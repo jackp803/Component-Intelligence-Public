@@ -13,6 +13,7 @@ public partial class ElectricalWorkspaceWindow
         base.OnContentRendered(e);
         ConfigurePrimaryWorkspaceTabs();
         TopologyCanvas.ComponentImageResolver ??= ResolveComponentImageAsync;
+        TopologyCanvas.ComponentProductPageResolver ??= ResolveComponentProductPageAsync;
         TopologyCanvas.RefreshCanvas();
     }
 

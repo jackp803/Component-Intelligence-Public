@@ -35,31 +35,67 @@ public sealed class ComponentProjectBridge
         foreach (var sourcePort in source.Ports)
             instance.Ports.Add(MapPort(sourcePort, source, componentInstanceId));
 
-        if (source.Pins.Count > 0)
+        foreach (var sourcePin in source.Pins)
         {
-            DomainPort pinTarget;
-            if (instance.Ports.Count == 1)
+            var explicitOwner = FindExplicitPinOwner(instance, sourcePin.PortId);
+            if (explicitOwner is not null)
             {
-                pinTarget = instance.Ports[0];
-            }
-            else
-            {
-                pinTarget = new DomainPort
-                {
-                    PortId = $"{componentInstanceId}:port:unassigned",
-                    Name = instance.Ports.Count == 0 ? "PORT-1" : "UNASSIGNED-PINS",
-                    Connector = instance.Ports.Count == 0 ? MapRootConnector(source, componentInstanceId) : null
-                };
-                if (instance.Ports.Count > 1)
-                    pinTarget.Capabilities.Add("NEEDS_PORT_MAPPING");
-                instance.Ports.Add(pinTarget);
+                explicitOwner.Pins.Add(MapPin(sourcePin, source, componentInstanceId, explicitOwner.Name));
+                continue;
             }
 
-            foreach (var sourcePin in source.Pins)
-                pinTarget.Pins.Add(MapPin(sourcePin, source, componentInstanceId));
+            // A declared-but-unmatched PortId is engineering evidence of unresolved ownership. Never
+            // silently move that pin to another port just because the component currently has one port.
+            if (!string.IsNullOrWhiteSpace(sourcePin.PortId))
+            {
+                var unresolved = GetOrCreateUnassignedPinPort(instance, componentInstanceId, source);
+                if (!unresolved.Capabilities.Contains("NEEDS_PORT_MAPPING", StringComparer.OrdinalIgnoreCase))
+                    unresolved.Capabilities.Add("NEEDS_PORT_MAPPING");
+                unresolved.Pins.Add(MapPin(sourcePin, source, componentInstanceId, sourcePin.PortId));
+                continue;
+            }
+
+            var physicalPorts = instance.Ports
+                .Where(port => !string.Equals(port.Name, "UNASSIGNED-PINS", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (physicalPorts.Length == 1)
+            {
+                physicalPorts[0].Pins.Add(MapPin(sourcePin, source, componentInstanceId, physicalPorts[0].Name));
+                continue;
+            }
+
+            var fallback = GetOrCreateUnassignedPinPort(instance, componentInstanceId, source);
+            if (physicalPorts.Length > 1 && !fallback.Capabilities.Contains("NEEDS_PORT_MAPPING", StringComparer.OrdinalIgnoreCase))
+                fallback.Capabilities.Add("NEEDS_PORT_MAPPING");
+            fallback.Pins.Add(MapPin(sourcePin, source, componentInstanceId, null));
         }
 
         return instance;
+    }
+
+    private static DomainPort? FindExplicitPinOwner(ComponentInstance instance, string? logicalPortId)
+    {
+        if (string.IsNullOrWhiteSpace(logicalPortId)) return null;
+        return instance.Ports.FirstOrDefault(port =>
+            string.Equals(port.Name, logicalPortId.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static DomainPort GetOrCreateUnassignedPinPort(ComponentInstance instance, string instanceId, ComponentIR source)
+    {
+        var existing = instance.Ports.FirstOrDefault(port =>
+            string.Equals(port.Name, "UNASSIGNED-PINS", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(port.Name, "PORT-1", StringComparison.OrdinalIgnoreCase));
+        if (existing is not null) return existing;
+
+        var hasNoPorts = instance.Ports.Count == 0;
+        var port = new DomainPort
+        {
+            PortId = $"{instanceId}:port:unassigned",
+            Name = hasNoPorts ? "PORT-1" : "UNASSIGNED-PINS",
+            Connector = hasNoPorts ? MapRootConnector(source, instanceId) : null
+        };
+        instance.Ports.Add(port);
+        return port;
     }
 
     private static DomainPort MapPort(ContractPort sourcePort, ComponentIR source, string instanceId)
@@ -113,13 +149,14 @@ public sealed class ComponentProjectBridge
         };
     }
 
-    private static DomainPin MapPin(ContractPin sourcePin, ComponentIR source, string instanceId)
+    private static DomainPin MapPin(ContractPin sourcePin, ComponentIR source, string instanceId, string? ownerPortId)
     {
         var raw = string.Join(' ', new[] { sourcePin.Function, sourcePin.SignalType, sourcePin.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
         var layer = DetermineLayer(sourcePin.SignalType, sourcePin.Function);
+        var ownerIdentity = string.IsNullOrWhiteSpace(ownerPortId) ? "unassigned" : Sanitize(ownerPortId);
         return new DomainPin
         {
-            PinId = $"{instanceId}:pin:{Sanitize(sourcePin.PinNumber)}",
+            PinId = $"{instanceId}:port:{ownerIdentity}:pin:{Sanitize(sourcePin.PinNumber)}",
             PinNumber = sourcePin.PinNumber,
             PinName = NullIfBlank(sourcePin.Description),
             Function = NullIfBlank(sourcePin.Function),

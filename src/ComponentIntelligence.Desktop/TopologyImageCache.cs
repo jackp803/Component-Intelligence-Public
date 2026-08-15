@@ -1,8 +1,10 @@
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -13,6 +15,7 @@ namespace ComponentIntelligence.Desktop;
 public sealed class TopologyImageCache
 {
     private const long MaximumBytes = 5 * 1024 * 1024;
+    private const int MaximumProductPageBytes = 2 * 1024 * 1024;
     private readonly string _root;
     private readonly HttpClient _http;
 
@@ -26,7 +29,29 @@ public sealed class TopologyImageCache
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
     }
 
-    public async Task<string?> GetLocalPathAsync(Uri? source, CancellationToken cancellationToken = default)
+    public Task<string?> GetLocalPathAsync(Uri? source, CancellationToken cancellationToken = default) =>
+        GetLocalPathAsync(source, null, cancellationToken);
+
+    /// <summary>
+    /// Tries the explicit image URL first. If a vendor CDN rejects direct hot-link access, the public
+    /// product page is inspected for its og:image/twitter:image and that image is cached instead.
+    /// </summary>
+    public async Task<string?> GetLocalPathAsync(
+        Uri? source,
+        Uri? productPage,
+        CancellationToken cancellationToken = default)
+    {
+        var direct = await TryGetLocalPathAsync(source, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(direct)) return direct;
+
+        var discovered = await DiscoverProductImageAsync(productPage, cancellationToken);
+        if (discovered is null || Uri.Compare(discovered, source, UriComponents.AbsoluteUri, UriFormat.SafeUnescaped, StringComparison.OrdinalIgnoreCase) == 0)
+            return null;
+
+        return await TryGetLocalPathAsync(discovered, cancellationToken);
+    }
+
+    private async Task<string?> TryGetLocalPathAsync(Uri? source, CancellationToken cancellationToken)
     {
         if (source is null) return null;
         if (source.IsFile)
@@ -77,18 +102,56 @@ public sealed class TopologyImageCache
         }
     }
 
+    private async Task<Uri?> DiscoverProductImageAsync(Uri? productPage, CancellationToken cancellationToken)
+    {
+        if (productPage is null || productPage.Scheme is not ("http" or "https")) return null;
+        try
+        {
+            using var request = BuildPageRequest(productPage);
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentLength is > MaximumProductPageBytes) return null;
+
+            var html = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (html.Length > MaximumProductPageBytes) html = html[..MaximumProductPageBytes];
+            var image = ExtractMetaImage(html);
+            if (string.IsNullOrWhiteSpace(image)) return null;
+            image = WebUtility.HtmlDecode(image.Trim());
+            return Uri.TryCreate(image, UriKind.Absolute, out var absolute)
+                ? absolute
+                : Uri.TryCreate(productPage, image, out var relative) ? relative : null;
+        }
+        catch when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+
+    internal static string? ExtractMetaImage(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return null;
+        foreach (var property in new[] { "og:image", "twitter:image", "twitter:image:src" })
+        {
+            var escaped = Regex.Escape(property);
+            var first = Regex.Match(
+                html,
+                $"<meta[^>]+(?:property|name)\\s*=\\s*[\"']{escaped}[\"'][^>]+content\\s*=\\s*[\"'](?<url>[^\"']+)[\"'][^>]*>",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (first.Success) return first.Groups["url"].Value;
+
+            var reversed = Regex.Match(
+                html,
+                $"<meta[^>]+content\\s*=\\s*[\"'](?<url>[^\"']+)[\"'][^>]+(?:property|name)\\s*=\\s*[\"']{escaped}[\"'][^>]*>",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (reversed.Success) return reversed.Groups["url"].Value;
+        }
+        return null;
+    }
+
     private static HttpRequestMessage BuildImageRequest(Uri source)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, source);
-
-        // Many manufacturer CDNs reject generic library clients even though the same public image is
-        // available in a browser. Use normal browser negotiation headers while keeping the request fully
-        // deterministic and unauthenticated.
-        request.Headers.UserAgent.ParseAdd(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-            "(KHTML, like Gecko) Chrome/126.0 Safari/537.36 ComponentIntelligence/1.0");
-        request.Headers.Accept.ParseAdd("image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
-        request.Headers.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+        ApplyBrowserHeaders(request);
 
         // Moxa publishes product images on its public Azure Front Door CDN. The browser obtains those
         // images from moxa.com, so preserve that public-page context instead of looking like a hotlink bot.
@@ -99,6 +162,24 @@ public sealed class TopologyImageCache
         }
 
         return request;
+    }
+
+    private static HttpRequestMessage BuildPageRequest(Uri source)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, source);
+        ApplyBrowserHeaders(request);
+        request.Headers.Accept.Clear();
+        request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        return request;
+    }
+
+    private static void ApplyBrowserHeaders(HttpRequestMessage request)
+    {
+        request.Headers.UserAgent.ParseAdd(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/126.0 Safari/537.36 ComponentIntelligence/1.0");
+        request.Headers.Accept.ParseAdd("image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+        request.Headers.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
     }
 
     internal static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();

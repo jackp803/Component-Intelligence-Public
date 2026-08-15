@@ -1,27 +1,37 @@
+using ComponentIntelligence.Contracts;
 using ComponentIntelligence.Electrical.Bridging;
 
 namespace ComponentIntelligence.Desktop;
 
 public partial class ElectricalWorkspaceWindow
 {
-    private async Task<Uri?> ResolveComponentImageAsync(string componentDefinitionId)
+    private Task<Uri?> ResolveComponentImageAsync(string componentDefinitionId) =>
+        ResolveComponentVisualUriAsync(componentDefinitionId, component => component.Assets.ImageUrl);
+
+    private Task<Uri?> ResolveComponentProductPageAsync(string componentDefinitionId) =>
+        ResolveComponentVisualUriAsync(componentDefinitionId, component => component.Assets.ProductPageUrl);
+
+    private async Task<Uri?> ResolveComponentVisualUriAsync(
+        string componentDefinitionId,
+        Func<ComponentIR, Uri?> selector)
     {
         try
         {
             var catalog = new ComponentIrCatalogReader(_databasePath);
             var component = await catalog.GetByIdAsync(componentDefinitionId);
-            if (component?.Assets.ImageUrl is not null) return component.Assets.ImageUrl;
+            var uri = component is null ? null : selector(component);
+            if (uri is not null) return uri;
 
             // Placeholder instances keep their project-specific definition ID when enriched so that
             // topology references/connections remain stable. Fall back to the visible identity rather
-            // than mutating that project ID only to make an image appear.
+            // than mutating that project ID only to make visual assets appear.
             var instance = _project.Components.FirstOrDefault(item =>
                 string.Equals(item.ComponentDefinitionId, componentDefinitionId, StringComparison.OrdinalIgnoreCase));
             if (instance is null || string.IsNullOrWhiteSpace(instance.DisplayName)) return null;
             var identity = instance.DisplayName.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (identity.Length != 2) return null;
             component = await catalog.FindByIdentityAsync(identity[0], identity[1]);
-            return component?.Assets.ImageUrl;
+            return component is null ? null : selector(component);
         }
         catch
         {

@@ -257,16 +257,26 @@ public sealed class NotionComponentKnowledgeStore : IComponentKnowledgeStore
         ComponentPin pin,
         CancellationToken cancellationToken)
     {
+        var filters = new List<JsonObject>
+        {
+            RelationFilter("Component", componentPageId),
+            RichTextFilter("Pin Number", pin.PinNumber)
+        };
+        if (!string.IsNullOrWhiteSpace(pin.PortId))
+            filters.Add(RichTextFilter("Port ID", pin.PortId.Trim()));
+
         var existing = await QuerySingleAsync(
             _options.PinsDataSourceId,
-            AndFilter(RelationFilter("Component", componentPageId), RichTextFilter("Pin Number", pin.PinNumber)),
+            AndFilter(filters.ToArray()),
             cancellationToken);
         var evidence = PreferredEvidence(pin.Evidence);
         var verification = evidence?.VerificationStatus ?? (string.IsNullOrWhiteSpace(pin.Function) ? VerificationStatus.NotAvailable : VerificationStatus.SingleSource);
+        var owner = string.IsNullOrWhiteSpace(pin.PortId) ? "Unassigned" : pin.PortId.Trim();
         var properties = new JsonObject
         {
-            ["Pin"] = TitleProperty($"{component.Identity.Manufacturer} {component.Identity.Model} :: Pin {pin.PinNumber}"),
+            ["Pin"] = TitleProperty($"{component.Identity.Manufacturer} {component.Identity.Model} :: {owner} Pin {pin.PinNumber}"),
             ["Component"] = RelationProperty(componentPageId),
+            ["Port ID"] = RichTextProperty(pin.PortId),
             ["Pin Number"] = RichTextProperty(pin.PinNumber),
             ["Function"] = RichTextProperty(pin.Function),
             ["Signal Type"] = RichTextProperty(pin.SignalType),
@@ -379,6 +389,7 @@ public sealed class NotionComponentKnowledgeStore : IComponentKnowledgeStore
                 ParseVerification(GetSelect(p, "Verification Status")));
             return new ComponentPin
             {
+                PortId = GetText(p, "Port ID"),
                 PinNumber = GetText(p, "Pin Number") ?? "?",
                 Function = function,
                 SignalType = GetText(p, "Signal Type"),

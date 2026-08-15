@@ -39,6 +39,15 @@ public static class PinEngineeringValidationPolicy
         var parserEvidence = pin.Evidence
             .Where(evidence => evidence.ExtractionMethod is ExtractionMethod.TableParser or ExtractionMethod.OcrText)
             .ToArray();
+        var legacyPdfTableContext = LooksLikeLegacyPdfTableContext(pin.Description);
+        var hasUnreviewedThirdPartyEvidence = pin.Evidence.Any(evidence =>
+            evidence.SourceType is ComponentSourceType.TrustedThirdParty or ComponentSourceType.GenericWeb or ComponentSourceType.AiInference);
+
+        // Older Notion round-trips did not preserve ExtractionMethod when reading a pin back. The stored
+        // Description still carries "PDF table / page N", so keep the same safety rule for legacy rows.
+        if ((parserEvidence.Length > 0 || legacyPdfTableContext) && hasUnreviewedThirdPartyEvidence)
+            return false;
+
         if (parserEvidence.Length == 0) return true;
 
         // OCR-derived contact facts remain review-only until confirmed/verified.
@@ -47,10 +56,6 @@ public static class PinEngineeringValidationPolicy
 
         var hasElectricalSemantics = LooksLikeElectricalPinFunction(pin.Function) || LooksLikeExplicitPinContext(pin.Description);
         if (!hasElectricalSemantics) return false;
-
-        // A single third-party/generic table parse must never become central engineering truth by itself.
-        if (parserEvidence.Any(evidence => evidence.SourceType is ComponentSourceType.TrustedThirdParty or ComponentSourceType.GenericWeb or ComponentSourceType.AiInference))
-            return false;
 
         return parserEvidence.Any(evidence => evidence.SourceType is
             ComponentSourceType.ManufacturerDatasheet or
@@ -75,6 +80,10 @@ public static class PinEngineeringValidationPolicy
         if (string.IsNullOrWhiteSpace(description)) return false;
         return ContextHints.Any(hint => description.Contains(hint, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static bool LooksLikeLegacyPdfTableContext(string? description) =>
+        !string.IsNullOrWhiteSpace(description) &&
+        description.Contains("PDF table", StringComparison.OrdinalIgnoreCase);
 
     private static bool ContainsToken(string value, string token)
     {

@@ -10,6 +10,7 @@ namespace ComponentIntelligence.Desktop;
 public partial class TopologyCanvasControl
 {
     private Func<string, Task<Uri?>>? _componentImageResolver;
+    private Func<string, Task<Uri?>>? _componentProductPageResolver;
     private readonly TopologyImageCache _topologyImageCache = new();
     private readonly HashSet<string> _expandedVisualPortIds = new(StringComparer.OrdinalIgnoreCase);
     private bool _componentVisualHooked;
@@ -22,12 +23,27 @@ public partial class TopologyCanvasControl
         set
         {
             _componentImageResolver = value;
-            ConfigureNotionSettingsButton();
-            if (_componentVisualHooked || Surface is null) return;
-            _componentVisualHooked = true;
-            Surface.LayoutUpdated += (_, _) => DecorateComponentVisuals();
-            Surface.PreviewMouseLeftButtonDown += Surface_PreviewPinExpansion;
+            ConfigureComponentVisualHooks();
         }
+    }
+
+    public Func<string, Task<Uri?>>? ComponentProductPageResolver
+    {
+        get => _componentProductPageResolver;
+        set
+        {
+            _componentProductPageResolver = value;
+            ConfigureComponentVisualHooks();
+        }
+    }
+
+    private void ConfigureComponentVisualHooks()
+    {
+        ConfigureNotionSettingsButton();
+        if (_componentVisualHooked || Surface is null) return;
+        _componentVisualHooked = true;
+        Surface.LayoutUpdated += (_, _) => DecorateComponentVisuals();
+        Surface.PreviewMouseLeftButtonDown += Surface_PreviewPinExpansion;
     }
 
     private void ConfigureNotionSettingsButton()
@@ -91,8 +107,8 @@ public partial class TopologyCanvasControl
             var image = new Image
             {
                 Tag = "CI-COMPONENT-IMAGE",
-                Width = 40,
-                Height = 34,
+                Width = 54,
+                Height = 42,
                 Stretch = Stretch.Uniform,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(3, 2, 3, 0),
@@ -155,8 +171,16 @@ public partial class TopologyCanvasControl
         try
         {
             var source = _componentImageResolver is null ? null : await _componentImageResolver(componentDefinitionId);
-            var localPath = await _topologyImageCache.GetLocalPathAsync(source);
-            if (string.IsNullOrWhiteSpace(localPath) || !File.Exists(localPath)) return;
+            var productPage = _componentProductPageResolver is null ? null : await _componentProductPageResolver(componentDefinitionId);
+            var localPath = await _topologyImageCache.GetLocalPathAsync(source, productPage);
+            if (string.IsNullOrWhiteSpace(localPath) || !File.Exists(localPath))
+            {
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    target.ToolTip = $"產品圖片目前無法載入。\nImage URL: {source?.AbsoluteUri ?? "<none>"}\nProduct Page fallback: {productPage?.AbsoluteUri ?? "<none>"}";
+                });
+                return;
+            }
             var imagePath = localPath!;
 
             await Dispatcher.InvokeAsync(() =>
@@ -168,10 +192,15 @@ public partial class TopologyCanvasControl
                 bitmap.EndInit();
                 bitmap.Freeze();
                 target.Source = bitmap;
+                target.ToolTip = $"Product Image（產品圖片）— 僅作視覺表示，不作工程真值\nCache: {imagePath}";
             });
         }
-        catch
+        catch (Exception exception)
         {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                target.ToolTip = $"產品圖片載入失敗：{exception.GetType().Name}: {exception.Message}";
+            });
             // Product images are optional display aids. A failed image must never block topology.
         }
     }

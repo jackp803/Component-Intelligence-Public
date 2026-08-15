@@ -14,6 +14,11 @@ public sealed record ComponentPort
 
 public sealed record ComponentPin
 {
+    /// <summary>
+    /// Logical parent port identity (for example PWR, ETH1, X1). Null means the available evidence
+    /// does not establish which port owns the pin; callers must keep that uncertainty visible.
+    /// </summary>
+    public string? PortId { get; init; }
     public required string PinNumber { get; init; }
     public string? Function { get; init; }
     public string? SignalType { get; init; }

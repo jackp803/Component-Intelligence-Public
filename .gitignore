@@ -15,7 +15,7 @@ obj/
 *.sqlite3
 secrets.json
 appsettings.Local.json
-cache/
+/cache/
 artifacts/
 TestResults/
 .agent-orchestrator/

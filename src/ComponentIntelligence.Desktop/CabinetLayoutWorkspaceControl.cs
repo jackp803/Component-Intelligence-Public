@@ -850,10 +850,10 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             Kind = kind;
             ObjectId = objectId;
             Label = label;
-            Footprint = footprint;
-            Placement = placement;
             _setFootprint = setFootprint;
             _setPlacement = setPlacement;
+            Footprint = footprint;
+            Placement = placement;
         }
 
         public LayoutObjectKind Kind { get; }

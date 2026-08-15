@@ -28,12 +28,14 @@ public sealed class VerificationEngine : IVerificationEngine
         ArgumentNullException.ThrowIfNull(component);
         ArgumentNullException.ThrowIfNull(raw);
 
+        var acceptedPinCount = component.Pins.Count(PinEngineeringValidationPolicy.IsAccepted);
+        var rejectedPinCount = component.Pins.Count - acceptedPinCount;
         var criticalChecks = new Dictionary<string, bool>
         {
             ["operating_voltage"] = component.Power.OperatingVoltage is not null,
             ["output_type"] = !string.IsNullOrWhiteSpace(component.Io.OutputType),
             ["connector"] = !string.IsNullOrWhiteSpace(component.Connector.Family) && component.Connector.Pins is > 0,
-            ["pins"] = component.Pins.Count > 0
+            ["pins"] = acceptedPinCount > 0
         };
         var passedCritical = criticalChecks.Count(check => check.Value);
         var criticalCoverage = passedCritical / (decimal)criticalChecks.Count;
@@ -71,6 +73,10 @@ public sealed class VerificationEngine : IVerificationEngine
             .Where(check => !check.Value)
             .Select(check => $"MISSING_WIRING_{check.Key.ToUpperInvariant()}")
             .ToList();
+        if (rejectedPinCount > 0)
+            issues.Add($"PIN_ENGINEERING_GATE_REJECTED:{rejectedPinCount}");
+        if (component.Pins.Count > 0 && acceptedPinCount == 0)
+            issues.Add("PINS_PRESENT_BUT_ENGINEERING_UNVERIFIED");
         if (meaningfulSpecs.Length == 0) issues.Add("NO_ENGINEERING_SPECIFICATIONS_EXTRACTED");
         if (mappedKeys == 0 && meaningfulSpecs.Length > 0) issues.Add("SPECIFICATIONS_CAPTURED_BUT_NOT_NORMALIZED");
         if (documentCount == 0) issues.Add("NO_ENGINEERING_DOCUMENT_DISCOVERED");

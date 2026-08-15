@@ -32,7 +32,7 @@ public static class ComponentRuntimeFactory
 
         var notionOptions = NotionKnowledgeStoreOptions.FromEnvironment();
         IComponentKnowledgeStore? centralKnowledge = notionOptions.IsEnabled
-            ? new NotionComponentKnowledgeStore(notionOptions)
+            ? new EngineeringValidatedKnowledgeStore(new NotionComponentKnowledgeStore(notionOptions))
             : null;
 
         return new ComponentIntelligencePipeline(
@@ -54,7 +54,7 @@ public static class ComponentRuntimeFactory
     public static ComponentKnowledgeSyncService CreateKnowledgeSyncService(string databasePath)
     {
         var options = NotionKnowledgeStoreOptions.FromEnvironment();
-        IComponentKnowledgeStore central = new NotionComponentKnowledgeStore(options);
+        IComponentKnowledgeStore central = new EngineeringValidatedKnowledgeStore(new NotionComponentKnowledgeStore(options));
         return new ComponentKnowledgeSyncService(databasePath, central);
     }
 

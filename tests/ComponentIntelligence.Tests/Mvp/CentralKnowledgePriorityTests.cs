@@ -4,6 +4,7 @@ using ComponentIntelligence.Normalization;
 using ComponentIntelligence.Pipeline;
 using ComponentIntelligence.Repository;
 using ComponentIntelligence.Resolution;
+using ComponentIntelligence.Search;
 using ComponentIntelligence.Sources;
 using ComponentIntelligence.Verification;
 using Xunit;
@@ -74,6 +75,33 @@ public sealed class CentralKnowledgePriorityTests
         }
     }
 
+    [Fact]
+    public async Task NormalSearch_ReturnsIncompleteCentralKnowledgeWithoutImplicitEnrichment()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var repository = new SqliteComponentIrRepository(Path.Combine(directory, "priority.db"));
+            var central = IncompleteComponent("notion-incomplete", "Existing central knowledge");
+            var pipeline = CreatePipeline(repository, new FakeKnowledgeStore(central));
+            var search = new ComponentSearchService(pipeline);
+
+            var result = await search.SearchAsync("MOXA", "EDS-2005-EL");
+
+            Assert.Equal(ResolutionStatus.Resolved, result.Result.ResolutionStatus);
+            Assert.NotNull(result.Result.Component);
+            Assert.Equal("notion-incomplete", result.Result.Component!.Identity.ComponentId);
+            Assert.Contains("NOTION_CENTRAL_SEARCH_HIT_NO_ENRICHMENT", result.Result.Issues);
+            Assert.Contains("EXISTING_KNOWLEDGE_RETURNED_WITHOUT_ENRICHMENT", result.Result.Issues);
+            Assert.Contains("EXPLICIT_DEEP_SEARCH_REQUIRED_FOR_REFRESH", result.Result.Issues);
+        }
+        finally
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
     private static ComponentIntelligencePipeline CreatePipeline(
         SqliteComponentIrRepository repository,
         IComponentKnowledgeStore central)
@@ -121,6 +149,18 @@ public sealed class CentralKnowledgePriorityTests
                 Protocol = "Ethernet"
             }
         ]
+    };
+
+    private static ComponentIR IncompleteComponent(string componentId, string category) => new()
+    {
+        Identity = new ComponentIrIdentity
+        {
+            ComponentId = componentId,
+            Manufacturer = "MOXA",
+            Model = "EDS-2005-EL",
+            Mpn = "EDS-2005-EL"
+        },
+        Classification = new ComponentClassification { Category = category }
     };
 
     private sealed class FakeKnowledgeStore(ComponentIR? component) : IComponentKnowledgeStore

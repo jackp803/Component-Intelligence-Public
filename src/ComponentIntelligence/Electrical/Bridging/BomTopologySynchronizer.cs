@@ -112,6 +112,7 @@ public sealed class BomTopologySynchronizer
                 if (component is not null)
                 {
                     instance = _bridge.CreateInstance(component, instanceId);
+                    instance.Footprint ??= ComponentPhysicalKnowledgeMapper.TryCreateFootprint(component);
                     instance.DisplayName = InstanceDisplayName(manufacturer, model, index, installedQuantity, quantityUnknown: false);
                     instance.ResponsibilityScope = ResponsibilityScope.InScope;
                     rich++;

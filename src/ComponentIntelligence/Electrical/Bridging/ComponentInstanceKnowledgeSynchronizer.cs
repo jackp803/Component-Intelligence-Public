@@ -27,6 +27,7 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
             target.TypeKey);
 
         if (string.IsNullOrWhiteSpace(target.DisplayName)) target.DisplayName = mapped.DisplayName;
+        FillPhysicalFootprint(target, source);
 
         foreach (var incomingPort in mapped.Ports)
         {
@@ -66,6 +67,24 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
                 FillPin(existingPin, incomingPin);
             }
         }
+    }
+
+    private static void FillPhysicalFootprint(ComponentInstance target, ComponentIR source)
+    {
+        var incoming = ComponentPhysicalKnowledgeMapper.TryCreateFootprint(source);
+        if (incoming is null) return;
+
+        if (target.Footprint is null)
+        {
+            target.Footprint = incoming;
+            return;
+        }
+
+        if (target.Footprint.WidthMm <= 0) target.Footprint.WidthMm = incoming.WidthMm;
+        if (target.Footprint.HeightMm <= 0) target.Footprint.HeightMm = incoming.HeightMm;
+        target.Footprint.DepthMm ??= incoming.DepthMm;
+        if (target.Footprint.MountingType == MountingType.Unknown)
+            target.Footprint.MountingType = incoming.MountingType;
     }
 
     private static DomainPort? FindMatchingPort(ComponentInstance target, DomainPort incoming) =>

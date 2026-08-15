@@ -150,6 +150,16 @@ public sealed class ComponentManualEditorDialog : Window
     private UIElement BuildPinsPanel()
     {
         var root = new DockPanel { Margin = new Thickness(8) };
+        var hint = new TextBlock
+        {
+            Text = "Port ID（所屬接口）決定 Pin 掛在哪個接口下。例如 PWR 的兩個腳位可填：PWR | 1 | 24V，以及 PWR | 2 | 0V。若不知道所屬 Port，請留空，不要猜。",
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = System.Windows.Media.Brushes.DimGray,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        DockPanel.SetDock(hint, Dock.Top);
+        root.Children.Add(hint);
+
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
         var add = new Button { Content = "+ Pin", Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 0, 8, 0) };
         var remove = new Button { Content = "移除選取 / Remove", Padding = new Thickness(12, 5, 12, 5) };
@@ -159,13 +169,18 @@ public sealed class ComponentManualEditorDialog : Window
         root.Children.Add(buttons);
 
         var grid = GridFor(_pins);
+        grid.Columns.Add(TextColumn("Port ID", nameof(PinEditRow.PortId), 90));
         grid.Columns.Add(TextColumn("Pin", nameof(PinEditRow.PinNumber), 70));
-        grid.Columns.Add(TextColumn("Function", nameof(PinEditRow.Function), 160));
-        grid.Columns.Add(TextColumn("Signal", nameof(PinEditRow.SignalType), 120));
-        grid.Columns.Add(TextColumn("Direction", nameof(PinEditRow.Direction), 100));
-        grid.Columns.Add(TextColumn("Voltage", nameof(PinEditRow.VoltageDomain), 100));
-        grid.Columns.Add(TextColumn("Description", nameof(PinEditRow.Description), 220));
-        add.Click += (_, _) => _pins.Add(new PinEditRow { PinNumber = (_pins.Count + 1).ToString() });
+        grid.Columns.Add(TextColumn("Function", nameof(PinEditRow.Function), 150));
+        grid.Columns.Add(TextColumn("Signal", nameof(PinEditRow.SignalType), 110));
+        grid.Columns.Add(TextColumn("Direction", nameof(PinEditRow.Direction), 95));
+        grid.Columns.Add(TextColumn("Voltage", nameof(PinEditRow.VoltageDomain), 105));
+        grid.Columns.Add(TextColumn("Description", nameof(PinEditRow.Description), 210));
+        add.Click += (_, _) => _pins.Add(new PinEditRow
+        {
+            PortId = _ports.Count == 1 ? _ports[0].PortId : null,
+            PinNumber = (_pins.Count + 1).ToString()
+        });
         remove.Click += (_, _) => { if (grid.SelectedItem is PinEditRow row) _pins.Remove(row); };
         root.Children.Add(grid);
         return root;
@@ -254,12 +269,21 @@ public sealed class ComponentManualEditorDialog : Window
 
     private ComponentPin BuildPin(PinEditRow row)
     {
-        var original = _original.Pins.FirstOrDefault(pin => string.Equals(pin.PinNumber, row.PinNumber, StringComparison.OrdinalIgnoreCase));
-        var changed = original is null || !Same(original.Function, row.Function) || !Same(original.SignalType, row.SignalType) || !Same(original.Direction, row.Direction) || !Same(original.VoltageDomain, row.VoltageDomain) || !Same(original.Description, row.Description);
+        var original = _original.Pins.FirstOrDefault(pin =>
+            string.Equals(pin.PinNumber, row.PinNumber, StringComparison.OrdinalIgnoreCase) &&
+            (string.IsNullOrWhiteSpace(row.PortId) || string.Equals(pin.PortId, row.PortId, StringComparison.OrdinalIgnoreCase)));
+        var changed = original is null ||
+                      !Same(original.PortId, row.PortId) ||
+                      !Same(original.Function, row.Function) ||
+                      !Same(original.SignalType, row.SignalType) ||
+                      !Same(original.Direction, row.Direction) ||
+                      !Same(original.VoltageDomain, row.VoltageDomain) ||
+                      !Same(original.Description, row.Description);
         var evidence = original?.Evidence.ToList() ?? new List<Evidence>();
-        if (changed) evidence.Add(UserEvidence($"Pin {row.PinNumber}: {row.Function ?? "Unknown"}"));
+        if (changed) evidence.Add(UserEvidence($"Port {row.PortId ?? "Unknown"} / Pin {row.PinNumber}: {row.Function ?? "Unknown"}"));
         return new ComponentPin
         {
+            PortId = NullIfBlank(row.PortId),
             PinNumber = row.PinNumber.Trim(),
             Function = NullIfBlank(row.Function),
             SignalType = NullIfBlank(row.SignalType),
@@ -330,13 +354,14 @@ public sealed class ComponentManualEditorDialog : Window
 
     private sealed class PinEditRow
     {
+        public string? PortId { get; set; }
         public string PinNumber { get; set; } = string.Empty;
         public string? Function { get; set; }
         public string? SignalType { get; set; }
         public string? Direction { get; set; }
         public string? VoltageDomain { get; set; }
         public string? Description { get; set; }
-        public static PinEditRow From(ComponentPin pin) => new() { PinNumber = pin.PinNumber, Function = pin.Function, SignalType = pin.SignalType, Direction = pin.Direction, VoltageDomain = pin.VoltageDomain, Description = pin.Description };
+        public static PinEditRow From(ComponentPin pin) => new() { PortId = pin.PortId, PinNumber = pin.PinNumber, Function = pin.Function, SignalType = pin.SignalType, Direction = pin.Direction, VoltageDomain = pin.VoltageDomain, Description = pin.Description };
     }
 
     private sealed class SpecificationEditRow

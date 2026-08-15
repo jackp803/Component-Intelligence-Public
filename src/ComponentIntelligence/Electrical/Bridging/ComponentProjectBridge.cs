@@ -48,7 +48,7 @@ public sealed class ComponentProjectBridge
             // silently move that pin to another port just because the component currently has one port.
             if (!string.IsNullOrWhiteSpace(sourcePin.PortId))
             {
-                var unresolved = GetOrCreateUnassignedPinPort(instance, componentInstanceId);
+                var unresolved = GetOrCreateUnassignedPinPort(instance, componentInstanceId, source);
                 if (!unresolved.Capabilities.Contains("NEEDS_PORT_MAPPING", StringComparer.OrdinalIgnoreCase))
                     unresolved.Capabilities.Add("NEEDS_PORT_MAPPING");
                 unresolved.Pins.Add(MapPin(sourcePin, source, componentInstanceId, sourcePin.PortId));
@@ -64,7 +64,7 @@ public sealed class ComponentProjectBridge
                 continue;
             }
 
-            var fallback = GetOrCreateUnassignedPinPort(instance, componentInstanceId);
+            var fallback = GetOrCreateUnassignedPinPort(instance, componentInstanceId, source);
             if (physicalPorts.Length > 1 && !fallback.Capabilities.Contains("NEEDS_PORT_MAPPING", StringComparer.OrdinalIgnoreCase))
                 fallback.Capabilities.Add("NEEDS_PORT_MAPPING");
             fallback.Pins.Add(MapPin(sourcePin, source, componentInstanceId, null));
@@ -80,17 +80,19 @@ public sealed class ComponentProjectBridge
             string.Equals(port.Name, logicalPortId.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
-    private static DomainPort GetOrCreateUnassignedPinPort(ComponentInstance instance, string instanceId)
+    private static DomainPort GetOrCreateUnassignedPinPort(ComponentInstance instance, string instanceId, ComponentIR source)
     {
         var existing = instance.Ports.FirstOrDefault(port =>
-            string.Equals(port.Name, "UNASSIGNED-PINS", StringComparison.OrdinalIgnoreCase));
+            string.Equals(port.Name, "UNASSIGNED-PINS", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(port.Name, "PORT-1", StringComparison.OrdinalIgnoreCase));
         if (existing is not null) return existing;
 
+        var hasNoPorts = instance.Ports.Count == 0;
         var port = new DomainPort
         {
             PortId = $"{instanceId}:port:unassigned",
-            Name = instance.Ports.Count == 0 ? "PORT-1" : "UNASSIGNED-PINS",
-            Connector = instance.Ports.Count == 0 ? null : null
+            Name = hasNoPorts ? "PORT-1" : "UNASSIGNED-PINS",
+            Connector = hasNoPorts ? MapRootConnector(source, instanceId) : null
         };
         instance.Ports.Add(port);
         return port;

@@ -20,6 +20,20 @@ public sealed class PinEngineeringValidationPolicyTests
     }
 
     [Fact]
+    public void LegacyNotionRoundTrip_ThirdPartyPdfTable_IsStillRejected()
+    {
+        var pin = Pin(
+            "13",
+            "13 Adhesive tape",
+            ComponentSourceType.TrustedThirdParty,
+            VerificationStatus.SingleSource,
+            "Pin assignment extracted from: PDF table / page 9",
+            ExtractionMethod.UserInput);
+
+        Assert.False(PinEngineeringValidationPolicy.IsAccepted(pin));
+    }
+
+    [Fact]
     public void ManufacturerTableParser_WithExplicitElectricalMeaning_IsAccepted()
     {
         var pin = Pin(
@@ -63,7 +77,8 @@ public sealed class PinEngineeringValidationPolicyTests
         string function,
         ComponentSourceType sourceType,
         VerificationStatus verificationStatus,
-        string description) => new()
+        string description,
+        ExtractionMethod extractionMethod = ExtractionMethod.TableParser) => new()
     {
         PinNumber = number,
         Function = function,
@@ -75,7 +90,7 @@ public sealed class PinEngineeringValidationPolicyTests
                 SourceType = sourceType,
                 SourceUrl = new Uri("https://example.com/source.pdf"),
                 DocumentUrl = new Uri("https://example.com/source.pdf"),
-                ExtractionMethod = ExtractionMethod.TableParser,
+                ExtractionMethod = extractionMethod,
                 RawValue = function,
                 RetrievedAt = DateTimeOffset.UtcNow,
                 VerificationStatus = verificationStatus

@@ -1,0 +1,456 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-12
+  name: Component IR / Persistence
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T104
+  version: 1
+  title: ComponentIR Builder
+  objective: 完成「ComponentIR Builder」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不重新進行網路查詢。
+  - 不得把 Cache 檔案當唯一真相來源。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T103
+    required_artifacts:
+    - T103-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T103/T103-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Repository/
+    - src/ComponentIntelligence/Contracts/
+    - tests/ComponentIntelligence.Tests/Repository/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'Normalized Profile + Verification → ComponentIR。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T104-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「ComponentIR Builder」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T105
+  version: 1
+  title: Save Raw Specs
+  objective: 完成「Save Raw Specs」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不重新進行網路查詢。
+  - 不得把 Cache 檔案當唯一真相來源。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T104
+    required_artifacts:
+    - T104-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T104/T104-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '---'
+  outputs:
+    artifacts:
+    - id: T105-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Save Raw Specs」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T106
+  version: 1
+  title: Save Normalized Specs
+  objective: 完成「Save Normalized Specs」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不重新進行網路查詢。
+  - 不得把 Cache 檔案當唯一真相來源。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T105
+    required_artifacts:
+    - T105-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T105/T105-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '---'
+  outputs:
+    artifacts:
+    - id: T106-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Save Normalized Specs」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T107
+  version: 1
+  title: Save Evidence
+  objective: 完成「Save Evidence」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不重新進行網路查詢。
+  - 不得把 Cache 檔案當唯一真相來源。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T106
+    required_artifacts:
+    - T106-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T106/T106-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '---'
+  outputs:
+    artifacts:
+    - id: T107-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Save Evidence」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T108
+  version: 1
+  title: Save Pins
+  objective: 完成「Save Pins」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不重新進行網路查詢。
+  - 不得把 Cache 檔案當唯一真相來源。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T107
+    required_artifacts:
+    - T107-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T107/T107-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '---'
+  outputs:
+    artifacts:
+    - id: T108-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Save Pins」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T109
+  version: 1
+  title: Save Ports
+  objective: 完成「Save Ports」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不重新進行網路查詢。
+  - 不得把 Cache 檔案當唯一真相來源。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T108
+    required_artifacts:
+    - T108-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T108/T108-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '---'
+  outputs:
+    artifacts:
+    - id: T109-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Save Ports」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T110
+  version: 1
+  title: Save Assets
+  objective: 完成「Save Assets」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不重新進行網路查詢。
+  - 不得把 Cache 檔案當唯一真相來源。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T109
+    required_artifacts:
+    - T109-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T109/T109-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '只要求 metadata/url；大檔案可只 cache。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T110-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Save Assets」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T111
+  version: 1
+  title: Load ComponentIR
+  objective: 完成「Load ComponentIR」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不重新進行網路查詢。
+  - 不得把 Cache 檔案當唯一真相來源。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T110
+    required_artifacts:
+    - T110-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T110/T110-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '從 DB 重建 IR。
+
+
+      PHASE 12 GATE：
+
+      關閉再開，Component IR 可重建。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T111-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Load ComponentIR」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

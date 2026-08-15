@@ -1,0 +1,361 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-13
+  name: Cache
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T112
+  version: 1
+  title: CacheDirectoryManager
+  objective: 完成「CacheDirectoryManager」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不得刪除 URL、Evidence、Component IR metadata。
+  - 不管理雲端儲存。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T111
+    required_artifacts:
+    - T111-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T111/T111-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Cache/
+    - tests/ComponentIntelligence.Tests/Cache/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '建立：
+
+      - documents
+
+      - images
+
+      - cad
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T112-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「CacheDirectoryManager」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T113
+  version: 1
+  title: CacheAccessTracker
+  objective: 完成「CacheAccessTracker」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不得刪除 URL、Evidence、Component IR metadata。
+  - 不管理雲端儲存。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T112
+    required_artifacts:
+    - T112-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T112/T112-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '更新 LastAccessed。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T113-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「CacheAccessTracker」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T114
+  version: 1
+  title: CacheSizeCalculator
+  objective: 完成「CacheSizeCalculator」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不得刪除 URL、Evidence、Component IR metadata。
+  - 不管理雲端儲存。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T113
+    required_artifacts:
+    - T113-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T113/T113-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '取得總 bytes。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T114-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「CacheSizeCalculator」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T115
+  version: 1
+  title: LruSelector
+  objective: 完成「LruSelector」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不得刪除 URL、Evidence、Component IR metadata。
+  - 不管理雲端儲存。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T114
+    required_artifacts:
+    - T114-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T114/T114-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '選最久未使用 cache asset。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T115-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「LruSelector」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T116
+  version: 1
+  title: CacheEviction
+  objective: 完成「CacheEviction」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不得刪除 URL、Evidence、Component IR metadata。
+  - 不管理雲端儲存。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T115
+    required_artifacts:
+    - T115-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T115/T115-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '超上限刪實體 cache。
+
+      不得刪 DB metadata / Evidence / URL。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T116-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「CacheEviction」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T117
+  version: 1
+  title: Cache Tests
+  objective: 完成「Cache Tests」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不得刪除 URL、Evidence、Component IR metadata。
+  - 不管理雲端儲存。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T116
+    required_artifacts:
+    - T116-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T116/T116-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'PHASE 13 GATE：
+
+      LRU 可刪檔但不損害 Component IR。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T117-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Cache Tests」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

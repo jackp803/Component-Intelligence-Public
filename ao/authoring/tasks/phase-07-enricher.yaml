@@ -1,0 +1,583 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-07
+  name: Component Enricher Core
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T058
+  version: 1
+  title: RawComponentProfile Contract
+  objective: 完成「RawComponentProfile Contract」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T057
+    required_artifacts:
+    - T057-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T057/T057-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Enrichment/
+    - src/ComponentIntelligence/Contracts/
+    - tests/ComponentIntelligence.Tests/Enrichment/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '包含：
+
+      - identity
+
+      - raw specs
+
+      - raw pins
+
+      - raw ports
+
+      - documents
+
+      - assets
+
+      - evidence
+
+      - missing data
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T058-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「RawComponentProfile Contract」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T059
+  version: 1
+  title: ComponentEnricher Skeleton
+  objective: 完成「ComponentEnricher Skeleton」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T058
+    required_artifacts:
+    - T058-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T058/T058-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '建立流程控制，不做品牌細節。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T059-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「ComponentEnricher Skeleton」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T060
+  version: 1
+  title: Enrichment Source Planning
+  objective: 完成「Enrichment Source Planning」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T059
+    required_artifacts:
+    - T059-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T059/T059-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '決定：
+
+      - product page
+
+      - datasheet
+
+      - manual
+
+      - download center
+
+      - secondary source
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T060-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Enrichment Source Planning」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T061
+  version: 1
+  title: Product Page Retrieval
+  objective: 完成「Product Page Retrieval」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T060
+    required_artifacts:
+    - T060-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T060/T060-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '讀取已解析官方頁。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T061-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Product Page Retrieval」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T062
+  version: 1
+  title: DocumentDiscoverer
+  objective: 完成「DocumentDiscoverer」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T061
+    required_artifacts:
+    - T061-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T061/T061-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '找：
+
+      - Datasheet
+
+      - Manual
+
+      - Wiring Diagram
+
+      - Dimension Drawing
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T062-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「DocumentDiscoverer」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T063
+  version: 1
+  title: AssetDiscoverer
+  objective: 完成「AssetDiscoverer」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T062
+    required_artifacts:
+    - T062-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T062/T062-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '找：
+
+      - Product Image
+
+      - CAD URL
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T063-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「AssetDiscoverer」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T064
+  version: 1
+  title: StructuredDataExtractor
+  objective: 完成「StructuredDataExtractor」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T063
+    required_artifacts:
+    - T063-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T063/T063-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '優先：
+
+      - JSON
+
+      - metadata
+
+      - HTML tables/labels
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T064-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「StructuredDataExtractor」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T065
+  version: 1
+  title: MissingDataAnalyzer
+  objective: 完成「MissingDataAnalyzer」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T064
+    required_artifacts:
+    - T064-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T064/T064-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '依 Category 判斷必要資料缺口。
+
+
+      第一版 Sensor Profile 至少：
+
+      - Voltage
+
+      - Output
+
+      - Connector
+
+      - Pin
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T065-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「MissingDataAnalyzer」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T066
+  version: 1
+  title: EnrichmentRunLogger
+  objective: 完成「EnrichmentRunLogger」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做 normalized value。
+  - 不以猜測補滿缺失工程欄位。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T065
+    required_artifacts:
+    - T065-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T065/T065-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '保存整次補全結果與失敗原因。
+
+
+      PHASE 7 GATE：
+
+      可產生 RawComponentProfile，即使部分欄位為空。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T066-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「EnrichmentRunLogger」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

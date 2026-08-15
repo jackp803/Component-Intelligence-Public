@@ -1,0 +1,379 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-04
+  name: Source Architecture
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T038
+  version: 1
+  title: IComponentSource
+  objective: 完成「IComponentSource」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不在來源抽象層實作完整品牌規格解析。
+  - 不固定指定模型。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T037
+    required_artifacts:
+    - T037-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T037/T037-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Sources/
+    - src/ComponentIntelligence/Resolution/
+    - tests/ComponentIntelligence.Tests/Sources/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '建立統一 Interface。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T038-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IComponentSource」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T039
+  version: 1
+  title: SourceResult / ProductPage / ComponentDocument
+  objective: 完成「SourceResult / ProductPage / ComponentDocument」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不在來源抽象層實作完整品牌規格解析。
+  - 不固定指定模型。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T038
+    required_artifacts:
+    - T038-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T038/T038-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '建立來源資料 DTO（資料物件）。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T039-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「SourceResult / ProductPage / ComponentDocument」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T040
+  version: 1
+  title: SourcePlanner
+  objective: 完成「SourcePlanner」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不在來源抽象層實作完整品牌規格解析。
+  - 不固定指定模型。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T039
+    required_artifacts:
+    - T039-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T039/T039-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'INPUT：
+
+      ComponentIdentity / Manufacturer
+
+
+      OUTPUT：
+
+      排序後來源列表。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T040-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「SourcePlanner」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T041
+  version: 1
+  title: FakeComponentSource
+  objective: 完成「FakeComponentSource」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不在來源抽象層實作完整品牌規格解析。
+  - 不固定指定模型。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T040
+    required_artifacts:
+    - T040-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T040/T040-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '回傳固定假資料：
+
+      IFM O5D100
+
+
+      用途：
+
+      測試外部流程，不碰真網站。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T041-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「FakeComponentSource」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T042
+  version: 1
+  title: Resolver External Hook
+  objective: 完成「Resolver External Hook」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不在來源抽象層實作完整品牌規格解析。
+  - 不固定指定模型。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T041
+    required_artifacts:
+    - T041-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T041/T041-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'Local MISS 時可呼叫 SourcePlanner + Sources。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T042-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Resolver External Hook」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T043
+  version: 1
+  title: External Source Tests
+  objective: 完成「External Source Tests」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不在來源抽象層實作完整品牌規格解析。
+  - 不固定指定模型。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T042
+    required_artifacts:
+    - T042-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T042/T042-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'PHASE 4 GATE：
+
+
+      ```text
+
+      Local MISS
+
+      → Fake Source
+
+      → Candidate
+
+      → RESOLVED
+
+      ```
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T043-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「External Source Tests」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

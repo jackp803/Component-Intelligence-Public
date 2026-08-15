@@ -1,0 +1,499 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-06
+  name: IFM Resolver Adapter
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T050
+  version: 1
+  title: IfmSource Skeleton
+  objective: 完成「IfmSource Skeleton」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不一次支援其他品牌。
+  - 不在 Resolver Adapter 中補齊所有工程規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T049
+    required_artifacts:
+    - T049-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T049/T049-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Sources/Ifm/
+    - src/ComponentIntelligence/Resolution/
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/
+    - tests/fixtures/ifm/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '只建立 class + interface implementation skeleton。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T050-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IfmSource Skeleton」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T051
+  version: 1
+  title: IFM Product Search
+  objective: 完成「IFM Product Search」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不一次支援其他品牌。
+  - 不在 Resolver Adapter 中補齊所有工程規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T050
+    required_artifacts:
+    - T050-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T050/T050-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'INPUT：
+
+      IFM + model
+
+
+      OUTPUT：
+
+      Candidate list
+
+
+      不得解析全部 specs。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T051-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IFM Product Search」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T052
+  version: 1
+  title: IFM Identity Parser
+  objective: 完成「IFM Identity Parser」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不一次支援其他品牌。
+  - 不在 Resolver Adapter 中補齊所有工程規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T051
+    required_artifacts:
+    - T051-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T051/T051-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '從官方頁讀：
+
+      - official model
+
+      - product name if available
+
+      - mpn if available
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T052-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IFM Identity Parser」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T053
+  version: 1
+  title: IFM Official Product URL
+  objective: 完成「IFM Official Product URL」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不一次支援其他品牌。
+  - 不在 Resolver Adapter 中補齊所有工程規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T052
+    required_artifacts:
+    - T052-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T052/T052-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '保存官方 URL。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T053-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IFM Official Product URL」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T054
+  version: 1
+  title: IFM Candidate Builder
+  objective: 完成「IFM Candidate Builder」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不一次支援其他品牌。
+  - 不在 Resolver Adapter 中補齊所有工程規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T053
+    required_artifacts:
+    - T053-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T053/T053-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '把 IFM raw result → ComponentCandidate。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T054-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IFM Candidate Builder」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T055
+  version: 1
+  title: IFM Resolver Integration
+  objective: 完成「IFM Resolver Integration」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不一次支援其他品牌。
+  - 不在 Resolver Adapter 中補齊所有工程規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T054
+    required_artifacts:
+    - T054-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T054/T054-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '接入 ComponentResolver。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T055-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IFM Resolver Integration」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T056
+  version: 1
+  title: IFM Fixture Tests
+  objective: 完成「IFM Fixture Tests」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不一次支援其他品牌。
+  - 不在 Resolver Adapter 中補齊所有工程規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T055
+    required_artifacts:
+    - T055-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T055/T055-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '用保存的 HTML Fixture（固定測試頁）離線測試。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T056-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IFM Fixture Tests」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T057
+  version: 1
+  title: Optional Live IFM Test
+  objective: 完成「Optional Live IFM Test」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不一次支援其他品牌。
+  - 不在 Resolver Adapter 中補齊所有工程規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T056
+    required_artifacts:
+    - T056-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T056/T056-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '可選。
+
+      失敗不得使單元測試紅燈。
+
+
+      PHASE 6 GATE：
+
+
+      ```text
+
+      IFM + O5D100
+
+      → RESOLVED
+
+      → Official Product URL
+
+      ```
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T057-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Optional Live IFM Test」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

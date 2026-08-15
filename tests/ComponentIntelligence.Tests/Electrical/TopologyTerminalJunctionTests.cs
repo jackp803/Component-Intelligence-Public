@@ -1,0 +1,96 @@
+using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Topology;
+using Xunit;
+
+namespace ComponentIntelligence.Tests.Electrical;
+
+public sealed class TopologyTerminalJunctionTests
+{
+    [Fact]
+    public void InlineTerminalCanBecomeParallelBranchJunctionWithoutVisualOnlyContinuity()
+    {
+        var project = ProjectWithThreePorts();
+        project.TopologyPlacements.Add(new TopologyPlacement { ObjectId = "cmp-a", ObjectKind = "COMPONENT", X = 10, Y = 20, Width = 140, Height = 76 });
+        project.TopologyPlacements.Add(new TopologyPlacement { ObjectId = "cmp-b", ObjectKind = "COMPONENT", X = 500, Y = 20, Width = 140, Height = 76 });
+        project.TopologyPlacements.Add(new TopologyPlacement { ObjectId = "cmp-c", ObjectKind = "COMPONENT", X = 500, Y = 220, Width = 140, Height = 76 });
+
+        var editor = new TopologyConnectionEditor();
+        var original = editor.ConnectPorts(project, "cmp-a:pwr", "cmp-b:pwr", "net-24v");
+        var terminal = editor.InsertInlineTerminal(project, original.ConnectionId, new InlineTerminalOptions(FunctionTag: "24V"));
+        var service = new TopologyTerminalJunctionService();
+
+        var branch = service.Connect(project, TopologyTerminalJunctionService.Selector(terminal.TerminalBlockId), "cmp-c:pwr");
+
+        Assert.Equal(3, project.Connections.Count);
+        Assert.Equal("net-24v", branch.NetId);
+        var position = Assert.Single(terminal.Positions);
+        var level = Assert.Single(position.Levels);
+        Assert.Equal("TOPOLOGY_JUNCTION", position.TerminalType);
+        Assert.Equal(3, level.ConnectionPoints.Count);
+        var branchPoint = level.ConnectionPoints.Single(point => point.PhysicalSide == "BRANCH");
+        Assert.Contains(level.InternalConnections, item =>
+            string.Equals(item.ToConnectionPointId, branchPoint.ConnectionPointId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(item.FromConnectionPointId, branchPoint.ConnectionPointId, StringComparison.OrdinalIgnoreCase));
+        Assert.True(
+            (branch.FromEndpointId == branchPoint.ConnectionPointId && branch.ToEndpointId == "cmp-c:pwr") ||
+            (branch.ToEndpointId == branchPoint.ConnectionPointId && branch.FromEndpointId == "cmp-c:pwr"));
+    }
+
+    [Fact]
+    public void RepeatedBranchesAllocateSeparateTerminalConnectionPoints()
+    {
+        var project = ProjectWithFourPorts();
+        project.TopologyPlacements.Add(new TopologyPlacement { ObjectId = "cmp-a", ObjectKind = "COMPONENT", X = 10, Y = 20, Width = 140, Height = 76 });
+        project.TopologyPlacements.Add(new TopologyPlacement { ObjectId = "cmp-b", ObjectKind = "COMPONENT", X = 500, Y = 20, Width = 140, Height = 76 });
+
+        var editor = new TopologyConnectionEditor();
+        var original = editor.ConnectPorts(project, "cmp-a:pwr", "cmp-b:pwr", "net-24v");
+        var terminal = editor.InsertInlineTerminal(project, original.ConnectionId, new InlineTerminalOptions(FunctionTag: "24V"));
+        var service = new TopologyTerminalJunctionService();
+        var selector = TopologyTerminalJunctionService.Selector(terminal.TerminalBlockId);
+
+        service.Connect(project, selector, "cmp-c:pwr");
+        service.Connect(project, selector, "cmp-d:pwr");
+
+        var level = terminal.Positions.Single().Levels.Single();
+        Assert.Equal(4, level.ConnectionPoints.Count);
+        Assert.Equal(2, level.ConnectionPoints.Count(point => point.PhysicalSide == "BRANCH"));
+        Assert.Equal(4, project.Connections.Count);
+    }
+
+    private static ElectricalProject ProjectWithThreePorts()
+    {
+        var project = new ElectricalProject { ProjectId = "junction-test" };
+        AddPowerPort(project, "cmp-a");
+        AddPowerPort(project, "cmp-b");
+        AddPowerPort(project, "cmp-c");
+        return project;
+    }
+
+    private static ElectricalProject ProjectWithFourPorts()
+    {
+        var project = ProjectWithThreePorts();
+        AddPowerPort(project, "cmp-d");
+        return project;
+    }
+
+    private static void AddPowerPort(ElectricalProject project, string componentId)
+    {
+        project.Components.Add(new ComponentInstance
+        {
+            ComponentInstanceId = componentId,
+            ComponentDefinitionId = "test-power-device",
+            TypeKey = "DEVICE",
+            ReferenceDesignator = componentId.ToUpperInvariant(),
+            Ports =
+            {
+                new ComponentPort
+                {
+                    PortId = $"{componentId}:pwr",
+                    Name = "24V",
+                    MaxConnections = 1
+                }
+            }
+        });
+    }
+}

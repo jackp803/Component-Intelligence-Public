@@ -1,0 +1,292 @@
+<Window x:Class="ComponentIntelligence.Desktop.ElectricalWorkspaceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ComponentIntelligence.Desktop"
+        Title="Component Intelligence - Electrical Design" Height="900" Width="1420"
+        MinHeight="740" MinWidth="1140" WindowStartupLocation="CenterOwner">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Electrical Design Engine｜電氣設計引擎" FontSize="26" FontWeight="SemiBold" />
+            <TextBlock Text="Project Model → Topology → Wiring / Net → Terminal / Jumper → Cable Planning → Physical Layout → Validation" Foreground="#666" Margin="0,3,0,0" />
+        </StackPanel>
+
+        <Border Grid.Row="1" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,12" Background="#FAFAFA">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="200" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Project ID" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBox x:Name="ProjectIdText" Grid.Column="1" Height="30" IsReadOnly="True" VerticalContentAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="名稱" VerticalAlignment="Center" Margin="12,0,8,0" />
+                <TextBox x:Name="ProjectNameText" Grid.Column="3" Height="30" VerticalContentAlignment="Center" />
+                <Button Grid.Column="4" Content="新專案" Padding="12,6" Margin="10,0,0,0" Click="NewProject_Click" />
+                <Button Grid.Column="5" Content="儲存" Padding="12,6" Margin="6,0,0,0" Click="SaveProject_Click" />
+                <Button Grid.Column="6" Content="載入" Padding="12,6" Margin="6,0,0,0" Click="LoadProject_Click" />
+                <Button x:Name="UndoButton" Grid.Column="7" Content="復原 Undo" Padding="12,6" Margin="10,0,0,0" Click="Undo_Click" />
+                <Button x:Name="RedoButton" Grid.Column="8" Content="重做 Redo" Padding="12,6" Margin="6,0,0,0" Click="Redo_Click" />
+                <Button Grid.Column="9" Content="執行驗證" Padding="16,6" Margin="8,0,0,0" HorizontalAlignment="Right" Click="ValidateProject_Click" />
+            </Grid>
+        </Border>
+
+        <TabControl Grid.Row="2">
+            <TabItem Header="元件 Components">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <WrapPanel Margin="0,0,0,10">
+                        <TextBlock Text="Type Key" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ComponentTypeText" Width="120" Height="28" Text="SENSOR" Margin="0,0,10,0" />
+                        <TextBlock Text="Reference" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ComponentReferenceText" Width="100" Height="28" Margin="0,0,10,0" />
+                        <TextBlock Text="Equipment Tag" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ComponentTagText" Width="180" Height="28" Margin="0,0,10,0" />
+                        <Button Content="新增元件實例" Padding="14,5" Click="AddComponent_Click" />
+                    </WrapPanel>
+                    <DataGrid x:Name="ComponentsGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Stable ID" Binding="{Binding ComponentInstanceId}" Width="1.4*" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding TypeKey}" Width="*" />
+                            <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceDesignator}" Width="*" />
+                            <DataGridTextColumn Header="Equipment Tag" Binding="{Binding EquipmentTag}" Width="1.4*" />
+                            <DataGridTextColumn Header="Scope" Binding="{Binding ResponsibilityScope}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="拓樸 Topology">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <WrapPanel Margin="0,0,0,10">
+                        <TextBlock Text="Layer Filter（圖層篩選）" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="TopologyLayerCombo" Width="190" Height="28" DisplayMemberPath="Label" SelectionChanged="TopologyLayerCombo_SelectionChanged" Margin="0,0,10,0" />
+                        <Button Content="自動排列 Auto Arrange" Padding="14,5" Click="AutoArrangeTopology_Click" Margin="0,0,12,0" />
+                        <TextBlock Text="左鍵拖曳＝移動；右鍵＝旋轉 90°。Topology Placement（拓樸位置）與 Physical Placement（實體位置）分開保存。" Foreground="#666" VerticalAlignment="Center" />
+                    </WrapPanel>
+                    <local:TopologyCanvasControl x:Name="TopologyCanvas" Grid.Row="1" />
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="電氣網路 Nets">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <WrapPanel Margin="0,0,0,10">
+                        <TextBlock Text="Label" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="NetLabelText" Width="150" Height="28" Text="54V+" Margin="0,0,10,0" />
+                        <TextBlock Text="Layer" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <ComboBox x:Name="NetLayerCombo" Width="150" Height="28" Margin="0,0,10,0" />
+                        <TextBlock Text="Isolation Domain" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="NetIsolationText" Width="150" Height="28" Margin="0,0,10,0" />
+                        <Button Content="新增 Net" Padding="14,5" Click="AddNet_Click" />
+                    </WrapPanel>
+                    <DataGrid x:Name="NetsGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Net ID" Binding="{Binding NetId}" Width="1.5*" />
+                            <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="*" />
+                            <DataGridTextColumn Header="Layer" Binding="{Binding Layer}" Width="*" />
+                            <DataGridTextColumn Header="Ground / Reference" Binding="{Binding GroundReferenceType}" Width="1.3*" />
+                            <DataGridTextColumn Header="Isolation Domain" Binding="{Binding IsolationDomainId}" Width="1.3*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="端子 Terminal Blocks">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <WrapPanel Margin="0,0,0,10">
+                        <TextBlock Text="Reference" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="TerminalReferenceText" Width="90" Height="28" Text="TB1" Margin="0,0,10,0" />
+                        <TextBlock Text="Function" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="TerminalFunctionText" Width="160" Height="28" Text="54V+" Margin="0,0,10,0" />
+                        <TextBlock Text="Positions" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="TerminalCountText" Width="55" Height="28" Text="6" Margin="0,0,10,0" />
+                        <CheckBox x:Name="TerminalJumperCheck" Content="建立全組短路片 / Jumper" VerticalAlignment="Center" IsChecked="True" Margin="0,0,12,0" />
+                        <Button Content="新增端子台" Padding="14,5" Click="AddTerminalBlock_Click" />
+                    </WrapPanel>
+                    <DataGrid x:Name="TerminalBlocksGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="TerminalBlocksGrid_SelectionChanged">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceDesignator}" Width="*" />
+                            <DataGridTextColumn Header="Function" Binding="{Binding FunctionTag}" Width="1.2*" />
+                            <DataGridTextColumn Header="Positions" Binding="{Binding Positions.Count}" Width="*" />
+                            <DataGridTextColumn Header="Jumpers" Binding="{Binding Jumpers.Count}" Width="*" />
+                            <DataGridTextColumn Header="Stable ID" Binding="{Binding TerminalBlockId}" Width="1.6*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="配線 Wiring">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock Text="Endpoint ID 可使用元件 Pin ID 或端子 ConnectionPoint ID。端子詳細 ID 可從下方 Endpoint 清單取得。" Foreground="#666" Margin="0,0,0,8" />
+                    <WrapPanel Grid.Row="1" Margin="0,0,0,10">
+                        <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ConnectionFromText" Width="180" Height="28" Margin="0,0,8,0" />
+                        <TextBlock Text="To" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ConnectionToText" Width="180" Height="28" Margin="0,0,8,0" />
+                        <TextBlock Text="Net ID" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ConnectionNetText" Width="180" Height="28" Margin="0,0,8,0" />
+                        <TextBlock Text="mm²" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ConnectionAreaText" Width="70" Height="28" Margin="0,0,8,0" />
+                        <Button Content="新增連線" Padding="14,5" Click="AddConnection_Click" />
+                    </WrapPanel>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="3*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
+                        <DataGrid x:Name="ConnectionsGrid" AutoGenerateColumns="False" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="From" Binding="{Binding FromEndpointId}" Width="*" />
+                                <DataGridTextColumn Header="To" Binding="{Binding ToEndpointId}" Width="*" />
+                                <DataGridTextColumn Header="Net" Binding="{Binding NetId}" Width="*" />
+                                <DataGridTextColumn Header="Area mm²" Binding="{Binding ConductorAreaMm2}" Width="0.8*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <ListBox x:Name="EndpointsList" Grid.Column="2" FontFamily="Consolas" />
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="實體佈局 Physical Layout">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <WrapPanel Margin="0,0,0,8">
+                        <TextBlock Text="Container" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ContainerNameText" Width="120" Height="28" Text="CAB-01" Margin="0,0,8,0" />
+                        <TextBlock Text="W mm" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ContainerWidthText" Width="70" Height="28" Text="800" Margin="0,0,8,0" />
+                        <TextBlock Text="H mm" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ContainerHeightText" Width="70" Height="28" Text="600" Margin="0,0,8,0" />
+                        <Button Content="新增容器" Padding="14,5" Click="AddContainer_Click" />
+                    </WrapPanel>
+                    <WrapPanel Grid.Row="1" Margin="0,0,0,10">
+                        <TextBlock Text="Component Reference" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="PlacementComponentText" Width="110" Height="28" Margin="0,0,8,0" />
+                        <TextBlock Text="Container ID" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="PlacementContainerText" Width="180" Height="28" Margin="0,0,8,0" />
+                        <TextBlock Text="X" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox x:Name="PlacementXText" Width="60" Height="28" Text="50" Margin="0,0,6,0" />
+                        <TextBlock Text="Y" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox x:Name="PlacementYText" Width="60" Height="28" Text="50" Margin="0,0,6,0" />
+                        <TextBlock Text="W" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox x:Name="PlacementWidthText" Width="60" Height="28" Text="80" Margin="0,0,6,0" />
+                        <TextBlock Text="H" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <TextBox x:Name="PlacementHeightText" Width="60" Height="28" Text="120" Margin="0,0,6,0" />
+                        <Button Content="設定位置" Padding="14,5" Click="SetPlacement_Click" />
+                    </WrapPanel>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="3*"/></Grid.ColumnDefinitions>
+                        <DataGrid x:Name="ContainersGrid" AutoGenerateColumns="False" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                                <DataGridTextColumn Header="ID" Binding="{Binding ContainerId}" Width="1.5*" />
+                                <DataGridTextColumn Header="W" Binding="{Binding WidthMm}" Width="0.6*" />
+                                <DataGridTextColumn Header="H" Binding="{Binding HeightMm}" Width="0.6*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <DataGrid x:Name="PlacementsGrid" Grid.Column="2" AutoGenerateColumns="False" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Reference" Binding="{Binding Reference}" Width="*" />
+                                <DataGridTextColumn Header="Container" Binding="{Binding ContainerId}" Width="1.4*" />
+                                <DataGridTextColumn Header="X" Binding="{Binding X}" Width="0.7*" />
+                                <DataGridTextColumn Header="Y" Binding="{Binding Y}" Width="0.7*" />
+                                <DataGridTextColumn Header="W" Binding="{Binding Width}" Width="0.7*" />
+                                <DataGridTextColumn Header="H" Binding="{Binding Height}" Width="0.7*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="推導 BOM Derived BOM">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <WrapPanel Margin="0,0,0,10">
+                        <TextBlock Text="線長餘量 %" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="CableAllowancePercentText" Width="55" Height="28" Text="0" Margin="0,0,8,0" />
+                        <TextBlock Text="固定餘量 mm" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="CableFixedAllowanceText" Width="70" Height="28" Text="0" Margin="0,0,8,0" />
+                        <TextBlock Text="每端 Service Loop mm" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="CableServiceLoopText" Width="70" Height="28" Text="0" Margin="0,0,8,0" />
+                        <Button Content="重新推導 BOM" Padding="14,5" Click="RebuildDerivedBom_Click" />
+                        <TextBlock Text="未定義的 Terminal / Cable 會保留 NeedsSelection / LengthPending，不會猜料號或線長。" Foreground="#666" VerticalAlignment="Center" Margin="12,0,0,0" />
+                    </WrapPanel>
+                    <DataGrid x:Name="DerivedBomGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="0.9*" />
+                            <DataGridTextColumn Header="Manufacturer" Binding="{Binding Manufacturer}" Width="*" />
+                            <DataGridTextColumn Header="Part Number" Binding="{Binding PartNumber}" Width="*" />
+                            <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2.4*" />
+                            <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="0.6*" />
+                            <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="0.6*" />
+                            <DataGridTextColumn Header="Status" Binding="{Binding ResolutionStatus}" Width="1.1*" />
+                            <DataGridTextColumn Header="Reason / Provenance" Binding="{Binding Reason}" Width="2.4*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="匯出前檢查 Pre-Export">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <WrapPanel Margin="0,0,0,10">
+                        <Button Content="重新掃描未接腳位" Padding="14,5" Click="RefreshPreExport_Click" Margin="0,0,10,0" />
+                        <TextBlock Text="Endpoint" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ReviewEndpointText" Width="210" Height="28" IsReadOnly="True" Margin="0,0,8,0" />
+                        <TextBlock Text="Disposition" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <ComboBox x:Name="ReviewDispositionCombo" Width="160" Height="28" Margin="0,0,8,0" />
+                        <TextBlock Text="Reason" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ReviewReasonText" Width="220" Height="28" Margin="0,0,8,0" />
+                        <TextBlock Text="Confirmed By" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="ReviewConfirmedByText" Width="110" Height="28" Margin="0,0,8,0" />
+                        <Button Content="套用" Padding="14,5" Click="ApplyPreExportDisposition_Click" />
+                    </WrapPanel>
+                    <DataGrid x:Name="PreExportGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" SelectionChanged="PreExportGrid_SelectionChanged">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Component" Binding="{Binding ComponentLabel}" Width="*" />
+                            <DataGridTextColumn Header="Port" Binding="{Binding PortId}" Width="1.2*" />
+                            <DataGridTextColumn Header="Pin" Binding="{Binding PinNumber}" Width="0.6*" />
+                            <DataGridCheckBoxColumn Header="Required" Binding="{Binding IsRequired}" Width="0.7*" />
+                            <DataGridTextColumn Header="Scope" Binding="{Binding ResponsibilityScope}" Width="0.9*" />
+                            <DataGridTextColumn Header="Disposition" Binding="{Binding Disposition}" Width="1.2*" />
+                            <DataGridCheckBoxColumn Header="Resolved" Binding="{Binding IsResolved}" Width="0.7*" />
+                            <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="2*" />
+                            <DataGridTextColumn Header="Endpoint ID" Binding="{Binding EndpointId}" Width="1.6*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="驗證 Validation">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock x:Name="ReadinessText" Text="尚未執行驗證" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+                    <DataGrid x:Name="ValidationGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="0.8*" />
+                            <DataGridTextColumn Header="Rule" Binding="{Binding RuleId}" Width="1.1*" />
+                            <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="3*" />
+                            <DataGridCheckBoxColumn Header="Pre-Export" Binding="{Binding RequiresPreExportReview}" Width="0.8*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <TextBlock Grid.Row="3" x:Name="WorkspaceStatusText" Text="Electrical Project 尚未儲存" Foreground="#666" Margin="0,10,0,0" />
+    </Grid>
+</Window>

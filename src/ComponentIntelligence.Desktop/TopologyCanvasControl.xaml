@@ -1,0 +1,43 @@
+<UserControl x:Class="ComponentIntelligence.Desktop.TopologyCanvasControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinHeight="420" MinWidth="700"
+             Focusable="True"
+             PreviewMouseLeftButtonDown="TopologyCanvas_PreviewMouseLeftButtonDown"
+             PreviewMouseRightButtonDown="TopologyCanvas_PreviewMouseRightButtonDown"
+             PreviewKeyDown="TopologyCanvas_PreviewKeyDown">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" BorderBrush="#D8D8D8" BorderThickness="1" CornerRadius="6" Padding="8" Background="#FAFAFA" Margin="0,0,0,8">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Button x:Name="SelectModeButton" Content="選取 / Select" Padding="12,5" Margin="0,0,6,0" Click="SelectMode_Click" />
+                    <Button x:Name="WireModeButton" Content="拉線 / Wire" Padding="12,5" Margin="0,0,6,0" Click="WireMode_Click" ToolTip="左鍵點第一個 Port 或端子圓點，再移動到第二個端點左鍵完成；Esc / 右鍵取消" />
+                    <Button Content="匯出 PDF" Padding="12,5" Margin="0,0,6,0" Click="ExportPdf_Click" ToolTip="把目前可見的拓樸畫布匯出為 PDF" />
+                    <Button Content="? 操作說明" Padding="12,5" Click="ShowHelp_Click" />
+                </StackPanel>
+                <TextBlock x:Name="SelectionText" Text="未選取" VerticalAlignment="Center" Foreground="#666" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <Border x:Name="HintBanner" Grid.Row="1" BorderBrush="#B9D7F2" BorderThickness="1" CornerRadius="5" Background="#EEF7FF" Padding="8" Margin="0,0,0,8">
+            <DockPanel>
+                <Button Content="×" DockPanel.Dock="Right" Width="26" Height="24" Padding="0" Click="DismissHint_Click" ToolTip="關閉提示" />
+                <TextBlock x:Name="HintText" Text="操作提示：拖曳元件可移動；按「拉線」後左鍵點 A Port／端子圓點，預覽線會跟著滑鼠，再左鍵點 B 端點完成；Esc / 右鍵取消。雙擊線路可插入 Terminal（顯示為小圓圈）、Connector 或設定 Cable Segment；端子圓點可再拉出並聯支線。" TextWrapping="Wrap" Foreground="#245A85" VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="2" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="6" Background="#F7F7F7">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <Canvas x:Name="Surface" Width="1800" Height="1200" Background="White"
+                        MouseMove="Surface_WirePreviewMouseMove"
+                        LayoutUpdated="Surface_LayoutUpdated" />
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,591 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-03
+  name: Local Resolver Core
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T030
+  version: 1
+  title: ManufacturerNormalizer
+  objective: 完成「ManufacturerNormalizer」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析 Datasheet 或工程規格。
+  - 不使用 AI 猜產品身分。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T029
+    required_artifacts:
+    - T029-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T029/T029-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Resolution/
+    - src/ComponentIntelligence/Repository/
+    - tests/ComponentIntelligence.Tests/Resolution/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    functions:
+    - string? Normalize(string? manufacturer);
+    test_cases:
+    - '`ifm`, `IFM`, `ifm electronic` 可映射 IFM（透過 alias）。'
+    spec_excerpt: 'FUNCTION：
+
+
+      ```csharp
+
+      string? Normalize(string? manufacturer);
+
+      ```
+
+
+      MUST：
+
+      - Trim
+
+      - Case normalization
+
+      - Alias lookup hook
+
+
+      TEST：
+
+      `ifm`, `IFM`, `ifm electronic` 可映射 IFM（透過 alias）。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T030-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：`ifm`, `IFM`, `ifm electronic` 可映射 IFM（透過 alias）。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T031
+  version: 1
+  title: ModelNormalizer
+  objective: 完成「ModelNormalizer」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不得直接把官方 Model 中 `-`, `/`, `.` 全部刪除。
+  - 不解析 Datasheet 或工程規格。
+  - 不使用 AI 猜產品身分。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T030
+    required_artifacts:
+    - T030-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T030/T030-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'MUST：
+
+      - Trim
+
+      - Unicode normalize
+
+      - case normalize for search
+
+      - preserve raw model
+
+      - generate SearchKey
+
+
+      FORBIDDEN：
+
+      不得直接把官方 Model 中 `-`, `/`, `.` 全部刪除。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T031-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「ModelNormalizer」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T032
+  version: 1
+  title: ManufacturerAliasRepository
+  objective: 完成「ManufacturerAliasRepository」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析 Datasheet 或工程規格。
+  - 不使用 AI 猜產品身分。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T031
+    required_artifacts:
+    - T031-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T031/T031-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'MUST：
+
+      - save alias
+
+      - resolve alias
+
+      - canonical manufacturer
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T032-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「ManufacturerAliasRepository」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T033
+  version: 1
+  title: LocalComponentLookup
+  objective: 完成「LocalComponentLookup」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析 Datasheet 或工程規格。
+  - 不使用 AI 猜產品身分。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T032
+    required_artifacts:
+    - T032-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T032/T032-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    functions:
+    - Task<ComponentRecord?> FindAsync(ComponentIdentityQuery query);
+    spec_excerpt: 'FUNCTION：
+
+
+      ```csharp
+
+      Task<ComponentRecord?> FindAsync(ComponentIdentityQuery query);
+
+      ```
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T033-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「LocalComponentLookup」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T034
+  version: 1
+  title: IdentityMatcher
+  objective: 完成「IdentityMatcher」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析 Datasheet 或工程規格。
+  - 不使用 AI 猜產品身分。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T033
+    required_artifacts:
+    - T033-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T033/T033-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '比較：
+
+      - manufacturer exact
+
+      - official model exact
+
+      - normalized model match
+
+      - mpn match
+
+      - source authority
+
+
+      不得看 description 就判定唯一產品。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T034-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IdentityMatcher」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T035
+  version: 1
+  title: ResolutionDecisionEngine
+  objective: 完成「ResolutionDecisionEngine」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析 Datasheet 或工程規格。
+  - 不使用 AI 猜產品身分。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T034
+    required_artifacts:
+    - T034-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T034/T034-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'OUTPUT：
+
+      - EXACT
+
+      - STRONG
+
+      - AMBIGUOUS
+
+      - NOT_FOUND
+
+      - CONFLICT
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T035-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「ResolutionDecisionEngine」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T036
+  version: 1
+  title: ComponentResolver Local Pipeline
+  objective: 完成「ComponentResolver Local Pipeline」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析 Datasheet 或工程規格。
+  - 不使用 AI 猜產品身分。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T035
+    required_artifacts:
+    - T035-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T035/T035-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    functions:
+    - Task<ResolutionResult> ResolveAsync(ComponentIdentityQuery query);
+    - 第一版只：
+    - validate
+    - normalize
+    - local lookup
+    - decision
+    spec_excerpt: 'FUNCTION：
+
+
+      ```csharp
+
+      Task<ResolutionResult> ResolveAsync(ComponentIdentityQuery query);
+
+      ```
+
+
+      第一版只：
+
+      - validate
+
+      - normalize
+
+      - local lookup
+
+      - decision
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T036-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「ComponentResolver Local Pipeline」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T037
+  version: 1
+  title: Local Resolver Tests
+  objective: 完成「Local Resolver Tests」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析 Datasheet 或工程規格。
+  - 不使用 AI 猜產品身分。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T036
+    required_artifacts:
+    - T036-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T036/T036-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    cases:
+    - local hit → RESOLVED EXACT
+    - missing → NOT_FOUND
+    - missing input → WAITING_FOR_INPUT
+    spec_excerpt: 'CASES：
+
+      - local hit → RESOLVED EXACT
+
+      - missing → NOT_FOUND
+
+      - missing input → WAITING_FOR_INPUT
+
+
+      PHASE 3 GATE：
+
+      不使用網路也可正確解析 Local HIT / MISS。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T037-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：local hit → RESOLVED EXACT
+  - id: AC-002
+    type: deterministic
+    statement: 完成並可驗證：missing → NOT_FOUND
+  - id: AC-003
+    type: deterministic
+    statement: 完成並可驗證：missing input → WAITING_FOR_INPUT
+  - id: AC-004
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

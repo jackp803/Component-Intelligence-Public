@@ -1,0 +1,615 @@
+schema_version: '1.0'
+tasks:
+  T001:
+    files:
+    - ComponentIntelligence.sln
+    - src/ComponentIntelligence/ComponentIntelligence.csproj
+    - tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj
+    - tests/ComponentIntelligence.Tests/TaskCoverage/T001Tests.cs
+    artifact_path: ComponentIntelligence.sln
+  T002:
+    files:
+    - src/ComponentIntelligence/Contracts/Statuses.cs
+    - tests/ComponentIntelligence.Tests/TaskCoverage/T002Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/Statuses.cs
+  T003:
+    files:
+    - src/ComponentIntelligence/Contracts/Identity.cs
+    - tests/ComponentIntelligence.Tests/TaskCoverage/T003Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/Identity.cs
+  T004:
+    files:
+    - src/ComponentIntelligence/Contracts/Resolution.cs
+    - tests/ComponentIntelligence.Tests/TaskCoverage/T004Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/Resolution.cs
+  T005:
+    files:
+    - src/ComponentIntelligence/Contracts/Evidence.cs
+    - tests/ComponentIntelligence.Tests/TaskCoverage/T005Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/Evidence.cs
+  T006:
+    files:
+    - src/ComponentIntelligence/Contracts/RawSpecification.cs
+    - tests/ComponentIntelligence.Tests/TaskCoverage/T006Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/RawSpecification.cs
+  T007:
+    files:
+    - src/ComponentIntelligence/Contracts/Connectivity.cs
+    - tests/ComponentIntelligence.Tests/TaskCoverage/T007Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/Connectivity.cs
+  T008:
+    files:
+    - src/ComponentIntelligence/Contracts/ComponentIr.cs
+    - tests/ComponentIntelligence.Tests/TaskCoverage/T008Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/ComponentIr.cs
+  T009:
+    files:
+    - src/ComponentIntelligence/Contracts/BomRow.cs
+    - tests/ComponentIntelligence.Tests/Bom/TaskCoverage/T009Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/BomRow.cs
+  T010:
+    files:
+    - src/ComponentIntelligence/Bom/BomQuantityCalculator.cs
+    - tests/ComponentIntelligence.Tests/Bom/TaskCoverage/T010Tests.cs
+    artifact_path: src/ComponentIntelligence/Bom/BomQuantityCalculator.cs
+  T011:
+    files:
+    - src/ComponentIntelligence/Bom/BomRowValidator.cs
+    - tests/ComponentIntelligence.Tests/Bom/TaskCoverage/T011Tests.cs
+    artifact_path: src/ComponentIntelligence/Bom/BomRowValidator.cs
+  T012:
+    files:
+    - src/ComponentIntelligence/Bom/BomHeaderMapper.cs
+    - tests/ComponentIntelligence.Tests/Bom/TaskCoverage/T012Tests.cs
+    artifact_path: src/ComponentIntelligence/Bom/BomHeaderMapper.cs
+  T013:
+    files:
+    - src/ComponentIntelligence/ComponentIntelligence.csproj
+    - src/ComponentIntelligence/Bom/BomRowReader.cs
+    - tests/ComponentIntelligence.Tests/Bom/TaskCoverage/T013Tests.cs
+    artifact_path: src/ComponentIntelligence/Bom/BomRowReader.cs
+  T014:
+    files:
+    - src/ComponentIntelligence/Bom/BomImporter.cs
+    - tests/ComponentIntelligence.Tests/Bom/TaskCoverage/T014Tests.cs
+    artifact_path: src/ComponentIntelligence/Bom/BomImporter.cs
+  T015:
+    files:
+    - src/ComponentIntelligence/Bom/BomTemplateGenerator.cs
+    - tests/ComponentIntelligence.Tests/Bom/TaskCoverage/T015Tests.cs
+    artifact_path: src/ComponentIntelligence/Bom/BomTemplateGenerator.cs
+  T016:
+    files:
+    - tests/ComponentIntelligence.Tests/Bom/BomImporterIntegrationTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Bom/BomImporterIntegrationTests.cs
+  T017:
+    files:
+    - src/ComponentIntelligence/ComponentIntelligence.csproj
+    - src/ComponentIntelligence/Repository/SqliteConnectionFactory.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T017Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/SqliteConnectionFactory.cs
+  T018:
+    files:
+    - src/ComponentIntelligence/Repository/DatabaseBootstrap.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T018Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/DatabaseBootstrap.cs
+  T019:
+    files:
+    - src/ComponentIntelligence/Repository/SqliteSchema.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T019Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/SqliteSchema.cs
+  T020:
+    files:
+    - src/ComponentIntelligence/Repository/SqliteSchema.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T020Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/SqliteSchema.cs
+  T021:
+    files:
+    - src/ComponentIntelligence/Repository/SqliteSchema.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T021Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/SqliteSchema.cs
+  T022:
+    files:
+    - src/ComponentIntelligence/Repository/SqliteSchema.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T022Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/SqliteSchema.cs
+  T023:
+    files:
+    - src/ComponentIntelligence/Repository/SqliteSchema.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T023Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/SqliteSchema.cs
+  T024:
+    files:
+    - src/ComponentIntelligence/Repository/SqliteSchema.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T024Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/SqliteSchema.cs
+  T025:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T025Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T026:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T026Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T027:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T027Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T028:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T028Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T029:
+    files:
+    - tests/ComponentIntelligence.Tests/Repository/ComponentRepositoryTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Repository/ComponentRepositoryTests.cs
+  T030:
+    files:
+    - src/ComponentIntelligence/Resolution/ManufacturerNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Resolution/TaskCoverage/T030Tests.cs
+    artifact_path: src/ComponentIntelligence/Resolution/ManufacturerNormalizer.cs
+  T031:
+    files:
+    - src/ComponentIntelligence/Resolution/ModelNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Resolution/TaskCoverage/T031Tests.cs
+    artifact_path: src/ComponentIntelligence/Resolution/ModelNormalizer.cs
+  T032:
+    files:
+    - src/ComponentIntelligence/Repository/ManufacturerAliasRepository.cs
+    - tests/ComponentIntelligence.Tests/Resolution/TaskCoverage/T032Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ManufacturerAliasRepository.cs
+  T033:
+    files:
+    - src/ComponentIntelligence/Resolution/LocalComponentLookup.cs
+    - tests/ComponentIntelligence.Tests/Resolution/TaskCoverage/T033Tests.cs
+    artifact_path: src/ComponentIntelligence/Resolution/LocalComponentLookup.cs
+  T034:
+    files:
+    - src/ComponentIntelligence/Resolution/IdentityMatcher.cs
+    - tests/ComponentIntelligence.Tests/Resolution/TaskCoverage/T034Tests.cs
+    artifact_path: src/ComponentIntelligence/Resolution/IdentityMatcher.cs
+  T035:
+    files:
+    - src/ComponentIntelligence/Resolution/ResolutionDecisionEngine.cs
+    - tests/ComponentIntelligence.Tests/Resolution/TaskCoverage/T035Tests.cs
+    artifact_path: src/ComponentIntelligence/Resolution/ResolutionDecisionEngine.cs
+  T036:
+    files:
+    - src/ComponentIntelligence/Resolution/ComponentResolver.cs
+    - tests/ComponentIntelligence.Tests/Resolution/TaskCoverage/T036Tests.cs
+    artifact_path: src/ComponentIntelligence/Resolution/ComponentResolver.cs
+  T037:
+    files:
+    - tests/ComponentIntelligence.Tests/Resolution/ComponentResolverTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Resolution/ComponentResolverTests.cs
+  T038:
+    files:
+    - src/ComponentIntelligence/Sources/IComponentSource.cs
+    - tests/ComponentIntelligence.Tests/Sources/TaskCoverage/T038Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/IComponentSource.cs
+  T039:
+    files:
+    - src/ComponentIntelligence/Contracts/SourceModels.cs
+    - tests/ComponentIntelligence.Tests/Sources/TaskCoverage/T039Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/SourceModels.cs
+  T040:
+    files:
+    - src/ComponentIntelligence/Sources/SourcePlanner.cs
+    - tests/ComponentIntelligence.Tests/Sources/TaskCoverage/T040Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/SourcePlanner.cs
+  T041:
+    files:
+    - src/ComponentIntelligence/Sources/FakeComponentSource.cs
+    - tests/ComponentIntelligence.Tests/Sources/TaskCoverage/T041Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/FakeComponentSource.cs
+  T042:
+    files:
+    - src/ComponentIntelligence/Resolution/ComponentResolver.cs
+    - tests/ComponentIntelligence.Tests/Sources/TaskCoverage/T042Tests.cs
+    artifact_path: src/ComponentIntelligence/Resolution/ComponentResolver.cs
+  T043:
+    files:
+    - tests/ComponentIntelligence.Tests/Sources/ExternalSourceResolverTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Sources/ExternalSourceResolverTests.cs
+  T044:
+    files:
+    - src/ComponentIntelligence/Network/ComponentHttpClient.cs
+    - tests/ComponentIntelligence.Tests/Network/TaskCoverage/T044Tests.cs
+    artifact_path: src/ComponentIntelligence/Network/ComponentHttpClient.cs
+  T045:
+    files:
+    - src/ComponentIntelligence/Network/HttpFetchResult.cs
+    - tests/ComponentIntelligence.Tests/Network/TaskCoverage/T045Tests.cs
+    artifact_path: src/ComponentIntelligence/Network/HttpFetchResult.cs
+  T046:
+    files:
+    - src/ComponentIntelligence/Network/RetryPolicy.cs
+    - tests/ComponentIntelligence.Tests/Network/TaskCoverage/T046Tests.cs
+    artifact_path: src/ComponentIntelligence/Network/RetryPolicy.cs
+  T047:
+    files:
+    - src/ComponentIntelligence/Network/SourceRateLimitPolicy.cs
+    - tests/ComponentIntelligence.Tests/Network/TaskCoverage/T047Tests.cs
+    artifact_path: src/ComponentIntelligence/Network/SourceRateLimitPolicy.cs
+  T048:
+    files:
+    - src/ComponentIntelligence/Network/HtmlParser.cs
+    - tests/ComponentIntelligence.Tests/Network/TaskCoverage/T048Tests.cs
+    artifact_path: src/ComponentIntelligence/Network/HtmlParser.cs
+  T049:
+    files:
+    - tests/ComponentIntelligence.Tests/Network/NetworkInfrastructureTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Network/NetworkInfrastructureTests.cs
+  T050:
+    files:
+    - src/ComponentIntelligence/Sources/Ifm/IfmSource.cs
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/TaskCoverage/T050Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/Ifm/IfmSource.cs
+  T051:
+    files:
+    - src/ComponentIntelligence/Sources/Ifm/IfmSource.cs
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/TaskCoverage/T051Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/Ifm/IfmSource.cs
+  T052:
+    files:
+    - src/ComponentIntelligence/Sources/Ifm/IfmIdentityParser.cs
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/TaskCoverage/T052Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/Ifm/IfmIdentityParser.cs
+  T053:
+    files:
+    - src/ComponentIntelligence/Sources/Ifm/IfmProductUrlResolver.cs
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/TaskCoverage/T053Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/Ifm/IfmProductUrlResolver.cs
+  T054:
+    files:
+    - src/ComponentIntelligence/Sources/Ifm/IfmCandidateBuilder.cs
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/TaskCoverage/T054Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/Ifm/IfmCandidateBuilder.cs
+  T055:
+    files:
+    - src/ComponentIntelligence/Sources/Ifm/IfmSource.cs
+    - src/ComponentIntelligence/Resolution/ComponentResolver.cs
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/TaskCoverage/T055Tests.cs
+    artifact_path: src/ComponentIntelligence/Sources/Ifm/IfmSource.cs
+  T056:
+    files:
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/IfmSourceFixtureTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Sources/Ifm/IfmSourceFixtureTests.cs
+  T057:
+    files:
+    - tests/ComponentIntelligence.Tests/Sources/Ifm/IfmSourceLiveTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Sources/Ifm/IfmSourceLiveTests.cs
+  T058:
+    files:
+    - src/ComponentIntelligence/Contracts/RawComponentProfile.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T058Tests.cs
+    artifact_path: src/ComponentIntelligence/Contracts/RawComponentProfile.cs
+  T059:
+    files:
+    - src/ComponentIntelligence/Enrichment/ComponentEnricher.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T059Tests.cs
+    artifact_path: src/ComponentIntelligence/Enrichment/ComponentEnricher.cs
+  T060:
+    files:
+    - src/ComponentIntelligence/Enrichment/EnrichmentSourcePlanner.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T060Tests.cs
+    artifact_path: src/ComponentIntelligence/Enrichment/EnrichmentSourcePlanner.cs
+  T061:
+    files:
+    - src/ComponentIntelligence/Enrichment/ProductPageRetriever.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T061Tests.cs
+    artifact_path: src/ComponentIntelligence/Enrichment/ProductPageRetriever.cs
+  T062:
+    files:
+    - src/ComponentIntelligence/Enrichment/DocumentDiscoverer.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T062Tests.cs
+    artifact_path: src/ComponentIntelligence/Enrichment/DocumentDiscoverer.cs
+  T063:
+    files:
+    - src/ComponentIntelligence/Enrichment/AssetDiscoverer.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T063Tests.cs
+    artifact_path: src/ComponentIntelligence/Enrichment/AssetDiscoverer.cs
+  T064:
+    files:
+    - src/ComponentIntelligence/Enrichment/StructuredDataExtractor.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T064Tests.cs
+    artifact_path: src/ComponentIntelligence/Enrichment/StructuredDataExtractor.cs
+  T065:
+    files:
+    - src/ComponentIntelligence/Enrichment/MissingDataAnalyzer.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T065Tests.cs
+    artifact_path: src/ComponentIntelligence/Enrichment/MissingDataAnalyzer.cs
+  T066:
+    files:
+    - src/ComponentIntelligence/Enrichment/EnrichmentRunLogger.cs
+    - tests/ComponentIntelligence.Tests/Enrichment/TaskCoverage/T066Tests.cs
+    artifact_path: src/ComponentIntelligence/Enrichment/EnrichmentRunLogger.cs
+  T067:
+    files:
+    - src/ComponentIntelligence/Cache/DocumentDownloader.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T067Tests.cs
+    artifact_path: src/ComponentIntelligence/Cache/DocumentDownloader.cs
+  T068:
+    files:
+    - src/ComponentIntelligence/Cache/HashService.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T068Tests.cs
+    artifact_path: src/ComponentIntelligence/Cache/HashService.cs
+  T069:
+    files:
+    - src/ComponentIntelligence/Cache/CacheMetadata.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T069Tests.cs
+    artifact_path: src/ComponentIntelligence/Cache/CacheMetadata.cs
+  T070:
+    files:
+    - src/ComponentIntelligence/Extraction/PdfTextExtractor.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T070Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/PdfTextExtractor.cs
+  T071:
+    files:
+    - tests/ComponentIntelligence.Tests/Extraction/DatasheetFixtureTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Extraction/DatasheetFixtureTests.cs
+  T072:
+    files:
+    - src/ComponentIntelligence/Extraction/DocumentEvidenceBuilder.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T072Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/DocumentEvidenceBuilder.cs
+  T073:
+    files:
+    - src/ComponentIntelligence/Extraction/SpecificationDictionary.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T073Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/SpecificationDictionary.cs
+  T074:
+    files:
+    - src/ComponentIntelligence/Extraction/VoltageRawParser.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T074Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/VoltageRawParser.cs
+  T075:
+    files:
+    - src/ComponentIntelligence/Extraction/CurrentRawParser.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T075Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/CurrentRawParser.cs
+  T076:
+    files:
+    - src/ComponentIntelligence/Extraction/OutputTypeParser.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T076Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/OutputTypeParser.cs
+  T077:
+    files:
+    - src/ComponentIntelligence/Extraction/ProtocolParser.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T077Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/ProtocolParser.cs
+  T078:
+    files:
+    - src/ComponentIntelligence/Extraction/ConnectorParser.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T078Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/ConnectorParser.cs
+  T079:
+    files:
+    - src/ComponentIntelligence/Extraction/PinTableParser.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T079Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/PinTableParser.cs
+  T080:
+    files:
+    - src/ComponentIntelligence/Extraction/PortParser.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T080Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/PortParser.cs
+  T081:
+    files:
+    - src/ComponentIntelligence/Extraction/SpecificationParser.cs
+    - tests/ComponentIntelligence.Tests/Extraction/TaskCoverage/T081Tests.cs
+    artifact_path: src/ComponentIntelligence/Extraction/SpecificationParser.cs
+  T082:
+    files:
+    - src/ComponentIntelligence/Normalization/UnitNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T082Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/UnitNormalizer.cs
+  T083:
+    files:
+    - src/ComponentIntelligence/Normalization/VoltageNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T083Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/VoltageNormalizer.cs
+  T084:
+    files:
+    - src/ComponentIntelligence/Normalization/CurrentNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T084Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/CurrentNormalizer.cs
+  T085:
+    files:
+    - src/ComponentIntelligence/Normalization/SignalNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T085Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/SignalNormalizer.cs
+  T086:
+    files:
+    - src/ComponentIntelligence/Normalization/ProtocolNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T086Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/ProtocolNormalizer.cs
+  T087:
+    files:
+    - src/ComponentIntelligence/Normalization/ConnectorNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T087Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/ConnectorNormalizer.cs
+  T088:
+    files:
+    - src/ComponentIntelligence/Normalization/PinNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T088Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/PinNormalizer.cs
+  T089:
+    files:
+    - src/ComponentIntelligence/Normalization/PortNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T089Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/PortNormalizer.cs
+  T090:
+    files:
+    - src/ComponentIntelligence/Normalization/CategoryNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T090Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/CategoryNormalizer.cs
+  T091:
+    files:
+    - src/ComponentIntelligence/Normalization/ComponentNormalizer.cs
+    - tests/ComponentIntelligence.Tests/Normalization/TaskCoverage/T091Tests.cs
+    artifact_path: src/ComponentIntelligence/Normalization/ComponentNormalizer.cs
+  T092:
+    files:
+    - src/ComponentIntelligence/Verification/SourceAuthority.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T092Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/SourceAuthority.cs
+  T093:
+    files:
+    - src/ComponentIntelligence/Verification/FieldEvidence.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T093Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/FieldEvidence.cs
+  T094:
+    files:
+    - src/ComponentIntelligence/Verification/FieldComparator.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T094Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/FieldComparator.cs
+  T095:
+    files:
+    - src/ComponentIntelligence/Verification/ConflictDetector.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T095Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/ConflictDetector.cs
+  T096:
+    files:
+    - src/ComponentIntelligence/Verification/VerificationStatusDecision.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T096Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/VerificationStatusDecision.cs
+  T097:
+    files:
+    - src/ComponentIntelligence/Verification/CompletenessCalculator.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T097Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/CompletenessCalculator.cs
+  T098:
+    files:
+    - src/ComponentIntelligence/Verification/ConfidenceCalculator.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T098Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/ConfidenceCalculator.cs
+  T099:
+    files:
+    - src/ComponentIntelligence/Verification/WiringReadinessEvaluator.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T099Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/WiringReadinessEvaluator.cs
+  T100:
+    files:
+    - src/ComponentIntelligence/Verification/TopologyReadinessEvaluator.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T100Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/TopologyReadinessEvaluator.cs
+  T101:
+    files:
+    - src/ComponentIntelligence/Verification/ValidationReadinessEvaluator.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T101Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/ValidationReadinessEvaluator.cs
+  T102:
+    files:
+    - src/ComponentIntelligence/Verification/DrawingReadinessEvaluator.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T102Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/DrawingReadinessEvaluator.cs
+  T103:
+    files:
+    - src/ComponentIntelligence/Verification/VerificationEngine.cs
+    - tests/ComponentIntelligence.Tests/Verification/TaskCoverage/T103Tests.cs
+    artifact_path: src/ComponentIntelligence/Verification/VerificationEngine.cs
+  T104:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentIrBuilder.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T104Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentIrBuilder.cs
+  T105:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T105Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T106:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T106Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T107:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T107Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T108:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T108Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T109:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T109Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T110:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T110Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T111:
+    files:
+    - src/ComponentIntelligence/Repository/ComponentRepository.cs
+    - tests/ComponentIntelligence.Tests/Repository/TaskCoverage/T111Tests.cs
+    artifact_path: src/ComponentIntelligence/Repository/ComponentRepository.cs
+  T112:
+    files:
+    - src/ComponentIntelligence/Cache/CacheDirectoryManager.cs
+    - tests/ComponentIntelligence.Tests/Cache/TaskCoverage/T112Tests.cs
+    artifact_path: src/ComponentIntelligence/Cache/CacheDirectoryManager.cs
+  T113:
+    files:
+    - src/ComponentIntelligence/Cache/CacheAccessTracker.cs
+    - tests/ComponentIntelligence.Tests/Cache/TaskCoverage/T113Tests.cs
+    artifact_path: src/ComponentIntelligence/Cache/CacheAccessTracker.cs
+  T114:
+    files:
+    - src/ComponentIntelligence/Cache/CacheSizeCalculator.cs
+    - tests/ComponentIntelligence.Tests/Cache/TaskCoverage/T114Tests.cs
+    artifact_path: src/ComponentIntelligence/Cache/CacheSizeCalculator.cs
+  T115:
+    files:
+    - src/ComponentIntelligence/Cache/LruSelector.cs
+    - tests/ComponentIntelligence.Tests/Cache/TaskCoverage/T115Tests.cs
+    artifact_path: src/ComponentIntelligence/Cache/LruSelector.cs
+  T116:
+    files:
+    - src/ComponentIntelligence/Cache/CacheEviction.cs
+    - tests/ComponentIntelligence.Tests/Cache/TaskCoverage/T116Tests.cs
+    artifact_path: src/ComponentIntelligence/Cache/CacheEviction.cs
+  T117:
+    files:
+    - tests/ComponentIntelligence.Tests/Cache/CacheManagerTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/Cache/CacheManagerTests.cs
+  T118:
+    files:
+    - tests/ComponentIntelligence.Tests/EndToEnd/OfflineEndToEndTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/EndToEnd/OfflineEndToEndTests.cs
+  T119:
+    files:
+    - tests/ComponentIntelligence.Tests/EndToEnd/IfmO5D100EndToEndTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/EndToEnd/IfmO5D100EndToEndTests.cs
+  T120:
+    files:
+    - tests/ComponentIntelligence.Tests/EndToEnd/ExistingComponentReuseTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/EndToEnd/ExistingComponentReuseTests.cs
+  T121:
+    files:
+    - tests/ComponentIntelligence.Tests/EndToEnd/MissingModelEndToEndTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/EndToEnd/MissingModelEndToEndTests.cs
+  T122:
+    files:
+    - tests/ComponentIntelligence.Tests/EndToEnd/AmbiguousCandidateEndToEndTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/EndToEnd/AmbiguousCandidateEndToEndTests.cs
+  T123:
+    files:
+    - tests/ComponentIntelligence.Tests/EndToEnd/ConflictEndToEndTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/EndToEnd/ConflictEndToEndTests.cs
+  T124:
+    files:
+    - tests/ComponentIntelligence.Tests/EndToEnd/DatabaseReloadEndToEndTests.cs
+    artifact_path: tests/ComponentIntelligence.Tests/EndToEnd/DatabaseReloadEndToEndTests.cs
+  T125:
+    files:
+    - tests/ComponentIntelligence.Tests/EndToEnd/V01RegressionSuite.cs
+    artifact_path: tests/ComponentIntelligence.Tests/EndToEnd/V01RegressionSuite.cs

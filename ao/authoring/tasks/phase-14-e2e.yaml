@@ -1,0 +1,715 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-14
+  name: End-to-End（端到端）
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T118
+  version: 1
+  title: Offline E2E Fixture
+  objective: 完成「Offline E2E Fixture」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不新增 v0.1 範圍外功能。
+  - 不得為了通過測試而放寬 Contract。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T117
+    required_artifacts:
+    - T117-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T117/T117-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/
+    - tests/ComponentIntelligence.Tests/EndToEnd/
+    - tests/fixtures/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'Excel → Fake/Fixture Source → Raw → Normalize → Verify → SQLite → IR。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T118-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Offline E2E Fixture」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T119
+  version: 1
+  title: IFM O5D100 E2E
+  objective: 完成「IFM O5D100 E2E」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不新增 v0.1 範圍外功能。
+  - 不得為了通過測試而放寬 Contract。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T118
+    required_artifacts:
+    - T118-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T118/T118-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '真正樣本完整跑通。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T119-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「IFM O5D100 E2E」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T120
+  version: 1
+  title: Existing Component Reuse
+  objective: 完成「Existing Component Reuse」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不新增 v0.1 範圍外功能。
+  - 不得為了通過測試而放寬 Contract。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T119
+    required_artifacts:
+    - T119-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T119/T119-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '第二次：
+
+      Local HIT → 不重複走完整下載。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T120-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Existing Component Reuse」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T121
+  version: 1
+  title: Missing Model Case
+  objective: 完成「Missing Model Case」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不新增 v0.1 範圍外功能。
+  - 不得為了通過測試而放寬 Contract。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T120
+    required_artifacts:
+    - T120-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T120/T120-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'BOM 可匯入；
+
+      Resolver → WAITING_FOR_INPUT。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T121-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Missing Model Case」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T122
+  version: 1
+  title: Ambiguous Case
+  objective: 完成「Ambiguous Case」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不新增 v0.1 範圍外功能。
+  - 不得為了通過測試而放寬 Contract。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T121
+    required_artifacts:
+    - T121-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T121/T121-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '多個強候選：
+
+      不得自動亂選。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T122-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Ambiguous Case」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T123
+  version: 1
+  title: Conflict Case
+  objective: 完成「Conflict Case」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不新增 v0.1 範圍外功能。
+  - 不得為了通過測試而放寬 Contract。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T122
+    required_artifacts:
+    - T122-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T122/T122-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '權威來源衝突：
+
+      輸出 CONFLICT + Evidence。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T123-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Conflict Case」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T124
+  version: 1
+  title: Database Reload
+  objective: 完成「Database Reload」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不新增 v0.1 範圍外功能。
+  - 不得為了通過測試而放寬 Contract。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T123
+    required_artifacts:
+    - T123-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T123/T123-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '程式重新啟動後：
+
+      資料仍在；
+
+      IR 可重建。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T124-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Database Reload」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T125
+  version: 1
+  title: Final Regression Suite
+  objective: 完成「Final Regression Suite」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不新增 v0.1 範圍外功能。
+  - 不得為了通過測試而放寬 Contract。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T124
+    required_artifacts:
+    - T124-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T124/T124-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '所有主要模組回歸測試。
+
+
+      FINAL GATE：
+
+
+      ```text
+
+      Excel:
+
+      IFM | O5D100 | 4 | 5
+
+
+      → Import
+
+      → Spare = 1
+
+      → Resolve
+
+      → Official URL
+
+      → Datasheet
+
+      → Voltage
+
+      → Output
+
+      → Connector
+
+      → Pin
+
+      → Raw Data
+
+      → Evidence
+
+      → Normalize
+
+      → Verify
+
+      → Component IR
+
+      → SQLite
+
+      → Reload
+
+      → Local Reuse
+
+      ```
+
+
+      ---
+
+
+      # 19. Worker Model（執行模型） Task Packet Template（任務包模板）
+
+
+      ```text
+
+      TASK
+
+      T0XX — <名稱>
+
+
+      GOAL
+
+      只完成 <單一功能>。
+
+
+      CONTEXT
+
+      本 Task 所需最小上下文。
+
+
+      INPUT CONTRACT
+
+      列出可以依賴的已完成資料結構／介面。
+
+
+      OUTPUT CONTRACT
+
+      列出本 Task 必須新增／修改的 public API。
+
+
+      ALLOWED FILES
+
+      只允許：
+
+      - ...
+
+      - ...
+
+
+      FORBIDDEN
+
+      - 不得執行下一 Task
+
+      - 不得修改 Contract 除非本 Task 明確要求
+
+      - 不得修改其他模組
+
+      - 不得新增未要求的第三方套件
+
+      - 不得刪除／放寬測試
+
+      - 不得用 AI 猜工程資料
+
+
+      ACCEPTANCE TESTS
+
+      1. ...
+
+      2. ...
+
+      3. ...
+
+
+      BUILD
+
+      指定 build command。
+
+
+      TEST
+
+      指定 test command。
+
+
+      STOP CONDITION
+
+      上述 Build + Tests PASS 後立即停止並回報。
+
+      ```
+
+
+      ---
+
+
+      # 20. Reviewer（審查模型）規則
+
+
+      建議：
+
+      - Selected Worker Model（由 Skill 選擇）：Implementation（實作）
+
+      - Selected Reviewer Model（由 Skill 選擇）：Review（審查）
+
+
+      Reviewer 只檢查：
+
+      - Contract compliance（契約符合）
+
+      - Scope compliance（範圍符合）
+
+      - Tests
+
+      - obvious bugs
+
+      - hard-coded assumptions
+
+      - accidental cross-module changes
+
+
+      Reviewer 不得自行做大規模重構。
+
+
+      ---
+
+
+      # 21. AI Runtime Boundary（執行期 AI 邊界）
+
+
+      AI 只處理：
+
+      - 複雜 PDF
+
+      - 圖片 Pinout
+
+      - 歧義候選
+
+      - 非結構化分類
+
+
+      AI 輸出：
+
+      `INFERRED`
+
+
+      除非後續由可信 Evidence 證明，否則不得 `VERIFIED`。
+
+
+      ---
+
+
+      # 22. 最終開發哲學
+
+
+      ```text
+
+      Contract 先固定
+
+      ↓
+
+      小 Task 實作
+
+      ↓
+
+      Compiler
+
+      ↓
+
+      Unit Test
+
+      ↓
+
+      Reviewer
+
+      ↓
+
+      Gate
+
+      ↓
+
+      下一 Task
+
+      ```
+
+
+      而不是：
+
+
+      ```text
+
+      把整份規格丟給 Worker Model（執行模型）
+
+      ↓
+
+      叫它一次做完整系統
+
+      ```
+
+
+      系統架構不由 Worker Model（執行模型） 即興決定；Worker Model（執行模型） 的工作是忠實完成已定義的小型 Implementation Task（實作任務）。'
+  outputs:
+    artifacts:
+    - id: T125-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Final Regression Suite」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

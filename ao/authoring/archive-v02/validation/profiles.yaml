@@ -1,0 +1,14 @@
+schema_version: '1.0'
+profiles:
+  dotnet_build:
+    type: command
+    command: dotnet build
+    timeout_seconds: 600
+    success_exit_codes:
+    - 0
+  dotnet_test_all:
+    type: command
+    command: dotnet test
+    timeout_seconds: 900
+    success_exit_codes:
+    - 0

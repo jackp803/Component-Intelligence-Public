@@ -1,0 +1,890 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-02
+  name: SQLite Repository
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T017
+  version: 1
+  title: SQLite Connection Factory
+  objective: 完成「SQLite Connection Factory」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T016
+    required_artifacts:
+    - T016-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T016/T016-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Repository/
+    - tests/ComponentIntelligence.Tests/Repository/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'MUST：
+
+      - open database
+
+      - create file if missing
+
+      - connection string centralized
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T017-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「SQLite Connection Factory」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T018
+  version: 1
+  title: DatabaseBootstrap
+  objective: 完成「DatabaseBootstrap」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T017
+    required_artifacts:
+    - T017-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T017/T017-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    functions:
+    - Task InitializeAsync(CancellationToken ct);
+    spec_excerpt: 'FUNCTION：
+
+
+      ```csharp
+
+      Task InitializeAsync(CancellationToken ct);
+
+      ```
+
+
+      MUST：
+
+      - idempotent
+
+      - repeated run safe
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T018-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「DatabaseBootstrap」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T019
+  version: 1
+  title: Components Schema
+  objective: 完成「Components Schema」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T018
+    required_artifacts:
+    - T018-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T018/T018-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_fields:
+    - id
+    - manufacturer
+    - official_model
+    - mpn
+    - product_name
+    - category
+    - subcategory
+    - identity_status
+    - enrichment_status
+    - verification_status
+    - created_at
+    - updated_at
+    - last_verified_at
+    spec_excerpt: 'TABLE：
+
+      components
+
+
+      FIELDS：
+
+      - id
+
+      - manufacturer
+
+      - official_model
+
+      - mpn
+
+      - product_name
+
+      - category
+
+      - subcategory
+
+      - identity_status
+
+      - enrichment_status
+
+      - verification_status
+
+      - created_at
+
+      - updated_at
+
+      - last_verified_at
+
+
+      UNIQUE：
+
+      manufacturer + official_model
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T019-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：id
+  - id: AC-002
+    type: deterministic
+    statement: 完成並可驗證：manufacturer
+  - id: AC-003
+    type: deterministic
+    statement: 完成並可驗證：official_model
+  - id: AC-004
+    type: deterministic
+    statement: 完成並可驗證：mpn
+  - id: AC-005
+    type: deterministic
+    statement: 完成並可驗證：product_name
+  - id: AC-006
+    type: deterministic
+    statement: 完成並可驗證：category
+  - id: AC-007
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T020
+  version: 1
+  title: Source / Document Schema
+  objective: 完成「Source / Document Schema」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T019
+    required_artifacts:
+    - T019-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T019/T019-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'TABLE：
+
+      - component_sources
+
+      - component_documents
+
+
+      MUST：
+
+      保存 source authority / urls / hashes / timestamps。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T020-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Source / Document Schema」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T021
+  version: 1
+  title: Raw Specs Schema
+  objective: 完成「Raw Specs Schema」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T020
+    required_artifacts:
+    - T020-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T020/T020-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'TABLE：
+
+      component_raw_specs
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T021-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Raw Specs Schema」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T022
+  version: 1
+  title: Normalized Specs Schema
+  objective: 完成「Normalized Specs Schema」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T021
+    required_artifacts:
+    - T021-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T021/T021-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'TABLE：
+
+      component_normalized_specs
+
+
+      支援：
+
+      - text value
+
+      - numeric value
+
+      - unit
+
+      - status
+
+      - source id
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T022-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Normalized Specs Schema」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T023
+  version: 1
+  title: Port / Pin Schema
+  objective: 完成「Port / Pin Schema」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T022
+    required_artifacts:
+    - T022-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T022/T022-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'TABLE：
+
+      - component_ports
+
+      - component_pins
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T023-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Port / Pin Schema」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T024
+  version: 1
+  title: Run Log Schema
+  objective: 完成「Run Log Schema」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T023
+    required_artifacts:
+    - T023-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T023/T023-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'TABLE：
+
+      - resolution_runs
+
+      - enrichment_runs
+
+      - verification_results
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T024-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Run Log Schema」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T025
+  version: 1
+  title: SaveComponentAsync
+  objective: 完成「SaveComponentAsync」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T024
+    required_artifacts:
+    - T024-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T024/T024-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'MUST：
+
+      新增 component。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T025-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「SaveComponentAsync」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T026
+  version: 1
+  title: GetByIdAsync
+  objective: 完成「GetByIdAsync」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T025
+    required_artifacts:
+    - T025-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T025/T025-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'MUST：
+
+      不存在回 null，不丟假資料。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T026-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「GetByIdAsync」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T027
+  version: 1
+  title: FindByIdentityAsync
+  objective: 完成「FindByIdentityAsync」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T026
+    required_artifacts:
+    - T026-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T026/T026-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'INPUT：
+
+      manufacturer + model
+
+
+      MUST：
+
+      exact identity lookup。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T027-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「FindByIdentityAsync」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T028
+  version: 1
+  title: UpdateComponentAsync
+  objective: 完成「UpdateComponentAsync」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T027
+    required_artifacts:
+    - T027-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T027/T027-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'MUST：
+
+      更新允許欄位。
+
+      不得更換 primary identity 而不留紀錄。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T028-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「UpdateComponentAsync」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T029
+  version: 1
+  title: Repository CRUD Tests
+  objective: 完成「Repository CRUD Tests」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Resolver 或網站爬取。
+  - 不修改 BOM 規格。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T028
+    required_artifacts:
+    - T028-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T028/T028-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'PHASE 2 GATE：
+
+      Save / Read / Find / Update 全 PASS。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T029-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Repository CRUD Tests」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

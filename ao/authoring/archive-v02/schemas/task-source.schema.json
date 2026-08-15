@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AO Task Source Schema 1.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "tasks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "phase": {
+      "type": "object"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    }
+  },
+  "$defs": {
+    "dependency": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "required": [
+            "task_id"
+          ],
+          "properties": {
+            "task_id": {
+              "type": "string",
+              "pattern": "^T[0-9]{3}$"
+            },
+            "required_artifacts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "task": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "title",
+        "objective",
+        "dependencies",
+        "acceptance",
+        "validation",
+        "side_effects",
+        "stop_condition"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^T[0-9]{3}$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "non_goals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          }
+        },
+        "inputs": {
+          "type": "object"
+        },
+        "source_of_truth": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "execution_scope": {
+          "type": "object"
+        },
+        "implementation": {
+          "type": "object"
+        },
+        "outputs": {
+          "type": "object"
+        },
+        "acceptance": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "statement"
+            ]
+          }
+        },
+        "validation": {
+          "type": "object",
+          "required": [
+            "profiles",
+            "all_must_pass"
+          ]
+        },
+        "retry": {
+          "type": "object"
+        },
+        "side_effects": {
+          "type": "object",
+          "required": [
+            "level"
+          ]
+        },
+        "priority": {
+          "type": "string"
+        },
+        "stop_condition": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

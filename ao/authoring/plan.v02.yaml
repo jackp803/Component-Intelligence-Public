@@ -1,0 +1,36 @@
+schema_version: '1.0'
+plan:
+  id: COMPONENT-INTELLIGENCE-V01
+  project_id: component-intelligence
+  name: Component Intelligence System Development Plan（元件智慧資料系統開發計畫）— Model-Agnostic
+  version: 2
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+policy:
+  execution_mode: sequential
+  max_workers: 1
+  stop_on_final_failure: true
+  stop_on_human_gate: true
+  require_artifact_dependencies: true
+  disallow_model_pinning: true
+  worker_context_mode: current_task_plus_required_artifacts_and_relevant_sources
+  actor_selection: external_skill_or_runtime
+  task_defines_work_not_actor: true
+task_sources:
+- tasks/phase-00-foundation.yaml
+- tasks/phase-01-bom.yaml
+- tasks/phase-02-sqlite.yaml
+- tasks/phase-03-resolver-local.yaml
+- tasks/phase-04-source-architecture.yaml
+- tasks/phase-05-network.yaml
+- tasks/phase-06-ifm-adapter.yaml
+- tasks/phase-07-enricher.yaml
+- tasks/phase-08-document-pdf.yaml
+- tasks/phase-09-extraction.yaml
+- tasks/phase-10-normalizer.yaml
+- tasks/phase-11-verification.yaml
+- tasks/phase-12-ir-persistence.yaml
+- tasks/phase-13-cache.yaml
+- tasks/phase-14-e2e.yaml
+validation_profiles_source: validation/profiles.yaml

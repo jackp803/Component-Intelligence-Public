@@ -1,0 +1,74 @@
+name: Document Real-world Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - gpt/electrical-design-core
+    paths:
+      - 'src/ComponentIntelligence/Extraction/**'
+      - 'src/ComponentIntelligence/ComponentIntelligence.csproj'
+      - 'tests/ComponentIntelligence.Tests/Extraction/RealWorldPdfMarkdownSmokeTests.cs'
+      - '.github/workflows/document-realworld-smoke.yml'
+
+jobs:
+  pdf-markdown-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Download diverse public manufacturer PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/component-intelligence-pdfs"
+          UA='Mozilla/5.0 ComponentIntelligence/1.0 PDF-structure-smoke'
+
+          curl --fail --location --retry 3 --user-agent "$UA" \
+            --output "$RUNNER_TEMP/component-intelligence-pdfs/espressif-esp32-s3.pdf" \
+            'https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf'
+
+          curl --fail --location --retry 3 --user-agent "$UA" \
+            --output "$RUNNER_TEMP/component-intelligence-pdfs/arduino-uno-r4-minima.pdf" \
+            'https://docs.arduino.cc/resources/datasheets/ABX00080-datasheet.pdf'
+
+          curl --fail --location --retry 3 --user-agent "$UA" \
+            --output "$RUNNER_TEMP/component-intelligence-pdfs/ti-tps62160.pdf" \
+            'https://www.ti.com/lit/ds/symlink/tps62160.pdf'
+
+          for pdf in "$RUNNER_TEMP/component-intelligence-pdfs"/*.pdf; do
+            test "$(head -c 4 "$pdf")" = '%PDF'
+            ls -lh "$pdf"
+          done
+
+      - name: Restore core test graph only
+        run: dotnet restore tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj
+
+      - name: Run real-world PDF Markdown smoke test
+        env:
+          COMPONENT_INTELLIGENCE_REAL_PDF_DIR: ${{ runner.temp }}/component-intelligence-pdfs
+          COMPONENT_INTELLIGENCE_REAL_PDF_REPORT: ${{ runner.temp }}/document-realworld-report.json
+        run: dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~RealWorldPdfMarkdownSmokeTests --logger "console;verbosity=normal"
+
+      - name: Show extraction report
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/document-realworld-report.json" ]; then
+            cat "$RUNNER_TEMP/document-realworld-report.json"
+          else
+            echo 'No report generated.'
+          fi
+
+      - name: Upload extraction report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: document-realworld-smoke-report
+          path: ${{ runner.temp }}/document-realworld-report.json
+          if-no-files-found: warn

@@ -1,0 +1,266 @@
+using ComponentIntelligence.Contracts;
+using ComponentIntelligence.Electrical.Domain;
+using ContractPort = ComponentIntelligence.Contracts.ComponentPort;
+using ContractPin = ComponentIntelligence.Contracts.ComponentPin;
+using DomainPort = ComponentIntelligence.Electrical.Domain.ComponentPort;
+using DomainPin = ComponentIntelligence.Electrical.Domain.ComponentPin;
+
+namespace ComponentIntelligence.Electrical.Bridging;
+
+public sealed class ComponentProjectBridge
+{
+    public ComponentInstance CreateInstance(
+        ComponentIR source,
+        string componentInstanceId,
+        string? referenceDesignator = null,
+        string? equipmentTag = null,
+        string? typeKey = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentException.ThrowIfNullOrWhiteSpace(componentInstanceId);
+
+        var instance = new ComponentInstance
+        {
+            ComponentInstanceId = componentInstanceId,
+            ComponentDefinitionId = source.Identity.ComponentId,
+            TypeKey = FirstNonBlank(typeKey, source.Classification.Subcategory, source.Classification.Category, "COMPONENT")!,
+            ReferenceDesignator = NullIfBlank(referenceDesignator),
+            ReferenceSource = string.IsNullOrWhiteSpace(referenceDesignator) ? ReferenceSource.AutoAssigned : ReferenceSource.Manual,
+            ReferenceLocked = !string.IsNullOrWhiteSpace(referenceDesignator),
+            EquipmentTag = NullIfBlank(equipmentTag),
+            DisplayName = $"{source.Identity.Manufacturer} {source.Identity.Model}".Trim(),
+            ResponsibilityScope = ResponsibilityScope.Unknown
+        };
+
+        foreach (var sourcePort in source.Ports)
+            instance.Ports.Add(MapPort(sourcePort, source, componentInstanceId));
+
+        if (source.Pins.Count > 0)
+        {
+            DomainPort pinTarget;
+            if (instance.Ports.Count == 1)
+            {
+                pinTarget = instance.Ports[0];
+            }
+            else
+            {
+                pinTarget = new DomainPort
+                {
+                    PortId = $"{componentInstanceId}:port:unassigned",
+                    Name = instance.Ports.Count == 0 ? "PORT-1" : "UNASSIGNED-PINS",
+                    Connector = instance.Ports.Count == 0 ? MapRootConnector(source, componentInstanceId) : null
+                };
+                if (instance.Ports.Count > 1)
+                    pinTarget.Capabilities.Add("NEEDS_PORT_MAPPING");
+                instance.Ports.Add(pinTarget);
+            }
+
+            foreach (var sourcePin in source.Pins)
+                pinTarget.Pins.Add(MapPin(sourcePin, source, componentInstanceId));
+        }
+
+        return instance;
+    }
+
+    private static DomainPort MapPort(ContractPort sourcePort, ComponentIR source, string instanceId)
+    {
+        var portId = string.IsNullOrWhiteSpace(sourcePort.PortId)
+            ? $"{instanceId}:port:{Guid.NewGuid():N}"
+            : $"{instanceId}:port:{Sanitize(sourcePort.PortId)}";
+
+        var connectorFamily = FirstNonBlank(sourcePort.ConnectorFamily, source.Connector.Family);
+        var connector = string.IsNullOrWhiteSpace(connectorFamily)
+            ? null
+            : new ConnectorDefinition
+            {
+                ConnectorId = $"{portId}:connector",
+                Family = connectorFamily!,
+                Coding = source.Connector.Coding,
+                PinCount = source.Connector.Pins,
+                Gender = ConnectorGender.Unknown,
+                MountType = ConnectorMountType.Device
+            };
+
+        var port = new DomainPort
+        {
+            PortId = portId,
+            // PortId is the physical/logical connection identity (ETH1, ETH2, PWR...). PortType and
+            // Protocol describe what the port is; using them as the visible name makes repeated ports
+            // indistinguishable on the topology canvas.
+            Name = FirstNonBlank(sourcePort.PortId, sourcePort.PortType, "PORT")!,
+            Protocol = NormalizeProtocol(FirstNonBlank(sourcePort.Protocol, sourcePort.SignalType)),
+            Connector = connector
+        };
+        if (!string.IsNullOrWhiteSpace(sourcePort.SignalType)) port.Capabilities.Add(sourcePort.SignalType!);
+        if (!string.IsNullOrWhiteSpace(sourcePort.Direction)) port.Capabilities.Add($"DIRECTION:{sourcePort.Direction}");
+        if (!string.IsNullOrWhiteSpace(sourcePort.VoltageDomain)) port.Capabilities.Add($"VOLTAGE_DOMAIN:{sourcePort.VoltageDomain}");
+        foreach (var allowed in sourcePort.AllowedConnections.Where(value => !string.IsNullOrWhiteSpace(value)))
+            port.Capabilities.Add($"ALLOWED:{allowed}");
+        return port;
+    }
+
+    private static ConnectorDefinition? MapRootConnector(ComponentIR source, string instanceId)
+    {
+        if (string.IsNullOrWhiteSpace(source.Connector.Family)) return null;
+        return new ConnectorDefinition
+        {
+            ConnectorId = $"{instanceId}:port:unassigned:connector",
+            Family = source.Connector.Family!,
+            Coding = source.Connector.Coding,
+            PinCount = source.Connector.Pins,
+            Gender = ConnectorGender.Unknown,
+            MountType = ConnectorMountType.Device
+        };
+    }
+
+    private static DomainPin MapPin(ContractPin sourcePin, ComponentIR source, string instanceId)
+    {
+        var raw = string.Join(' ', new[] { sourcePin.Function, sourcePin.SignalType, sourcePin.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        var layer = DetermineLayer(sourcePin.SignalType, sourcePin.Function);
+        return new DomainPin
+        {
+            PinId = $"{instanceId}:pin:{Sanitize(sourcePin.PinNumber)}",
+            PinNumber = sourcePin.PinNumber,
+            PinName = NullIfBlank(sourcePin.Description),
+            Function = NullIfBlank(sourcePin.Function),
+            Protocol = NormalizeProtocol(sourcePin.SignalType),
+            SignalStandardRaw = NullIfBlank(sourcePin.SignalType),
+            Layer = layer,
+            Status = DeterminePinStatus(sourcePin.Function),
+            GroundReferenceType = DetermineGroundReference(raw),
+            Power = layer == ElectricalLayer.Power ? BuildPowerCapability(sourcePin, source.Power) : null
+        };
+    }
+
+    private static PowerCapability? BuildPowerCapability(ContractPin pin, ComponentIntelligence.Contracts.ComponentPower sourcePower)
+    {
+        var voltage = MapVoltage(sourcePower.OperatingVoltage);
+        var role = DeterminePowerRole(pin.Direction);
+        var function = $"{pin.Function} {pin.Description}".ToUpperInvariant();
+        var isReturn = ContainsAny(function, "0V", "V-", "L-", "RETURN");
+        var isPositiveSupply = ContainsAny(function, "+24V", "+54V", "V+", "L+", "SUPPLY+", "POWER+") ||
+                               (!isReturn && ContainsAny(function, "SUPPLY", "POWER"));
+
+        if (isReturn && role == PowerRole.Unknown) role = PowerRole.Return;
+
+        double? requiredCurrent = null;
+        double? maxCurrent = null;
+        if (isPositiveSupply)
+        {
+            if (role == PowerRole.Source)
+            {
+                maxCurrent = ToDouble(sourcePower.MaximumCurrentAmp);
+            }
+            else
+            {
+                requiredCurrent = ToDouble(sourcePower.CurrentConsumptionAmp ?? sourcePower.MaximumCurrentAmp);
+            }
+        }
+
+        if (voltage is null && role == PowerRole.Unknown && !isReturn && !isPositiveSupply && requiredCurrent is null && maxCurrent is null)
+            return null;
+
+        return new PowerCapability
+        {
+            Role = role,
+            Polarity = isReturn ? Polarity.Return : isPositiveSupply ? Polarity.Positive : Polarity.Unknown,
+            Voltage = voltage,
+            RequiredCurrentAmp = requiredCurrent,
+            MaxCurrentAmp = maxCurrent
+        };
+    }
+
+    private static VoltageSpecification? MapVoltage(NormalizedVoltage? voltage)
+    {
+        if (voltage is null) return null;
+        var min = ToDouble(voltage.Min);
+        var max = ToDouble(voltage.Max);
+        double? nominal = min is double minValue && max is double maxValue && Math.Abs(minValue - maxValue) < 1e-9 ? minValue : null;
+        return new VoltageSpecification
+        {
+            Type = string.Equals(voltage.Type, "DC", StringComparison.OrdinalIgnoreCase)
+                ? VoltageType.Dc
+                : string.Equals(voltage.Type, "AC", StringComparison.OrdinalIgnoreCase) ? VoltageType.Ac : VoltageType.Unknown,
+            NominalVoltage = nominal,
+            MinVoltage = nominal is null ? min : null,
+            MaxVoltage = nominal is null ? max : null
+        };
+    }
+
+    private static PowerRole DeterminePowerRole(string? direction)
+    {
+        if (string.IsNullOrWhiteSpace(direction)) return PowerRole.Unknown;
+        var normalized = direction.Trim().ToUpperInvariant();
+        if (ContainsAny(normalized, "OUTPUT", "SOURCE", "OUT")) return PowerRole.Source;
+        if (ContainsAny(normalized, "INPUT", "SINK", "IN")) return PowerRole.Input;
+        return PowerRole.Unknown;
+    }
+
+    private static double? ToDouble(decimal? value) => value is decimal number ? (double)number : null;
+
+    private static ElectricalLayer DetermineLayer(string? signalType, string? function)
+    {
+        var text = $"{signalType} {function}".ToUpperInvariant();
+        if (ContainsAny(text, "RS485", "RS-485", "ETHERNET", "ETHERCAT", "IO-LINK", "IOLINK", "CAN", "PROFINET", "MODBUS")) return ElectricalLayer.Communication;
+        if (ContainsAny(text, "4-20MA", "4…20MA", "4..20MA", "0-10V", "ANALOG", "AI", "AO")) return ElectricalLayer.Analog;
+        if (ContainsAny(text, "DIGITAL", "DI", "DO", "PNP", "NPN")) return ElectricalLayer.Digital;
+        if (ContainsAny(text, "PE", "FE", "SHIELD", "CHASSIS", "SIGNAL GROUND", "SG")) return ElectricalLayer.Grounding;
+        if (ContainsAny(text, "+24V", "24V", "+54V", "54V", "0V", "V+", "V-", "L+", "L-", "POWER", "SUPPLY")) return ElectricalLayer.Power;
+        return ElectricalLayer.Unknown;
+    }
+
+    private static GroundReferenceType DetermineGroundReference(string raw)
+    {
+        var text = raw.ToUpperInvariant();
+        if (ContainsToken(text, "PE")) return GroundReferenceType.ProtectiveEarth;
+        if (ContainsToken(text, "FE")) return GroundReferenceType.FunctionalEarth;
+        if (text.Contains("CHASSIS", StringComparison.Ordinal)) return GroundReferenceType.Chassis;
+        if (text.Contains("SHIELD", StringComparison.Ordinal)) return GroundReferenceType.Shield;
+        if (ContainsToken(text, "SG") || text.Contains("SIGNAL GROUND", StringComparison.Ordinal)) return GroundReferenceType.SignalGround;
+        if (ContainsToken(text, "0V")) return GroundReferenceType.PowerReturn;
+        if (ContainsToken(text, "GND")) return GroundReferenceType.Unknown;
+        return GroundReferenceType.None;
+    }
+
+    private static PinStatus DeterminePinStatus(string? function)
+    {
+        var text = function?.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(text)) return PinStatus.Unknown;
+        if (text is "NC" or "N.C." or "NOT CONNECTED") return PinStatus.Nc;
+        if (text.Contains("RESERVED", StringComparison.Ordinal)) return PinStatus.Reserved;
+        if (text.Contains("OPTION", StringComparison.Ordinal)) return PinStatus.Optional;
+        return PinStatus.Normal;
+    }
+
+    private static string? NormalizeProtocol(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var normalized = value.Trim().Replace("_", string.Empty).Replace("-", string.Empty).Replace(" ", string.Empty).ToUpperInvariant();
+        if (normalized.Contains("RS485", StringComparison.Ordinal)) return "RS485";
+        if (normalized.Contains("ETHERCAT", StringComparison.Ordinal)) return "EtherCAT";
+        if (normalized.Contains("ETHERNET", StringComparison.Ordinal)) return "Ethernet";
+        if (normalized.Contains("IOLINK", StringComparison.Ordinal)) return "IO-Link";
+        if (normalized.Contains("PROFINET", StringComparison.Ordinal)) return "PROFINET";
+        if (normalized.Contains("MODBUS", StringComparison.Ordinal)) return "Modbus";
+        return null;
+    }
+
+    private static bool ContainsAny(string source, params string[] values) => values.Any(value => source.Contains(value, StringComparison.Ordinal));
+
+    private static bool ContainsToken(string source, string token)
+    {
+        var separators = new[] { ' ', '/', '\\', '-', '_', '+', ':', ';', ',', '(', ')', '[', ']' };
+        return source.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(part => string.Equals(part, token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string Sanitize(string value)
+    {
+        var chars = value.Trim().Select(character => char.IsLetterOrDigit(character) ? character : '-').ToArray();
+        return new string(chars).Trim('-').ToLowerInvariant();
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? FirstNonBlank(params string?[] values) => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
+}

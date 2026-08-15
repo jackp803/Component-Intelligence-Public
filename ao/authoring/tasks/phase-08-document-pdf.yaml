@@ -1,0 +1,374 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-08
+  name: Document / PDF
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T067
+  version: 1
+  title: DocumentDownloader
+  objective: 完成「DocumentDownloader」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做產品身分解析。
+  - PDF 擷取結果不得直接等同 VERIFIED。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T066
+    required_artifacts:
+    - T066-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T066/T066-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Extraction/
+    - src/ComponentIntelligence/Cache/
+    - tests/ComponentIntelligence.Tests/Extraction/
+    - tests/fixtures/documents/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '下載到 cache，支援 cancellation。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T067-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「DocumentDownloader」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T068
+  version: 1
+  title: SHA256 HashService
+  objective: 完成「SHA256 HashService」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做產品身分解析。
+  - PDF 擷取結果不得直接等同 VERIFIED。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T067
+    required_artifacts:
+    - T067-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T067/T067-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    functions:
+    - 檔案 → lowercase/consistent SHA-256 string。
+    spec_excerpt: 'FUNCTION：
+
+      檔案 → lowercase/consistent SHA-256 string。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T068-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「SHA256 HashService」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T069
+  version: 1
+  title: CacheMetadata
+  objective: 完成「CacheMetadata」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做產品身分解析。
+  - PDF 擷取結果不得直接等同 VERIFIED。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T068
+    required_artifacts:
+    - T068-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T068/T068-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '保存：
+
+      - URL
+
+      - local path
+
+      - hash
+
+      - size
+
+      - timestamps
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T069-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「CacheMetadata」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T070
+  version: 1
+  title: PdfTextExtractor
+  objective: 完成「PdfTextExtractor」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做產品身分解析。
+  - PDF 擷取結果不得直接等同 VERIFIED。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T069
+    required_artifacts:
+    - T069-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T069/T069-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'PdfPig。
+
+      回傳逐頁文字或可追蹤 page number。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T070-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「PdfTextExtractor」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T071
+  version: 1
+  title: Datasheet Fixture Test
+  objective: 完成「Datasheet Fixture Test」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做產品身分解析。
+  - PDF 擷取結果不得直接等同 VERIFIED。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T070
+    required_artifacts:
+    - T070-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T070/T070-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '使用固定 PDF Fixture。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T071-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Datasheet Fixture Test」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T072
+  version: 1
+  title: Document Evidence
+  objective: 完成「Document Evidence」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不做產品身分解析。
+  - PDF 擷取結果不得直接等同 VERIFIED。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T071
+    required_artifacts:
+    - T071-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T071/T071-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '將 PDF hash/page/method 寫進 Evidence。
+
+
+      PHASE 8 GATE：
+
+      可從 fixture PDF 取得可追蹤文字。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T072-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Document Evidence」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

@@ -1,0 +1,816 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-00
+  name: Foundation / Contracts（基礎／資料契約）
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T001
+  version: 1
+  title: 建立 ComponentIntelligence 專案骨架
+  objective: 建立主專案與測試專案目錄，不實作功能。
+  non_goals:
+  - 不得加入網路套件
+  - 不得建立真實 Resolver
+  - 不得建 SQLite schema
+  - 不實作網路功能。
+  - 不實作 AI。
+  - 不得自行執行下一個 Task。
+  dependencies: []
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/
+    - tests/ComponentIntelligence.Tests/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_items:
+    - ComponentIntelligence project
+    - ComponentIntelligence.Tests project
+    - 基本 folder layout
+    - 專案引用
+    - 初始 build
+    spec_excerpt: 'GOAL：
+
+      建立主專案與測試專案目錄，不實作功能。
+
+
+      MUST COMPLETE：
+
+      - ComponentIntelligence project
+
+      - ComponentIntelligence.Tests project
+
+      - 基本 folder layout
+
+      - 專案引用
+
+      - 初始 build
+
+
+      FORBIDDEN：
+
+      - 不得加入網路套件
+
+      - 不得建立真實 Resolver
+
+      - 不得建 SQLite schema
+
+
+      ACCEPTANCE：
+
+      - Solution build PASS
+
+      - Test project 可執行
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T001-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: Solution build PASS
+  - id: AC-002
+    type: deterministic
+    statement: Test project 可執行
+  - id: AC-003
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T002
+  version: 1
+  title: 建立核心 Status Enum（狀態列舉）
+  objective: 完成「建立核心 Status Enum（狀態列舉）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作網路功能。
+  - 不實作 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T001
+    required_artifacts:
+    - T001-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T001/T001-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_items:
+    - BomImportStatus
+    - ResolutionStatus
+    - MatchLevel
+    - EnrichmentStatus
+    - VerificationStatus
+    - ReadinessStatus
+    spec_excerpt: 'MUST COMPLETE：
+
+      - BomImportStatus
+
+      - ResolutionStatus
+
+      - MatchLevel
+
+      - EnrichmentStatus
+
+      - VerificationStatus
+
+      - ReadinessStatus
+
+
+      ACCEPTANCE：
+
+      - Enum serialization 測試
+
+      - 不得依賴外部模組
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T002-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: Enum serialization 測試
+  - id: AC-002
+    type: deterministic
+    statement: 不得依賴外部模組
+  - id: AC-003
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T003
+  version: 1
+  title: ComponentIdentity Contract（元件身分契約）
+  objective: 完成「ComponentIdentity Contract（元件身分契約）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作網路功能。
+  - 不實作 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T002
+    required_artifacts:
+    - T002-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T002/T002-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    functions:
+    - 資料結構可表示：
+    - raw manufacturer
+    - raw model
+    - normalized manufacturer
+    - normalized model
+    - search key
+    - official manufacturer
+    - official model
+    - mpn
+    - official url
+    required_items:
+    - ComponentIdentity
+    - ComponentIdentityQuery
+    spec_excerpt: 'MUST COMPLETE：
+
+      - ComponentIdentity
+
+      - ComponentIdentityQuery
+
+
+      FUNCTION：
+
+      資料結構可表示：
+
+      - raw manufacturer
+
+      - raw model
+
+      - normalized manufacturer
+
+      - normalized model
+
+      - search key
+
+      - official manufacturer
+
+      - official model
+
+      - mpn
+
+      - official url
+
+
+      ACCEPTANCE：
+
+      - 建構測試
+
+      - JSON serialization 測試
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T003-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 建構測試
+  - id: AC-002
+    type: deterministic
+    statement: JSON serialization 測試
+  - id: AC-003
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T004
+  version: 1
+  title: Resolution Contract（解析契約）
+  objective: 完成「Resolution Contract（解析契約）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作網路功能。
+  - 不實作 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T003
+    required_artifacts:
+    - T003-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T003/T003-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_items:
+    - ComponentCandidate
+    - ResolutionResult
+    - IdentityMatchResult
+    spec_excerpt: 'MUST COMPLETE：
+
+      - ComponentCandidate
+
+      - ResolutionResult
+
+      - IdentityMatchResult
+
+
+      ACCEPTANCE：
+
+      可表示：
+
+      - Exact
+
+      - Strong
+
+      - Ambiguous
+
+      - NotFound
+
+      - Conflict
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T004-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 可表示：
+  - id: AC-002
+    type: deterministic
+    statement: Exact
+  - id: AC-003
+    type: deterministic
+    statement: Strong
+  - id: AC-004
+    type: deterministic
+    statement: Ambiguous
+  - id: AC-005
+    type: deterministic
+    statement: NotFound
+  - id: AC-006
+    type: deterministic
+    statement: Conflict
+  - id: AC-007
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T005
+  version: 1
+  title: Evidence Contract（證據契約）
+  objective: 完成「Evidence Contract（證據契約）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作網路功能。
+  - 不實作 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T004
+    required_artifacts:
+    - T004-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T004/T004-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_items:
+    - Evidence
+    - ExtractionMethod
+    - ComponentSourceType
+    required_fields:
+    - source type/url
+    - document url/hash
+    - page
+    - extraction method
+    - raw value
+    - retrieved time
+    - verification status
+    spec_excerpt: 'MUST COMPLETE：
+
+      - Evidence
+
+      - ExtractionMethod
+
+      - ComponentSourceType
+
+
+      FIELDS：
+
+      - source type/url
+
+      - document url/hash
+
+      - page
+
+      - extraction method
+
+      - raw value
+
+      - retrieved time
+
+      - verification status
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T005-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：Evidence
+  - id: AC-002
+    type: deterministic
+    statement: 完成並可驗證：ExtractionMethod
+  - id: AC-003
+    type: deterministic
+    statement: 完成並可驗證：ComponentSourceType
+  - id: AC-004
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T006
+  version: 1
+  title: RawSpecification Contract（原始規格契約）
+  objective: 完成「RawSpecification Contract（原始規格契約）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作網路功能。
+  - 不實作 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T005
+    required_artifacts:
+    - T005-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T005/T005-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_items:
+    - RawSpecification
+    - ProposedKey
+    - Evidence list
+    spec_excerpt: 'MUST COMPLETE：
+
+      - RawSpecification
+
+      - ProposedKey
+
+      - Evidence list
+
+
+      ACCEPTANCE：
+
+      Raw value 必須可與 normalized value 分離。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T006-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: Raw value 必須可與 normalized value 分離。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T007
+  version: 1
+  title: Port / Pin Contract（連接埠／腳位契約）
+  objective: 完成「Port / Pin Contract（連接埠／腳位契約）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作網路功能。
+  - 不實作 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T006
+    required_artifacts:
+    - T006-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T006/T006-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_items:
+    - ComponentPort
+    - ComponentPin
+    - Pin 至少：
+    - number
+    - function
+    - signal type
+    - direction
+    - voltage domain
+    - description
+    - evidence
+    - Port 至少：
+    - id
+    - type
+    - connector
+    - signal type
+    - direction
+    - voltage domain
+    - protocol
+    - allowed connections
+    spec_excerpt: 'MUST COMPLETE：
+
+      - ComponentPort
+
+      - ComponentPin
+
+
+      Pin 至少：
+
+      - number
+
+      - function
+
+      - signal type
+
+      - direction
+
+      - voltage domain
+
+      - description
+
+      - evidence
+
+
+      Port 至少：
+
+      - id
+
+      - type
+
+      - connector
+
+      - signal type
+
+      - direction
+
+      - voltage domain
+
+      - protocol
+
+      - allowed connections
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T007-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：ComponentPort
+  - id: AC-002
+    type: deterministic
+    statement: 完成並可驗證：ComponentPin
+  - id: AC-003
+    type: deterministic
+    statement: 完成並可驗證：Pin 至少：
+  - id: AC-004
+    type: deterministic
+    statement: 完成並可驗證：number
+  - id: AC-005
+    type: deterministic
+    statement: 完成並可驗證：function
+  - id: AC-006
+    type: deterministic
+    statement: 完成並可驗證：signal type
+  - id: AC-007
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T008
+  version: 1
+  title: ComponentIR Skeleton（元件 IR 骨架）
+  objective: 完成「ComponentIR Skeleton（元件 IR 骨架）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不實作 Normalizer
+  - 不實作 DB
+  - 不實作網路功能。
+  - 不實作 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T007
+    required_artifacts:
+    - T007-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T007/T007-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_items:
+    - ComponentIR
+    - Identity
+    - Classification
+    - Power
+    - I/O
+    - Connector
+    - Ports
+    - Pins
+    - Assets
+    - Readiness
+    spec_excerpt: 'MUST COMPLETE：
+
+      - ComponentIR
+
+      - Identity
+
+      - Classification
+
+      - Power
+
+      - I/O
+
+      - Connector
+
+      - Ports
+
+      - Pins
+
+      - Assets
+
+      - Readiness
+
+
+      FORBIDDEN：
+
+      - 不實作 Normalizer
+
+      - 不實作 DB
+
+
+      PHASE 0 GATE：
+
+      - Build PASS
+
+      - Contract tests PASS
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T008-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：ComponentIR
+  - id: AC-002
+    type: deterministic
+    statement: 完成並可驗證：Identity
+  - id: AC-003
+    type: deterministic
+    statement: 完成並可驗證：Classification
+  - id: AC-004
+    type: deterministic
+    statement: 完成並可驗證：Power
+  - id: AC-005
+    type: deterministic
+    statement: 完成並可驗證：I/O
+  - id: AC-006
+    type: deterministic
+    statement: 完成並可驗證：Connector
+  - id: AC-007
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

@@ -1,0 +1,44 @@
+name: Component Intelligence CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: component-intelligence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-demo:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Enforce no-OpenCV production dependency
+        shell: pwsh
+        run: |
+          $matches = Get-ChildItem src -Recurse -File | Where-Object { $_.Extension -in '.cs', '.csproj', '.props', '.targets' } | Select-String -Pattern 'OpenCvSharp|PackageReference\s+Include="[^"]*OpenCV'
+          if ($matches) {
+            $matches | ForEach-Object { Write-Host $_ }
+            throw 'OpenCvSharp/OpenCV package or namespace references are forbidden in production source.'
+          }
+      - name: Restore
+        run: dotnet restore ComponentIntelligence.sln
+      - name: Build
+        run: dotnet build ComponentIntelligence.sln --configuration Release --no-restore
+      - name: Test
+        run: dotnet test ComponentIntelligence.sln --configuration Release --no-build
+      - name: Run deterministic MVP demo
+        run: dotnet run --project src/ComponentIntelligence.Cli/ComponentIntelligence.Cli.csproj --configuration Release --no-build -- demo --db artifacts/ci-mvp.db
+      - name: Publish Windows desktop x64
+        run: dotnet publish src/ComponentIntelligence.Desktop/ComponentIntelligence.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/desktop-win-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ComponentIntelligence-Desktop-win-x64
+          path: artifacts/desktop-win-x64
+          retention-days: 3

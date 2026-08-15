@@ -1,0 +1,3 @@
+PLAN VALID: 125 tasks, 125 artifacts
+TASK SOURCES: 15
+MODEL PINNING: none

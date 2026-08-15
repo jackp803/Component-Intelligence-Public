@@ -1,0 +1,684 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-01
+  name: BOM
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T009
+  version: 1
+  title: BomRow
+  objective: 完成「BomRow」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不查詢網路元件資料。
+  - 不建立工程規格補全。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T008
+    required_artifacts:
+    - T008-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T008/T008-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Bom/
+    - src/ComponentIntelligence/Contracts/
+    - tests/ComponentIntelligence.Tests/Bom/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    required_items:
+    - 五個使用者欄位
+    - raw manufacturer/model
+    - spare quantity
+    - import status
+    - validation flags
+    - raw row dictionary
+    spec_excerpt: 'MUST COMPLETE：
+
+      - 五個使用者欄位
+
+      - raw manufacturer/model
+
+      - spare quantity
+
+      - import status
+
+      - validation flags
+
+      - raw row dictionary
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T009-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：五個使用者欄位
+  - id: AC-002
+    type: deterministic
+    statement: 完成並可驗證：raw manufacturer/model
+  - id: AC-003
+    type: deterministic
+    statement: 完成並可驗證：spare quantity
+  - id: AC-004
+    type: deterministic
+    statement: 完成並可驗證：import status
+  - id: AC-005
+    type: deterministic
+    statement: 完成並可驗證：validation flags
+  - id: AC-006
+    type: deterministic
+    statement: 完成並可驗證：raw row dictionary
+  - id: AC-007
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T010
+  version: 1
+  title: Spare Quantity Calculator（備品計算）
+  objective: 完成「Spare Quantity Calculator（備品計算）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不查詢網路元件資料。
+  - 不建立工程規格補全。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T009
+    required_artifacts:
+    - T009-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T009/T009-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    functions:
+    - int? CalculateSpareQuantity(int? used, int? total);
+    rules:
+    - valid → total - used
+    - invalid/null → null
+    - 不修改原始數量
+    test_cases:
+    - 4/5 → 1
+    - 5/5 → 0
+    - 5/4 → null + invalid
+    - null → null
+    spec_excerpt: 'FUNCTION：
+
+
+      ```csharp
+
+      int? CalculateSpareQuantity(int? used, int? total);
+
+      ```
+
+
+      RULE：
+
+      - valid → total - used
+
+      - invalid/null → null
+
+      - 不修改原始數量
+
+
+      TEST：
+
+      - 4/5 → 1
+
+      - 5/5 → 0
+
+      - 5/4 → null + invalid
+
+      - null → null
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T010-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：4/5 → 1
+  - id: AC-002
+    type: deterministic
+    statement: 完成並可驗證：5/5 → 0
+  - id: AC-003
+    type: deterministic
+    statement: 完成並可驗證：5/4 → null + invalid
+  - id: AC-004
+    type: deterministic
+    statement: 完成並可驗證：null → null
+  - id: AC-005
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T011
+  version: 1
+  title: BomRowValidator（BOM 資料列驗證）
+  objective: 完成「BomRowValidator（BOM 資料列驗證）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不查詢網路元件資料。
+  - 不建立工程規格補全。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T010
+    required_artifacts:
+    - T010-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T010/T010-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    rules:
+    - Validation error 不等於拒絕匯入。
+    spec_excerpt: 'FLAGS：
+
+      - MISSING_MANUFACTURER
+
+      - MISSING_MODEL
+
+      - INVALID_USED_QUANTITY
+
+      - INVALID_TOTAL_QUANTITY
+
+      - TOTAL_LESS_THAN_USED
+
+
+      RULE：
+
+      Validation error 不等於拒絕匯入。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T011-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「BomRowValidator（BOM 資料列驗證）」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T012
+  version: 1
+  title: BomHeaderMapper（標題映射）
+  objective: 完成「BomHeaderMapper（標題映射）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不查詢網路元件資料。
+  - 不建立工程規格補全。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T011
+    required_artifacts:
+    - T011-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T011/T011-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '第一版支援正式 Header：
+
+      - Manufacturer
+
+      - Model / Part Number
+
+      - Used Quantity
+
+      - Total Quantity
+
+      - Notes
+
+
+      可選同義詞：
+
+      - 製造商
+
+      - 型號 / 料號
+
+      - 使用數量
+
+      - 總數
+
+      - 備註
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T012-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「BomHeaderMapper（標題映射）」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T013
+  version: 1
+  title: Excel Row Reader（Excel 資料列讀取）
+  objective: 完成「Excel Row Reader（Excel 資料列讀取）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不查詢網路元件資料。
+  - 不建立工程規格補全。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T012
+    required_artifacts:
+    - T012-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T012/T012-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    technology:
+    - ClosedXML
+    spec_excerpt: 'TECH：
+
+      ClosedXML
+
+
+      MUST：
+
+      - 讀取單列
+
+      - Trim
+
+      - Preserve raw values
+
+      - 不擅自修改型號符號
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T013-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Excel Row Reader（Excel 資料列讀取）」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T014
+  version: 1
+  title: BomImporter
+  objective: 完成「BomImporter」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不查詢網路元件資料。
+  - 不建立工程規格補全。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T013
+    required_artifacts:
+    - T013-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T013/T013-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    functions:
+    - Task<BomImportResult> ImportAsync(string filePath);
+    spec_excerpt: 'FUNCTION：
+
+
+      ```csharp
+
+      Task<BomImportResult> ImportAsync(string filePath);
+
+      ```
+
+
+      MUST：
+
+      - 找 `BOM` sheet
+
+      - detect headers
+
+      - ignore empty rows
+
+      - import non-empty rows
+
+      - apply validator
+
+      - preserve raw row
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T014-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「BomImporter」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T015
+  version: 1
+  title: BOM Template Generator（BOM 模板產生器）
+  objective: 完成「BOM Template Generator（BOM 模板產生器）」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不查詢網路元件資料。
+  - 不建立工程規格補全。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T014
+    required_artifacts:
+    - T014-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T014/T014-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'MUST：
+
+      建立 `.xlsx`：
+
+      - BOM Sheet
+
+      - 5 欄
+
+      - bold header
+
+      - light background
+
+      - freeze first row
+
+      - auto filter
+
+      - suggested widths
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T015-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「BOM Template Generator（BOM 模板產生器）」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T016
+  version: 1
+  title: BOM Integration Tests
+  objective: 完成「BOM Integration Tests」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不查詢網路元件資料。
+  - 不建立工程規格補全。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T015
+    required_artifacts:
+    - T015-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T015/T015-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    cases:
+    - 完整 row
+    - missing manufacturer
+    - missing model
+    - invalid quantity
+    - extra blank rows
+    - notes blank
+    - raw value preservation
+    spec_excerpt: 'CASES：
+
+      - 完整 row
+
+      - missing manufacturer
+
+      - missing model
+
+      - invalid quantity
+
+      - extra blank rows
+
+      - notes blank
+
+      - raw value preservation
+
+
+      PHASE 1 GATE：
+
+      `IFM | O5D100 | 4 | 5` → BomRow + Spare=1
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T016-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 完成並可驗證：完整 row
+  - id: AC-002
+    type: deterministic
+    statement: 完成並可驗證：missing manufacturer
+  - id: AC-003
+    type: deterministic
+    statement: 完成並可驗證：missing model
+  - id: AC-004
+    type: deterministic
+    statement: 完成並可驗證：invalid quantity
+  - id: AC-005
+    type: deterministic
+    statement: 完成並可驗證：extra blank rows
+  - id: AC-006
+    type: deterministic
+    statement: 完成並可驗證：notes blank
+  - id: AC-007
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

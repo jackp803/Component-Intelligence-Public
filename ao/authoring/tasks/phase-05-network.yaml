@@ -1,0 +1,383 @@
+schema_version: '1.0'
+phase:
+  id: PHASE-05
+  name: Network Infrastructure
+  execution_policy:
+    gate_required_before_next_phase: true
+tasks:
+- id: T044
+  version: 1
+  title: HttpClient Infrastructure
+  objective: 完成「HttpClient Infrastructure」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析特定品牌的工程規格。
+  - 不使用 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T043
+    required_artifacts:
+    - T043-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T043/T043-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: &id001
+    - src/ComponentIntelligence/Network/
+    - tests/ComponentIntelligence.Tests/Network/
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '使用：
+
+      IHttpClientFactory
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T044-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「HttpClient Infrastructure」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: high
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T045
+  version: 1
+  title: HTTP Response Wrapper
+  objective: 完成「HTTP Response Wrapper」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析特定品牌的工程規格。
+  - 不使用 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T044
+    required_artifacts:
+    - T044-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T044/T044-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '統一：
+
+      - success
+
+      - status code
+
+      - body
+
+      - error
+
+      - timing
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T045-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「HTTP Response Wrapper」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T046
+  version: 1
+  title: Retry Policy
+  objective: 完成「Retry Policy」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析特定品牌的工程規格。
+  - 不使用 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T045
+    required_artifacts:
+    - T045-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T045/T045-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '處理：
+
+      - timeout
+
+      - 429
+
+      - 500/502/503/504
+
+
+      使用 Backoff（退避）。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T046-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Retry Policy」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T047
+  version: 1
+  title: Rate Limit Contract
+  objective: 完成「Rate Limit Contract」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析特定品牌的工程規格。
+  - 不使用 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T046
+    required_artifacts:
+    - T046-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T046/T046-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'per source：
+
+      - max concurrency
+
+      - minimum delay
+
+      - max retry
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T047-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Rate Limit Contract」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T048
+  version: 1
+  title: HTML Parser Wrapper
+  objective: 完成「HTML Parser Wrapper」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析特定品牌的工程規格。
+  - 不使用 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T047
+    required_artifacts:
+    - T047-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T047/T047-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: 'AngleSharp wrapper。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T048-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「HTML Parser Wrapper」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。
+- id: T049
+  version: 1
+  title: Fake HTTP Tests
+  objective: 完成「Fake HTTP Tests」所需的最小實作，且只涵蓋本 Task 規格。
+  non_goals:
+  - 不解析特定品牌的工程規格。
+  - 不使用 AI。
+  - 不得自行執行下一個 Task。
+  dependencies:
+  - task_id: T048
+    required_artifacts:
+    - T048-result
+  inputs:
+    references:
+    - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+    - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+    artifacts:
+    - artifact://T048/T048-result
+  source_of_truth:
+  - docs/spec/Component_Intelligence_System_Master_Spec_v0.1.md
+  - docs/spec/Component_Intelligence_System_Worker_Task_Spec_v0.2.md
+  execution_scope:
+    allowed_roots: *id001
+    protected:
+    - .git/**
+    - docs/spec/**
+    - docs/source_of_truth/**
+    max_production_files_changed: 4
+    max_test_files_changed: 3
+  implementation:
+    spec_excerpt: '不得依賴真網路。
+
+
+      PHASE 5 GATE：
+
+      Fake HTTP 可重試、可解析 HTML。
+
+
+      ---'
+  outputs:
+    artifacts:
+    - id: T049-result
+      type: task_result
+      required: true
+  acceptance:
+  - id: AC-001
+    type: deterministic
+    statement: 「Fake HTTP Tests」可成功編譯並符合主規格。
+  - id: AC-002
+    type: deterministic
+    statement: 本 Task 的 production change 必須限制在 execution_scope.allowed_roots，且不得修改 protected 路徑。
+  validation:
+    profiles:
+    - dotnet_build
+    - dotnet_test_all
+    all_must_pass: true
+  retry:
+    max_total_task_attempts: 3
+  side_effects:
+    level: LOCAL_REVERSIBLE
+  priority: normal
+  stop_condition: Build 與本 Task 相關 deterministic tests 全部 PASS 後立即停止；不得自行開始下一 Task。

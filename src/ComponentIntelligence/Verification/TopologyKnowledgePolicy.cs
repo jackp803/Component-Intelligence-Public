@@ -8,11 +8,10 @@ namespace ComponentIntelligence.Verification;
 ///
 /// Two valid topology shapes are supported:
 /// 1) explicit physical/logical Ports, each with a connector and engineering role/protocol; or
-/// 2) a connector with a known pin count and usable function for every required pin.
+/// 2) a connector with a known pin count and usable function for every required engineering-accepted pin.
 ///
-/// This lets devices such as Ethernet switches become topology-ready from ETH1..ETH8 port definitions
-/// without pretending every RJ45 contact must be expanded before the network topology can be represented,
-/// while sensor/field-device connectors still require pin-function coverage when pins are the connection model.
+/// Automatically parsed pin candidates that fail PinEngineeringValidationPolicy never count toward
+/// topology readiness, even if they are still present in a legacy/raw record.
 /// </summary>
 public static class TopologyKnowledgePolicy
 {
@@ -37,7 +36,9 @@ public static class TopologyKnowledgePolicy
 
         var connectorKnown = !string.IsNullOrWhiteSpace(component.Connector.Family);
         var expectedPins = component.Connector.Pins.GetValueOrDefault();
+        var rejectedPins = component.Pins.Count(pin => !PinEngineeringValidationPolicy.IsAccepted(pin));
         var distinctPins = component.Pins
+            .Where(PinEngineeringValidationPolicy.IsAccepted)
             .Where(pin => !string.IsNullOrWhiteSpace(pin.PinNumber))
             .GroupBy(pin => pin.PinNumber, StringComparer.OrdinalIgnoreCase)
             .Select(group => group
@@ -55,6 +56,8 @@ public static class TopologyKnowledgePolicy
         var pinTopologyReady = connectorKnown && pinCountKnown && allExpectedPinsDetected && allDetectedFunctionsKnown;
 
         var issues = new List<string>();
+        if (rejectedPins > 0)
+            issues.Add($"TOPOLOGY_PIN_ENGINEERING_GATE_REJECTED:{rejectedPins}");
         if (explicitPorts.Length > 0)
         {
             if (portsWithConnector < explicitPorts.Length)

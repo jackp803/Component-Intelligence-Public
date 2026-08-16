@@ -49,7 +49,8 @@ public static class ComponentPhysicalKnowledgeMapper
         var installation = source.Specifications.FirstOrDefault(specification =>
             IsTrusted(specification.Status) &&
             (string.Equals(specification.Key, "installation", StringComparison.OrdinalIgnoreCase) ||
-             specification.Name.Contains("Installation", StringComparison.OrdinalIgnoreCase)));
+             specification.Name.Contains("Installation", StringComparison.OrdinalIgnoreCase) ||
+             specification.Name.Contains("Mounting", StringComparison.OrdinalIgnoreCase)));
         var installationText = string.Join(' ', new[]
         {
             installation?.Value,
@@ -61,12 +62,25 @@ public static class ComponentPhysicalKnowledgeMapper
             WidthMm = width,
             HeightMm = height,
             DepthMm = depth,
-            MountingType = installationText.Contains("DIN-rail", StringComparison.OrdinalIgnoreCase) ||
-                           installationText.Contains("DIN rail", StringComparison.OrdinalIgnoreCase)
-                ? MountingType.DinRail
-                : MountingType.Unknown
+            MountingType = MapMountingType(installationText)
         };
     }
+
+    private static MountingType MapMountingType(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return MountingType.Unknown;
+        if (Contains(raw, "DIN-rail", "DIN rail", "DINRail")) return MountingType.DinRail;
+        if (Contains(raw, "backplate", "back plate")) return MountingType.Backplate;
+        if (Contains(raw, "panel cutout", "panel-cutout")) return MountingType.PanelCutout;
+        if (Contains(raw, "door")) return MountingType.Door;
+        if (Contains(raw, "machine frame", "machine-frame")) return MountingType.MachineFrame;
+        if (Contains(raw, "free standing", "freestanding", "free-standing")) return MountingType.FreeStanding;
+        if (Contains(raw, "surface", "screw mounting", "screw-mounted", "screw mounted")) return MountingType.Surface;
+        return MountingType.Unknown;
+    }
+
+    private static bool Contains(string source, params string[] tokens) =>
+        tokens.Any(token => source.Contains(token, StringComparison.OrdinalIgnoreCase));
 
     private static bool IsTrusted(VerificationStatus status) =>
         status is VerificationStatus.Verified or VerificationStatus.UserConfirmed or VerificationStatus.SingleSource;

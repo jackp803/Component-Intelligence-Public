@@ -27,6 +27,7 @@ public enum GroundReferenceType
 public enum PinStatus
 {
     Normal,
+    Unused,
     Optional,
     Nc,
     Reserved,

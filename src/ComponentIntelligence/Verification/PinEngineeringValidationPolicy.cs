@@ -78,7 +78,13 @@ public static class PinEngineeringValidationPolicy
     private static bool LooksLikeExplicitPinContext(string? description)
     {
         if (string.IsNullOrWhiteSpace(description)) return false;
-        return ContextHints.Any(hint => description.Contains(hint, StringComparison.OrdinalIgnoreCase));
+
+        const string extractionPrefix = "Pin assignment extracted from:";
+        var sourceContext = description.Trim();
+        if (sourceContext.StartsWith(extractionPrefix, StringComparison.OrdinalIgnoreCase))
+            sourceContext = sourceContext[extractionPrefix.Length..].Trim();
+
+        return ContextHints.Any(hint => sourceContext.Contains(hint, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool LooksLikeLegacyPdfTableContext(string? description) =>

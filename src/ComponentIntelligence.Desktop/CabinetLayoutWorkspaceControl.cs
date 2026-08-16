@@ -837,6 +837,8 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
     {
         private readonly Action<PhysicalFootprint?> _setFootprint;
         private readonly Action<PhysicalPlacement?> _setPlacement;
+        private PhysicalFootprint? _footprint;
+        private PhysicalPlacement? _placement;
 
         public LayoutTarget(
             LayoutObjectKind kind,
@@ -861,13 +863,13 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         public string Label { get; }
         public PhysicalFootprint? Footprint
         {
-            get => field;
-            set { field = value; _setFootprint(value); }
+            get => _footprint;
+            set { _footprint = value; _setFootprint(value); }
         }
         public PhysicalPlacement? Placement
         {
-            get => field;
-            set { field = value; _setPlacement(value); }
+            get => _placement;
+            set { _placement = value; _setPlacement(value); }
         }
     }
 }

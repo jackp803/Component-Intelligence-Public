@@ -9,7 +9,7 @@ public enum KnowledgeGapPriority
 /// <summary>
 /// A field that is genuinely absent or unusable in central knowledge and should be completed from
 /// a human-selected engineering document. The desktop application only reports the gap; it does not
-/// search the web, download PDFs, infer a replacement value, or write the value back to Notion.
+/// search the web, download PDFs, infer a replacement value, or write the value back to the central archive.
 /// </summary>
 public sealed record KnowledgeGap
 {

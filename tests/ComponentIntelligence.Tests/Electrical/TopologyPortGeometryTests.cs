@@ -19,6 +19,58 @@ public sealed class TopologyPortGeometryTests
     }
 
     [Theory]
+    [InlineData("Input Port", "Passive", TopologyScreenSide.Left)]
+    [InlineData("Output Port", "Passive", TopologyScreenSide.Right)]
+    [InlineData("Power Input", "Output", TopologyScreenSide.Left)]
+    [InlineData("Power Output", "Input", TopologyScreenSide.Right)]
+    public void DeclaredPortRole_IsPrimaryTopologyVisualSemantic(
+        string role,
+        string direction,
+        TopologyScreenSide expected)
+    {
+        var port = new ComponentPort { PortId = "device:port", Name = "PORT" };
+        port.Capabilities.Add($"ROLE:{role}");
+        port.Capabilities.Add($"DIRECTION:{direction}");
+
+        Assert.Equal(expected, TopologyPortGeometry.DetermineScreenSide(port));
+    }
+
+    [Fact]
+    public void F03_20_PassiveInputAndOutputRoles_RenderOnOppositeSides()
+    {
+        var input = new ComponentPort { PortId = "OMRON_F03-20_INPUT", Name = "INPUT" };
+        input.Capabilities.Add("ROLE:Input Port");
+        input.Capabilities.Add("DIRECTION:Passive");
+
+        var output = new ComponentPort { PortId = "OMRON_F03-20_OUTPUT", Name = "OUTPUT" };
+        output.Capabilities.Add("ROLE:Output Port");
+        output.Capabilities.Add("DIRECTION:Passive");
+
+        Assert.Equal(TopologyScreenSide.Left, TopologyPortGeometry.DetermineScreenSide(input));
+        Assert.Equal(TopologyScreenSide.Right, TopologyPortGeometry.DetermineScreenSide(output));
+    }
+
+    [Fact]
+    public void AmbiguousInputOutputRole_FallsBackToDeclaredDirection()
+    {
+        var port = new ComponentPort { PortId = "device:mixed", Name = "MIXED" };
+        port.Capabilities.Add("ROLE:Input/Output Interface");
+        port.Capabilities.Add("DIRECTION:Input");
+
+        Assert.Equal(TopologyScreenSide.Left, TopologyPortGeometry.DetermineScreenSide(port));
+    }
+
+    [Fact]
+    public void PassivePortWithoutDirectionalRole_RemainsNeutralRight()
+    {
+        var port = new ComponentPort { PortId = "device:passive", Name = "PASSIVE" };
+        port.Capabilities.Add("ROLE:Terminal Interface");
+        port.Capabilities.Add("DIRECTION:Passive");
+
+        Assert.Equal(TopologyScreenSide.Right, TopologyPortGeometry.DetermineScreenSide(port));
+    }
+
+    [Theory]
     [InlineData(0,   240, 240,  1,  0)]
     [InlineData(90,  170, 310,  0,  1)]
     [InlineData(180, 100, 240, -1,  0)]

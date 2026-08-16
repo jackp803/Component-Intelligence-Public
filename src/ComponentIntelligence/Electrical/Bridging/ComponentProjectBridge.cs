@@ -111,9 +111,9 @@ public sealed class ComponentProjectBridge
             {
                 ConnectorId = $"{portId}:connector",
                 Family = connectorFamily!,
-                Coding = source.Connector.Coding,
-                PinCount = source.Connector.Pins,
-                Gender = ConnectorGender.Unknown,
+                Coding = FirstNonBlank(sourcePort.ConnectorCoding, source.Connector.Coding),
+                PinCount = sourcePort.PinCount ?? source.Connector.Pins,
+                Gender = ParseConnectorGender(sourcePort.ConnectorGender),
                 MountType = ConnectorMountType.Device
             };
 
@@ -125,8 +125,12 @@ public sealed class ComponentProjectBridge
             // indistinguishable on the topology canvas.
             Name = FirstNonBlank(sourcePort.PortId, sourcePort.PortType, "PORT")!,
             Protocol = NormalizeProtocol(FirstNonBlank(sourcePort.Protocol, sourcePort.SignalType)),
-            Connector = connector
+            Connector = connector,
+            PhysicalLocation = string.IsNullOrWhiteSpace(sourcePort.PhysicalSide)
+                ? null
+                : new PhysicalPortLocation { Side = sourcePort.PhysicalSide!.Trim() }
         };
+        if (!string.IsNullOrWhiteSpace(sourcePort.PortRole)) port.Capabilities.Add($"ROLE:{sourcePort.PortRole}");
         if (!string.IsNullOrWhiteSpace(sourcePort.SignalType)) port.Capabilities.Add(sourcePort.SignalType!);
         if (!string.IsNullOrWhiteSpace(sourcePort.Direction)) port.Capabilities.Add($"DIRECTION:{sourcePort.Direction}");
         if (!string.IsNullOrWhiteSpace(sourcePort.VoltageDomain)) port.Capabilities.Add($"VOLTAGE_DOMAIN:{sourcePort.VoltageDomain}");
@@ -151,19 +155,21 @@ public sealed class ComponentProjectBridge
 
     private static DomainPin MapPin(ContractPin sourcePin, ComponentIR source, string instanceId, string? ownerPortId)
     {
-        var raw = string.Join(' ', new[] { sourcePin.Function, sourcePin.SignalType, sourcePin.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
-        var layer = DetermineLayer(sourcePin.SignalType, sourcePin.Function);
+        var raw = string.Join(' ', new[] { sourcePin.Function, sourcePin.PinRole, sourcePin.SignalType, sourcePin.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        var layer = DetermineLayer(sourcePin.SignalType, FirstNonBlank(sourcePin.Function, sourcePin.PinRole));
         var ownerIdentity = string.IsNullOrWhiteSpace(ownerPortId) ? "unassigned" : Sanitize(ownerPortId);
+        var status = DeterminePinStatus(sourcePin.PinStatus, sourcePin.Function);
         return new DomainPin
         {
             PinId = $"{instanceId}:port:{ownerIdentity}:pin:{Sanitize(sourcePin.PinNumber)}",
             PinNumber = sourcePin.PinNumber,
-            PinName = NullIfBlank(sourcePin.Description),
-            Function = NullIfBlank(sourcePin.Function),
-            Protocol = NormalizeProtocol(sourcePin.SignalType),
-            SignalStandardRaw = NullIfBlank(sourcePin.SignalType),
+            PinName = FirstNonBlank(sourcePin.PinName, sourcePin.Description),
+            Function = FirstNonBlank(sourcePin.Function, sourcePin.PinRole),
+            Protocol = NormalizeProtocol(FirstNonBlank(sourcePin.SignalType, sourcePin.PinRole)),
+            SignalStandardRaw = FirstNonBlank(sourcePin.SignalType, sourcePin.PinRole),
             Layer = layer,
-            Status = DeterminePinStatus(sourcePin.Function),
+            Status = status,
+            IsRequired = status == PinStatus.Normal,
             GroundReferenceType = DetermineGroundReference(raw),
             Power = layer == ElectricalLayer.Power ? BuildPowerCapability(sourcePin, source.Power) : null
         };
@@ -173,7 +179,7 @@ public sealed class ComponentProjectBridge
     {
         var voltage = MapVoltage(sourcePower.OperatingVoltage);
         var role = DeterminePowerRole(pin.Direction);
-        var function = $"{pin.Function} {pin.Description}".ToUpperInvariant();
+        var function = $"{pin.Function} {pin.PinRole} {pin.Description}".ToUpperInvariant();
         var isReturn = ContainsAny(function, "0V", "V-", "L-", "RETURN");
         var isPositiveSupply = ContainsAny(function, "+24V", "+54V", "V+", "L+", "SUPPLY+", "POWER+") ||
                                (!isReturn && ContainsAny(function, "SUPPLY", "POWER"));
@@ -230,6 +236,7 @@ public sealed class ComponentProjectBridge
         var normalized = direction.Trim().ToUpperInvariant();
         if (ContainsAny(normalized, "OUTPUT", "SOURCE", "OUT")) return PowerRole.Source;
         if (ContainsAny(normalized, "INPUT", "SINK", "IN")) return PowerRole.Input;
+        if (ContainsAny(normalized, "RETURN")) return PowerRole.Return;
         return PowerRole.Unknown;
     }
 
@@ -259,14 +266,38 @@ public sealed class ComponentProjectBridge
         return GroundReferenceType.None;
     }
 
-    private static PinStatus DeterminePinStatus(string? function)
+    private static PinStatus DeterminePinStatus(string? explicitStatus, string? function)
     {
+        var status = explicitStatus?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (status is "USED" or "NORMAL") return PinStatus.Normal;
+            if (status is "UNUSED" or "OPEN") return PinStatus.Unused;
+            if (status is "NC" or "N.C." or "NOT CONNECTED") return PinStatus.Nc;
+            if (status.Contains("RESERVED", StringComparison.Ordinal)) return PinStatus.Reserved;
+            if (status.Contains("OPTION", StringComparison.Ordinal)) return PinStatus.Optional;
+            if (status is "UNKNOWN" or "NOTAPPLICABLE" or "NOT APPLICABLE") return PinStatus.Unknown;
+        }
+
         var text = function?.Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(text)) return PinStatus.Unknown;
         if (text is "NC" or "N.C." or "NOT CONNECTED") return PinStatus.Nc;
+        if (text.Contains("UNUSED", StringComparison.Ordinal) || text.Contains("OPEN", StringComparison.Ordinal)) return PinStatus.Unused;
         if (text.Contains("RESERVED", StringComparison.Ordinal)) return PinStatus.Reserved;
         if (text.Contains("OPTION", StringComparison.Ordinal)) return PinStatus.Optional;
         return PinStatus.Normal;
+    }
+
+    private static ConnectorGender ParseConnectorGender(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return ConnectorGender.Unknown;
+        return value.Trim().ToUpperInvariant() switch
+        {
+            "MALE" => ConnectorGender.Male,
+            "FEMALE" => ConnectorGender.Female,
+            "GENDERLESS" => ConnectorGender.Genderless,
+            _ => ConnectorGender.Unknown
+        };
     }
 
     private static string? NormalizeProtocol(string? value)

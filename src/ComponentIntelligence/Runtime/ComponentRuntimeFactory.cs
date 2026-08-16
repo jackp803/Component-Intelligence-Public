@@ -17,6 +17,10 @@ namespace ComponentIntelligence.Runtime;
 
 public static class ComponentRuntimeFactory
 {
+    /// <summary>
+    /// Legacy online pipeline retained for CLI/regression compatibility only.
+    /// The Windows desktop UI must use CreateNotionOnlyLookupService instead.
+    /// </summary>
     public static ComponentIntelligencePipeline CreateOnline(string databasePath, string? cachePath = null)
     {
         var repository = new SqliteComponentIrRepository(databasePath);
@@ -44,6 +48,21 @@ public static class ComponentRuntimeFactory
             centralKnowledge);
     }
 
+    /// <summary>
+    /// Production Windows-desktop lookup path. Notion is the only engineering knowledge authority.
+    /// SQLite is hydrated only as a runtime cache for topology/layout; no web resolver, PDF downloader,
+    /// parser, browser automation, distributor source, or automatic Notion write is constructed here.
+    /// </summary>
+    public static NotionOnlyComponentLookupService CreateNotionOnlyLookupService(string databasePath)
+    {
+        var repository = new SqliteComponentIrRepository(databasePath);
+        var notionOptions = NotionKnowledgeStoreOptions.FromEnvironment();
+        IComponentKnowledgeStore notion = new EngineeringValidatedKnowledgeStore(
+            new NotionComponentKnowledgeStore(notionOptions));
+        return new NotionOnlyComponentLookupService(repository, notion);
+    }
+
+    [Obsolete("Desktop search is Notion-only. Use CreateNotionOnlyLookupService.")]
     public static ComponentSearchService CreateOnlineSearchService(string databasePath, string? cachePath = null) =>
         new(CreateOnline(databasePath, cachePath));
 

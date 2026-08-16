@@ -12,8 +12,8 @@ public enum TopologyScreenSide
 /// Computes visual anchors for Component Ports on the topology canvas.
 /// The legacy Calculate method keeps the historical local-right-edge behavior for compatibility.
 /// CalculateScreenSide places a Port on the requested screen-left/screen-right edge after component
-/// rotation, which keeps Input on the left and Output on the right while still touching the rotated
-/// component perimeter.
+/// rotation. Screen-side selection is a topology presentation rule, not a rewrite of electrical
+/// direction: an archived passive Port may still be visually an Input-side or Output-side interface.
 /// </summary>
 public static class TopologyPortGeometry
 {
@@ -21,17 +21,20 @@ public static class TopologyPortGeometry
     {
         ArgumentNullException.ThrowIfNull(port);
 
-        var declaredDirection = port.Capabilities
-            .FirstOrDefault(capability => capability.StartsWith("DIRECTION:", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(declaredDirection))
-        {
-            var value = declaredDirection[(declaredDirection.IndexOf(':') + 1)..].Trim().ToUpperInvariant();
-            if (value is "INPUT" or "IN" or "SINK" or "RECEIVE" or "RX")
-                return TopologyScreenSide.Left;
-            if (value is "OUTPUT" or "OUT" or "SOURCE" or "TRANSMIT" or "TX")
-                return TopologyScreenSide.Right;
-        }
+        // Topology role is the primary visual semantic. This intentionally comes before electrical
+        // Direction so passive adapters/terminal blocks such as OMRON F03-20 can preserve truthful
+        // Direction=Passive while still rendering Input Port on the left and Output Port on the right.
+        var declaredRole = GetCapabilityValue(port, "ROLE:");
+        if (TryDetermineRoleSide(declaredRole, out var roleSide))
+            return roleSide;
 
+        // If the archive does not provide a directional role, use the actual electrical direction.
+        var declaredDirection = GetCapabilityValue(port, "DIRECTION:");
+        if (TryDetermineDirectionSide(declaredDirection, out var directionSide))
+            return directionSide;
+
+        // Finally infer from engineering pin semantics. Mixed/ambiguous or fully passive pin sets are
+        // deliberately not forced into an Input/Output meaning and retain the neutral right-side default.
         var hasInput = port.Pins.Any(pin =>
             pin.Power?.Role is PowerRole.Input or PowerRole.Return ||
             pin.Digital?.IoType == DigitalIoType.Di ||
@@ -41,7 +44,10 @@ public static class TopologyPortGeometry
             pin.Digital?.IoType == DigitalIoType.Do ||
             pin.Analog?.Direction == AnalogDirection.Output);
 
-        return hasInput && !hasOutput ? TopologyScreenSide.Left : TopologyScreenSide.Right;
+        if (hasInput && !hasOutput) return TopologyScreenSide.Left;
+        if (hasOutput && !hasInput) return TopologyScreenSide.Right;
+
+        return TopologyScreenSide.Right;
     }
 
     public static TopologyPortAnchor Calculate(TopologyPlacement placement, int portIndex, int portCount)
@@ -99,6 +105,57 @@ public static class TopologyPortGeometry
         };
 
         return RotateLocalAnchor(placement, localX, localY, edge.OutwardX, edge.OutwardY);
+    }
+
+    private static string? GetCapabilityValue(ComponentPort port, string prefix)
+    {
+        var capability = port.Capabilities
+            .FirstOrDefault(value => value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(capability)) return null;
+
+        var separator = capability.IndexOf(':');
+        if (separator < 0 || separator == capability.Length - 1) return null;
+        var value = capability[(separator + 1)..].Trim();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static bool TryDetermineRoleSide(string? role, out TopologyScreenSide side)
+    {
+        side = TopologyScreenSide.Right;
+        if (string.IsNullOrWhiteSpace(role)) return false;
+
+        var tokens = role
+            .Split([' ', '\t', '-', '_', '/', '\\', ':', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var hasInputRole = tokens.Any(token => token.Equals("INPUT", StringComparison.OrdinalIgnoreCase));
+        var hasOutputRole = tokens.Any(token => token.Equals("OUTPUT", StringComparison.OrdinalIgnoreCase));
+
+        // A role such as "Input/Output" is intentionally ambiguous and must fall through to Direction.
+        if (hasInputRole == hasOutputRole) return false;
+
+        side = hasInputRole ? TopologyScreenSide.Left : TopologyScreenSide.Right;
+        return true;
+    }
+
+    private static bool TryDetermineDirectionSide(string? direction, out TopologyScreenSide side)
+    {
+        side = TopologyScreenSide.Right;
+        if (string.IsNullOrWhiteSpace(direction)) return false;
+
+        var value = direction.Trim().ToUpperInvariant();
+        if (value is "INPUT" or "IN" or "SINK" or "RECEIVE" or "RX")
+        {
+            side = TopologyScreenSide.Left;
+            return true;
+        }
+
+        if (value is "OUTPUT" or "OUT" or "SOURCE" or "TRANSMIT" or "TX" or
+            "BIDIRECTIONAL" or "INOUT" or "I/O" or "IO")
+        {
+            side = TopologyScreenSide.Right;
+            return true;
+        }
+
+        return false;
     }
 
     private static TopologyPortAnchor RotateLocalAnchor(

@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using ComponentIntelligence.Contracts;
 using ComponentIntelligence.Normalization;
+using ComponentIntelligence.Resolution;
 
 namespace ComponentIntelligence.Repository;
 

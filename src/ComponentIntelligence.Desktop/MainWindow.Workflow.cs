@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.Windows;
 using ComponentIntelligence.Electrical.Bridging;
+using ComponentIntelligence.Search;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -94,12 +95,6 @@ public partial class MainWindow
         // A first central lookup can enter Topology immediately. If a BOM was already topology-ready,
         // appending another resolved row preserves readiness. Otherwise the user must still run the
         // batch central-library load for the pre-existing rows.
-        if (_importedRows.Count > 1 && !_workflowWasReadyBeforeSearchAdd)
-        {
-            _workflowWasReadyBeforeSearchAdd = false;
-            return;
-        }
-
         var added = _importedRows[^1];
         var manufacturer = added.Manufacturer?.Trim();
         var model = added.ModelOrPartNumber?.Trim();
@@ -113,7 +108,10 @@ public partial class MainWindow
         {
             var cached = await new ComponentIrCatalogReader(_databasePath)
                 .FindByIdentityAsync(manufacturer, model);
-            if (cached is null)
+            if (!CentralLookupTopologyGate.CanUnlockAfterAdd(
+                    _importedRows.Count,
+                    _workflowWasReadyBeforeSearchAdd,
+                    cached is not null))
             {
                 _workflowWasReadyBeforeSearchAdd = false;
                 return;

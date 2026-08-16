@@ -17,6 +17,33 @@ public enum TopologyScreenSide
 /// </summary>
 public static class TopologyPortGeometry
 {
+    public static TopologyScreenSide DetermineScreenSide(ComponentPort port)
+    {
+        ArgumentNullException.ThrowIfNull(port);
+
+        var declaredDirection = port.Capabilities
+            .FirstOrDefault(capability => capability.StartsWith("DIRECTION:", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(declaredDirection))
+        {
+            var value = declaredDirection[(declaredDirection.IndexOf(':') + 1)..].Trim().ToUpperInvariant();
+            if (value is "INPUT" or "IN" or "SINK" or "RECEIVE" or "RX")
+                return TopologyScreenSide.Left;
+            if (value is "OUTPUT" or "OUT" or "SOURCE" or "TRANSMIT" or "TX")
+                return TopologyScreenSide.Right;
+        }
+
+        var hasInput = port.Pins.Any(pin =>
+            pin.Power?.Role is PowerRole.Input or PowerRole.Return ||
+            pin.Digital?.IoType == DigitalIoType.Di ||
+            pin.Analog?.Direction == AnalogDirection.Input);
+        var hasOutput = port.Pins.Any(pin =>
+            pin.Power?.Role == PowerRole.Source ||
+            pin.Digital?.IoType == DigitalIoType.Do ||
+            pin.Analog?.Direction == AnalogDirection.Output);
+
+        return hasInput && !hasOutput ? TopologyScreenSide.Left : TopologyScreenSide.Right;
+    }
+
     public static TopologyPortAnchor Calculate(TopologyPlacement placement, int portIndex, int portCount)
     {
         ArgumentNullException.ThrowIfNull(placement);

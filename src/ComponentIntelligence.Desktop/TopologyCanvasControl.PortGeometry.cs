@@ -24,7 +24,7 @@ public partial class TopologyCanvasControl
             if (placement is null) continue;
 
             var ports = component.Ports.Take(16)
-                .Select(port => new PortVisualPlacement(port, DetermineScreenSide(port)))
+                .Select(port => new PortVisualPlacement(port, TopologyPortGeometry.DetermineScreenSide(port)))
                 .ToArray();
 
             foreach (var side in new[] { TopologyScreenSide.Left, TopologyScreenSide.Right })
@@ -69,41 +69,6 @@ public partial class TopologyCanvasControl
                 }
             }
         }
-    }
-
-    private static TopologyScreenSide DetermineScreenSide(ComponentPort port)
-    {
-        var declaredDirection = port.Capabilities
-            .FirstOrDefault(capability => capability.StartsWith("DIRECTION:", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(declaredDirection))
-        {
-            var value = declaredDirection[(declaredDirection.IndexOf(':') + 1)..].Trim().ToUpperInvariant();
-            if (value is "INPUT" or "IN" or "SINK" or "RECEIVE" or "RX")
-                return TopologyScreenSide.Left;
-            if (value is "OUTPUT" or "OUT" or "SOURCE" or "TRANSMIT" or "TX")
-                return TopologyScreenSide.Right;
-            if (value is "BIDIRECTIONAL" or "INOUT" or "I/O" or "IO")
-                return TopologyScreenSide.Right;
-        }
-
-        var hasInput = false;
-        var hasOutput = false;
-        foreach (var pin in port.Pins)
-        {
-            if (pin.Power?.Role is PowerRole.Input or PowerRole.Return) hasInput = true;
-            if (pin.Power?.Role == PowerRole.Source) hasOutput = true;
-            if (pin.Digital?.IoType == DigitalIoType.Di) hasInput = true;
-            if (pin.Digital?.IoType == DigitalIoType.Do) hasOutput = true;
-            if (pin.Analog?.Direction == AnalogDirection.Input) hasInput = true;
-            if (pin.Analog?.Direction == AnalogDirection.Output) hasOutput = true;
-        }
-
-        if (hasInput && !hasOutput) return TopologyScreenSide.Left;
-        if (hasOutput && !hasInput) return TopologyScreenSide.Right;
-
-        // Unknown and genuinely bidirectional interfaces are not forced into a directional meaning.
-        // Right is the neutral/default display side and preserves prior topology behavior.
-        return TopologyScreenSide.Right;
     }
 
     private TextBlock? FindPortLabelFollowing(Border marker, string portName)

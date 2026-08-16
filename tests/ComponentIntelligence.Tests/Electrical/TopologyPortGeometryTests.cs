@@ -7,6 +7,18 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class TopologyPortGeometryTests
 {
     [Theory]
+    [InlineData("Input", TopologyScreenSide.Left)]
+    [InlineData("OUTPUT", TopologyScreenSide.Right)]
+    [InlineData("Bidirectional", TopologyScreenSide.Right)]
+    public void DeclaredDirection_DeterminesTopologyScreenSide(string direction, TopologyScreenSide expected)
+    {
+        var port = new ComponentPort { PortId = "device:port", Name = "PORT" };
+        port.Capabilities.Add($"DIRECTION:{direction}");
+
+        Assert.Equal(expected, TopologyPortGeometry.DetermineScreenSide(port));
+    }
+
+    [Theory]
     [InlineData(0,   240, 240,  1,  0)]
     [InlineData(90,  170, 310,  0,  1)]
     [InlineData(180, 100, 240, -1,  0)]

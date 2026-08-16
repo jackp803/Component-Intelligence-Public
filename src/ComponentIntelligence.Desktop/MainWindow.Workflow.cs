@@ -18,16 +18,14 @@ public partial class MainWindow
         _workflowHooksInstalled = true;
 
         // The working BOM collection is the reliable UI lifecycle signal. ImportBom_Click assigns
-        // _importedRows before it clears/repopulates _rows, therefore the Reset/Add notifications below
-        // can immediately unlock the Notion load step after a successful Excel import. This avoids
-        // racing two async Button.Click handlers and also covers manual Add-to-BOM through the same path.
+        // _importedRows before it clears/repopulates _rows, therefore Reset/Add notifications can
+        // immediately unlock the central-library load step after a successful Excel import.
         _rows.CollectionChanged += WorkingBomRows_CollectionChanged;
         ProcessButton.Click += WorkflowProcess_Click;
 
-        // A successful Notion single-component lookup has already hydrated Component IR into SQLite.
-        // Capture the prior workflow state before Add-to-BOM dirties the collection, then restore readiness
-        // after the newly added row is confirmed in the runtime cache. This avoids forcing a redundant
-        // second Notion load just to enter Topology.
+        // A successful single-component central lookup already hydrates Component IR into SQLite.
+        // Capture the prior workflow state before Add-to-BOM dirties the collection, then restore
+        // readiness after the newly added row is confirmed in the runtime cache.
         AddSearchResultButton.PreviewMouseLeftButtonDown += (_, _) =>
             _workflowWasReadyBeforeSearchAdd = _bomProcessingCompleted;
         AddSearchResultButton.Click += WorkflowAddSearchResult_Click;
@@ -37,9 +35,8 @@ public partial class MainWindow
 
     private void WorkingBomRows_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // ProcessNotion_Click replaces view rows with Notion-backed results. A Replace is not a BOM edit
-        // and must not dirty the workflow while the batch is running. Add/Remove/Reset are actual working-
-        // BOM changes (including Excel import and manual Add-to-BOM).
+        // The central batch replaces view rows with central-library results. Replace/Move are not BOM
+        // edits; Add/Remove/Reset are actual working-BOM changes.
         if (e.Action == NotifyCollectionChangedAction.Replace || e.Action == NotifyCollectionChangedAction.Move)
             return;
 
@@ -49,8 +46,8 @@ public partial class MainWindow
         if (_importedRows.Count > 0)
         {
             StatusText.Text = T(
-                $"BOM 已載入 {_importedRows.Count} 筆。下一步：按「從 Notion 取得」。",
-                $"BOM loaded: {_importedRows.Count} row(s). Next: click Load from Notion.");
+                $"BOM 已載入 {_importedRows.Count} 筆。下一步：按「從中央庫取得」。",
+                $"BOM loaded: {_importedRows.Count} row(s). Next: click Load Central Library.");
         }
     }
 
@@ -63,18 +60,20 @@ public partial class MainWindow
             return;
         }
 
-        // ProcessNotion_Click is the XAML handler and runs before this observer. It disables the button
-        // while Notion is being read and hydrates every resolved Component IR into local SQLite for
-        // topology/layout. Wait for that lifecycle, then unlock Topology when the Notion batch finishes.
+        // ProcessCentralLibrary_Click is the XAML handler and runs before this observer. It disables
+        // the button while Components/Ports/Pins are being read and hydrates resolved Component IR
+        // into local SQLite. Wait for that lifecycle, then unlock Topology when the batch finishes.
         await Task.Yield();
         while (!ProcessButton.IsEnabled)
             await Task.Delay(75);
 
         var status = StatusText.Text ?? string.Empty;
         _bomProcessingCompleted =
+            status.StartsWith("中央庫讀取完成", StringComparison.OrdinalIgnoreCase) ||
+            status.StartsWith("Central library load complete", StringComparison.OrdinalIgnoreCase) ||
+            // Migration compatibility with earlier Notion-only builds.
             status.StartsWith("Notion 讀取完成", StringComparison.OrdinalIgnoreCase) ||
             status.StartsWith("Notion load complete", StringComparison.OrdinalIgnoreCase) ||
-            // Keep compatibility with older builds/workflows that still report the legacy completion text.
             status.StartsWith("處理完成", StringComparison.OrdinalIgnoreCase) ||
             status.StartsWith("Processing complete", StringComparison.OrdinalIgnoreCase);
         UpdateWorkflowButtons();
@@ -82,21 +81,19 @@ public partial class MainWindow
         if (_bomProcessingCompleted)
         {
             StatusText.Text = T(
-                $"Notion 讀取完成：{_importedRows.Count} 筆。現在可進入「電路拓樸」；缺資料的元件仍會以 Placeholder（佔位元件）顯示。",
-                $"Notion load complete: {_importedRows.Count} row(s). Electrical Topology is now available; components with missing knowledge remain visible as placeholders.");
+                $"中央庫讀取完成：{_importedRows.Count} 筆。現在可進入「電路拓樸」；缺資料元件仍會以 Placeholder（佔位元件）顯示。",
+                $"Central library load complete: {_importedRows.Count} row(s). Electrical Topology is now available; components with missing knowledge remain visible as placeholders.");
         }
     }
 
     private async void WorkflowAddSearchResult_Click(object sender, RoutedEventArgs e)
     {
-        // The normal AddSearchResultToBom_Click handler runs first and appends the Notion-resolved row.
-        // Yield once so this observer sees the updated working BOM.
         await Task.Yield();
         if (_importedRows.Count == 0) return;
 
-        // A first Notion lookup can enter Topology immediately. If a BOM was already topology-ready,
-        // appending another Notion-resolved row should preserve that readiness. Otherwise the user must
-        // still run the batch Notion load for the pre-existing rows.
+        // A first central lookup can enter Topology immediately. If a BOM was already topology-ready,
+        // appending another resolved row preserves readiness. Otherwise the user must still run the
+        // batch central-library load for the pre-existing rows.
         if (_importedRows.Count > 1 && !_workflowWasReadyBeforeSearchAdd)
         {
             _workflowWasReadyBeforeSearchAdd = false;
@@ -125,8 +122,8 @@ public partial class MainWindow
             _bomProcessingCompleted = true;
             UpdateWorkflowButtons();
             StatusText.Text = T(
-                $"已加入 BOM：{manufacturer} {model}。Notion Component IR 已在本機快取，可直接進入「電路拓樸」。",
-                $"Added to BOM: {manufacturer} {model}. The Notion Component IR is already in the local runtime cache, so Electrical Topology is available now.");
+                $"已加入 BOM：{manufacturer} {model}。中央 Component IR 已在本機快取，可直接進入「電路拓樸」。",
+                $"Added to BOM: {manufacturer} {model}. The central Component IR is already in the local runtime cache, so Electrical Topology is available now.");
         }
         finally
         {
@@ -144,11 +141,11 @@ public partial class MainWindow
 
         var topologyTip = T(
             _bomProcessingCompleted
-                ? "Notion 已讀取完成；開啟 Topology 查看元件與缺資料 Placeholder。"
-                : "請先匯入 BOM 並按「從 Notion 取得」，完成後即可查看 Topology。",
+                ? "中央庫已讀取完成；開啟 Topology 查看元件與缺資料 Placeholder。"
+                : "請先匯入 BOM 並按「從中央庫取得」，完成後即可查看 Topology。",
             _bomProcessingCompleted
-                ? "Notion load is complete; open Topology to review components and missing-data placeholders."
-                : "Import a BOM and run Load from Notion before opening Topology.");
+                ? "Central-library load is complete; open Topology to review components and missing-data placeholders."
+                : "Import a BOM and run Load Central Library before opening Topology.");
         TopologyButton.ToolTip = topologyTip;
         ElectricalButton.ToolTip = topologyTip;
     }
@@ -159,7 +156,7 @@ public partial class MainWindow
         {
             MessageBox.Show(
                 this,
-                T("請先匯入 BOM，或先查詢 Notion 元件並加入 BOM。", "Import a BOM first, or look up a Notion component and add it to the BOM."),
+                T("請先匯入 BOM，或先查詢中央元件並加入 BOM。", "Import a BOM first, or look up a central component and add it to the BOM."),
                 T("尚未有 BOM", "No BOM loaded"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -171,9 +168,9 @@ public partial class MainWindow
         MessageBox.Show(
             this,
             T(
-                "請先按「從 Notion 取得」。Notion 讀取完成後即可進入電路拓樸。\n\n如果是上方單顆 Notion 查詢，查到後按「加入 BOM」即可直接進入 Topology，不需要再重複查一次。\n\n軟體只從 Notion 中央庫取得 Component IR，並寫入 Local SQLite 執行快取供 Topology 使用；不會再自動上網搜尋或抓 PDF。",
-                "Run Load from Notion first. Electrical Topology becomes available when the Notion load completes.\n\nFor a single Notion lookup above, click Add to BOM after a successful lookup and Topology becomes available immediately; no second lookup is required.\n\nThe application reads Component IR only from Notion and hydrates the local SQLite runtime cache for Topology; it no longer performs automatic web search or PDF download."),
-            T("請先讀取 Notion", "Load Notion first"),
+                "請先按「從中央庫取得」。中央庫讀取完成後即可進入電路拓樸。\n\n如果是上方單顆中央庫查詢，查到後按「加入 BOM」即可直接進入 Topology，不需要再重複查一次。\n\n軟體只從中央 Components / Ports / Pins 取得 Component IR，並寫入 Local SQLite 執行快取供 Topology / Layout 使用；不會自動上網搜尋或抓 PDF。",
+                "Run Load Central Library first. Electrical Topology becomes available when the central-library load completes.\n\nFor a single central lookup above, click Add to BOM after a successful lookup and Topology becomes available immediately; no second lookup is required.\n\nThe application reads Component IR only from central Components / Ports / Pins and hydrates the local SQLite runtime cache for Topology / Layout; it does not perform automatic web search or PDF download."),
+            T("請先讀取中央庫", "Load Central Library first"),
             MessageBoxButton.OK,
             MessageBoxImage.Information);
         return false;

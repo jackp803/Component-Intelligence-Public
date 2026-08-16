@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.Windows;
+using ComponentIntelligence.Electrical.Bridging;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -7,6 +8,7 @@ public partial class MainWindow
 {
     private bool _workflowHooksInstalled;
     private bool _bomProcessingCompleted;
+    private bool _workflowWasReadyBeforeSearchAdd;
 
     protected override void OnContentRendered(EventArgs e)
     {
@@ -21,6 +23,15 @@ public partial class MainWindow
         // racing two async Button.Click handlers and also covers manual Add-to-BOM through the same path.
         _rows.CollectionChanged += WorkingBomRows_CollectionChanged;
         ProcessButton.Click += WorkflowProcess_Click;
+
+        // A successful Notion single-component lookup has already hydrated Component IR into SQLite.
+        // Capture the prior workflow state before Add-to-BOM dirties the collection, then restore readiness
+        // after the newly added row is confirmed in the runtime cache. This avoids forcing a redundant
+        // second Notion load just to enter Topology.
+        AddSearchResultButton.PreviewMouseLeftButtonDown += (_, _) =>
+            _workflowWasReadyBeforeSearchAdd = _bomProcessingCompleted;
+        AddSearchResultButton.Click += WorkflowAddSearchResult_Click;
+
         UpdateWorkflowButtons();
     }
 
@@ -76,6 +87,53 @@ public partial class MainWindow
         }
     }
 
+    private async void WorkflowAddSearchResult_Click(object sender, RoutedEventArgs e)
+    {
+        // The normal AddSearchResultToBom_Click handler runs first and appends the Notion-resolved row.
+        // Yield once so this observer sees the updated working BOM.
+        await Task.Yield();
+        if (_importedRows.Count == 0) return;
+
+        // A first Notion lookup can enter Topology immediately. If a BOM was already topology-ready,
+        // appending another Notion-resolved row should preserve that readiness. Otherwise the user must
+        // still run the batch Notion load for the pre-existing rows.
+        if (_importedRows.Count > 1 && !_workflowWasReadyBeforeSearchAdd)
+        {
+            _workflowWasReadyBeforeSearchAdd = false;
+            return;
+        }
+
+        var added = _importedRows[^1];
+        var manufacturer = added.Manufacturer?.Trim();
+        var model = added.ModelOrPartNumber?.Trim();
+        if (string.IsNullOrWhiteSpace(manufacturer) || string.IsNullOrWhiteSpace(model))
+        {
+            _workflowWasReadyBeforeSearchAdd = false;
+            return;
+        }
+
+        try
+        {
+            var cached = await new ComponentIrCatalogReader(_databasePath)
+                .FindByIdentityAsync(manufacturer, model);
+            if (cached is null)
+            {
+                _workflowWasReadyBeforeSearchAdd = false;
+                return;
+            }
+
+            _bomProcessingCompleted = true;
+            UpdateWorkflowButtons();
+            StatusText.Text = T(
+                $"已加入 BOM：{manufacturer} {model}。Notion Component IR 已在本機快取，可直接進入「電路拓樸」。",
+                $"Added to BOM: {manufacturer} {model}. The Notion Component IR is already in the local runtime cache, so Electrical Topology is available now.");
+        }
+        finally
+        {
+            _workflowWasReadyBeforeSearchAdd = false;
+        }
+    }
+
     private void UpdateWorkflowButtons()
     {
         var hasBom = _importedRows.Count > 0;
@@ -113,8 +171,8 @@ public partial class MainWindow
         MessageBox.Show(
             this,
             T(
-                "請先按「從 Notion 取得」。Notion 讀取完成後即可進入電路拓樸。\n\n軟體只從 Notion 中央庫取得 Component IR，並寫入 Local SQLite 執行快取供 Topology 使用；不會再自動上網搜尋或抓 PDF。",
-                "Run Load from Notion first. Electrical Topology becomes available when the Notion load completes.\n\nThe application reads Component IR only from Notion and hydrates the local SQLite runtime cache for Topology; it no longer performs automatic web search or PDF download."),
+                "請先按「從 Notion 取得」。Notion 讀取完成後即可進入電路拓樸。\n\n如果是上方單顆 Notion 查詢，查到後按「加入 BOM」即可直接進入 Topology，不需要再重複查一次。\n\n軟體只從 Notion 中央庫取得 Component IR，並寫入 Local SQLite 執行快取供 Topology 使用；不會再自動上網搜尋或抓 PDF。",
+                "Run Load from Notion first. Electrical Topology becomes available when the Notion load completes.\n\nFor a single Notion lookup above, click Add to BOM after a successful lookup and Topology becomes available immediately; no second lookup is required.\n\nThe application reads Component IR only from Notion and hydrates the local SQLite runtime cache for Topology; it no longer performs automatic web search or PDF download."),
             T("請先讀取 Notion", "Load Notion first"),
             MessageBoxButton.OK,
             MessageBoxImage.Information);

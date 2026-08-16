@@ -19,7 +19,7 @@ public static class ComponentRuntimeFactory
 {
     /// <summary>
     /// Legacy online pipeline retained for CLI/regression compatibility only.
-    /// The Windows desktop UI must use CreateNotionOnlyLookupService instead.
+    /// The Windows desktop UI must use CreateCentralWorkbookLookupService instead.
     /// </summary>
     public static ComponentIntelligencePipeline CreateOnline(string databasePath, string? cachePath = null)
     {
@@ -49,10 +49,25 @@ public static class ComponentRuntimeFactory
     }
 
     /// <summary>
-    /// Production Windows-desktop lookup path. Notion is the only engineering knowledge authority.
-    /// SQLite is hydrated only as a runtime cache for topology/layout; no web resolver, PDF downloader,
-    /// parser, browser automation, distributor source, or automatic Notion write is constructed here.
+    /// Production Windows-desktop path. The selected Component_Intelligence_Database.xlsx is the
+    /// central engineering authority and must contain Components, Ports, and Pins sheets. Google Drive
+    /// for Desktop may synchronize the workbook and Documents folder locally. SQLite is hydrated only
+    /// as a runtime/query cache; no web resolver, PDF downloader, parser, or central write is constructed.
     /// </summary>
+    public static CentralLibraryComponentLookupService CreateCentralWorkbookLookupService(
+        string databasePath,
+        string workbookPath)
+    {
+        var repository = new SqliteComponentIrRepository(databasePath);
+        IComponentKnowledgeStore central = new WorkbookComponentKnowledgeStore(workbookPath);
+        return new CentralLibraryComponentLookupService(repository, central);
+    }
+
+    /// <summary>
+    /// Legacy Notion adapter retained for migration/regression compatibility. New Windows UI code must
+    /// not call this method.
+    /// </summary>
+    [Obsolete("Desktop central knowledge is workbook-based. Use CreateCentralWorkbookLookupService.")]
     public static NotionOnlyComponentLookupService CreateNotionOnlyLookupService(string databasePath)
     {
         var repository = new SqliteComponentIrRepository(databasePath);
@@ -62,14 +77,15 @@ public static class ComponentRuntimeFactory
         return new NotionOnlyComponentLookupService(repository, notion);
     }
 
-    [Obsolete("Desktop search is Notion-only. Use CreateNotionOnlyLookupService.")]
+    [Obsolete("Desktop search uses the central workbook. Use CreateCentralWorkbookLookupService.")]
     public static ComponentSearchService CreateOnlineSearchService(string databasePath, string? cachePath = null) =>
         new(CreateOnline(databasePath, cachePath));
 
     /// <summary>
-    /// Creates the explicit Local ↔ Notion manual sync workflow. The returned service is safe to use
-    /// even when no Notion token exists: local edits are still saved and marked Pending/LocalOnly.
+    /// Legacy explicit Local ↔ Notion manual sync retained for migration/regression compatibility.
+    /// It is no longer the production desktop central-archive path.
     /// </summary>
+    [Obsolete("Central archive writes are owned by the GPT archive workflow, not the desktop application.")]
     public static ComponentKnowledgeSyncService CreateKnowledgeSyncService(string databasePath)
     {
         var options = NotionKnowledgeStoreOptions.FromEnvironment();

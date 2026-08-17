@@ -33,27 +33,44 @@ public sealed class TopologyProjection
     {
         ArgumentNullException.ThrowIfNull(project);
         if (columns <= 0) throw new ArgumentOutOfRangeException(nameof(columns));
+
+        var sensorByObjectId = project.Components.ToDictionary(
+            component => component.ComponentInstanceId,
+            IsFieldSensor,
+            StringComparer.OrdinalIgnoreCase);
         var known = project.TopologyPlacements.Select(item => item.ObjectId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var objects = project.Components.Select(component => (Id: component.ComponentInstanceId, Kind: "COMPONENT"))
-            .Concat(project.TerminalBlocks.Select(block => (Id: block.TerminalBlockId, Kind: "TERMINAL_BLOCK")))
+        var objects = project.Components
+            .Select(component => new PlacementCandidate(component.ComponentInstanceId, "COMPONENT", IsFieldSensor(component)))
+            .Concat(project.TerminalBlocks.Select(block => new PlacementCandidate(block.TerminalBlockId, "TERMINAL_BLOCK", false)))
             .Where(item => !known.Contains(item.Id))
             .ToArray();
 
-        var index = project.TopologyPlacements.Count;
-        foreach (var item in objects)
+        // Reserve the visible far-right lane for field sensors. This keeps the normal control / hub /
+        // terminal topology in the body of the drawing while sensors form a predictable right-side row.
+        // The rule is presentation-only and does not alter electrical Direction, PortRole, or connectivity.
+        var hasDedicatedSensorLane = columns >= 2;
+        var bodyColumns = hasDedicatedSensorLane ? columns - 1 : 1;
+        var sensorX = hasDedicatedSensorLane
+            ? startX + (columns - 1) * gapX
+            : startX + gapX;
+
+        var bodyIndex = project.TopologyPlacements.Count(placement =>
+            !sensorByObjectId.TryGetValue(placement.ObjectId, out var isSensor) || !isSensor);
+        var sensorIndex = project.TopologyPlacements.Count(placement =>
+            sensorByObjectId.TryGetValue(placement.ObjectId, out var isSensor) && isSensor);
+
+        foreach (var item in objects.Where(item => !item.IsFieldSensor))
         {
-            var column = index % columns;
-            var row = index / columns;
-            project.TopologyPlacements.Add(new TopologyPlacement
-            {
-                ObjectId = item.Id,
-                ObjectKind = item.Kind,
-                X = startX + column * gapX,
-                Y = startY + row * gapY,
-                Width = item.Kind == "TERMINAL_BLOCK" ? 165 : 140,
-                Height = item.Kind == "TERMINAL_BLOCK" ? 88 : 76
-            });
-            index++;
+            var column = bodyIndex % bodyColumns;
+            var row = bodyIndex / bodyColumns;
+            AddPlacement(project, item, startX + column * gapX, startY + row * gapY);
+            bodyIndex++;
+        }
+
+        foreach (var item in objects.Where(item => item.IsFieldSensor))
+        {
+            AddPlacement(project, item, sensorX, startY + sensorIndex * gapY);
+            sensorIndex++;
         }
     }
 
@@ -156,6 +173,41 @@ public sealed class TopologyProjection
         placement.RotationDegrees = normalized;
     }
 
+    private static void AddPlacement(ElectricalProject project, PlacementCandidate item, double x, double y)
+    {
+        project.TopologyPlacements.Add(new TopologyPlacement
+        {
+            ObjectId = item.Id,
+            ObjectKind = item.Kind,
+            X = x,
+            Y = y,
+            Width = item.Kind == "TERMINAL_BLOCK" ? 165 : 140,
+            Height = item.Kind == "TERMINAL_BLOCK" ? 88 : 76
+        });
+    }
+
+    private static bool IsFieldSensor(ComponentInstance component)
+    {
+        var type = component.TypeKey.Trim();
+        if (!type.Contains("sensor", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // Keep devices whose category merely contains the word Sensor but whose engineering role is
+        // actually an amplifier/controller/interface in the normal control body rather than in the
+        // right-side field-sensor lane.
+        return !ContainsAny(type,
+            "amplifier",
+            "controller",
+            "master",
+            "gateway",
+            "hub",
+            "cable",
+            "connector",
+            "adapter");
+    }
+
+    private static bool ContainsAny(string value, params string[] tokens) =>
+        tokens.Any(token => value.Contains(token, StringComparison.OrdinalIgnoreCase));
+
     private static IReadOnlyDictionary<string, string> BuildEndpointOwners(ElectricalProject project)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -218,4 +270,6 @@ public sealed class TopologyProjection
         if (layers.Contains(filter.Value)) return true;
         return edges.Any(edge => string.Equals(edge.FromObjectId, objectId, StringComparison.OrdinalIgnoreCase) || string.Equals(edge.ToObjectId, objectId, StringComparison.OrdinalIgnoreCase));
     }
+
+    private sealed record PlacementCandidate(string Id, string Kind, bool IsFieldSensor);
 }

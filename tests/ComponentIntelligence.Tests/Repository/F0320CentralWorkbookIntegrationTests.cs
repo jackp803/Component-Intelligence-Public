@@ -32,6 +32,7 @@ public sealed class F0320CentralWorkbookIntegrationTests
             Assert.NotNull(cached);
             Assert.Equal(2, cached!.Ports.Count);
             Assert.Equal(3, cached.Pins.Count(pin => pin.PortId == "INPUT"));
+            Assert.Equal("F03-20-IN-1", cached.Pins.Single(pin => pin.PortId == "INPUT" && pin.PinNumber == "1").PinId);
             Assert.Equal("Unused", cached.Pins.Single(pin => pin.PortId == "INPUT" && pin.PinNumber == "3").PinStatus);
             Assert.DoesNotContain(KnowledgeCompletenessPolicy.Assess(cached), gap => gap.Key == "pins.coverage.INPUT");
 

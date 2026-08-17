@@ -7,6 +7,45 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class TopologyProjectionArrangementTests
 {
     [Fact]
+    public void EnsurePlacement_AddsOnlyRequestedObject()
+    {
+        var project = new ElectricalProject { ProjectId = "palette-first" };
+        project.Components.Add(Component("C1", "PLC"));
+        project.Components.Add(Component("C2", "IO-Link Master"));
+        project.Components.Add(Component("C3", "Pressure Sensor"));
+        var projection = new TopologyProjection();
+
+        var placement = projection.EnsurePlacement(project, "C2", 520, 310);
+
+        Assert.Single(project.TopologyPlacements);
+        Assert.Equal("C2", placement.ObjectId);
+        Assert.Equal(520, placement.X, 6);
+        Assert.Equal(310, placement.Y, 6);
+        Assert.Empty(projection.Build(project).Nodes.Where(node => node.ObjectId != "C2"));
+    }
+
+    [Fact]
+    public void EnsurePlacement_ReusesExistingSavedPlacementWithoutDuplicate()
+    {
+        var project = new ElectricalProject { ProjectId = "saved-placement" };
+        project.Components.Add(Component("C1", "PLC"));
+        project.TopologyPlacements.Add(new TopologyPlacement
+        {
+            ObjectId = "C1",
+            ObjectKind = "COMPONENT",
+            X = 123,
+            Y = 456
+        });
+        var projection = new TopologyProjection();
+
+        var placement = projection.EnsurePlacement(project, "C1", 900, 900);
+
+        Assert.Single(project.TopologyPlacements);
+        Assert.Equal(123, placement.X, 6);
+        Assert.Equal(456, placement.Y, 6);
+    }
+
+    [Fact]
     public void EnsurePlacements_PutsFieldSensorsInFarRightLane()
     {
         var project = new ElectricalProject { ProjectId = "sensor-lane" };

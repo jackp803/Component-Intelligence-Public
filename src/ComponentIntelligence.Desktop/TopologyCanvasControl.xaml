@@ -46,6 +46,20 @@
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                         <TextBlock Text="元件 / Components" FontSize="16" FontWeight="SemiBold" />
                         <TextBlock Text="這裡只顯示尚未放上畫布的 BOM／專案元件；拖到右側後會從清單消失，但不會刪除元件資料。" Foreground="#666" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <WrapPanel Margin="0,8,0,0">
+                            <ToggleButton x:Name="TerminalPaletteButton"
+                                          Content="端子台 / Terminal"
+                                          Padding="9,4" Margin="0,0,6,4"
+                                          Checked="PaletteCategoryToggle_Changed"
+                                          Unchecked="PaletteCategoryToggle_Changed"
+                                          ToolTip="只有開啟時，端子台電料才會出現在下方待放置清單" />
+                            <ToggleButton x:Name="JumperPaletteButton"
+                                          Content="短路片 / Jumper"
+                                          Padding="9,4" Margin="0,0,0,4"
+                                          Checked="PaletteCategoryToggle_Changed"
+                                          Unchecked="PaletteCategoryToggle_Changed"
+                                          ToolTip="只有開啟時，短路片／橋接片電料才會出現在下方待放置清單" />
+                        </WrapPanel>
                     </StackPanel>
                     <ListBox x:Name="TopologyPalette"
                              DisplayMemberPath="Display"

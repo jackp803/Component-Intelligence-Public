@@ -210,6 +210,26 @@ public sealed class TopologyPortGeometryTests
         Assert.Equal(-1d, last.OutwardY, 6);
     }
 
+    [Theory]
+    [InlineData(0, 100, 200, 140, 80)]
+    [InlineData(90, 130, 170, 80, 140)]
+    [InlineData(180, 100, 200, 140, 80)]
+    [InlineData(270, 130, 170, 80, 140)]
+    public void VisualBounds_ReflectTheActuallyRotatedComponentRectangle(
+        int degrees,
+        double expectedX,
+        double expectedY,
+        double expectedWidth,
+        double expectedHeight)
+    {
+        var bounds = TopologyPortGeometry.CalculateVisualBounds(Placement(degrees));
+
+        Assert.Equal(expectedX, bounds.X, 6);
+        Assert.Equal(expectedY, bounds.Y, 6);
+        Assert.Equal(expectedWidth, bounds.Width, 6);
+        Assert.Equal(expectedHeight, bounds.Height, 6);
+    }
+
     private static TopologyPlacement Placement(int degrees) => new()
     {
         ObjectId = "device-1",

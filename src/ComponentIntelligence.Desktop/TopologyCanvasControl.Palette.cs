@@ -1,8 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using ComponentIntelligence.Electrical.Topology;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -125,21 +127,45 @@ public partial class TopologyCanvasControl
             placement => placement.ObjectId,
             StringComparer.OrdinalIgnoreCase);
 
+        var showTerminals = TerminalPaletteButton?.IsChecked == true;
+        var showJumpers = JumperPaletteButton?.IsChecked == true;
+        var terminalCount = 0;
+        var jumperCount = 0;
         var items = new List<TopologyPaletteItem>();
         foreach (var component in _project.Components)
         {
             if (placementById.ContainsKey(component.ComponentInstanceId)) continue;
+            var materialKind = TopologyPaletteMaterialPolicy.Classify(component.TypeKey);
+            if (materialKind == TopologyPaletteMaterialKind.TerminalBlock)
+            {
+                terminalCount++;
+                if (!showTerminals) continue;
+            }
+            else if (materialKind == TopologyPaletteMaterialKind.ShortingJumper)
+            {
+                jumperCount++;
+                if (!showJumpers) continue;
+            }
+
             var label = component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId;
+            var kind = materialKind switch
+            {
+                TopologyPaletteMaterialKind.TerminalBlock => "Terminal Block｜端子台",
+                TopologyPaletteMaterialKind.ShortingJumper => "Shorting Jumper｜短路片",
+                _ => "Component｜元件"
+            };
             items.Add(new TopologyPaletteItem(
                 component.ComponentInstanceId,
                 "COMPONENT",
                 label,
-                BuildPaletteDisplay(label, "Component｜元件")));
+                BuildPaletteDisplay(label, kind)));
         }
 
         foreach (var block in _project.TerminalBlocks)
         {
             if (placementById.ContainsKey(block.TerminalBlockId)) continue;
+            terminalCount++;
+            if (!showTerminals) continue;
             var label = string.IsNullOrWhiteSpace(block.FunctionTag)
                 ? block.ReferenceDesignator
                 : $"{block.ReferenceDesignator} / {block.FunctionTag}";
@@ -150,6 +176,11 @@ public partial class TopologyCanvasControl
                 BuildPaletteDisplay(label, "Terminal Block｜端子台")));
         }
 
+        if (TerminalPaletteButton is not null)
+            TerminalPaletteButton.Content = $"端子台 / Terminal ({terminalCount})";
+        if (JumperPaletteButton is not null)
+            JumperPaletteButton.Content = $"短路片 / Jumper ({jumperCount})";
+
         var ordered = items
             .OrderBy(item => item.Label, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.ObjectId, StringComparer.OrdinalIgnoreCase)
@@ -159,6 +190,19 @@ public partial class TopologyCanvasControl
 
         _topologyPaletteSignature = signature;
         TopologyPalette.ItemsSource = ordered;
+    }
+
+    private void PaletteCategoryToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        RefreshTopologyPaletteIfNeeded(force: true);
+        if (sender is ToggleButton button)
+        {
+            var visible = button.IsChecked == true;
+            HintBanner.Visibility = Visibility.Visible;
+            HintText.Text = visible
+                ? $"已展開 {button.Content}；可從下方清單拖到畫布。"
+                : "已收起特殊電料清單；已放上畫布的元件不會被刪除。";
+        }
     }
 
     private static string BuildPaletteDisplay(string label, string kind) =>

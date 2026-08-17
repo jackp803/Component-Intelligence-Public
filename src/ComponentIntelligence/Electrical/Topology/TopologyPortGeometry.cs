@@ -17,6 +17,23 @@ public enum TopologyScreenSide
 /// </summary>
 public static class TopologyPortGeometry
 {
+    public static TopologyPlacementBounds CalculateVisualBounds(TopologyPlacement placement)
+    {
+        ArgumentNullException.ThrowIfNull(placement);
+        var radians = NormalizeDegrees(placement.RotationDegrees) * Math.PI / 180d;
+        var visualWidth = Math.Abs(placement.Width * Math.Cos(radians)) +
+                          Math.Abs(placement.Height * Math.Sin(radians));
+        var visualHeight = Math.Abs(placement.Width * Math.Sin(radians)) +
+                           Math.Abs(placement.Height * Math.Cos(radians));
+        var centerX = placement.X + placement.Width / 2d;
+        var centerY = placement.Y + placement.Height / 2d;
+        return new TopologyPlacementBounds(
+            centerX - visualWidth / 2d,
+            centerY - visualHeight / 2d,
+            visualWidth,
+            visualHeight);
+    }
+
     public static TopologyScreenSide DetermineScreenSide(ComponentInstance component, ComponentPort port)
     {
         ArgumentNullException.ThrowIfNull(component);
@@ -272,3 +289,4 @@ public static class TopologyPortGeometry
 }
 
 public sealed record TopologyPortAnchor(double X, double Y, double OutwardX, double OutwardY);
+public sealed record TopologyPlacementBounds(double X, double Y, double Width, double Height);

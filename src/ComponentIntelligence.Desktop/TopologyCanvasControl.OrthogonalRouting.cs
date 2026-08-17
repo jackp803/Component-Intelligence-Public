@@ -11,6 +11,10 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class TopologyCanvasControl
 {
+    private const double RoutingObstacleMargin = 24d;
+    private const double RoutingEndpointClearance = 48d;
+    private const double RoutingLaneClearance = 24d;
+    private const double RoutingParallelSpacing = 24d;
     private readonly Dictionary<string, Point> _manualRouteWaypoints = new(StringComparer.OrdinalIgnoreCase);
     private bool _routingVisualsUpdating;
     private string? _selectedRouteConnectionId;
@@ -152,22 +156,18 @@ public partial class TopologyCanvasControl
         Point end,
         IReadOnlyList<IReadOnlyList<Point>> completedRoutes)
     {
-        if (Math.Abs(start.X - end.X) < 0.5 || Math.Abs(start.Y - end.Y) < 0.5)
-            return [start, end];
-
         var obstacles = BuildRoutingObstacles();
-        const double clearance = 26d;
 
         const double routingGrid = 12d;
         static double SnapToGrid(double value) => Math.Round(value / routingGrid) * routingGrid;
 
-        var xLanes = obstacles.SelectMany(rect => new[] { rect.Left - clearance, rect.Right + clearance })
+        var xLanes = obstacles.SelectMany(rect => new[] { rect.Left - RoutingLaneClearance, rect.Right + RoutingLaneClearance })
             .Append((start.X + end.X) / 2d)
             .Select(SnapToGrid)
             .Where(x => x >= 0d && x <= Surface.Width)
             .Distinct()
             .ToArray();
-        var yLanes = obstacles.SelectMany(rect => new[] { rect.Top - clearance, rect.Bottom + clearance })
+        var yLanes = obstacles.SelectMany(rect => new[] { rect.Top - RoutingLaneClearance, rect.Bottom + RoutingLaneClearance })
             .Append((start.Y + end.Y) / 2d)
             .Select(SnapToGrid)
             .Where(y => y >= 0d && y <= Surface.Height)
@@ -244,14 +244,14 @@ public partial class TopologyCanvasControl
     private List<Rect> BuildRoutingObstacles()
     {
         if (_project is null) return [];
-        const double margin = 12d;
 
         return _project.TopologyPlacements
-            .Select(placement => new Rect(
-                placement.X - margin,
-                placement.Y - margin,
-                placement.Width + margin * 2,
-                placement.Height + margin * 2))
+            .Select(TopologyPortGeometry.CalculateVisualBounds)
+            .Select(bounds => new Rect(
+                bounds.X - RoutingObstacleMargin,
+                bounds.Y - RoutingObstacleMargin,
+                bounds.Width + RoutingObstacleMargin * 2,
+                bounds.Height + RoutingObstacleMargin * 2))
             .ToList();
     }
 
@@ -263,11 +263,11 @@ public partial class TopologyCanvasControl
             string.Equals(item.ObjectId, ownerId, StringComparison.OrdinalIgnoreCase));
         if (placement is null) return anchor;
 
-        const double clearance = 24d;
-        var left = placement.X;
-        var right = placement.X + placement.Width;
-        var top = placement.Y;
-        var bottom = placement.Y + placement.Height;
+        var bounds = TopologyPortGeometry.CalculateVisualBounds(placement);
+        var left = bounds.X;
+        var right = bounds.X + bounds.Width;
+        var top = bounds.Y;
+        var bottom = bounds.Y + bounds.Height;
         var distances = new[]
         {
             (Distance: Math.Abs(anchor.X - left), Side: EndpointEscapeSide.Left),
@@ -284,10 +284,10 @@ public partial class TopologyCanvasControl
 
         return side switch
         {
-            EndpointEscapeSide.Left => new Point(left - clearance, anchor.Y),
-            EndpointEscapeSide.Right => new Point(right + clearance, anchor.Y),
-            EndpointEscapeSide.Top => new Point(anchor.X, top - clearance),
-            EndpointEscapeSide.Bottom => new Point(anchor.X, bottom + clearance),
+            EndpointEscapeSide.Left => new Point(left - RoutingEndpointClearance, anchor.Y),
+            EndpointEscapeSide.Right => new Point(right + RoutingEndpointClearance, anchor.Y),
+            EndpointEscapeSide.Top => new Point(anchor.X, top - RoutingEndpointClearance),
+            EndpointEscapeSide.Bottom => new Point(anchor.X, bottom + RoutingEndpointClearance),
             _ => anchor
         };
     }
@@ -339,7 +339,8 @@ public partial class TopologyCanvasControl
             var c = route[index];
             var d = route[index + 1];
             if (TryGetProperOrthogonalIntersection(a, b, c, d, out _)) count++;
-            else if (HasCollinearOverlap(a, b, c, d)) count += 5;
+            else if (HasCollinearOverlap(a, b, c, d)) count += 8;
+            else if (HasNearbyParallelOverlap(a, b, c, d)) count += 2;
         }
         return count;
     }
@@ -357,6 +358,24 @@ public partial class TopologyCanvasControl
         var bothVertical = Math.Abs(a.X - b.X) < epsilon && Math.Abs(c.X - d.X) < epsilon &&
                            Math.Abs(a.X - c.X) < epsilon;
         return bothVertical && Math.Min(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y)) -
+               Math.Max(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y)) > minimumOverlap;
+    }
+
+    private static bool HasNearbyParallelOverlap(Point a, Point b, Point c, Point d)
+    {
+        const double epsilon = 0.5d;
+        const double minimumOverlap = 8d;
+        var bothHorizontal = Math.Abs(a.Y - b.Y) < epsilon && Math.Abs(c.Y - d.Y) < epsilon;
+        if (bothHorizontal && Math.Abs(a.Y - c.Y) < RoutingParallelSpacing)
+        {
+            var overlap = Math.Min(Math.Max(a.X, b.X), Math.Max(c.X, d.X)) -
+                          Math.Max(Math.Min(a.X, b.X), Math.Min(c.X, d.X));
+            return overlap > minimumOverlap;
+        }
+
+        var bothVertical = Math.Abs(a.X - b.X) < epsilon && Math.Abs(c.X - d.X) < epsilon;
+        if (!bothVertical || Math.Abs(a.X - c.X) >= RoutingParallelSpacing) return false;
+        return Math.Min(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y)) -
                Math.Max(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y)) > minimumOverlap;
     }
 

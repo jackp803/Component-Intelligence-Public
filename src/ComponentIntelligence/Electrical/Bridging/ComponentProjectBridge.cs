@@ -164,10 +164,13 @@ public sealed class ComponentProjectBridge
         var raw = string.Join(' ', new[] { sourcePin.Function, sourcePin.PinRole, sourcePin.SignalType, sourcePin.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
         var layer = DetermineLayer(sourcePin.SignalType, FirstNonBlank(sourcePin.Function, sourcePin.PinRole));
         var ownerIdentity = string.IsNullOrWhiteSpace(ownerPortId) ? "unassigned" : Sanitize(ownerPortId);
+        var stableSourcePinId = FirstNonBlank(
+            sourcePin.PinId,
+            $"{FirstNonBlank(ownerPortId, "unassigned")}:{sourcePin.PinNumber}")!;
         var status = DeterminePinStatus(sourcePin.PinStatus, sourcePin.Function);
         return new DomainPin
         {
-            PinId = $"{instanceId}:port:{ownerIdentity}:pin:{Sanitize(sourcePin.PinNumber)}",
+            PinId = $"{instanceId}:port:{ownerIdentity}:pin:{EncodeStableIdSegment(stableSourcePinId)}",
             PinNumber = sourcePin.PinNumber,
             PinName = FirstNonBlank(sourcePin.PinName, sourcePin.Description),
             Function = FirstNonBlank(sourcePin.Function, sourcePin.PinRole),
@@ -326,6 +329,26 @@ public sealed class ComponentProjectBridge
         var separators = new[] { ' ', '/', '\\', '-', '_', '+', ':', ';', ',', '(', ')', '[', ']' };
         return source.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Any(part => string.Equals(part, token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string EncodeStableIdSegment(string value)
+    {
+        var builder = new System.Text.StringBuilder();
+        foreach (var character in value.Trim())
+        {
+            if (char.IsLetterOrDigit(character) || character is '-' or '_')
+            {
+                builder.Append(char.ToLowerInvariant(character));
+                continue;
+            }
+
+            // Encode punctuation instead of deleting it. This keeps +, -, /, :, and other engineering
+            // identifiers deterministic and collision-free even for legacy rows without a central PinID.
+            builder.Append("_u")
+                .Append(((int)character).ToString("x4"))
+                .Append('_');
+        }
+        return builder.Length == 0 ? "empty" : builder.ToString();
     }
 
     private static string Sanitize(string value)

@@ -124,7 +124,30 @@ public sealed class BomTopologySynchronizerTests
         Assert.Equal(0, result.RichInstances);
         Assert.Equal(0, result.PlaceholderInstances);
         Assert.Equal(1, result.DeferredConnectionMaterialRows);
+        var material = Assert.Single(result.ConnectionMaterials);
+        Assert.Equal("CMP-CABLE-001", material.CableDefinitionId);
+        Assert.Equal("Vendor", material.Manufacturer);
+        Assert.Equal("CABLE-001", material.Model);
+        Assert.Equal(category, material.Category);
+        Assert.Equal(3, material.AvailableQuantity);
+        Assert.Contains("BOM Qty 3", material.DisplayLabel, StringComparison.Ordinal);
         Assert.Empty(project.Components);
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_RepeatedCableRowsBecomeOneDropdownChoiceWithCombinedQuantity()
+    {
+        var project = NewProject();
+        var component = NewComponentIr("CMP-WIRE-001", "Vendor", "WIRE-001", category: "Wire");
+
+        var result = await new BomTopologySynchronizer().SynchronizeAsync(
+            project,
+            [NewRow("C3", "Vendor", "WIRE-001", used: 2, spare: 0),
+             NewRow("C4", "Vendor", "WIRE-001", used: 3, spare: 0)],
+            (_, _, _) => Task.FromResult<ComponentIR?>(component));
+
+        var material = Assert.Single(result.ConnectionMaterials);
+        Assert.Equal(5, material.AvailableQuantity);
     }
 
     [Fact]

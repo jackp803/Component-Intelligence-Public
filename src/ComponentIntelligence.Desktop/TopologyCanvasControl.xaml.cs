@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using ComponentIntelligence.Electrical.Bridging;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Topology;
 using Microsoft.Win32;
@@ -24,6 +25,8 @@ public partial class TopologyCanvasControl : UserControl
     private bool _dragRecorded;
     private InteractionMode _interactionMode = InteractionMode.Select;
     private string? _pendingWireEndpointId;
+    private IReadOnlyList<BomConnectionMaterialOption> _availableCableMaterials =
+        Array.Empty<BomConnectionMaterialOption>();
 
     public TopologyCanvasControl()
     {
@@ -48,6 +51,12 @@ public partial class TopologyCanvasControl : UserControl
     {
         _layerFilter = layer;
         Render();
+    }
+
+    public void SetAvailableCableMaterials(IEnumerable<BomConnectionMaterialOption> materials)
+    {
+        ArgumentNullException.ThrowIfNull(materials);
+        _availableCableMaterials = materials.ToArray();
     }
 
     public void AutoArrange()
@@ -279,7 +288,15 @@ public partial class TopologyCanvasControl : UserControl
             return;
         }
 
-        var dialog = new InlineConnectionDialog(BuildConnectionSummary(connection)) { Owner = Window.GetWindow(this) };
+        var assignedCable = _project.Cables.FirstOrDefault(item =>
+            string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
+        var dialog = new InlineConnectionDialog(
+            BuildConnectionSummary(connection),
+            _availableCableMaterials,
+            assignedCable?.CableDefinitionId)
+        {
+            Owner = Window.GetWindow(this)
+        };
         if (dialog.ShowDialog() != true)
         {
             e.Handled = true;

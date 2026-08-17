@@ -23,6 +23,7 @@ public partial class ElectricalWorkspaceWindow
     {
         if (workingBom.Count == 0)
         {
+            TopologyCanvas.SetAvailableCableMaterials(Array.Empty<BomConnectionMaterialOption>());
             WorkspaceStatusText.Text = "BOM → Topology：目前 working BOM 無資料。";
             return;
         }
@@ -60,11 +61,12 @@ public partial class ElectricalWorkspaceWindow
             // LoadProject_Click immediately performs a fresh sync against the loaded snapshot.
             if (!ReferenceEquals(targetProject, _project)) return;
 
+            TopologyCanvas.SetAvailableCableMaterials(result.ConnectionMaterials);
             RefreshAll();
             WorkspaceStatusText.Text =
                 $"Processed BOM → Topology：新增 {result.AddedInstances}；" +
                 $"完整 IR {result.RichInstances}；Placeholder {result.PlaceholderInstances}；" +
-                $"連線材料 {result.DeferredConnectionMaterialRows}；" +
+                $"連線材料 {result.DeferredConnectionMaterialRows}（可選型號 {result.ConnectionMaterials.Count}）；" +
                 $"Qty ? {result.UnknownQuantityRows}；Spare-only 略過 {result.SkippedSpareOnlyRows}。" +
                 "舊專案的位置與接線已保留；請按「儲存」寫回更新後的專案。";
         }

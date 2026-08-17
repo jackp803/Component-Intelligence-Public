@@ -45,7 +45,7 @@ public partial class TopologyCanvasControl
         var result = new List<VisualEndpoint>();
         foreach (var port in component.Ports)
         {
-            var side = TopologyPortGeometry.DetermineScreenSide(port);
+            var side = TopologyPortGeometry.DetermineScreenSide(component, port);
             var mode = TopologyEndpointPolicy.DetermineDisplayMode(port);
 
             if (mode == TopologyEndpointDisplayMode.Connector || port.Pins.Count == 0)

@@ -1,5 +1,7 @@
 # Topology Endpoint + Routing v2
 
+> Central archive decisions are governed by [`COMPONENT_ARCHIVE_SPEC_V2.md`](COMPONENT_ARCHIVE_SPEC_V2.md). This document defines how archived Ports/Pins are presented and connected on the Topology canvas.
+
 ## 1. Purpose
 
 Topology is not only a component relationship diagram. It must retain enough endpoint identity to become a reliable input for Wiring Diagram / Electrical Drawing generation.
@@ -61,6 +63,8 @@ Topology blocks are not fixed-size symbols. When a component has many visible en
 
 Current editor target is approximately 22 px vertical pitch per visible endpoint on the more populated side, with a larger minimum width when Pin-level endpoints are shown.
 
+Large I/O devices may therefore render taller than ordinary sensors. Readability has priority over keeping every block the same size.
+
 ## 6. Connector expand/collapse
 
 `Connector` mode is collapsed by default.
@@ -81,7 +85,42 @@ Expanded Pin markers are real wireable endpoints. Expansion changes presentation
 
 `Pins` mode is permanently expanded because hiding independent terminals/conductors would make the wiring ambiguous.
 
-## 7. Orthogonal routing
+## 7. Screen side semantics｜畫面左右規則
+
+Topology screen side and electrical Direction are different concepts.
+
+Priority for Port placement:
+
+1. Clear `PortRole` semantics: Input-role → screen-left; Output-role → screen-right.
+2. Electrical `Direction` if the role is not directional.
+3. Pin engineering semantics if both are still unresolved.
+4. Mixed / bidirectional / neutral fallback follows the editor presentation policy; current neutral default is right.
+
+`PhysicalSide` describes the real physical connector face and does not override this topology convention.
+
+### OMRON K7L-AT50DP
+
+The SENSING Port contains terminals 2/3/4 and is archived as:
+
+```text
+PortRole = Sensor Input
+Direction = Mixed
+TopologyEndpointMode = Pins
+```
+
+Therefore terminals 2/3/4 render on the **left**. Pin 4 may electrically transmit the sensing signal without changing the functional PortRole of the group.
+
+The OUTPUT Port contains 5/6/7 and renders on the **right**.
+
+### IFM AL1342
+
+X01~X08 are archived truthfully as `IO-Link Port Class A`, `Direction=Mixed`, `TopologyEndpointMode=Connector`.
+
+They must **not** be re-archived as fake `Output` ports merely to force a side. Because the role is mixed/non-directional, the editor's neutral presentation fallback places these ports on the **right**.
+
+If a runtime build shows X01~X08 on the wrong side while the archive still contains the values above, treat it as a program/runtime regression, not an archive correction.
+
+## 8. Orthogonal routing
 
 Formal topology lines use 90-degree orthogonal polylines rather than only straight center-to-center lines.
 
@@ -97,7 +136,26 @@ A selected route exposes a draggable bend handle. Dragging the handle creates a 
 
 Manual route waypoints are currently editor-session visual state; engineering connection endpoint data remains persistent. Persistent multi-waypoint project serialization can be added independently without changing the endpoint contract.
 
-## 8. Archive rules for GPT archiving workflow
+## 9. Auto Arrange｜自動排列
+
+Auto Arrange is presentation logic, not archive truth.
+
+Current desired layout behavior:
+
+- Controls, masters, power supplies, amplifiers and other infrastructure occupy left/center columns.
+- True Sensor components are grouped in an orderly rightmost column.
+- A component must not be classified as Sensor merely because its Description contains the word `sensor`; e.g. a sensor amplifier/controller remains an amplifier/controller.
+- User manual placement remains editable after auto-arrange.
+
+The archive should provide truthful `Category` / Type information only. Do not add fake Port directions or physical-side values to influence auto-arrange.
+
+## 10. Canvas capacity
+
+The topology workspace is intentionally larger than the visible viewport and is scrollable in both axes. Large endpoint-count devices and a rightmost Sensor column are expected to require more working area than the original fixed small canvas.
+
+Canvas size is a UI setting and must not be encoded into the central archive.
+
+## 11. Archive rules for GPT archiving workflow
 
 When archiving a Port, the GPT archive workflow must:
 
@@ -107,9 +165,10 @@ When archiving a Port, the GPT archive workflow must:
 4. set `TopologyEndpointMode=Pins` when conductors/terminals are independently selected and wired by the engineer;
 5. never change Electrical `Direction` merely to force a topology visual side;
 6. keep `PortRole` as the topology/functional role and `Direction` as the truthful electrical behavior;
-7. keep all unused/NC/unknown physical Pins explicit.
+7. keep all unused/NC/unknown physical Pins explicit;
+8. never use `PhysicalSide` or fake Category values as a screen-placement hack.
 
-## 9. AL5021 reference behavior
+## 12. AL5021 reference behavior
 
 For IFM AL5021:
 

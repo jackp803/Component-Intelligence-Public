@@ -3,6 +3,7 @@ namespace ComponentIntelligence.Contracts;
 public sealed record ComponentPort
 {
     public required string PortId { get; init; }
+    public string? PortName { get; init; }
     public string? PortType { get; init; }
     public string? PortRole { get; init; }
     public string? ConnectorFamily { get; init; }
@@ -14,6 +15,12 @@ public sealed record ComponentPort
     public string? VoltageDomain { get; init; }
     public string? Protocol { get; init; }
     public string? PhysicalSide { get; init; }
+    /// <summary>
+    /// Topology interaction hint from the central archive. "Connector" means the physical connector
+    /// is the default topology endpoint; "Pins" means each physical pin/terminal/wire is individually
+    /// connectable on the topology canvas. Engineering Pin rows are retained in both modes.
+    /// </summary>
+    public string? TopologyEndpointMode { get; init; }
     public IReadOnlyList<string> AllowedConnections { get; init; } = Array.Empty<string>();
 }
 

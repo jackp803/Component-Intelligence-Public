@@ -27,6 +27,13 @@ public sealed record ComponentPort
 public sealed record ComponentPin
 {
     /// <summary>
+    /// Stable central-archive PinID. This identity is independent from the human-facing PinNumber and
+    /// must be preserved so symbols such as +, -, V+, V-, A+, and B- cannot collapse to the same
+    /// runtime endpoint after identifier normalization. Legacy/non-workbook sources may leave it null.
+    /// </summary>
+    public string? PinId { get; init; }
+
+    /// <summary>
     /// Logical parent port identity (for example PWR, ETH1, X1). Null means the available evidence
     /// does not establish which port owns the pin; callers must keep that uncertainty visible.
     /// </summary>

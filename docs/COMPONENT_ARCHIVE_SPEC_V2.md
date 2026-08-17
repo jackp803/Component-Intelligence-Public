@@ -105,6 +105,8 @@ OMRON_K7L-AT50DP_SENSING_2
 
 ID 是 stable engineering key（穩定工程鍵），不要因 UI 顯示名稱改字就改 ID。`PortName` / `PinName` 是人類可讀名稱。
 
+`Pins.PinID` 必須保持唯一且穩定，不能只靠清洗 `PinNumber` 重新產生。`+`, `-`, `V+`, `V-`, `A+`, `B-` 等符號本身具有工程識別意義；Runtime 若需要 instance-specific endpoint ID，應以中央 `PinID` 為主要 identity，再加 instance scope。舊資料沒有 `PinID` 時，fallback 也必須以可逆／不碰撞的方式編碼符號，不得直接刪除 `+/-`。
+
 ## 5. Components Sheet｜元件表
 
 目前核心欄位：
@@ -166,7 +168,7 @@ PortRole  = Output Port
 Direction = Passive
 ```
 
-這樣可保留真實 Passive 行為，同時讓 Topology 使用 PortRole 顯示 Input-left / Output-right。
+這樣可保留真實 Passive 行為，同時讓一般 Topology 使用 PortRole 顯示 Input-left / Output-right。
 
 ### 6.3 K7L-AT50DP SENSING 範例
 
@@ -179,7 +181,7 @@ Direction = Mixed
 TopologyEndpointMode = Pins
 ```
 
-Pin 2、3 是 Input/receive semantics；Pin 4 會送出 sensing signal，因此整個 Port 的 `Direction=Mixed` 是真實電氣資料。但整組在 Topology 的 functional role 是 Sensor Input，因此 2/3/4 應顯示在元件左側。
+Pin 2、3 是 Input/receive semantics；Pin 4 會送出 sensing signal，因此整個 Port 的 `Direction=Mixed` 是真實電氣資料。**K7L 的畫面左右屬於 component-specific presentation rule（元件專屬顯示規則），不能從這些電氣欄位反推或竄改。** 目前核准的 Topology 顯示為：POWER 1/8 與 OUTPUT 5/6/7 在左側，SENSING 2/3/4 在右側。這個例外只存在 UI presentation policy，不寫進假的 `Direction` 或 `PhysicalSide`。
 
 ### 6.4 AL1342 X01~X08 範例
 
@@ -193,13 +195,13 @@ ConnectorCoding = A
 TopologyEndpointMode = Connector
 ```
 
-此 Port 同時包含 sensor supply output、DI input、return、IO-Link C/Q，因此不得為了畫面位置硬改成 `Direction=Output`。目前 Topology 對這種 mixed / non-directional role 使用 presentation fallback，預設放右側。這是程式規則，不是歸檔造假的理由。
+此 Port 同時包含 sensor supply output、DI input、return、IO-Link C/Q，因此不得為了畫面位置硬改成 `Direction=Output`。目前 Topology 對 `Direction=Mixed` 的 connector 使用 neutral/mixed presentation fallback，放右側；即使真實 Pins 中包含 L+、L-、DI、C/Q，也不能被 Pin fallback 拉到左側。這是程式顯示規則，不是歸檔造假的理由。
 
 ### 6.5 PhysicalSide
 
 `PhysicalSide` 只描述真實機構位置，例如 `Front / Left / Right / Top`。沒有原廠證據就 `Unknown`。
 
-`PhysicalSide` 不等於 Topology screen side（畫面左右）。
+`PhysicalSide` 不等於 Topology screen side（畫面左右）。不得在 Notes 或 PhysicalSide 中寫「為了 Topology 放左／右」作為工程資料；若只是 UI 排版要求，應由 presentation policy 處理。
 
 ## 7. Pins Sheet｜腳位表
 
@@ -324,6 +326,7 @@ Cylindrical（圓柱）：
 - `TopologyEndpointMode` 已可決定 Connector vs Pins。
 - 已知 `PinCount` 的 Port 需 `ActualPinCount == PinCount`。
 - Pins mode 下，所有實際可接線 terminal / conductor 都有獨立 Pin row。
+- 每個 Pin 都有穩定且唯一的 `PinID`；不得因 `PinNumber` 符號清洗而碰撞。
 - 不得存在已知錯誤的 pin ownership。
 
 功能仍有 Unknown 可以存在，但如果 Unknown 會讓實際接線對象無法判斷，必須保持 `Review`，不能標 Ready。
@@ -360,6 +363,7 @@ Cylindrical（圓柱）：
 - M12 自動等於 5-pin。
 - 兩端同型 connector 就自動假設 1→1、2→2。
 - 為了 UI 左右位置把 Mixed / Passive 改成假的 Input / Output。
+- 為了 UI 左右位置把 `PhysicalSide` 寫成假的 Left / Right。
 - 把相近型號或同系列 variant 的資料直接套用到 exact model。
 
 ## 15. 新元件歸檔 SOP
@@ -371,12 +375,12 @@ Cylindrical（圓柱）：
 5. 找出所有 physical/logical Ports。
 6. 為每個 Port 建 PortID / PortName / PortRole / Direction。
 7. 判斷 Connector family / coding / gender / actual contact count。
-8. 建立全部 physical Pins，不省略 NC / Unused / Unknown。
+8. 建立全部 physical Pins，不省略 NC / Unused / Unknown，並給每個實體 contact 穩定且唯一的 PinID。
 9. 寫 PinRole / Direction / SignalType / Voltage / Function / PinStatus。
 10. 決定 `TopologyEndpointMode=Connector` 或 `Pins`。
 11. 歸檔 mechanical dimensions / mounting / drawing。
 12. 保存官方文件到 `Documents/<Manufacturer>/<Model>/...` 並填 relative path。
-13. 驗證 Component → Port → Pin 關聯與 PinCount completeness。
+13. 驗證 Component → Port → Pin 關聯、PinID uniqueness 與 PinCount completeness。
 14. 通過 Gate 才標 Ready；缺資料保持 Review / NeedsData。
 15. 更新 native Google Sheet 後，重新輸出 / 覆蓋 `Component_Intelligence_Database.xlsx`，避免 Desktop 讀到舊副本。
 
@@ -390,14 +394,15 @@ Cylindrical（圓柱）：
 
 ### OMRON K7L-AT50DP
 
-- POWER → `Power Input`。
-- SENSING 2/3/4 → `Sensor Input`, `Direction=Mixed`, `TopologyEndpointMode=Pins`，Topology 左側。
-- OUTPUT 5/6/7 → functional output group，Topology 右側。
+- POWER 1/8 → `Power Input`，真實 Direction 依工程資料保存；Topology **左側**。
+- SENSING 2/3/4 → `Sensor Input`, `Direction=Mixed`, `TopologyEndpointMode=Pins`；Topology **右側**。
+- OUTPUT 5/6/7 → functional output group；Topology **左側**。
+- 上述左右是 component-specific UI presentation rule，不得藉由竄改 `Direction` / `PhysicalSide` 實現。
 
 ### IFM AL1342
 
 - X01~X08 是 M12 A-coded IO-Link Class A whole-mated connectors → `Connector`。
-- `Direction=Mixed` 保持真實，不為畫面位置改成 Output。
+- `Direction=Mixed` 保持真實，不為畫面位置改成 Output；即使包含 L+ / L- / DI / C/Q Pins，Topology 仍應在右側。
 - X21~X23 Ethernet whole-mated connector → `Connector`。
 - X31 module power connector → `Connector`。
 
@@ -411,5 +416,5 @@ Cylindrical（圓柱）：
 
 - 本文件：中央歸檔資料與 GPT 歸檔決策規則。
 - `CENTRAL_WORKBOOK_KNOWLEDGE_V1.md`：現有 workbook storage/runtime contract 的歷史基礎文件；若規則衝突，以本 v2 為準。
-- `TOPOLOGY_ENDPOINT_ROUTING_V2.md`：Topology endpoint 顯示、Pin-level connection、orthogonal routing（正交走線）與 UI 行為。
+- `TOPOLOGY_ENDPOINT_ROUTING_V2.md`：Topology endpoint 顯示、Pin-level connection、orthogonal routing（正交走線）、palette-first placement（元件清單優先放置）與 UI 行為。
 - `VENDOR-PART-INTAKE-V1.md`：legacy intake 文件；新的 vendor/custom-part 流程應遵守本 v2。

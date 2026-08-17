@@ -51,6 +51,7 @@ public partial class TopologyCanvasControl
 
             DecorateComponentImages();
             Surface_LayoutUpdated(null, EventArgs.Empty);
+            EnsureCanvasContainsProjectContent();
             RefreshTopologyPaletteIfNeeded(force: true);
             ApplyWireLayerVisibility();
             ApplyTopologySelectionVisuals();
@@ -93,6 +94,12 @@ public partial class TopologyCanvasControl
 
         var point = e.GetPosition(Surface);
         var placement = _projection.EnsurePlacement(_project, item.ObjectId, point.X, point.Y);
+        var shift = ExpandCanvasForBounds(
+            point.X - placement.Width / 2d,
+            point.Y - placement.Height / 2d,
+            point.X + placement.Width / 2d,
+            point.Y + placement.Height / 2d);
+        point = new Point(point.X + shift.X, point.Y + shift.Y);
         var maxX = Math.Max(0, Surface.Width - placement.Width);
         var maxY = Math.Max(0, Surface.Height - placement.Height);
         var x = Math.Clamp(point.X - placement.Width / 2d, 0, maxX);

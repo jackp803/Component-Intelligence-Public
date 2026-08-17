@@ -30,7 +30,7 @@
         <Border x:Name="HintBanner" Grid.Row="1" BorderBrush="#B9D7F2" BorderThickness="1" CornerRadius="5" Background="#EEF7FF" Padding="8" Margin="0,0,0,8">
             <DockPanel>
                 <Button Content="×" DockPanel.Dock="Right" Width="26" Height="24" Padding="0" Click="DismissHint_Click" ToolTip="關閉提示" />
-                <TextBlock x:Name="HintText" Text="操作提示：左側元件清單可以直接拖到畫布整理位置；畫布內元件也能拖曳。按「拉線」後點 A Endpoint 再點 B Endpoint 完成精確接線；正式線應固定吸附真正 Port/Pin 圓點並使用 90° 折線。" TextWrapping="Wrap" Foreground="#245A85" VerticalAlignment="Center" />
+                <TextBlock x:Name="HintText" Text="操作提示：Ctrl + 滑鼠滾輪可縮放整張畫布；元件拖到上、下、左、右邊界附近會自動增加空間。按「拉線」後點 A Endpoint 再點 B Endpoint 完成精確接線。" TextWrapping="Wrap" Foreground="#245A85" VerticalAlignment="Center" />
             </DockPanel>
         </Border>
 
@@ -58,11 +58,18 @@
             <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#E5E5E5" ShowsPreview="True" />
 
             <Border Grid.Column="2" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="6" Background="#F7F7F7">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="TopologyScrollViewer"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              PreviewMouseWheel="TopologyScrollViewer_PreviewMouseWheel">
                     <Canvas x:Name="Surface" Width="3200" Height="2000" Background="White" AllowDrop="True"
                             DragOver="Surface_TopologyPaletteDragOver"
                             Drop="Surface_TopologyPaletteDrop"
-                            MouseMove="Surface_WirePreviewMouseMove" />
+                            MouseMove="Surface_WirePreviewMouseMove">
+                        <Canvas.LayoutTransform>
+                            <ScaleTransform x:Name="TopologyZoomTransform" ScaleX="1" ScaleY="1" />
+                        </Canvas.LayoutTransform>
+                    </Canvas>
                 </ScrollViewer>
             </Border>
         </Grid>

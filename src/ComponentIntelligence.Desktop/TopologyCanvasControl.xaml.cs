@@ -40,6 +40,7 @@ public partial class TopologyCanvasControl : UserControl
     {
         _project = project ?? throw new ArgumentNullException(nameof(project));
         _pendingWireEndpointId = null;
+        ResetCanvasBoundsForProject();
         Render();
     }
 
@@ -347,7 +348,7 @@ public partial class TopologyCanvasControl : UserControl
     private void ShowHelp_Click(object sender, RoutedEventArgs e)
     {
         HintBanner.Visibility = Visibility.Visible;
-        HintText.Text = "快速操作：① 拖曳空白處框選元件，拖曳高亮元件可整組移動。② 按「拉線」，點 A Endpoint 再點 B Endpoint。③ 按「自動排版」依連線關係重排元件與全部 90° 配線；可 Undo。④ 雙擊元件可補資料；雙擊線路可設定 Connector / Terminal / Cable。⑤ 右鍵元件旋轉。⑥ 匯出 PDF。";
+        HintText.Text = "快速操作：① Ctrl + 滾輪縮放畫布；元件拖到任一邊界會自動增加空間。② 拖曳空白處框選元件，拖曳高亮元件可整組移動。③ 按「拉線」，點 A Endpoint 再點 B Endpoint。④ 按「自動排版」重排元件與配線；可 Undo。⑤ 右鍵元件旋轉。⑥ 匯出 PDF。";
     }
 
     private void DismissHint_Click(object sender, RoutedEventArgs e) => HintBanner.Visibility = Visibility.Collapsed;

@@ -167,6 +167,15 @@ public partial class TopologyCanvasControl
         var minY = placements.Min(placement => origins[placement.ObjectId].Y);
         var maxRight = placements.Max(placement => origins[placement.ObjectId].X + placement.Width);
         var maxBottom = placements.Max(placement => origins[placement.ObjectId].Y + placement.Height);
+        var shift = ExpandCanvasForBounds(
+            minX + requestedDx,
+            minY + requestedDy,
+            maxRight + requestedDx,
+            maxBottom + requestedDy);
+        minX += shift.X;
+        minY += shift.Y;
+        maxRight += shift.X;
+        maxBottom += shift.Y;
         var dx = Math.Clamp(requestedDx, -minX, Math.Max(-minX, Surface.Width - maxRight));
         var dy = Math.Clamp(requestedDy, -minY, Math.Max(-minY, Surface.Height - maxBottom));
 

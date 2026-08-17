@@ -148,7 +148,8 @@ public sealed class CableCoreDefinition
 public sealed class CableInstance
 {
     public required string CableInstanceId { get; init; }
-    public required string CableDefinitionId { get; init; }
+    public required string CableDefinitionId { get; set; }
+    public string? DisplayName { get; set; }
     public string? ReferenceDesignator { get; set; }
     public double? ProvidedLengthMm { get; set; }
     public CableLengthSource LengthSource { get; set; } = CableLengthSource.Unknown;

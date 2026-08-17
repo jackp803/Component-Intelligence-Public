@@ -59,6 +59,13 @@ public sealed class InlineConnectionDialog : Window
         _operation.DisplayMemberPath = nameof(Choice.Label);
         _operation.SelectedIndex = 0;
 
+        void SelectCableOperation() => _operation.SelectedItem = _operation.Items
+            .Cast<Choice>()
+            .First(choice => choice.Operation == InlineConnectionOperation.CableSegment);
+
+        _cableDefinition.GotKeyboardFocus += (_, _) => SelectCableOperation();
+        _cableDefinition.SelectionChanged += (_, _) => SelectCableOperation();
+
         _genderA.ItemsSource = Enum.GetValues<ConnectorGender>();
         _genderB.ItemsSource = Enum.GetValues<ConnectorGender>();
         _genderA.SelectedItem = ConnectorGender.Female;
@@ -72,7 +79,8 @@ public sealed class InlineConnectionDialog : Window
         _cableDefinition.DisplayMemberPath = nameof(BomConnectionMaterialOption.DisplayLabel);
         _cableDefinition.SelectedValuePath = nameof(BomConnectionMaterialOption.CableDefinitionId);
         TextSearch.SetTextPath(_cableDefinition, nameof(BomConnectionMaterialOption.DisplayLabel));
-        if (!string.IsNullOrWhiteSpace(selectedCableDefinitionId))
+        if (!string.IsNullOrWhiteSpace(selectedCableDefinitionId) &&
+            !string.Equals(selectedCableDefinitionId, "UNRESOLVED-CABLE", StringComparison.OrdinalIgnoreCase))
         {
             _cableDefinition.SelectedItem = cableMaterials.FirstOrDefault(item =>
                 string.Equals(item.CableDefinitionId, selectedCableDefinitionId, StringComparison.OrdinalIgnoreCase));
@@ -164,6 +172,9 @@ public sealed class InlineConnectionDialog : Window
     public ConnectorGender SideAGender => _genderA.SelectedItem is ConnectorGender value ? value : ConnectorGender.Unknown;
     public ConnectorGender SideBGender => _genderB.SelectedItem is ConnectorGender value ? value : ConnectorGender.Unknown;
     public string? TerminalFunction => BlankToNull(_function.Text);
+    public string? CableDisplayName => _cableDefinition.SelectedItem is BomConnectionMaterialOption selected
+        ? $"{selected.Manufacturer} {selected.Model}".Trim()
+        : BlankToNull(_cableDefinition.Text);
     public string? CableDefinitionId
     {
         get
@@ -178,7 +189,7 @@ public sealed class InlineConnectionDialog : Window
 
     public InlineConnectorOptions ConnectorOptions => new(ConnectorFamily, ConnectorCoding, ConnectorPinCount, SideAGender, SideBGender, ReferenceDesignator);
     public InlineTerminalOptions TerminalOptions => new(ReferenceDesignator, TerminalFunction);
-    public CableSegmentOptions CableOptions => new(ReferenceDesignator, CableDefinitionId);
+    public CableSegmentOptions CableOptions => new(ReferenceDesignator, CableDefinitionId, CableDisplayName);
 
     private void Apply_Click(object? sender, RoutedEventArgs e)
     {

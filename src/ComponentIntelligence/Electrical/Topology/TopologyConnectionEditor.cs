@@ -16,7 +16,8 @@ public sealed record InlineTerminalOptions(
 
 public sealed record CableSegmentOptions(
     string? ReferenceDesignator = null,
-    string? CableDefinitionId = null);
+    string? CableDefinitionId = null,
+    string? DisplayName = null);
 
 public sealed class TopologyConnectionEditor
 {
@@ -158,11 +159,32 @@ public sealed class TopologyConnectionEditor
         ArgumentNullException.ThrowIfNull(project);
         ArgumentNullException.ThrowIfNull(options);
         var connection = FindConnection(project, connectionId);
+        var definitionId = string.IsNullOrWhiteSpace(options.CableDefinitionId)
+            ? "UNRESOLVED-CABLE"
+            : options.CableDefinitionId.Trim();
+        var displayName = string.IsNullOrWhiteSpace(options.DisplayName) ? null : options.DisplayName.Trim();
+
+        var existing = string.IsNullOrWhiteSpace(connection.CableInstanceId)
+            ? null
+            : project.Cables.FirstOrDefault(item =>
+                string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            existing.CableDefinitionId = definitionId;
+            existing.DisplayName = displayName;
+            if (!string.IsNullOrWhiteSpace(options.ReferenceDesignator))
+                existing.ReferenceDesignator = options.ReferenceDesignator.Trim();
+            else if (string.IsNullOrWhiteSpace(existing.ReferenceDesignator))
+                existing.ReferenceDesignator = NextCableReference(project);
+            connection.Kind = ConnectionKind.Cable;
+            return existing;
+        }
 
         var cable = new CableInstance
         {
             CableInstanceId = $"cbl-{Guid.NewGuid():N}",
-            CableDefinitionId = string.IsNullOrWhiteSpace(options.CableDefinitionId) ? "UNRESOLVED-CABLE" : options.CableDefinitionId.Trim(),
+            CableDefinitionId = definitionId,
+            DisplayName = displayName,
             ReferenceDesignator = string.IsNullOrWhiteSpace(options.ReferenceDesignator) ? NextCableReference(project) : options.ReferenceDesignator.Trim()
         };
         project.Cables.Add(cable);

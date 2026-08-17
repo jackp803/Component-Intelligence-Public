@@ -83,6 +83,36 @@ public sealed class TopologyInteractionTests
         Assert.Equal("M12", instance.Ports[0].Connector!.Family);
     }
 
+    [Fact]
+    public void AssigningBomCableUpdatesExistingUnresolvedCableAndPreservesPinMappings()
+    {
+        var project = ProjectWithTwoPorts();
+        var editor = new TopologyConnectionEditor();
+        var connection = editor.ConnectPorts(project, "cmp-a:port:p1", "cmp-b:port:p1");
+        var unresolved = new CableInstance
+        {
+            CableInstanceId = "cbl-existing",
+            CableDefinitionId = "UNRESOLVED-CABLE",
+            CoreAssignments =
+            {
+                new CoreAssignment { CoreId = "1", FromEndpointId = "cmp-a:port:p1", ToEndpointId = "cmp-b:port:p1" }
+            }
+        };
+        project.Cables.Add(unresolved);
+        connection.CableInstanceId = unresolved.CableInstanceId;
+
+        var assigned = editor.AssignCableSegment(
+            project,
+            connection.ConnectionId,
+            new CableSegmentOptions(null, "CMP-EVC014", "IFM EVC014"));
+
+        Assert.Same(unresolved, assigned);
+        Assert.Single(project.Cables);
+        Assert.Equal("CMP-EVC014", assigned.CableDefinitionId);
+        Assert.Equal("IFM EVC014", assigned.DisplayName);
+        Assert.Single(assigned.CoreAssignments);
+    }
+
     private static ElectricalProject ProjectWithTwoPorts()
     {
         var project = new ElectricalProject { ProjectId = "p1" };

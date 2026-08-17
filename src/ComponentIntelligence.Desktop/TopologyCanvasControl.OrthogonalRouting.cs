@@ -570,8 +570,26 @@ public partial class TopologyCanvasControl
         }
     }
 
-    private string BuildRouteIdentityLabel(ElectricalConnection connection) =>
-        $"{BuildEndpointShortLabel(connection.FromEndpointId)} → {BuildEndpointShortLabel(connection.ToEndpointId)}";
+    private string BuildRouteIdentityLabel(ElectricalConnection connection)
+    {
+        if (_project is not null && !string.IsNullOrWhiteSpace(connection.CableInstanceId))
+        {
+            var cable = _project.Cables.FirstOrDefault(item =>
+                string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
+            if (cable is not null && !string.IsNullOrWhiteSpace(cable.DisplayName))
+                return cable.DisplayName;
+
+            if (cable is not null &&
+                !string.Equals(cable.CableDefinitionId, "UNRESOLVED-CABLE", StringComparison.OrdinalIgnoreCase))
+            {
+                var material = _availableCableMaterials.FirstOrDefault(item =>
+                    string.Equals(item.CableDefinitionId, cable.CableDefinitionId, StringComparison.OrdinalIgnoreCase));
+                if (material is not null) return $"{material.Manufacturer} {material.Model}".Trim();
+            }
+        }
+
+        return $"{BuildEndpointShortLabel(connection.FromEndpointId)} → {BuildEndpointShortLabel(connection.ToEndpointId)}";
+    }
 
     private string BuildEndpointShortLabel(string endpointId)
     {

@@ -37,6 +37,8 @@ If a connector has N physical contacts, `Pins` must contain all N physical conta
 
 Do not infer the contact count from the connector family alone. For example, M12 is not automatically 5-pin; use the actual product connector specification.
 
+`Pins.PinID` is the stable archive identity for a contact/conductor. Runtime endpoint creation must preserve that identity rather than rebuilding identity only from `PinNumber`. This is required for engineering identifiers such as `+`, `-`, `V+`, `V-`, `A+`, and `B-`, which must never collapse to the same runtime endpoint after identifier normalization.
+
 ## 4. Exact topology connection identity
 
 A topology connection may now terminate at:
@@ -89,34 +91,52 @@ Expanded Pin markers are real wireable endpoints. Expansion changes presentation
 
 Topology screen side and electrical Direction are different concepts.
 
-Priority for Port placement:
+Generic priority for Port placement:
 
-1. Clear `PortRole` semantics: Input-role → screen-left; Output-role → screen-right.
-2. Electrical `Direction` if the role is not directional.
-3. Pin engineering semantics if both are still unresolved.
-4. Mixed / bidirectional / neutral fallback follows the editor presentation policy; current neutral default is right.
+1. component-specific approved presentation rule, when one exists;
+2. clear `PortRole` semantics: Input-role → screen-left; Output-role → screen-right;
+3. electrical `Direction` if the role is not directional;
+4. Pin engineering semantics if both are still unresolved;
+5. mixed / bidirectional / neutral fallback follows the editor presentation policy; current neutral default is right.
 
-`PhysicalSide` describes the real physical connector face and does not override this topology convention.
+`PhysicalSide` describes the real physical connector face and does not override this topology convention. A screen-placement requirement must not be archived as fake `PhysicalSide`, `Direction`, or `PortRole` data.
 
 ### OMRON K7L-AT50DP
 
-The SENSING Port contains terminals 2/3/4 and is archived as:
+K7L uses an approved component-specific **presentation rule** that intentionally differs from generic Input-left / Output-right flow. The archive remains truthful:
 
 ```text
-PortRole = Sensor Input
-Direction = Mixed
+POWER   = terminals 1 / 8
+SENSING = terminals 2 / 3 / 4
+OUTPUT  = terminals 5 / 6 / 7
+
+SENSING PortRole = Sensor Input
+SENSING Direction = Mixed
 TopologyEndpointMode = Pins
 ```
 
-Therefore terminals 2/3/4 render on the **left**. Pin 4 may electrically transmit the sensing signal without changing the functional PortRole of the group.
+The Topology canvas renders:
 
-The OUTPUT Port contains 5/6/7 and renders on the **right**.
+```text
+screen-left               screen-right
+1 / 8   ──┐          ┌── 2
+5 / 6 / 7 ├─ K7L ────┤   3
+          │          └── 4
+```
+
+Therefore:
+
+- POWER terminals `1 / 8` → **left**.
+- OUTPUT terminals `5 / 6 / 7` → **left**.
+- SENSING terminals `2 / 3 / 4` → **right**.
+
+This is UI presentation only. Do not change `Direction`, `PortRole`, or `PhysicalSide` merely to reproduce this picture.
 
 ### IFM AL1342
 
 X01~X08 are archived truthfully as `IO-Link Port Class A`, `Direction=Mixed`, `TopologyEndpointMode=Connector`.
 
-They must **not** be re-archived as fake `Output` ports merely to force a side. Because the role is mixed/non-directional, the editor's neutral presentation fallback places these ports on the **right**.
+They must **not** be re-archived as fake `Output` ports merely to force a side. `Direction=Mixed` is a resolved neutral/mixed presentation case and therefore X01~X08 remain on the **right**, even when the real archived Pins include L+, L-, DI, and C/Q.
 
 If a runtime build shows X01~X08 on the wrong side while the archive still contains the values above, treat it as a program/runtime regression, not an archive correction.
 
@@ -136,11 +156,29 @@ A selected route exposes a draggable bend handle. Dragging the handle creates a 
 
 Manual route waypoints are currently editor-session visual state; engineering connection endpoint data remains persistent. Persistent multi-waypoint project serialization can be added independently without changing the endpoint contract.
 
-## 9. Auto Arrange｜自動排列
+## 9. Palette-first placement + Auto Arrange｜元件清單優先與自動排列
 
-Auto Arrange is presentation logic, not archive truth.
+The left `Components` palette is the project/BOM inventory. Presence in the project and presence on the canvas are separate states:
 
-Current desired layout behavior:
+```text
+Component exists in BOM / Project
+        !=
+TopologyPlacement exists on canvas
+```
+
+Normal editor behavior:
+
+- Loading a project does **not** create missing `TopologyPlacement` rows.
+- Rendering/refreshing the canvas does **not** auto-place missing components.
+- An unplaced component remains in the left palette and is shown as `未定位`.
+- Dragging an unplaced palette item creates exactly one `TopologyPlacement` for that object.
+- Dragging the same item again moves the existing placement; it never creates a duplicate component.
+- Existing saved placements are preserved when a project is loaded.
+- Removing/moving a canvas placement must not delete the underlying BOM/project component.
+
+`Auto Arrange` is an explicit user command. It may clear/rebuild topology placements and place all project objects using the current arrangement policy. It is not allowed to run implicitly during ordinary render/load/refresh.
+
+Current Auto Arrange layout behavior:
 
 - Controls, masters, power supplies, amplifiers and other infrastructure occupy left/center columns.
 - True Sensor components are grouped in an orderly rightmost column.
@@ -166,7 +204,8 @@ When archiving a Port, the GPT archive workflow must:
 5. never change Electrical `Direction` merely to force a topology visual side;
 6. keep `PortRole` as the topology/functional role and `Direction` as the truthful electrical behavior;
 7. keep all unused/NC/unknown physical Pins explicit;
-8. never use `PhysicalSide` or fake Category values as a screen-placement hack.
+8. preserve a stable unique `Pins.PinID` for each archived contact/conductor;
+9. never use `PhysicalSide` or fake Category values as a screen-placement hack.
 
 ## 12. AL5021 reference behavior
 

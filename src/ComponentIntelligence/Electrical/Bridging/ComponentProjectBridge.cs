@@ -40,7 +40,7 @@ public sealed class ComponentProjectBridge
             var explicitOwner = FindExplicitPinOwner(instance, sourcePin.PortId);
             if (explicitOwner is not null)
             {
-                explicitOwner.Pins.Add(MapPin(sourcePin, source, componentInstanceId, explicitOwner.Name));
+                explicitOwner.Pins.Add(MapPin(sourcePin, source, componentInstanceId, sourcePin.PortId));
                 continue;
             }
 
@@ -76,8 +76,12 @@ public sealed class ComponentProjectBridge
     private static DomainPort? FindExplicitPinOwner(ComponentInstance instance, string? logicalPortId)
     {
         if (string.IsNullOrWhiteSpace(logicalPortId)) return null;
+        var expected = logicalPortId.Trim();
         return instance.Ports.FirstOrDefault(port =>
-            string.Equals(port.Name, logicalPortId.Trim(), StringComparison.OrdinalIgnoreCase));
+            string.Equals(port.Name, expected, StringComparison.OrdinalIgnoreCase) ||
+            port.Capabilities.Any(capability =>
+                capability.StartsWith("SOURCE_PORT_ID:", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(capability["SOURCE_PORT_ID:".Length..].Trim(), expected, StringComparison.OrdinalIgnoreCase)));
     }
 
     private static DomainPort GetOrCreateUnassignedPinPort(ComponentInstance instance, string instanceId, ComponentIR source)
@@ -120,17 +124,19 @@ public sealed class ComponentProjectBridge
         var port = new DomainPort
         {
             PortId = portId,
-            // PortId is the physical/logical connection identity (ETH1, ETH2, PWR...). PortType and
-            // Protocol describe what the port is; using them as the visible name makes repeated ports
-            // indistinguishable on the topology canvas.
-            Name = FirstNonBlank(sourcePort.PortId, sourcePort.PortType, "PORT")!,
+            // PortId remains the stable engineering identity while PortName is the human-readable label
+            // from the central workbook (INPUT, OUTPUT, X01, FIELD_IO...).
+            Name = FirstNonBlank(sourcePort.PortName, sourcePort.PortId, sourcePort.PortType, "PORT")!,
             Protocol = NormalizeProtocol(FirstNonBlank(sourcePort.Protocol, sourcePort.SignalType)),
             Connector = connector,
             PhysicalLocation = string.IsNullOrWhiteSpace(sourcePort.PhysicalSide)
                 ? null
                 : new PhysicalPortLocation { Side = sourcePort.PhysicalSide!.Trim() }
         };
+        if (!string.IsNullOrWhiteSpace(sourcePort.PortId)) port.Capabilities.Add($"SOURCE_PORT_ID:{sourcePort.PortId}");
         if (!string.IsNullOrWhiteSpace(sourcePort.PortRole)) port.Capabilities.Add($"ROLE:{sourcePort.PortRole}");
+        if (!string.IsNullOrWhiteSpace(sourcePort.TopologyEndpointMode))
+            port.Capabilities.Add($"TOPOLOGY_ENDPOINT_MODE:{sourcePort.TopologyEndpointMode}");
         if (!string.IsNullOrWhiteSpace(sourcePort.SignalType)) port.Capabilities.Add(sourcePort.SignalType!);
         if (!string.IsNullOrWhiteSpace(sourcePort.Direction)) port.Capabilities.Add($"DIRECTION:{sourcePort.Direction}");
         if (!string.IsNullOrWhiteSpace(sourcePort.VoltageDomain)) port.Capabilities.Add($"VOLTAGE_DOMAIN:{sourcePort.VoltageDomain}");

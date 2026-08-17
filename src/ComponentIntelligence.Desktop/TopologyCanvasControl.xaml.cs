@@ -37,7 +37,6 @@ public partial class TopologyCanvasControl : UserControl
     public void SetProject(ElectricalProject project)
     {
         _project = project ?? throw new ArgumentNullException(nameof(project));
-        _projection.EnsurePlacements(_project);
         _pendingWireEndpointId = null;
         Render();
     }
@@ -64,7 +63,6 @@ public partial class TopologyCanvasControl : UserControl
     {
         Surface.Children.Clear();
         if (_project is null) return;
-        _projection.EnsurePlacements(_project);
         var graph = _projection.Build(_project, _layerFilter);
         var nodes = graph.Nodes.ToDictionary(node => node.ObjectId, StringComparer.OrdinalIgnoreCase);
 

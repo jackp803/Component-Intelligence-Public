@@ -8,10 +8,10 @@ namespace ComponentIntelligence.Desktop;
 public partial class TopologyCanvasControl
 {
     /// <summary>
-    /// Repositions Port markers after component rotation. Direction semantics are screen-relative:
-    /// Input stays on the visible left side and Output stays on the visible right side. Unknown or
-    /// bidirectional ports remain on the right to preserve the previous neutral/default behavior.
-    /// Labels remain horizontal and follow their markers around the component perimeter.
+    /// Repositions Port markers after component rotation. The generic convention keeps Input on the
+    /// visible left and Output on the visible right, while component-aware presentation exceptions
+    /// (such as the approved K7L terminal grouping) are resolved by TopologyPortGeometry without
+    /// rewriting archived Direction or PhysicalSide. Labels remain horizontal around the perimeter.
     /// </summary>
     private void ApplyRotatedPortVisuals()
     {
@@ -24,7 +24,7 @@ public partial class TopologyCanvasControl
             if (placement is null) continue;
 
             var ports = component.Ports.Take(16)
-                .Select(port => new PortVisualPlacement(port, TopologyPortGeometry.DetermineScreenSide(port)))
+                .Select(port => new PortVisualPlacement(port, TopologyPortGeometry.DetermineScreenSide(component, port)))
                 .ToArray();
 
             foreach (var side in new[] { TopologyScreenSide.Left, TopologyScreenSide.Right })

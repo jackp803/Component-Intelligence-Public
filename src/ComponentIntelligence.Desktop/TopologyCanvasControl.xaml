@@ -34,7 +34,7 @@
 
         <Border Grid.Row="2" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="6" Background="#F7F7F7">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <Canvas x:Name="Surface" Width="1800" Height="1200" Background="White"
+                <Canvas x:Name="Surface" Width="3200" Height="2000" Background="White"
                         MouseMove="Surface_WirePreviewMouseMove"
                         LayoutUpdated="Surface_LayoutUpdated" />
             </ScrollViewer>

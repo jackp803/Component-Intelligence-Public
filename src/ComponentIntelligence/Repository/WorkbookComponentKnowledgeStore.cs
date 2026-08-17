@@ -170,6 +170,7 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
         return new ComponentPort
         {
             PortId = portId,
+            PortName = Meaningful(Get(row, "PortName")),
             PortRole = role,
             PortType = role,
             Direction = Meaningful(Get(row, "Direction")),
@@ -180,7 +181,8 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
             ConnectorCoding = Meaningful(Get(row, "ConnectorCoding")),
             ConnectorGender = Meaningful(Get(row, "Gender")),
             PinCount = ParsePositiveInt(Get(row, "PinCount")),
-            PhysicalSide = Meaningful(Get(row, "PhysicalSide"))
+            PhysicalSide = Meaningful(Get(row, "PhysicalSide")),
+            TopologyEndpointMode = Meaningful(Get(row, "TopologyEndpointMode"))
         };
     }
 

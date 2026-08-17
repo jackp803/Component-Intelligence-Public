@@ -19,8 +19,9 @@ public partial class TopologyCanvasControl
         if (_topologyPaletteConfigured) return;
         _topologyPaletteConfigured = true;
 
-        // The palette is intentionally presentation-only. It moves an existing TopologyPlacement;
-        // it never duplicates a BOM component or changes archived engineering data.
+        // The palette is presentation-only. Dragging an unplaced item creates exactly one
+        // TopologyPlacement; dragging it again moves that same placement. It never duplicates or
+        // deletes the BOM/project component and it never auto-places the rest of the inventory.
         ProjectChanged += TopologyCanvas_ProjectChangedRefreshVisuals;
         Surface.LayoutUpdated += (_, _) => RefreshTopologyPaletteIfNeeded();
 
@@ -87,23 +88,19 @@ public partial class TopologyCanvasControl
         if (_project is null || e.Data.GetData(TopologyPaletteDataFormat) is not TopologyPaletteItem item)
             return;
 
-        _projection.EnsurePlacements(_project);
-        var placement = _project.TopologyPlacements.FirstOrDefault(candidate =>
-            string.Equals(candidate.ObjectId, item.ObjectId, StringComparison.OrdinalIgnoreCase));
-        if (placement is null) return;
-
         var point = e.GetPosition(Surface);
+        var placement = _projection.EnsurePlacement(_project, item.ObjectId, point.X, point.Y);
         var maxX = Math.Max(0, Surface.Width - placement.Width);
         var maxY = Math.Max(0, Surface.Height - placement.Height);
         var x = Math.Clamp(point.X - placement.Width / 2d, 0, maxX);
         var y = Math.Clamp(point.Y - placement.Height / 2d, 0, maxY);
 
-        MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Move topology node {item.ObjectId} from palette"));
+        MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Place/move topology node {item.ObjectId} from palette"));
         _projection.Move(_project, item.ObjectId, x, y);
 
         SelectionText.Text = item.Label;
         HintBanner.Visibility = Visibility.Visible;
-        HintText.Text = $"已將 {item.Label} 移到 X={x:0}, Y={y:0}。可繼續從左側拖其他元件，或直接在畫布上拖曳微調後再接線。";
+        HintText.Text = $"已將 {item.Label} 放到 X={x:0}, Y={y:0}。左側仍保留完整 BOM 元件清單；再次拖同一顆只會移動，不會產生副本。";
 
         Render();
         ProjectChanged?.Invoke(this, EventArgs.Empty);
@@ -114,7 +111,6 @@ public partial class TopologyCanvasControl
     {
         if (_project is null || TopologyPalette is null) return;
 
-        _projection.EnsurePlacements(_project);
         var placementById = _project.TopologyPlacements.ToDictionary(
             placement => placement.ObjectId,
             StringComparer.OrdinalIgnoreCase);

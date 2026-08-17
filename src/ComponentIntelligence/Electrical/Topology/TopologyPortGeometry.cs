@@ -17,6 +17,20 @@ public enum TopologyScreenSide
 /// </summary>
 public static class TopologyPortGeometry
 {
+    public static TopologyScreenSide DetermineScreenSide(ComponentInstance component, ComponentPort port)
+    {
+        ArgumentNullException.ThrowIfNull(component);
+        ArgumentNullException.ThrowIfNull(port);
+
+        // Some products have a documented topology presentation that is intentionally not the same
+        // as generic Input-left / Output-right signal flow. Keep that rule here in presentation logic;
+        // never rewrite central PortRole, Direction, or PhysicalSide merely to force the drawing.
+        if (TryDetermineComponentPresentationSide(component, port, out var presentationSide))
+            return presentationSide;
+
+        return DetermineScreenSide(port);
+    }
+
     public static TopologyScreenSide DetermineScreenSide(ComponentPort port)
     {
         ArgumentNullException.ThrowIfNull(port);
@@ -107,6 +121,40 @@ public static class TopologyPortGeometry
         return RotateLocalAnchor(placement, localX, localY, edge.OutwardX, edge.OutwardY);
     }
 
+    private static bool TryDetermineComponentPresentationSide(
+        ComponentInstance component,
+        ComponentPort port,
+        out TopologyScreenSide side)
+    {
+        side = TopologyScreenSide.Right;
+        var identity = $"{component.ComponentDefinitionId} {component.DisplayName}";
+        if (!identity.Contains("K7L-AT50DP", StringComparison.OrdinalIgnoreCase)) return false;
+
+        var sourcePortId = GetCapabilityValue(port, "SOURCE_PORT_ID:") ?? port.Name;
+        var role = GetCapabilityValue(port, "ROLE:");
+        var presentationKey = $"{sourcePortId} {port.Name} {role}";
+
+        // User-approved K7L topology convention:
+        //   left  = POWER terminals 1/8 + relay/output terminals 5/6/7
+        //   right = SENSING terminals 2/3/4
+        // Electrical Direction remains truthful in the archive (Input / Mixed / Output).
+        if (presentationKey.Contains("SENSING", StringComparison.OrdinalIgnoreCase) ||
+            presentationKey.Contains("SENSOR INPUT", StringComparison.OrdinalIgnoreCase))
+        {
+            side = TopologyScreenSide.Right;
+            return true;
+        }
+
+        if (presentationKey.Contains("OUTPUT", StringComparison.OrdinalIgnoreCase) ||
+            presentationKey.Contains("POWER", StringComparison.OrdinalIgnoreCase))
+        {
+            side = TopologyScreenSide.Left;
+            return true;
+        }
+
+        return false;
+    }
+
     private static string? GetCapabilityValue(ComponentPort port, string prefix)
     {
         var capability = port.Capabilities
@@ -149,7 +197,7 @@ public static class TopologyPortGeometry
         }
 
         if (value is "OUTPUT" or "OUT" or "SOURCE" or "TRANSMIT" or "TX" or
-            "BIDIRECTIONAL" or "INOUT" or "I/O" or "IO")
+            "BIDIRECTIONAL" or "MIXED" or "INOUT" or "I/O" or "IO")
         {
             side = TopologyScreenSide.Right;
             return true;

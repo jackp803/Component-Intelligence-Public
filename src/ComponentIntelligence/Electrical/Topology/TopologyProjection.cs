@@ -29,6 +29,11 @@ public sealed record TopologyGraph
 
 public sealed class TopologyProjection
 {
+    /// <summary>
+    /// Explicit auto-arrange operation. This method creates placements for every unplaced project
+    /// object and is intentionally not required by normal rendering. Palette-first editing uses
+    /// EnsurePlacement to place only the object the user dragged onto the canvas.
+    /// </summary>
     public void EnsurePlacements(ElectricalProject project, double startX = 40, double startY = 40, double gapX = 190, double gapY = 130, int columns = 5)
     {
         ArgumentNullException.ThrowIfNull(project);
@@ -72,6 +77,41 @@ public sealed class TopologyProjection
             AddPlacement(project, item, sensorX, startY + sensorIndex * gapY);
             sensorIndex++;
         }
+    }
+
+    /// <summary>
+    /// Ensures only one selected component/terminal block has a topology placement. Existing saved
+    /// placements are returned unchanged; an unplaced object receives a new placement without causing
+    /// the rest of the BOM/project inventory to appear on the canvas.
+    /// </summary>
+    public TopologyPlacement EnsurePlacement(ElectricalProject project, string objectId, double x = 0, double y = 0)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentException.ThrowIfNullOrWhiteSpace(objectId);
+
+        var existing = project.TopologyPlacements.FirstOrDefault(item =>
+            string.Equals(item.ObjectId, objectId, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null) return existing;
+
+        var component = project.Components.FirstOrDefault(item =>
+            string.Equals(item.ComponentInstanceId, objectId, StringComparison.OrdinalIgnoreCase));
+        if (component is not null)
+            return AddPlacement(
+                project,
+                new PlacementCandidate(component.ComponentInstanceId, "COMPONENT", IsFieldSensor(component)),
+                Math.Max(0, x),
+                Math.Max(0, y));
+
+        var block = project.TerminalBlocks.FirstOrDefault(item =>
+            string.Equals(item.TerminalBlockId, objectId, StringComparison.OrdinalIgnoreCase));
+        if (block is not null)
+            return AddPlacement(
+                project,
+                new PlacementCandidate(block.TerminalBlockId, "TERMINAL_BLOCK", false),
+                Math.Max(0, x),
+                Math.Max(0, y));
+
+        throw new InvalidOperationException($"Unknown topology object '{objectId}'.");
     }
 
     public TopologyGraph Build(ElectricalProject project, ElectricalLayer? layerFilter = null)
@@ -173,9 +213,9 @@ public sealed class TopologyProjection
         placement.RotationDegrees = normalized;
     }
 
-    private static void AddPlacement(ElectricalProject project, PlacementCandidate item, double x, double y)
+    private static TopologyPlacement AddPlacement(ElectricalProject project, PlacementCandidate item, double x, double y)
     {
-        project.TopologyPlacements.Add(new TopologyPlacement
+        var placement = new TopologyPlacement
         {
             ObjectId = item.Id,
             ObjectKind = item.Kind,
@@ -183,7 +223,9 @@ public sealed class TopologyProjection
             Y = y,
             Width = item.Kind == "TERMINAL_BLOCK" ? 165 : 140,
             Height = item.Kind == "TERMINAL_BLOCK" ? 88 : 76
-        });
+        };
+        project.TopologyPlacements.Add(placement);
+        return placement;
     }
 
     private static bool IsFieldSensor(ComponentInstance component)

@@ -194,6 +194,7 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
 
         return new ComponentPin
         {
+            PinId = Meaningful(Get(row, "PinID")),
             PortId = portId,
             PinNumber = pinNumber,
             PinName = Meaningful(Get(row, "PinName")),

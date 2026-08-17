@@ -23,6 +23,7 @@ public partial class TopologyCanvasControl
     {
         base.OnInitialized(e);
         Loaded += (_, _) => ConfigureViewFilters();
+        InitializeRouteIsolation();
     }
 
     private void ConfigureViewFilters()

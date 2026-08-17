@@ -18,11 +18,9 @@ public partial class TopologyCanvasControl
     private bool _routeIsolationReconcileScheduled;
     private int _globalReroutePassesRemaining;
 
-    protected override void OnInitialized(EventArgs e)
-    {
-        base.OnInitialized(e);
-        Loaded += TopologyRouteIsolation_Loaded;
-    }
+    // TopologyCanvasControl already owns one WPF OnInitialized override for view filters. Keep one
+    // lifecycle authority and let that override register this independent route-isolation module.
+    private void InitializeRouteIsolation() => Loaded += TopologyRouteIsolation_Loaded;
 
     private void TopologyRouteIsolation_Loaded(object sender, RoutedEventArgs e)
     {

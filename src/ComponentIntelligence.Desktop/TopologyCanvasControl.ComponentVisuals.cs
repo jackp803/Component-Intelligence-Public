@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using ComponentIntelligence.Electrical.Topology;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -70,11 +71,25 @@ public partial class TopologyCanvasControl
         if (_project is null || _interactionMode != InteractionMode.Select || e.ClickCount < 2) return;
         var border = FindAncestor<Border>(e.OriginalSource as DependencyObject);
         if (border?.Tag is not string portId || Math.Abs(border.Width - 14d) > 0.01 || Math.Abs(border.Height - 14d) > 0.01) return;
-        if (!_project.Components.SelectMany(component => component.Ports).Any(port => string.Equals(port.PortId, portId, StringComparison.OrdinalIgnoreCase))) return;
+        var port = _project.Components.SelectMany(component => component.Ports)
+            .FirstOrDefault(candidate => string.Equals(candidate.PortId, portId, StringComparison.OrdinalIgnoreCase));
+        if (port is null) return;
+
+        // Individually wired terminals/flying leads are permanently pin-level. Only a whole-mated
+        // connector (M12/RJ45/etc.) can be collapsed/expanded for inspection or special pin wiring.
+        if (TopologyEndpointPolicy.DetermineDisplayMode(port) != TopologyEndpointDisplayMode.Connector)
+        {
+            SelectionText.Text = "此接口為 Pin-level（腳位層）";
+            HintText.Text = "散線／端子會固定顯示每一個可接線 Pin，不提供收合，避免遺失實際接線端點。";
+            e.Handled = true;
+            return;
+        }
 
         if (!_expandedVisualPortIds.Add(portId)) _expandedVisualPortIds.Remove(portId);
-        SelectionText.Text = _expandedVisualPortIds.Contains(portId) ? "Pin 清單已展開" : "Pin 清單已收合";
-        HintText.Text = "Port 雙擊可展開／收合 Pin；展開只改顯示，不會建立或修改任何接線。";
+        SelectionText.Text = _expandedVisualPortIds.Contains(portId) ? "Connector Pins 已展開" : "Connector Pins 已收合";
+        HintText.Text = _expandedVisualPortIds.Contains(portId)
+            ? "標準 Connector 已展開；現在每個 Pin 都是可拉線的真實 Endpoint。再次雙擊 Connector 可收合。"
+            : "標準 Connector 已收合；一般拓樸可直接把整個 Connector 當一個 Endpoint 使用。";
         Render();
         e.Handled = true;
     }
@@ -86,7 +101,7 @@ public partial class TopologyCanvasControl
         try
         {
             DecorateComponentImages();
-            DecorateExpandedPins();
+            EnsureEndpointModeVisuals();
         }
         finally
         {
@@ -116,53 +131,6 @@ public partial class TopologyCanvasControl
             };
             panel.Children.Insert(0, image);
             _ = LoadComponentImageAsync(component.ComponentDefinitionId, image);
-        }
-    }
-
-    private void DecorateExpandedPins()
-    {
-        if (_project is null || _expandedVisualPortIds.Count == 0) return;
-        var children = Surface.Children.Cast<UIElement>().ToArray();
-        foreach (var marker in children.OfType<Border>())
-        {
-            if (marker.Tag is not string portId || !_expandedVisualPortIds.Contains(portId)) continue;
-            if (Math.Abs(marker.Width - 14d) > 0.01 || Math.Abs(marker.Height - 14d) > 0.01) continue;
-            if (Surface.Children.OfType<FrameworkElement>().Any(element => Equals(element.Tag, "CI-PINS:" + portId))) continue;
-
-            var port = _project.Components.SelectMany(component => component.Ports)
-                .FirstOrDefault(item => string.Equals(item.PortId, portId, StringComparison.OrdinalIgnoreCase));
-            if (port is null) continue;
-
-            var panel = new StackPanel
-            {
-                Tag = "CI-PINS:" + portId,
-                Background = Brushes.White,
-                Opacity = 0.96,
-                ToolTip = "Expanded Pin list（展開腳位）— 顯示用途"
-            };
-            panel.Children.Add(new TextBlock
-            {
-                Text = $"{port.Name} Pins",
-                FontSize = 9,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = Brushes.DimGray
-            });
-            foreach (var pin in port.Pins.Take(16))
-            {
-                panel.Children.Add(new TextBlock
-                {
-                    Text = $"{pin.PinNumber}: {pin.Function ?? pin.PinName ?? "Unknown"}",
-                    FontSize = 9,
-                    Foreground = LayerBrush(pin.Layer),
-                    Padding = new Thickness(2, 0, 2, 0)
-                });
-            }
-            if (port.Pins.Count > 16)
-                panel.Children.Add(new TextBlock { Text = $"… +{port.Pins.Count - 16}", FontSize = 9, Foreground = Brushes.Gray });
-
-            Canvas.SetLeft(panel, Canvas.GetLeft(marker) + 22);
-            Canvas.SetTop(panel, Math.Max(0, Canvas.GetTop(marker) - 8));
-            Surface.Children.Add(panel);
         }
     }
 

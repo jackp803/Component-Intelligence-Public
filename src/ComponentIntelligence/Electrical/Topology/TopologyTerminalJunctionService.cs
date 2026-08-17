@@ -49,10 +49,10 @@ public sealed class TopologyTerminalJunctionService
         if (fromTerminal && toTerminal && string.Equals(fromTerminalId, toTerminalId, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("The same terminal junction cannot be wired back to itself.");
 
-        var fromPort = fromTerminal ? null : FindPort(project, fromSelector)
-            ?? throw new InvalidOperationException($"Unknown port '{fromSelector}'.");
-        var toPort = toTerminal ? null : FindPort(project, toSelector)
-            ?? throw new InvalidOperationException($"Unknown port '{toSelector}'.");
+        var fromEndpoint = fromTerminal ? null : FindComponentEndpoint(project, fromSelector)
+            ?? throw new InvalidOperationException($"Unknown endpoint '{fromSelector}'.");
+        var toEndpoint = toTerminal ? null : FindComponentEndpoint(project, toSelector)
+            ?? throw new InvalidOperationException($"Unknown endpoint '{toSelector}'.");
         var fromBlock = fromTerminal ? FindTerminalBlock(project, fromTerminalId) : null;
         var toBlock = toTerminal ? FindTerminalBlock(project, toTerminalId) : null;
 
@@ -61,11 +61,11 @@ public sealed class TopologyTerminalJunctionService
         if (toTerminal && toBlock is null)
             throw new InvalidOperationException($"Unknown terminal junction '{toTerminalId}'.");
 
-        if (fromPort is not null) EnsurePortCapacity(project, fromPort);
-        if (toPort is not null) EnsurePortCapacity(project, toPort);
-        if (fromPort is not null && toBlock is not null && IsPortConnectedToTerminal(project, fromPort.PortId, toBlock))
+        if (fromEndpoint is not null) EnsureEndpointCapacity(project, fromEndpoint);
+        if (toEndpoint is not null) EnsureEndpointCapacity(project, toEndpoint);
+        if (fromEndpoint is not null && toBlock is not null && IsEndpointConnectedToTerminal(project, fromEndpoint.EndpointId, toBlock))
             throw new InvalidOperationException("This port is already connected to the selected terminal junction.");
-        if (toPort is not null && fromBlock is not null && IsPortConnectedToTerminal(project, toPort.PortId, fromBlock))
+        if (toEndpoint is not null && fromBlock is not null && IsEndpointConnectedToTerminal(project, toEndpoint.EndpointId, fromBlock))
             throw new InvalidOperationException("This port is already connected to the selected terminal junction.");
 
         var fromNet = fromBlock is null ? null : ResolveSingleTerminalNet(project, fromBlock);
@@ -75,8 +75,8 @@ public sealed class TopologyTerminalJunctionService
             throw new InvalidOperationException($"The selected terminal junctions belong to different nets ('{fromNet}' vs '{toNet}').");
 
         var resolvedNetId = string.IsNullOrWhiteSpace(netId) ? fromNet ?? toNet : netId.Trim();
-        var fromEndpointId = fromBlock is null ? fromPort!.PortId : AllocateConnectionPoint(project, fromBlock);
-        var toEndpointId = toBlock is null ? toPort!.PortId : AllocateConnectionPoint(project, toBlock);
+        var fromEndpointId = fromBlock is null ? fromEndpoint!.EndpointId : AllocateConnectionPoint(project, fromBlock);
+        var toEndpointId = toBlock is null ? toEndpoint!.EndpointId : AllocateConnectionPoint(project, toBlock);
 
         var connection = new ElectricalConnection
         {
@@ -90,22 +90,33 @@ public sealed class TopologyTerminalJunctionService
         return connection;
     }
 
-    private static ComponentPort? FindPort(ElectricalProject project, string portId) =>
-        project.Components.SelectMany(component => component.Ports)
-            .FirstOrDefault(port => string.Equals(port.PortId, portId, StringComparison.OrdinalIgnoreCase));
+    private static ComponentEndpoint? FindComponentEndpoint(ElectricalProject project, string endpointId)
+    {
+        foreach (var port in project.Components.SelectMany(component => component.Ports))
+        {
+            if (string.Equals(port.PortId, endpointId, StringComparison.OrdinalIgnoreCase))
+                return new ComponentEndpoint(port.PortId, port.MaxConnections);
+
+            var pin = port.Pins.FirstOrDefault(item =>
+                string.Equals(item.PinId, endpointId, StringComparison.OrdinalIgnoreCase));
+            if (pin is not null) return new ComponentEndpoint(pin.PinId, 1);
+        }
+        return null;
+    }
 
     private static TerminalBlock? FindTerminalBlock(ElectricalProject project, string terminalBlockId) =>
         project.TerminalBlocks.FirstOrDefault(block =>
             string.Equals(block.TerminalBlockId, terminalBlockId, StringComparison.OrdinalIgnoreCase));
 
-    private static void EnsurePortCapacity(ElectricalProject project, ComponentPort port)
+    private static void EnsureEndpointCapacity(ElectricalProject project, ComponentEndpoint endpoint)
     {
-        if (port.MaxConnections is not > 0) return;
+        if (endpoint.MaxConnections is not > 0) return;
         var used = project.Connections.Count(connection =>
-            string.Equals(connection.FromEndpointId, port.PortId, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(connection.ToEndpointId, port.PortId, StringComparison.OrdinalIgnoreCase));
-        if (used >= port.MaxConnections.Value)
-            throw new InvalidOperationException($"Port '{port.Name}' already reached its maximum connection count ({port.MaxConnections}).");
+            string.Equals(connection.FromEndpointId, endpoint.EndpointId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(connection.ToEndpointId, endpoint.EndpointId, StringComparison.OrdinalIgnoreCase));
+        if (used >= endpoint.MaxConnections.Value)
+            throw new InvalidOperationException(
+                $"Endpoint '{endpoint.EndpointId}' already reached its maximum connection count ({endpoint.MaxConnections}).");
     }
 
     private static string AllocateConnectionPoint(ElectricalProject project, TerminalBlock block)
@@ -154,7 +165,7 @@ public sealed class TopologyTerminalJunctionService
         return pointId;
     }
 
-    private static bool IsPortConnectedToTerminal(ElectricalProject project, string portId, TerminalBlock block)
+    private static bool IsEndpointConnectedToTerminal(ElectricalProject project, string endpointId, TerminalBlock block)
     {
         var terminalPointIds = block.Positions
             .SelectMany(position => position.Levels)
@@ -162,8 +173,8 @@ public sealed class TopologyTerminalJunctionService
             .Select(point => point.ConnectionPointId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         return project.Connections.Any(connection =>
-            (string.Equals(connection.FromEndpointId, portId, StringComparison.OrdinalIgnoreCase) && terminalPointIds.Contains(connection.ToEndpointId)) ||
-            (string.Equals(connection.ToEndpointId, portId, StringComparison.OrdinalIgnoreCase) && terminalPointIds.Contains(connection.FromEndpointId)));
+            (string.Equals(connection.FromEndpointId, endpointId, StringComparison.OrdinalIgnoreCase) && terminalPointIds.Contains(connection.ToEndpointId)) ||
+            (string.Equals(connection.ToEndpointId, endpointId, StringComparison.OrdinalIgnoreCase) && terminalPointIds.Contains(connection.FromEndpointId)));
     }
 
     private static string? ResolveSingleTerminalNet(ElectricalProject project, TerminalBlock block)
@@ -181,4 +192,6 @@ public sealed class TopologyTerminalJunctionService
             .ToArray();
         return netIds.Length == 1 ? netIds[0] : null;
     }
+
+    private sealed record ComponentEndpoint(string EndpointId, int? MaxConnections);
 }

@@ -171,6 +171,45 @@ public sealed class TopologyPortGeometryTests
         });
     }
 
+    [Theory]
+    [InlineData(0,   TopologyScreenSide.Left,  100, 240, -1,  0)]
+    [InlineData(0,   TopologyScreenSide.Right, 240, 240,  1,  0)]
+    [InlineData(90,  TopologyScreenSide.Left,  170, 170,  0, -1)]
+    [InlineData(90,  TopologyScreenSide.Right, 170, 310,  0,  1)]
+    [InlineData(180, TopologyScreenSide.Left,  240, 240,  1,  0)]
+    [InlineData(180, TopologyScreenSide.Right, 100, 240, -1,  0)]
+    [InlineData(270, TopologyScreenSide.Left,  170, 310,  0,  1)]
+    [InlineData(270, TopologyScreenSide.Right, 170, 170,  0, -1)]
+    public void RotatedSideAnchor_FollowsThePhysicalComponentEdge(
+        int degrees,
+        TopologyScreenSide side,
+        double expectedX,
+        double expectedY,
+        double expectedOutwardX,
+        double expectedOutwardY)
+    {
+        var anchor = TopologyPortGeometry.CalculateRotatedSide(Placement(degrees), side, 0, 1);
+
+        Assert.Equal(expectedX, anchor.X, 6);
+        Assert.Equal(expectedY, anchor.Y, 6);
+        Assert.Equal(expectedOutwardX, anchor.OutwardX, 6);
+        Assert.Equal(expectedOutwardY, anchor.OutwardY, 6);
+    }
+
+    [Fact]
+    public void MultipleRotatedPins_MoveFromSideToTopAndPreserveOrder()
+    {
+        var placement = Placement(90);
+
+        var first = TopologyPortGeometry.CalculateRotatedSide(placement, TopologyScreenSide.Left, 0, 4);
+        var last = TopologyPortGeometry.CalculateRotatedSide(placement, TopologyScreenSide.Left, 3, 4);
+
+        Assert.Equal(first.Y, last.Y, 6);
+        Assert.True(first.X > last.X);
+        Assert.Equal(-1d, first.OutwardY, 6);
+        Assert.Equal(-1d, last.OutwardY, 6);
+    }
+
     private static TopologyPlacement Placement(int degrees) => new()
     {
         ObjectId = "device-1",

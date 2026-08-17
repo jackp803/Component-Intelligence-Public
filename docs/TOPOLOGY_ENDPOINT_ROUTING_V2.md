@@ -156,6 +156,35 @@ A selected route exposes a draggable bend handle. Dragging the handle creates a 
 
 Manual route waypoints are currently editor-session visual state; engineering connection endpoint data remains persistent. Persistent multi-waypoint project serialization can be added independently without changing the endpoint contract.
 
+### 8.1 Loose-wire and terminal endpoint contract｜散線與端子連線
+
+- `TOPO-WIRE-001`: A loose conductor must terminate at an exact Pin / terminal endpoint, not be collapsed to the parent Port.
+- `TOPO-WIRE-002`: Terminal/junction endpoints must be connectable to Component Pins as well as aggregate Ports. The endpoint lookup must accept Port IDs, Pin IDs, and terminal connection-point IDs without changing their persisted identity.
+- `TOPO-WIRE-003`: Multi-core cable conductors are connected independently. Unused conductors remain explicit and unconnected.
+- A geometric line crossing never creates electrical continuity. Continuity exists only through an explicit connection endpoint or junction.
+
+### 8.2 Electrical-potential wire colours｜正負電與接地顏色
+
+- `TOPO-STYLE-001`: Topology routes must derive their visual style from resolved net/potential semantics rather than from route order or a substring-only label guess.
+- Default canvas palette: positive DC (`+V`, `+24V`, `V+`) = red; DC return/negative (`0V`, `V-`, `-V`) = blue; protective/functional earth (`PE`, `FG`) = green; unresolved/neutral = dark gray. Signal/network routes may use their layer palette.
+- Colours are presentation aids and must be configurable for project/company conventions. Net labels and endpoint identity remain visible so electrical meaning never depends on colour alone.
+- UI route colour must not be treated as the physical conductor colour or written back as manufacturer/archive truth.
+
+### 8.3 Crossing and junction symbols｜跨線與導通符號
+
+- `TOPO-CROSS-001`: Two routes that geometrically cross but are not electrically connected must render a line jump/bridge or an equivalent visible gap.
+- `TOPO-CROSS-002`: Routes that intentionally share an electrical junction must render a filled junction dot anchored to a real junction/terminal endpoint.
+- `TOPO-CROSS-003`: A plain intersection must never silently become connected, and a junction symbol must never be inferred from proximity alone.
+- Crossing symbols are derived after routing and are presentation only; the saved electrical graph remains the authority for connectivity.
+
+### 8.4 Automatic rerouting after component movement｜移動元件後自動重算
+
+- `TOPO-ROUTE-001`: Moving a component must invalidate every connected automatic route and recompute it from the new true endpoint anchors.
+- The automatic router minimizes a deterministic weighted cost: Manhattan length first, then bend count, route crossings, component-obstacle violations, and clearance penalties.
+- Orthogonal routes use horizontal/vertical segments and 90-degree turns. A drag may show a lightweight preview; the authoritative route is recalculated when the component move is committed.
+- `TOPO-ROUTE-002`: User-locked/manual waypoints must be preserved. The router recalculates only the unlocked portions between the endpoint and locked waypoints.
+- Route recalculation changes presentation geometry only. It must not alter endpoint IDs, net identity, or electrical connectivity.
+
 ## 9. Palette-first placement + Auto Arrange｜元件清單優先與自動排列
 
 The left `Components` palette is the project/BOM inventory. Presence in the project and presence on the canvas are separate states:

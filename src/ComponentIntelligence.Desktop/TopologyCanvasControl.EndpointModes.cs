@@ -49,14 +49,14 @@ public partial class TopologyCanvasControl
             var mode = TopologyEndpointPolicy.DetermineDisplayMode(port);
 
             if (mode == TopologyEndpointDisplayMode.Connector || port.Pins.Count == 0)
-                result.Add(new VisualEndpoint(port.PortId, port.Name, port, null, side, isAggregatePort: true));
+                result.Add(new VisualEndpoint(port.PortId, port.Name, port, null, side, IsAggregatePort: true));
 
             if (mode == TopologyEndpointDisplayMode.Pins || _expandedVisualPortIds.Contains(port.PortId))
             {
                 foreach (var pin in port.Pins)
                 {
                     var label = BuildPinLabel(pin);
-                    result.Add(new VisualEndpoint(pin.PinId, label, port, pin, side, isAggregatePort: false));
+                    result.Add(new VisualEndpoint(pin.PinId, label, port, pin, side, IsAggregatePort: false));
                 }
             }
         }
@@ -75,12 +75,24 @@ public partial class TopologyCanvasControl
         var rightCount = endpoints.Count(endpoint => endpoint.Side == TopologyScreenSide.Right);
         var maxSideCount = Math.Max(leftCount, rightCount);
         var hasPinLevelEndpoints = endpoints.Any(endpoint => !endpoint.IsAggregatePort);
+        var leftLabelWidth = endpoints
+            .Where(endpoint => endpoint.Side == TopologyScreenSide.Left)
+            .Select(endpoint => EstimateEndpointLabelWidth(endpoint.Label))
+            .DefaultIfEmpty(0d)
+            .Max();
+        var rightLabelWidth = endpoints
+            .Where(endpoint => endpoint.Side == TopologyScreenSide.Right)
+            .Select(endpoint => EstimateEndpointLabelWidth(endpoint.Label))
+            .DefaultIfEmpty(0d)
+            .Max();
 
         // 22 px per endpoint preserves readable labels and clickable markers. The component is allowed
-        // to become large; hiding individual conductors merely to preserve a fixed rectangle would make
-        // the resulting wiring graph ambiguous.
+        // to become large. Side labels live inside the component, so reserve independent left/right
+        // label lanes plus a central title lane; this keeps names away from external conductors.
         var requiredHeight = Math.Max(baseline.Height, 52d + maxSideCount * 22d);
-        var requiredWidth = Math.Max(baseline.Width, hasPinLevelEndpoints ? 180d : baseline.Width);
+        var requiredWidth = Math.Max(
+            baseline.Width,
+            Math.Max(hasPinLevelEndpoints ? 180d : 0d, leftLabelWidth + rightLabelWidth + 96d));
 
         placement.Width = requiredWidth;
         placement.Height = requiredHeight;
@@ -120,7 +132,7 @@ public partial class TopologyCanvasControl
             for (var index = 0; index < sideEndpoints.Length; index++)
             {
                 var endpoint = sideEndpoints[index];
-                var anchor = TopologyPortGeometry.CalculateScreenSide(
+                var anchor = TopologyPortGeometry.CalculateRotatedSide(
                     placement,
                     side,
                     index,
@@ -300,8 +312,9 @@ public partial class TopologyCanvasControl
             Text = text,
             FontSize = 9,
             Foreground = Brushes.DimGray,
-            Background = Brushes.White,
-            Padding = new Thickness(2, 0, 2, 0),
+            Background = Brushes.Transparent,
+            Padding = new Thickness(0),
+            TextTrimming = TextTrimming.CharacterEllipsis,
             IsHitTestVisible = false
         };
         Surface.Children.Add(label);
@@ -310,20 +323,33 @@ public partial class TopologyCanvasControl
 
     private static void PositionEndpointLabel(TextBlock label, string text, TopologyPortAnchor anchor)
     {
-        var estimatedWidth = Math.Max(28d, text.Length * 5.8d + 4d);
+        var estimatedWidth = EstimateEndpointLabelWidth(text);
         const double estimatedHeight = 13d;
-        const double gap = 11d;
+        const double gap = 10d;
 
-        var x = anchor.X + anchor.OutwardX * gap;
-        var y = anchor.Y + anchor.OutwardY * gap;
-        if (anchor.OutwardX < -0.25) x -= estimatedWidth;
+        // Move opposite the outward marker normal so the label follows its pin while remaining on
+        // the inside of whichever edge the rotated pin now occupies. Keep text horizontal so it is
+        // readable even when the component is at 90° or 270°.
+        var x = anchor.X - anchor.OutwardX * gap;
+        var y = anchor.Y - anchor.OutwardY * gap - estimatedHeight / 2d;
+        if (anchor.OutwardX > 0.25) x -= estimatedWidth;
         else if (Math.Abs(anchor.OutwardX) <= 0.25) x -= estimatedWidth / 2d;
-        if (anchor.OutwardY < -0.25) y -= estimatedHeight;
-        else if (Math.Abs(anchor.OutwardY) <= 0.25) y -= estimatedHeight / 2d;
 
+        if (anchor.OutwardY > 0.25) y -= estimatedHeight / 2d;
+        else if (anchor.OutwardY < -0.25) y += estimatedHeight / 2d;
+
+        label.Width = estimatedWidth;
+        label.TextAlignment = Math.Abs(anchor.OutwardX) <= 0.25
+            ? TextAlignment.Center
+            : anchor.OutwardX > 0.25 ? TextAlignment.Right : TextAlignment.Left;
+        label.Background = Brushes.Transparent;
+        label.TextTrimming = TextTrimming.CharacterEllipsis;
         Canvas.SetLeft(label, Math.Max(0, x));
         Canvas.SetTop(label, Math.Max(0, y));
     }
+
+    private static double EstimateEndpointLabelWidth(string text) =>
+        Math.Max(28d, text.Length * 5.8d + 6d);
 
     private static string BuildPinLabel(ComponentPin pin)
     {

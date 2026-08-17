@@ -182,6 +182,46 @@ public sealed class BomTopologySynchronizerTests
         Assert.Equal(3, project.Components.Select(component => component.ComponentInstanceId).Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
+    [Fact]
+    public async Task SynchronizeAsync_NewBomRowsMergeIntoSavedProjectWithoutChangingExistingLayoutOrConnections()
+    {
+        var project = NewProject();
+        var originalRow = NewRow("10", "IFM", "AL1342", used: 1, spare: 0);
+        var addedRow = NewRow("11", "IFM", "PL1514", used: 1, spare: 0);
+        var synchronizer = new BomTopologySynchronizer();
+
+        await synchronizer.SynchronizeAsync(project, [originalRow], (_, _, _) => Task.FromResult<ComponentIR?>(null));
+        var original = Assert.Single(project.Components);
+        project.TopologyPlacements.Add(new TopologyPlacement
+        {
+            ObjectId = original.ComponentInstanceId,
+            ObjectKind = "Component",
+            X = 321,
+            Y = 123
+        });
+        project.Connections.Add(new ElectricalConnection
+        {
+            ConnectionId = "saved-connection",
+            FromEndpointId = "saved-from",
+            ToEndpointId = "saved-to"
+        });
+
+        var result = await synchronizer.SynchronizeAsync(
+            project,
+            [originalRow, addedRow],
+            (_, _, _) => Task.FromResult<ComponentIR?>(null));
+
+        Assert.Equal(1, result.AddedInstances);
+        Assert.Equal(2, project.Components.Count);
+        Assert.Contains(project.Components, component =>
+            component.DisplayName?.Contains("IFM PL1514", StringComparison.OrdinalIgnoreCase) == true);
+        var placement = Assert.Single(project.TopologyPlacements);
+        Assert.Equal(original.ComponentInstanceId, placement.ObjectId);
+        Assert.Equal(321, placement.X);
+        Assert.Equal(123, placement.Y);
+        Assert.Equal("saved-connection", Assert.Single(project.Connections).ConnectionId);
+    }
+
     private static ElectricalProject NewProject() => new()
     {
         ProjectId = "TEST-PROJECT"

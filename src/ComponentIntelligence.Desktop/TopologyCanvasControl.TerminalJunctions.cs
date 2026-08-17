@@ -36,7 +36,9 @@ public partial class TopologyCanvasControl
                 marker.Width = diameter;
                 marker.Height = diameter;
                 marker.CornerRadius = new CornerRadius(diameter / 2);
-                marker.Background = Brushes.White;
+                // A transparent ring leaves the conductor visible.  True multi-wire junctions get
+                // the explicit dark centre dot added by AddJunctionDots.
+                marker.Background = Brushes.Transparent;
                 marker.BorderBrush = Brushes.DarkSlateGray;
                 marker.BorderThickness = new Thickness(2);
                 marker.Child = null;
@@ -98,9 +100,16 @@ public partial class TopologyCanvasControl
             string.Equals(item.ObjectId, blockId, StringComparison.OrdinalIgnoreCase));
         if (placement is null) return;
 
+        if (!SelectTopologyObjectForDrag(blockId))
+        {
+            e.Handled = true;
+            return;
+        }
+
         _terminalDragBlockId = blockId;
         _terminalDragStartMouse = e.GetPosition(Surface);
         _terminalDragStartPlacement = new Point(placement.X, placement.Y);
+        _terminalDragStartSelectionPositions = CaptureSelectedTopologyPositions();
         _terminalDragRecorded = false;
         marker.CaptureMouse();
         SelectionText.Text = $"{block.ReferenceDesignator} | Terminal / Junction";
@@ -121,12 +130,7 @@ public partial class TopologyCanvasControl
         }
         if (!_terminalDragRecorded) return;
 
-        var placement = _project.TopologyPlacements.First(item =>
-            string.Equals(item.ObjectId, _terminalDragBlockId, StringComparison.OrdinalIgnoreCase));
-        placement.X = Math.Max(0, _terminalDragStartPlacement.X + dx);
-        placement.Y = Math.Max(0, _terminalDragStartPlacement.Y + dy);
-        Canvas.SetLeft(marker, placement.X + placement.Width / 2 - marker.Width / 2);
-        Canvas.SetTop(marker, placement.Y + placement.Height / 2 - marker.Height / 2);
+        MoveSelectedTopologyObjects(_terminalDragStartSelectionPositions, dx, dy);
         e.Handled = true;
     }
 
@@ -136,6 +140,7 @@ public partial class TopologyCanvasControl
         var moved = _terminalDragRecorded;
         if (sender is Border marker) marker.ReleaseMouseCapture();
         _terminalDragBlockId = null;
+        _terminalDragStartSelectionPositions.Clear();
         _terminalDragRecorded = false;
         if (moved)
         {

@@ -121,6 +121,33 @@ public static class TopologyPortGeometry
         return RotateLocalAnchor(placement, localX, localY, edge.OutwardX, edge.OutwardY);
     }
 
+    /// <summary>
+    /// Keeps a port attached to its original component edge while the component rotates. For
+    /// example, a right-edge output moves to the bottom edge after a clockwise 90-degree rotation,
+    /// and a left-edge input moves to the top edge. This is used by the interactive canvas where
+    /// component rotation must move the actual pins and connected wire endpoints together.
+    /// </summary>
+    public static TopologyPortAnchor CalculateRotatedSide(
+        TopologyPlacement placement,
+        TopologyScreenSide side,
+        int portIndex,
+        int portCount)
+    {
+        ArgumentNullException.ThrowIfNull(placement);
+        ValidateIndex(portIndex, portCount);
+
+        var fraction = (portIndex + 1d) / (portCount + 1d);
+        var isLeft = side == TopologyScreenSide.Left;
+        var localX = isLeft ? placement.X : placement.X + placement.Width;
+        var localY = placement.Y + placement.Height * fraction;
+        return RotateLocalAnchor(
+            placement,
+            localX,
+            localY,
+            isLeft ? -1d : 1d,
+            0d);
+    }
+
     private static bool TryDetermineComponentPresentationSide(
         ComponentInstance component,
         ComponentPort port,

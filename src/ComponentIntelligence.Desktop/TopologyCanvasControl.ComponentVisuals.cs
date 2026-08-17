@@ -43,7 +43,6 @@ public partial class TopologyCanvasControl
         ConfigureNotionSettingsButton();
         if (_componentVisualHooked || Surface is null) return;
         _componentVisualHooked = true;
-        Surface.LayoutUpdated += (_, _) => DecorateComponentVisuals();
         Surface.PreviewMouseLeftButtonDown += Surface_PreviewPinExpansion;
     }
 

@@ -27,8 +27,119 @@ public sealed record TopologyGraph
     public required IReadOnlyList<TopologyEdge> Edges { get; init; }
 }
 
+public sealed record TopologyArrangementResult(
+    int NodeCount,
+    int ConnectionCount,
+    int GraphGroupCount,
+    int LayerCount,
+    double RequiredWidth,
+    double RequiredHeight);
+
 public sealed class TopologyProjection
 {
+    /// <summary>
+    /// Repositions only objects already present on the topology canvas. Connected objects are split
+    /// into weak graph groups, layered from connection source to destination, and ordered near their
+    /// upstream neighbours. Existing component sizes are respected so columns and rows never overlap.
+    /// </summary>
+    public TopologyArrangementResult ArrangeConnectedPlacements(
+        ElectricalProject project,
+        double startX = 80d,
+        double startY = 70d,
+        double horizontalGap = 220d,
+        double verticalGap = 70d)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        var placements = project.TopologyPlacements
+            .GroupBy(placement => placement.ObjectId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToDictionary(placement => placement.ObjectId, StringComparer.OrdinalIgnoreCase);
+        if (placements.Count == 0)
+            return new TopologyArrangementResult(0, 0, 0, 0, startX, startY);
+
+        var endpointOwners = BuildEndpointOwners(project);
+        var edgeList = new List<LayoutEdge>();
+        foreach (var connection in project.Connections)
+        {
+            if (!endpointOwners.TryGetValue(connection.FromEndpointId, out var from) ||
+                !endpointOwners.TryGetValue(connection.ToEndpointId, out var to) ||
+                string.Equals(from, to, StringComparison.OrdinalIgnoreCase) ||
+                !placements.ContainsKey(from) ||
+                !placements.ContainsKey(to))
+            {
+                continue;
+            }
+
+            edgeList.Add(new LayoutEdge(from, to));
+        }
+        var edges = edgeList.Distinct().ToArray();
+
+        var outgoing = placements.Keys.ToDictionary(
+            id => id,
+            id => edges.Where(edge => string.Equals(edge.From, id, StringComparison.OrdinalIgnoreCase))
+                .Select(edge => edge.To).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+        var incoming = placements.Keys.ToDictionary(
+            id => id,
+            id => edges.Where(edge => string.Equals(edge.To, id, StringComparison.OrdinalIgnoreCase))
+                .Select(edge => edge.From).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+        var neighbours = placements.Keys.ToDictionary(
+            id => id,
+            id => outgoing[id].Concat(incoming[id]).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+
+        var graphGroups = BuildWeakGraphGroups(placements.Keys, neighbours)
+            .OrderByDescending(group => group.Count)
+            .ThenBy(group => group.Min(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var nextGroupY = startY;
+        var requiredWidth = startX;
+        var maximumLayerCount = 0;
+        foreach (var group in graphGroups)
+        {
+            var layers = AssignGraphLayers(group, outgoing, incoming, neighbours);
+            maximumLayerCount = Math.Max(maximumLayerCount, layers.Values.DefaultIfEmpty(0).Max() + 1);
+            var orderedLayers = OrderLayerNodes(group, layers, neighbours, outgoing);
+            var layerNumbers = orderedLayers.Keys.Order().ToArray();
+            var columnWidths = layerNumbers.ToDictionary(
+                layer => layer,
+                layer => orderedLayers[layer].Max(id => placements[id].Width));
+            var columnHeights = layerNumbers.ToDictionary(
+                layer => layer,
+                layer => orderedLayers[layer].Sum(id => placements[id].Height) +
+                         Math.Max(0, orderedLayers[layer].Count - 1) * verticalGap);
+            var groupHeight = Math.Max(1d, columnHeights.Values.DefaultIfEmpty(1d).Max());
+
+            var x = startX;
+            foreach (var layer in layerNumbers)
+            {
+                var y = nextGroupY + (groupHeight - columnHeights[layer]) / 2d;
+                foreach (var id in orderedLayers[layer])
+                {
+                    var placement = placements[id];
+                    placement.X = SnapLayoutCoordinate(x);
+                    placement.Y = SnapLayoutCoordinate(y);
+                    y += placement.Height + verticalGap;
+                    requiredWidth = Math.Max(requiredWidth, placement.X + placement.Width);
+                }
+                x += columnWidths[layer] + horizontalGap;
+            }
+
+            nextGroupY += groupHeight + 130d;
+        }
+
+        var requiredHeight = placements.Values.Max(placement => placement.Y + placement.Height);
+        return new TopologyArrangementResult(
+            placements.Count,
+            edges.Length,
+            graphGroups.Length,
+            maximumLayerCount,
+            requiredWidth,
+            requiredHeight);
+    }
+
     /// <summary>
     /// Explicit auto-arrange operation. This method creates placements for every unplaced project
     /// object and is intentionally not required by normal rendering. Palette-first editing uses
@@ -250,6 +361,142 @@ public sealed class TopologyProjection
     private static bool ContainsAny(string value, params string[] tokens) =>
         tokens.Any(token => value.Contains(token, StringComparison.OrdinalIgnoreCase));
 
+    private static IReadOnlyList<HashSet<string>> BuildWeakGraphGroups(
+        IEnumerable<string> objectIds,
+        IReadOnlyDictionary<string, string[]> neighbours)
+    {
+        var remaining = objectIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var groups = new List<HashSet<string>>();
+        while (remaining.Count > 0)
+        {
+            var seed = remaining.Order(StringComparer.OrdinalIgnoreCase).First();
+            var group = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var queue = new Queue<string>();
+            queue.Enqueue(seed);
+            remaining.Remove(seed);
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                group.Add(current);
+                foreach (var neighbour in neighbours[current].Order(StringComparer.OrdinalIgnoreCase))
+                {
+                    if (!remaining.Remove(neighbour)) continue;
+                    queue.Enqueue(neighbour);
+                }
+            }
+            groups.Add(group);
+        }
+        return groups;
+    }
+
+    private static Dictionary<string, int> AssignGraphLayers(
+        IReadOnlySet<string> group,
+        IReadOnlyDictionary<string, string[]> outgoing,
+        IReadOnlyDictionary<string, string[]> incoming,
+        IReadOnlyDictionary<string, string[]> neighbours)
+    {
+        var layers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var roots = group
+            .Where(id => incoming[id].All(source => !group.Contains(source)))
+            .OrderByDescending(id => outgoing[id].Count(group.Contains))
+            .ThenBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (roots.Length == 0)
+        {
+            roots =
+            [
+                group.OrderByDescending(id => outgoing[id].Count(group.Contains) - incoming[id].Count(group.Contains))
+                    .ThenByDescending(id => neighbours[id].Count(group.Contains))
+                    .ThenBy(id => id, StringComparer.OrdinalIgnoreCase)
+                    .First()
+            ];
+        }
+
+        var queue = new Queue<string>();
+        foreach (var root in roots)
+        {
+            layers[root] = 0;
+            queue.Enqueue(root);
+        }
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            foreach (var target in outgoing[current]
+                         .Where(group.Contains)
+                         .Order(StringComparer.OrdinalIgnoreCase))
+            {
+                if (layers.ContainsKey(target)) continue;
+                layers[target] = layers[current] + 1;
+                queue.Enqueue(target);
+            }
+        }
+
+        // A directed cycle or a connection drawn in reverse may not be reachable from a directed
+        // root. Attach each remainder to the closest already layered neighbour and expand undirected.
+        while (layers.Count < group.Count)
+        {
+            var seed = group.Where(id => !layers.ContainsKey(id))
+                .OrderBy(id => neighbours[id].Where(layers.ContainsKey).Select(id => layers[id]).DefaultIfEmpty(int.MaxValue).Min())
+                .ThenByDescending(id => neighbours[id].Count(group.Contains))
+                .ThenBy(id => id, StringComparer.OrdinalIgnoreCase)
+                .First();
+            var attachedLayers = neighbours[seed].Where(layers.ContainsKey).Select(id => layers[id]).ToArray();
+            layers[seed] = attachedLayers.Length == 0 ? 0 : attachedLayers.Min() + 1;
+            queue.Enqueue(seed);
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                foreach (var neighbour in neighbours[current]
+                             .Where(group.Contains)
+                             .Where(id => !layers.ContainsKey(id))
+                             .Order(StringComparer.OrdinalIgnoreCase))
+                {
+                    layers[neighbour] = layers[current] + 1;
+                    queue.Enqueue(neighbour);
+                }
+            }
+        }
+        return layers;
+    }
+
+    private static SortedDictionary<int, List<string>> OrderLayerNodes(
+        IReadOnlySet<string> group,
+        IReadOnlyDictionary<string, int> layers,
+        IReadOnlyDictionary<string, string[]> neighbours,
+        IReadOnlyDictionary<string, string[]> outgoing)
+    {
+        var result = new SortedDictionary<int, List<string>>();
+        var verticalRanks = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        foreach (var layer in layers.Values.Distinct().Order())
+        {
+            var nodes = group.Where(id => layers[id] == layer)
+                .Select(id => new
+                {
+                    Id = id,
+                    Barycenter = neighbours[id]
+                        .Where(verticalRanks.ContainsKey)
+                        .Select(neighbour => verticalRanks[neighbour])
+                        .DefaultIfEmpty(double.NaN)
+                        .Average(),
+                    Degree = neighbours[id].Count(group.Contains),
+                    OutDegree = outgoing[id].Count(group.Contains)
+                })
+                .OrderBy(item => double.IsNaN(item.Barycenter) ? 1 : 0)
+                .ThenBy(item => item.Barycenter)
+                .ThenByDescending(item => item.OutDegree)
+                .ThenByDescending(item => item.Degree)
+                .ThenBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(item => item.Id)
+                .ToList();
+            result[layer] = nodes;
+            for (var index = 0; index < nodes.Count; index++)
+                verticalRanks[nodes[index]] = index;
+        }
+        return result;
+    }
+
+    private static double SnapLayoutCoordinate(double value) => Math.Round(value / 20d) * 20d;
+
     private static IReadOnlyDictionary<string, string> BuildEndpointOwners(ElectricalProject project)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -314,4 +561,5 @@ public sealed class TopologyProjection
     }
 
     private sealed record PlacementCandidate(string Id, string Kind, bool IsFieldSensor);
+    private sealed record LayoutEdge(string From, string To);
 }

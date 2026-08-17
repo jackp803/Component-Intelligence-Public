@@ -69,9 +69,9 @@ public partial class TopologyCanvasControl
         {
             _anchoringConnectionLines = true;
 
-            // Component Borders rotate separately from their external endpoint markers. Apply the
-            // screen-relative Input-left / Output-right convention first, then replace pin-mode ports
-            // with individually wireable Pin endpoints.
+            // Component Borders rotate separately from their external endpoint markers. Move every
+            // Port/Pin to the corresponding rotated physical edge first, then rebuild individually
+            // wireable Pin endpoints and their orthogonal routes.
             ApplyRotatedPortVisuals();
             ApplyTerminalJunctionVisuals();
             EnsureEndpointModeVisuals();

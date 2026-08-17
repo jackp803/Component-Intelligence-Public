@@ -4,6 +4,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Topology;
+using ShapePath = System.Windows.Shapes.Path;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -12,6 +14,7 @@ public partial class TopologyCanvasControl
     private readonly Dictionary<string, Point> _manualRouteWaypoints = new(StringComparer.OrdinalIgnoreCase);
     private bool _routingVisualsUpdating;
     private string? _selectedRouteConnectionId;
+    private string? _hoveredRouteConnectionId;
     private Border? _dragRouteHandle;
     private string? _dragRouteConnectionId;
 
@@ -37,24 +40,30 @@ public partial class TopologyCanvasControl
                          .ToArray())
                 Surface.Children.Remove(obsolete);
 
-            foreach (var connection in _project.Connections)
+            var completedRoutes = new List<IReadOnlyList<Point>>();
+            foreach (var connection in _project.Connections.OrderBy(item => item.ConnectionId, StringComparer.OrdinalIgnoreCase))
             {
                 if (!TryFindTopologyEndpointMarkerCenter(connection.FromEndpointId, out var start) ||
                     !TryFindTopologyEndpointMarkerCenter(connection.ToEndpointId, out var end))
                     continue;
 
                 var route = FindOrCreateRoutePolyline(connection);
-                var points = _manualRouteWaypoints.TryGetValue(connection.ConnectionId, out var waypoint)
-                    ? BuildManualOrthogonalRoute(start, end, waypoint)
-                    : BuildAutomaticOrthogonalRoute(connection, start, end);
+                var escapedStart = CalculateEndpointEscapePoint(connection.FromEndpointId, start, end);
+                var escapedEnd = CalculateEndpointEscapePoint(connection.ToEndpointId, end, start);
+                var routedCore = _manualRouteWaypoints.TryGetValue(connection.ConnectionId, out var waypoint)
+                    ? BuildManualOrthogonalRoute(escapedStart, escapedEnd, waypoint)
+                    : BuildAutomaticOrthogonalRoute(escapedStart, escapedEnd, completedRoutes);
+                var points = CompactOrthogonalPoints(
+                    new[] { start }.Concat(routedCore).Append(end));
                 route.Points = new PointCollection(points);
                 route.Stroke = ResolveConnectionBrush(connection);
-                route.StrokeThickness = string.Equals(_selectedRouteConnectionId, connection.ConnectionId, StringComparison.OrdinalIgnoreCase)
-                    ? 4d
-                    : 3d;
+                route.ToolTip = $"{BuildEndpointTraceLabel(connection.FromEndpointId)} → {BuildEndpointTraceLabel(connection.ToEndpointId)}\nOrthogonal Route（正交折線）\n單擊：選取並顯示拖曳折點\n雙擊：線路設定";
                 Panel.SetZIndex(route, -20);
+                completedRoutes.Add(points);
             }
 
+            ApplyConnectionDecorations();
+            ApplyRouteEmphasisVisuals();
             UpdateRouteHandle();
         }
         finally
@@ -80,8 +89,25 @@ public partial class TopologyCanvasControl
             ToolTip = "Orthogonal Route（正交折線）\n單擊：選取並顯示拖曳折點\n雙擊：線路設定"
         };
         route.MouseLeftButtonDown += OrthogonalRoute_MouseLeftButtonDown;
+        route.MouseEnter += OrthogonalRoute_MouseEnter;
+        route.MouseLeave += OrthogonalRoute_MouseLeave;
         Surface.Children.Add(route);
         return route;
+    }
+
+    private void OrthogonalRoute_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.Tag is not string connectionId) return;
+        _hoveredRouteConnectionId = connectionId;
+        ApplyRouteEmphasisVisuals();
+    }
+
+    private void OrthogonalRoute_MouseLeave(object sender, MouseEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.Tag is not string connectionId ||
+            !string.Equals(_hoveredRouteConnectionId, connectionId, StringComparison.OrdinalIgnoreCase)) return;
+        _hoveredRouteConnectionId = null;
+        ApplyRouteEmphasisVisuals();
     }
 
     private void OrthogonalRoute_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -90,46 +116,120 @@ public partial class TopologyCanvasControl
         _selectedRouteConnectionId = connectionId;
         Edge_MouseLeftButtonDown(sender, e);
         if (e.ClickCount == 1)
-            EnsureOrthogonalConnectionVisuals();
+        {
+            ApplyRouteEmphasisVisuals();
+            UpdateRouteHandle();
+        }
+    }
+
+    private void ApplyRouteEmphasisVisuals()
+    {
+        foreach (var route in Surface.Children.OfType<Polyline>()
+                     .Where(item => string.Equals(item.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
+                                    item.Tag is string))
+        {
+            var connectionId = (string)route.Tag;
+            var hovered = string.Equals(_hoveredRouteConnectionId, connectionId, StringComparison.OrdinalIgnoreCase);
+            route.StrokeThickness = hovered
+                ? 5d
+                : string.Equals(_selectedRouteConnectionId, connectionId, StringComparison.OrdinalIgnoreCase) ? 4d : 3d;
+            route.Opacity = string.IsNullOrWhiteSpace(_hoveredRouteConnectionId) || hovered ? 1d : 0.18d;
+        }
+
+        foreach (var label in Surface.Children.OfType<TextBlock>()
+                     .Where(item => string.Equals(item.Uid, "CI-ROUTE-IDENTITY", StringComparison.Ordinal) &&
+                                    item.Tag is TopologyDecorationTag))
+        {
+            var tag = (TopologyDecorationTag)label.Tag;
+            var hovered = !string.IsNullOrWhiteSpace(_hoveredRouteConnectionId) &&
+                          tag.ConnectionIds.Contains(_hoveredRouteConnectionId, StringComparer.OrdinalIgnoreCase);
+            label.Opacity = string.IsNullOrWhiteSpace(_hoveredRouteConnectionId) || hovered ? 1d : 0.18d;
+        }
     }
 
     private IReadOnlyList<Point> BuildAutomaticOrthogonalRoute(
-        ElectricalConnection connection,
         Point start,
-        Point end)
+        Point end,
+        IReadOnlyList<IReadOnlyList<Point>> completedRoutes)
     {
         if (Math.Abs(start.X - end.X) < 0.5 || Math.Abs(start.Y - end.Y) < 0.5)
             return [start, end];
 
-        var obstacles = BuildRoutingObstacles(connection);
-        var minX = obstacles.Count == 0 ? Math.Min(start.X, end.X) : obstacles.Min(rect => rect.Left);
-        var maxX = obstacles.Count == 0 ? Math.Max(start.X, end.X) : obstacles.Max(rect => rect.Right);
-        var minY = obstacles.Count == 0 ? Math.Min(start.Y, end.Y) : obstacles.Min(rect => rect.Top);
-        var maxY = obstacles.Count == 0 ? Math.Max(start.Y, end.Y) : obstacles.Max(rect => rect.Bottom);
+        var obstacles = BuildRoutingObstacles();
         const double clearance = 26d;
 
-        var xLanes = new[]
-        {
-            (start.X + end.X) / 2d,
-            minX - clearance,
-            maxX + clearance
-        }.Distinct().ToArray();
-        var yLanes = new[]
-        {
-            (start.Y + end.Y) / 2d,
-            minY - clearance,
-            maxY + clearance
-        }.Distinct().ToArray();
+        const double routingGrid = 12d;
+        static double SnapToGrid(double value) => Math.Round(value / routingGrid) * routingGrid;
 
-        var candidates = new List<IReadOnlyList<Point>>();
+        var xLanes = obstacles.SelectMany(rect => new[] { rect.Left - clearance, rect.Right + clearance })
+            .Append((start.X + end.X) / 2d)
+            .Select(SnapToGrid)
+            .Where(x => x >= 0d && x <= Surface.Width)
+            .Distinct()
+            .ToArray();
+        var yLanes = obstacles.SelectMany(rect => new[] { rect.Top - clearance, rect.Bottom + clearance })
+            .Append((start.Y + end.Y) / 2d)
+            .Select(SnapToGrid)
+            .Where(y => y >= 0d && y <= Surface.Height)
+            .Distinct()
+            .ToArray();
+
+        var candidates = new List<IReadOnlyList<Point>>
+        {
+            CompactOrthogonalPoints([start, new Point(end.X, start.Y), end]),
+            CompactOrthogonalPoints([start, new Point(start.X, end.Y), end])
+        };
         foreach (var x in xLanes)
             candidates.Add(CompactOrthogonalPoints([start, new Point(x, start.Y), new Point(x, end.Y), end]));
         foreach (var y in yLanes)
             candidates.Add(CompactOrthogonalPoints([start, new Point(start.X, y), new Point(end.X, y), end]));
 
+        // Two-lane doglegs solve the common schematic case where a single Z-shaped route cannot
+        // avoid both a component and an existing wire bundle. Limit to nearby grid lanes so routing
+        // remains fast even for large BOMs.
+        var nearbyXLanes = xLanes.OrderBy(x => Math.Abs(x - (start.X + end.X) / 2d)).Take(12).ToArray();
+        var nearbyYLanes = yLanes.OrderBy(y => Math.Abs(y - (start.Y + end.Y) / 2d)).Take(12).ToArray();
+        foreach (var x in nearbyXLanes)
+        foreach (var y in nearbyYLanes)
+        {
+            candidates.Add(CompactOrthogonalPoints([
+                start,
+                new Point(x, start.Y),
+                new Point(x, y),
+                new Point(end.X, y),
+                end
+            ]));
+            candidates.Add(CompactOrthogonalPoints([
+                start,
+                new Point(start.X, y),
+                new Point(x, y),
+                new Point(x, end.Y),
+                end
+            ]));
+        }
+
         return candidates
-            .OrderBy(candidate => ScoreRoute(candidate, obstacles))
+            .OrderBy(candidate => ScoreRoute(candidate, obstacles, completedRoutes))
+            .ThenBy(candidate => string.Join(";", candidate.Select(point => $"{point.X:F2},{point.Y:F2}")), StringComparer.Ordinal)
             .First();
+    }
+
+    private void AutoRouteConnections_Click(object sender, RoutedEventArgs e)
+    {
+        if (_project is null) return;
+        MutationStarting?.Invoke(this, new TopologyMutationEventArgs("Auto layout topology and route all connections"));
+        var arrangement = _projection.ArrangeConnectedPlacements(_project);
+        Surface.Width = Math.Max(3200d, arrangement.RequiredWidth + 160d);
+        Surface.Height = Math.Max(2000d, arrangement.RequiredHeight + 160d);
+        _manualRouteWaypoints.Clear();
+        _selectedRouteConnectionId = null;
+        _hoveredRouteConnectionId = null;
+        RemoveRouteHandle();
+        Render();
+        SelectionText.Text = $"已排版 {arrangement.NodeCount} 個元件 / {_project.Connections.Count} 條線路";
+        HintBanner.Visibility = Visibility.Visible;
+        HintText.Text = $"自動排版完成：{arrangement.GraphGroupCount} 個連線群組、{arrangement.LayerCount} 層。元件已依接線方向排列，線路已重新配置水平／垂直通道；不滿意可按 Undo 復原。";
+        ProjectChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private static IReadOnlyList<Point> BuildManualOrthogonalRoute(Point start, Point end, Point waypoint) =>
@@ -141,23 +241,55 @@ public partial class TopologyCanvasControl
             end
         ]);
 
-    private List<Rect> BuildRoutingObstacles(ElectricalConnection connection)
+    private List<Rect> BuildRoutingObstacles()
     {
         if (_project is null) return [];
-        var fromOwner = FindTopologyEndpointOwner(connection.FromEndpointId);
-        var toOwner = FindTopologyEndpointOwner(connection.ToEndpointId);
         const double margin = 12d;
 
         return _project.TopologyPlacements
-            .Where(placement =>
-                !string.Equals(placement.ObjectId, fromOwner, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(placement.ObjectId, toOwner, StringComparison.OrdinalIgnoreCase))
             .Select(placement => new Rect(
                 placement.X - margin,
                 placement.Y - margin,
                 placement.Width + margin * 2,
                 placement.Height + margin * 2))
             .ToList();
+    }
+
+    private Point CalculateEndpointEscapePoint(string endpointId, Point anchor, Point otherAnchor)
+    {
+        if (_project is null) return anchor;
+        var ownerId = FindTopologyEndpointOwner(endpointId);
+        var placement = _project.TopologyPlacements.FirstOrDefault(item =>
+            string.Equals(item.ObjectId, ownerId, StringComparison.OrdinalIgnoreCase));
+        if (placement is null) return anchor;
+
+        const double clearance = 24d;
+        var left = placement.X;
+        var right = placement.X + placement.Width;
+        var top = placement.Y;
+        var bottom = placement.Y + placement.Height;
+        var distances = new[]
+        {
+            (Distance: Math.Abs(anchor.X - left), Side: EndpointEscapeSide.Left),
+            (Distance: Math.Abs(anchor.X - right), Side: EndpointEscapeSide.Right),
+            (Distance: Math.Abs(anchor.Y - top), Side: EndpointEscapeSide.Top),
+            (Distance: Math.Abs(anchor.Y - bottom), Side: EndpointEscapeSide.Bottom)
+        };
+        var nearest = distances.OrderBy(item => item.Distance).First();
+        var side = nearest.Distance <= 10d
+            ? nearest.Side
+            : Math.Abs(otherAnchor.X - anchor.X) >= Math.Abs(otherAnchor.Y - anchor.Y)
+                ? otherAnchor.X >= anchor.X ? EndpointEscapeSide.Right : EndpointEscapeSide.Left
+                : otherAnchor.Y >= anchor.Y ? EndpointEscapeSide.Bottom : EndpointEscapeSide.Top;
+
+        return side switch
+        {
+            EndpointEscapeSide.Left => new Point(left - clearance, anchor.Y),
+            EndpointEscapeSide.Right => new Point(right + clearance, anchor.Y),
+            EndpointEscapeSide.Top => new Point(anchor.X, top - clearance),
+            EndpointEscapeSide.Bottom => new Point(anchor.X, bottom + clearance),
+            _ => anchor
+        };
     }
 
     private string? FindTopologyEndpointOwner(string endpointId)
@@ -179,18 +311,53 @@ public partial class TopologyCanvasControl
         return null;
     }
 
-    private static double ScoreRoute(IReadOnlyList<Point> points, IReadOnlyList<Rect> obstacles)
+    private static double ScoreRoute(
+        IReadOnlyList<Point> points,
+        IReadOnlyList<Rect> obstacles,
+        IReadOnlyList<IReadOnlyList<Point>> completedRoutes)
     {
-        var intersections = 0;
+        var obstacleIntersections = 0;
+        var routeCrossings = 0;
         var length = 0d;
         for (var index = 0; index < points.Count - 1; index++)
         {
             var a = points[index];
             var b = points[index + 1];
             length += Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
-            intersections += obstacles.Count(obstacle => OrthogonalSegmentIntersectsRect(a, b, obstacle));
+            obstacleIntersections += obstacles.Count(obstacle => OrthogonalSegmentIntersectsRect(a, b, obstacle));
+            routeCrossings += completedRoutes.Sum(route => CountRouteConflicts(a, b, route));
         }
-        return intersections * 1_000_000d + length;
+        var bends = Math.Max(0, points.Count - 2);
+        return obstacleIntersections * 1_000_000_000d + routeCrossings * 1_000_000d + length * 10d + bends * 25d;
+    }
+
+    private static int CountRouteConflicts(Point a, Point b, IReadOnlyList<Point> route)
+    {
+        var count = 0;
+        for (var index = 0; index < route.Count - 1; index++)
+        {
+            var c = route[index];
+            var d = route[index + 1];
+            if (TryGetProperOrthogonalIntersection(a, b, c, d, out _)) count++;
+            else if (HasCollinearOverlap(a, b, c, d)) count += 5;
+        }
+        return count;
+    }
+
+    private static bool HasCollinearOverlap(Point a, Point b, Point c, Point d)
+    {
+        const double epsilon = 0.5;
+        const double minimumOverlap = 8d;
+        var bothHorizontal = Math.Abs(a.Y - b.Y) < epsilon && Math.Abs(c.Y - d.Y) < epsilon &&
+                             Math.Abs(a.Y - c.Y) < epsilon;
+        if (bothHorizontal)
+            return Math.Min(Math.Max(a.X, b.X), Math.Max(c.X, d.X)) -
+                   Math.Max(Math.Min(a.X, b.X), Math.Min(c.X, d.X)) > minimumOverlap;
+
+        var bothVertical = Math.Abs(a.X - b.X) < epsilon && Math.Abs(c.X - d.X) < epsilon &&
+                           Math.Abs(a.X - c.X) < epsilon;
+        return bothVertical && Math.Min(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y)) -
+               Math.Max(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y)) > minimumOverlap;
     }
 
     private static bool OrthogonalSegmentIntersectsRect(Point a, Point b, Rect rect)
@@ -240,6 +407,11 @@ public partial class TopologyCanvasControl
     private Brush ResolveConnectionBrush(ElectricalConnection connection)
     {
         if (_project is null) return Brushes.Gray;
+        var potential = TopologyConnectionPotentialClassifier.Classify(_project, connection);
+        if (potential == TopologyPotentialClass.PositiveDc) return Brushes.Firebrick;
+        if (potential == TopologyPotentialClass.NegativeOrReturnDc) return Brushes.RoyalBlue;
+        if (potential == TopologyPotentialClass.ProtectiveOrFunctionalEarth) return Brushes.ForestGreen;
+
         if (!string.IsNullOrWhiteSpace(connection.NetId))
         {
             var net = _project.Nets.FirstOrDefault(candidate =>
@@ -255,6 +427,335 @@ public partial class TopologyCanvasControl
             .Select(pin => pin.Layer)
             .FirstOrDefault(layer => layer != ElectricalLayer.Unknown);
         return LayerBrush(pinLayer);
+    }
+
+    private void ApplyConnectionDecorations()
+    {
+        if (_project is null) return;
+        foreach (var decoration in Surface.Children.OfType<FrameworkElement>()
+                     .Where(element => element.Uid.StartsWith("CI-CROSSING-", StringComparison.Ordinal) ||
+                                       string.Equals(element.Uid, "CI-JUNCTION-DOT", StringComparison.Ordinal) ||
+                                       string.Equals(element.Uid, "CI-ROUTE-IDENTITY", StringComparison.Ordinal))
+                     .ToArray())
+            Surface.Children.Remove(decoration);
+
+        var routes = Surface.Children.OfType<Polyline>()
+            .Where(route => string.Equals(route.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
+                            route.Tag is string && route.Points.Count >= 2)
+            .OrderBy(route => (string)route.Tag, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var emitted = new HashSet<string>(StringComparer.Ordinal);
+        for (var firstIndex = 0; firstIndex < routes.Length; firstIndex++)
+        for (var secondIndex = firstIndex + 1; secondIndex < routes.Length; secondIndex++)
+        {
+            var first = routes[firstIndex];
+            var second = routes[secondIndex];
+            for (var firstSegment = 0; firstSegment < first.Points.Count - 1; firstSegment++)
+            for (var secondSegment = 0; secondSegment < second.Points.Count - 1; secondSegment++)
+            {
+                var a = first.Points[firstSegment];
+                var b = first.Points[firstSegment + 1];
+                var c = second.Points[secondSegment];
+                var d = second.Points[secondSegment + 1];
+                if (!TryGetProperOrthogonalIntersection(a, b, c, d, out var crossing)) continue;
+                var key = $"{Math.Round(crossing.X, 2):F2}:{Math.Round(crossing.Y, 2):F2}";
+                if (!emitted.Add(key)) continue;
+
+                var firstIsHorizontal = Math.Abs(a.Y - b.Y) < 0.5;
+                var overRoute = firstIsHorizontal ? first : second;
+                AddCrossingBridge(crossing, overRoute, first, second);
+            }
+        }
+
+        AddJunctionDots(routes);
+        AddRouteIdentityLabels(routes);
+    }
+
+    private void AddRouteIdentityLabels(IReadOnlyList<Polyline> routes)
+    {
+        if (_project is null) return;
+        var occupiedLabels = new List<Rect>();
+        var componentBounds = _project.TopologyPlacements
+            .Select(placement => new Rect(
+                placement.X - 4d,
+                placement.Y - 4d,
+                placement.Width + 8d,
+                placement.Height + 8d))
+            .ToArray();
+        foreach (var route in routes)
+        {
+            var connectionId = (string)route.Tag;
+            var connection = _project.Connections.FirstOrDefault(item =>
+                string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase));
+            if (connection is null) continue;
+            var text = BuildRouteIdentityLabel(connection);
+            var segments = Enumerable.Range(0, route.Points.Count - 1)
+                .Select(index => new
+                {
+                    A = route.Points[index],
+                    B = route.Points[index + 1],
+                    Length = Distance(route.Points[index], route.Points[index + 1]),
+                    Horizontal = Math.Abs(route.Points[index].Y - route.Points[index + 1].Y) < 0.5
+                })
+                .OrderByDescending(segment => segment.Horizontal)
+                .ThenByDescending(segment => segment.Length)
+                .ToArray();
+
+            // Labels deliberately sit beside the longest clear segment, never on a wire.  They are
+            // transparent too, so an unusually dense drawing still leaves every conductor visible.
+            const double labelHeight = 13d;
+            var labelWidth = Math.Clamp(text.Length * 5.5d, 38d, 112d);
+            var candidates = new List<Rect>();
+            foreach (var segment in segments)
+            {
+                var midpoint = new Point((segment.A.X + segment.B.X) / 2d, (segment.A.Y + segment.B.Y) / 2d);
+                if (segment.Horizontal)
+                {
+                    candidates.Add(ClampRouteLabelBounds(new Rect(midpoint.X - labelWidth / 2d, midpoint.Y - labelHeight - 5d, labelWidth, labelHeight)));
+                    candidates.Add(ClampRouteLabelBounds(new Rect(midpoint.X - labelWidth / 2d, midpoint.Y + 5d, labelWidth, labelHeight)));
+                }
+                else
+                {
+                    candidates.Add(ClampRouteLabelBounds(new Rect(midpoint.X + 5d, midpoint.Y - labelHeight / 2d, labelWidth, labelHeight)));
+                    candidates.Add(ClampRouteLabelBounds(new Rect(midpoint.X - labelWidth - 5d, midpoint.Y - labelHeight / 2d, labelWidth, labelHeight)));
+                }
+            }
+
+            var bounds = candidates
+                .OrderBy(candidate => ScoreRouteLabelBounds(candidate, routes, componentBounds, occupiedLabels))
+                .ThenBy(candidate => candidate.Top)
+                .ThenBy(candidate => candidate.Left)
+                .FirstOrDefault();
+            if (bounds.IsEmpty)
+                bounds = new Rect(0, 0, labelWidth, labelHeight);
+
+            var label = new TextBlock
+            {
+                Uid = "CI-ROUTE-IDENTITY",
+                Tag = new TopologyDecorationTag([connectionId], RequireAllConnectionsVisible: true),
+                Text = text,
+                FontSize = 9,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = route.Stroke,
+                Background = Brushes.Transparent,
+                Padding = new Thickness(0),
+                Opacity = route.Opacity,
+                IsHitTestVisible = false,
+                ToolTip = $"{BuildEndpointTraceLabel(connection.FromEndpointId)} → {BuildEndpointTraceLabel(connection.ToEndpointId)}"
+            };
+            Canvas.SetLeft(label, bounds.Left);
+            Canvas.SetTop(label, bounds.Top);
+            Panel.SetZIndex(label, -7);
+            Surface.Children.Add(label);
+            occupiedLabels.Add(bounds);
+        }
+    }
+
+    private string BuildRouteIdentityLabel(ElectricalConnection connection) =>
+        $"{BuildEndpointShortLabel(connection.FromEndpointId)} → {BuildEndpointShortLabel(connection.ToEndpointId)}";
+
+    private string BuildEndpointShortLabel(string endpointId)
+    {
+        if (_project is null) return endpointId;
+        foreach (var component in _project.Components)
+        foreach (var port in component.Ports)
+        {
+            if (string.Equals(port.PortId, endpointId, StringComparison.OrdinalIgnoreCase))
+                return port.Name;
+            var pin = port.Pins.FirstOrDefault(item =>
+                string.Equals(item.PinId, endpointId, StringComparison.OrdinalIgnoreCase));
+            if (pin is not null)
+                return pin.PinName ?? pin.Function ?? pin.PinNumber;
+        }
+
+        foreach (var block in _project.TerminalBlocks)
+        {
+            var owns = block.Positions.SelectMany(position => position.Levels)
+                .SelectMany(level => level.ConnectionPoints)
+                .Any(point => string.Equals(point.ConnectionPointId, endpointId, StringComparison.OrdinalIgnoreCase));
+            if (owns) return block.ReferenceDesignator;
+        }
+        return endpointId;
+    }
+
+    private Rect ClampRouteLabelBounds(Rect bounds)
+    {
+        var width = Surface.Width;
+        var height = Surface.Height;
+        var x = bounds.Left;
+        var y = bounds.Top;
+        if (!double.IsNaN(width) && !double.IsInfinity(width))
+            x = Math.Clamp(x, 0d, Math.Max(0d, width - bounds.Width));
+        if (!double.IsNaN(height) && !double.IsInfinity(height))
+            y = Math.Clamp(y, 0d, Math.Max(0d, height - bounds.Height));
+        return new Rect(x, y, bounds.Width, bounds.Height);
+    }
+
+    private static int ScoreRouteLabelBounds(
+        Rect candidate,
+        IReadOnlyList<Polyline> routes,
+        IReadOnlyList<Rect> componentBounds,
+        IReadOnlyList<Rect> occupiedLabels)
+    {
+        var score = componentBounds.Count(bound => bound.IntersectsWith(candidate)) * 10_000;
+        score += occupiedLabels.Count(bound => bound.IntersectsWith(candidate)) * 1_000;
+        foreach (var route in routes)
+        for (var index = 0; index < route.Points.Count - 1; index++)
+            if (OrthogonalSegmentIntersectsRect(route.Points[index], route.Points[index + 1], candidate))
+                score += 100;
+        return score;
+    }
+
+    private string BuildEndpointTraceLabel(string endpointId)
+    {
+        if (_project is null) return endpointId;
+        foreach (var component in _project.Components)
+        foreach (var port in component.Ports)
+        {
+            var owner = component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId;
+            if (string.Equals(port.PortId, endpointId, StringComparison.OrdinalIgnoreCase))
+                return $"{owner}.{port.Name}";
+            var pin = port.Pins.FirstOrDefault(item =>
+                string.Equals(item.PinId, endpointId, StringComparison.OrdinalIgnoreCase));
+            if (pin is not null)
+                return $"{owner}.{pin.PinName ?? pin.Function ?? pin.PinNumber}";
+        }
+
+        foreach (var block in _project.TerminalBlocks)
+        {
+            var owns = block.Positions.SelectMany(position => position.Levels)
+                .SelectMany(level => level.ConnectionPoints)
+                .Any(point => string.Equals(point.ConnectionPointId, endpointId, StringComparison.OrdinalIgnoreCase));
+            if (owns) return block.ReferenceDesignator;
+        }
+        return endpointId;
+    }
+
+    private void AddCrossingBridge(Point crossing, Polyline overRoute, Polyline first, Polyline second)
+    {
+        var ids = new[] { (string)first.Tag, (string)second.Tag };
+        var tag = new TopologyDecorationTag(ids, RequireAllConnectionsVisible: true);
+        var gap = new Border
+        {
+            Uid = "CI-CROSSING-GAP",
+            Tag = tag,
+            Width = 16,
+            Height = 10,
+            Background = Brushes.White,
+            IsHitTestVisible = false
+        };
+        Canvas.SetLeft(gap, crossing.X - gap.Width / 2d);
+        Canvas.SetTop(gap, crossing.Y - gap.Height / 2d);
+        Panel.SetZIndex(gap, -10);
+        Surface.Children.Add(gap);
+
+        // Put the under-passing conductor back over the small white clearing.  The arc is then the
+        // only visual interruption, which makes this read as a non-connected crossing rather than a cut wire.
+        var underRoute = ReferenceEquals(overRoute, first) ? second : first;
+        var underpass = new Line
+        {
+            Uid = "CI-CROSSING-UNDERPASS",
+            Tag = tag,
+            X1 = crossing.X,
+            Y1 = crossing.Y - 8d,
+            X2 = crossing.X,
+            Y2 = crossing.Y + 8d,
+            Stroke = underRoute.Stroke,
+            StrokeThickness = underRoute.StrokeThickness,
+            IsHitTestVisible = false
+        };
+        Panel.SetZIndex(underpass, -9);
+        Surface.Children.Add(underpass);
+
+        var figure = new PathFigure { StartPoint = new Point(crossing.X - 7, crossing.Y) };
+        figure.Segments.Add(new ArcSegment(
+            new Point(crossing.X + 7, crossing.Y),
+            new Size(7, 7),
+            0,
+            false,
+            SweepDirection.Counterclockwise,
+            true));
+        var bridge = new ShapePath
+        {
+            Uid = "CI-CROSSING-BRIDGE",
+            Tag = tag,
+            Data = new PathGeometry([figure]),
+            Stroke = overRoute.Stroke,
+            StrokeThickness = overRoute.StrokeThickness,
+            StrokeLineJoin = PenLineJoin.Round,
+            IsHitTestVisible = false
+        };
+        Panel.SetZIndex(bridge, -8);
+        Surface.Children.Add(bridge);
+    }
+
+    private void AddJunctionDots(IReadOnlyList<Polyline> routes)
+    {
+        if (_project is null) return;
+        foreach (var block in _project.TerminalBlocks)
+        {
+            var pointIds = block.Positions.SelectMany(position => position.Levels)
+                .SelectMany(level => level.ConnectionPoints)
+                .Select(point => point.ConnectionPointId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var connectionIds = _project.Connections
+                .Where(connection => pointIds.Contains(connection.FromEndpointId) || pointIds.Contains(connection.ToEndpointId))
+                .Select(connection => connection.ConnectionId)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (connectionIds.Length < 2 || !TryFindTerminalMarkerCenter(block.TerminalBlockId, out var center)) continue;
+
+            var dot = new Ellipse
+            {
+                Uid = "CI-JUNCTION-DOT",
+                Tag = new TopologyDecorationTag(connectionIds, RequireAllConnectionsVisible: false),
+                Width = 7,
+                Height = 7,
+                Fill = Brushes.DarkSlateGray,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(dot, center.X - dot.Width / 2d);
+            Canvas.SetTop(dot, center.Y - dot.Height / 2d);
+            Panel.SetZIndex(dot, 5_001);
+            Surface.Children.Add(dot);
+        }
+    }
+
+    private static bool TryGetProperOrthogonalIntersection(Point a, Point b, Point c, Point d, out Point intersection)
+    {
+        const double endpointClearance = 8d;
+        var firstHorizontal = Math.Abs(a.Y - b.Y) < 0.5;
+        var firstVertical = Math.Abs(a.X - b.X) < 0.5;
+        var secondHorizontal = Math.Abs(c.Y - d.Y) < 0.5;
+        var secondVertical = Math.Abs(c.X - d.X) < 0.5;
+        if ((!firstHorizontal || !secondVertical) && (!firstVertical || !secondHorizontal))
+        {
+            intersection = default;
+            return false;
+        }
+
+        var horizontalA = firstHorizontal ? a : c;
+        var horizontalB = firstHorizontal ? b : d;
+        var verticalA = firstHorizontal ? c : a;
+        var verticalB = firstHorizontal ? d : b;
+        intersection = new Point(verticalA.X, horizontalA.Y);
+        var insideHorizontal = intersection.X > Math.Min(horizontalA.X, horizontalB.X) + endpointClearance &&
+                               intersection.X < Math.Max(horizontalA.X, horizontalB.X) - endpointClearance;
+        var insideVertical = intersection.Y > Math.Min(verticalA.Y, verticalB.Y) + endpointClearance &&
+                             intersection.Y < Math.Max(verticalA.Y, verticalB.Y) - endpointClearance;
+        return insideHorizontal && insideVertical;
+    }
+
+    private sealed record TopologyDecorationTag(
+        IReadOnlyList<string> ConnectionIds,
+        bool RequireAllConnectionsVisible);
+
+    private enum EndpointEscapeSide
+    {
+        Left,
+        Right,
+        Top,
+        Bottom
     }
 
     private void UpdateRouteHandle()

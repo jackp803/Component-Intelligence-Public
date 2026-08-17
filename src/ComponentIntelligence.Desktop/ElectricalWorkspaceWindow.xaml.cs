@@ -46,6 +46,7 @@ public partial class ElectricalWorkspaceWindow : Window
             WorkspaceStatusText.Text = "Topology（拓樸）已更新；專案實體位置與元件資料庫不會被任意重設。";
         };
         TopologyCanvas.ComponentDataRequested += TopologyCanvas_ComponentDataRequested;
+        Loaded += async (_, _) => await RefreshSavedProjectChoicesAsync();
 
         RefreshAll();
     }
@@ -106,6 +107,7 @@ public partial class ElectricalWorkspaceWindow : Window
         try
         {
             await _repository.SaveAsync(_project);
+            await RefreshSavedProjectChoicesAsync();
             WorkspaceStatusText.Text = $"已儲存 Project {_project.ProjectId} 到 SQLite。Schema={_project.SchemaVersion}";
         }
         catch (Exception exception)
@@ -116,7 +118,7 @@ public partial class ElectricalWorkspaceWindow : Window
 
     private async void LoadProject_Click(object sender, RoutedEventArgs e)
     {
-        var projectId = ProjectIdText.Text?.Trim();
+        var projectId = ProjectIdText.SelectedValue as string ?? ProjectIdText.Text?.Trim();
         if (string.IsNullOrWhiteSpace(projectId)) return;
         try
         {
@@ -130,7 +132,15 @@ public partial class ElectricalWorkspaceWindow : Window
             _project = loaded;
             _history.Clear();
             RefreshAll();
-            WorkspaceStatusText.Text = $"已載入 Project {_project.ProjectId}。";
+            if (_workingBomSnapshot.Count > 0)
+            {
+                WorkspaceStatusText.Text = $"已載入 Project {_project.ProjectId}；正在合併目前新版 BOM…";
+                await SynchronizeWorkingBomAsync(_workingBomSnapshot);
+            }
+            else
+            {
+                WorkspaceStatusText.Text = $"已載入 Project {_project.ProjectId}。";
+            }
         }
         catch (Exception exception)
         {
@@ -471,7 +481,10 @@ public partial class ElectricalWorkspaceWindow : Window
 
     private void RefreshAll()
     {
-        ProjectIdText.Text = _project.ProjectId;
+        var savedChoice = ProjectIdText.ItemsSource?.Cast<ElectricalProjectSummary>().FirstOrDefault(item =>
+            string.Equals(item.ProjectId, _project.ProjectId, StringComparison.OrdinalIgnoreCase));
+        ProjectIdText.SelectedItem = savedChoice;
+        if (savedChoice is null) ProjectIdText.Text = _project.ProjectId;
         ProjectNameText.Text = _project.Name ?? string.Empty;
         ComponentsGrid.ItemsSource = null;
         ComponentsGrid.ItemsSource = _project.Components;
@@ -492,6 +505,16 @@ public partial class ElectricalWorkspaceWindow : Window
         ValidationGrid.ItemsSource = null;
         ReadinessText.Text = "尚未執行驗證";
         UpdateHistoryButtons();
+    }
+
+    private async Task RefreshSavedProjectChoicesAsync()
+    {
+        var summaries = await _repository.ListAsync();
+        ProjectIdText.ItemsSource = summaries;
+        var current = summaries.FirstOrDefault(item =>
+            string.Equals(item.ProjectId, _project.ProjectId, StringComparison.OrdinalIgnoreCase));
+        ProjectIdText.SelectedItem = current;
+        if (current is null) ProjectIdText.Text = _project.ProjectId;
     }
 
     private void RebuildDerivedBomViewWithCurrentPolicy()

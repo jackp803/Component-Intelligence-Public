@@ -8,10 +8,9 @@ namespace ComponentIntelligence.Desktop;
 public partial class TopologyCanvasControl
 {
     /// <summary>
-    /// Repositions Port markers after component rotation. The generic convention keeps Input on the
-    /// visible left and Output on the visible right, while component-aware presentation exceptions
-    /// (such as the approved K7L terminal grouping) are resolved by TopologyPortGeometry without
-    /// rewriting archived Direction or PhysicalSide. Labels remain horizontal around the perimeter.
+    /// Repositions Port markers after component rotation. Input/Output semantics select the original
+    /// component edge, then that edge and every marker rotate together with the component. Labels
+    /// remain horizontal for readability but follow their marker and stay inside the rotated edge.
     /// </summary>
     private void ApplyRotatedPortVisuals()
     {
@@ -40,7 +39,7 @@ public partial class TopologyCanvasControl
                         Math.Abs(element.Height - 14d) < 0.1);
                     if (marker is null) continue;
 
-                    var anchor = TopologyPortGeometry.CalculateScreenSide(
+                    var anchor = TopologyPortGeometry.CalculateRotatedSide(
                         placement,
                         side,
                         sideIndex,
@@ -50,22 +49,7 @@ public partial class TopologyCanvasControl
 
                     var label = FindPortLabelFollowing(marker, port.Name);
                     if (label is null) continue;
-
-                    var labelWidth = label.ActualWidth > 0 ? label.ActualWidth : Math.Max(18d, port.Name.Length * 5.5d);
-                    var labelHeight = label.ActualHeight > 0 ? label.ActualHeight : 12d;
-                    const double gap = 11d;
-
-                    var x = anchor.X + anchor.OutwardX * gap;
-                    var y = anchor.Y + anchor.OutwardY * gap;
-
-                    if (anchor.OutwardX < -0.25) x -= labelWidth;
-                    else if (Math.Abs(anchor.OutwardX) <= 0.25) x -= labelWidth / 2d;
-
-                    if (anchor.OutwardY < -0.25) y -= labelHeight;
-                    else if (Math.Abs(anchor.OutwardY) <= 0.25) y -= labelHeight / 2d;
-
-                    Canvas.SetLeft(label, Math.Max(0, x));
-                    Canvas.SetTop(label, Math.Max(0, y));
+                    PositionEndpointLabel(label, port.Name, anchor);
                 }
             }
         }

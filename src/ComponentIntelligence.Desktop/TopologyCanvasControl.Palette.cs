@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,17 +12,17 @@ public partial class TopologyCanvasControl
     private Point _topologyPaletteMouseDown;
     private bool _topologyPaletteConfigured;
     private string? _topologyPaletteSignature;
+    private bool _finalTopologyVisualRefreshScheduled;
 
     private void TopologyCanvas_Loaded(object sender, RoutedEventArgs e)
     {
         if (_topologyPaletteConfigured) return;
         _topologyPaletteConfigured = true;
 
-        // The palette is presentation-only. Dragging an unplaced item creates exactly one
-        // TopologyPlacement; dragging it again moves that same placement. It never duplicates or
-        // deletes the BOM/project component and it never auto-places the rest of the inventory.
+        // The palette is a queue of objects not yet placed on the canvas. Dragging an item creates
+        // exactly one TopologyPlacement and removes it from this queue; the underlying BOM/project
+        // component is never deleted or duplicated.
         ProjectChanged += TopologyCanvas_ProjectChangedRefreshVisuals;
-        Surface.LayoutUpdated += (_, _) => RefreshTopologyPaletteIfNeeded();
 
         RefreshTopologyPaletteIfNeeded(force: true);
         ScheduleFinalTopologyVisualRefresh();
@@ -37,8 +36,11 @@ public partial class TopologyCanvasControl
 
     private void ScheduleFinalTopologyVisualRefresh()
     {
+        if (_finalTopologyVisualRefreshScheduled) return;
+        _finalTopologyVisualRefreshScheduled = true;
         _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
         {
+            _finalTopologyVisualRefreshScheduled = false;
             if (_project is null || Surface is null) return;
 
             // A completed connection must never fall back to the old center-to-center Line. Rebuild
@@ -47,10 +49,11 @@ public partial class TopologyCanvasControl
             foreach (var legacy in Surface.Children.OfType<Line>().Where(line => line.Tag is string))
                 legacy.Visibility = Visibility.Collapsed;
 
-            ApplyRotatedPortVisuals();
-            ApplyTerminalJunctionVisuals();
-            EnsureEndpointModeVisuals();
-            EnsureOrthogonalConnectionVisuals();
+            DecorateComponentImages();
+            Surface_LayoutUpdated(null, EventArgs.Empty);
+            RefreshTopologyPaletteIfNeeded(force: true);
+            ApplyWireLayerVisibility();
+            ApplyTopologySelectionVisuals();
         }));
     }
 
@@ -100,7 +103,7 @@ public partial class TopologyCanvasControl
 
         SelectionText.Text = item.Label;
         HintBanner.Visibility = Visibility.Visible;
-        HintText.Text = $"已將 {item.Label} 放到 X={x:0}, Y={y:0}。左側仍保留完整 BOM 元件清單；再次拖同一顆只會移動，不會產生副本。";
+        HintText.Text = $"已將 {item.Label} 放到 X={x:0}, Y={y:0}。它已從左側待放置清單移除；元件仍完整保存在 BOM／專案中。";
 
         Render();
         ProjectChanged?.Invoke(this, EventArgs.Empty);
@@ -118,18 +121,18 @@ public partial class TopologyCanvasControl
         var items = new List<TopologyPaletteItem>();
         foreach (var component in _project.Components)
         {
-            placementById.TryGetValue(component.ComponentInstanceId, out var placement);
+            if (placementById.ContainsKey(component.ComponentInstanceId)) continue;
             var label = component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId;
             items.Add(new TopologyPaletteItem(
                 component.ComponentInstanceId,
                 "COMPONENT",
                 label,
-                BuildPaletteDisplay(label, "Component｜元件", placement)));
+                BuildPaletteDisplay(label, "Component｜元件")));
         }
 
         foreach (var block in _project.TerminalBlocks)
         {
-            placementById.TryGetValue(block.TerminalBlockId, out var placement);
+            if (placementById.ContainsKey(block.TerminalBlockId)) continue;
             var label = string.IsNullOrWhiteSpace(block.FunctionTag)
                 ? block.ReferenceDesignator
                 : $"{block.ReferenceDesignator} / {block.FunctionTag}";
@@ -137,7 +140,7 @@ public partial class TopologyCanvasControl
                 block.TerminalBlockId,
                 "TERMINAL_BLOCK",
                 label,
-                BuildPaletteDisplay(label, "Terminal Block｜端子台", placement)));
+                BuildPaletteDisplay(label, "Terminal Block｜端子台")));
         }
 
         var ordered = items
@@ -151,13 +154,8 @@ public partial class TopologyCanvasControl
         TopologyPalette.ItemsSource = ordered;
     }
 
-    private static string BuildPaletteDisplay(string label, string kind, ComponentIntelligence.Electrical.Domain.TopologyPlacement? placement)
-    {
-        var position = placement is null
-            ? "未定位"
-            : $"X {placement.X.ToString("0", CultureInfo.InvariantCulture)}  Y {placement.Y.ToString("0", CultureInfo.InvariantCulture)}";
-        return $"{label}\n{kind} · {position}";
-    }
+    private static string BuildPaletteDisplay(string label, string kind) =>
+        $"{label}\n{kind} · 待放置";
 
     private sealed record TopologyPaletteItem(
         string ObjectId,

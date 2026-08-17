@@ -202,11 +202,15 @@ public sealed class ElectricalCoreTests
 
             await repository.SaveAsync(project);
             var loaded = await repository.GetAsync(project.ProjectId);
+            var savedProjects = await repository.ListAsync();
 
             Assert.NotNull(loaded);
             Assert.Equal("Electrical test", loaded!.Name);
             Assert.Single(loaded.Nets);
             Assert.Equal("54V+", loaded.Nets[0].Label);
+            var summary = Assert.Single(savedProjects);
+            Assert.Equal(project.ProjectId, summary.ProjectId);
+            Assert.Equal("Electrical test", summary.Name);
         }
         finally
         {

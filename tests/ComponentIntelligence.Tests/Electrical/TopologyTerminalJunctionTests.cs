@@ -58,6 +58,37 @@ public sealed class TopologyTerminalJunctionTests
         Assert.Equal(4, project.Connections.Count);
     }
 
+    [Fact]
+    public void TerminalJunctionCanConnectToExactComponentPin()
+    {
+        var project = ProjectWithThreePorts();
+        var targetPort = project.Components.Single(component => component.ComponentInstanceId == "cmp-c").Ports.Single();
+        targetPort.Pins.Add(new ComponentPin
+        {
+            PinId = "cmp-c:pwr:pin:plus",
+            PinNumber = "+",
+            PinName = "+24V",
+            Layer = ElectricalLayer.Power,
+            Status = PinStatus.Normal,
+            Power = new PowerCapability { Polarity = Polarity.Positive }
+        });
+
+        var editor = new TopologyConnectionEditor();
+        var original = editor.ConnectPorts(project, "cmp-a:pwr", "cmp-b:pwr", "net-24v");
+        var terminal = editor.InsertInlineTerminal(project, original.ConnectionId, new InlineTerminalOptions(FunctionTag: "24V"));
+        var service = new TopologyTerminalJunctionService();
+
+        var branch = service.Connect(
+            project,
+            TopologyTerminalJunctionService.Selector(terminal.TerminalBlockId),
+            "cmp-c:pwr:pin:plus");
+
+        Assert.Equal("net-24v", branch.NetId);
+        Assert.True(
+            string.Equals(branch.FromEndpointId, "cmp-c:pwr:pin:plus", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(branch.ToEndpointId, "cmp-c:pwr:pin:plus", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static ElectricalProject ProjectWithThreePorts()
     {
         var project = new ElectricalProject { ProjectId = "junction-test" };

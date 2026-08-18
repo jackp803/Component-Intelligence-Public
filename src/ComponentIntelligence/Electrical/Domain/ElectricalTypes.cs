@@ -128,6 +128,17 @@ public enum MountingSurface
     External
 }
 
+/// <summary>
+/// Selects which physical face of a component is placed against the cabinet mounting surface.
+/// RotationDegrees then rotates that projected face in the mounting plane.
+/// </summary>
+public enum ComponentMountOrientation
+{
+    Front,
+    Side,
+    Top
+}
+
 public enum Polarity
 {
     None,

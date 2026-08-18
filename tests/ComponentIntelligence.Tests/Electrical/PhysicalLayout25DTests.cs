@@ -6,6 +6,47 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class PhysicalLayout25DTests
 {
+    [Theory]
+    [InlineData(ComponentMountOrientation.Front, 0, 102, 82, 259)]
+    [InlineData(ComponentMountOrientation.Front, 90, 82, 102, 259)]
+    [InlineData(ComponentMountOrientation.Side, 0, 259, 82, 102)]
+    [InlineData(ComponentMountOrientation.Side, 90, 82, 259, 102)]
+    [InlineData(ComponentMountOrientation.Top, 0, 102, 259, 82)]
+    public void FootprintProjection_UsesMountedFaceAndPlanarRotation(
+        ComponentMountOrientation orientation,
+        int rotation,
+        double expectedWidth,
+        double expectedHeight,
+        double expectedProtrusion)
+    {
+        var footprint = new PhysicalFootprint { WidthMm = 102, HeightMm = 82, DepthMm = 259 };
+        var placement = new PhysicalPlacement
+        {
+            ParentContainerId = "cab",
+            MountOrientation = orientation,
+            RotationDegrees = rotation
+        };
+
+        var projection = PhysicalFootprintProjection.Project(footprint, placement);
+
+        Assert.Equal(expectedWidth, projection.WidthMm);
+        Assert.Equal(expectedHeight, projection.HeightMm);
+        Assert.Equal(expectedProtrusion, projection.ProtrusionMm);
+    }
+
+    [Fact]
+    public void SideMountedComponent_UsesWidthAsCabinetProtrusion()
+    {
+        var project = CabinetProject(depthMm: 120);
+        var component = Component("psu", "PSU01", MountingSurface.Backplate, 10, 10, 102, 82, 259);
+        component.Placement!.MountOrientation = ComponentMountOrientation.Side;
+        project.Components.Add(component);
+
+        var issues = new PhysicalLayoutValidator().Validate(project);
+
+        Assert.DoesNotContain(issues, issue => issue.RuleId == "RULE-LAYOUT-006" && issue.Severity == ValidationSeverity.Block);
+    }
+
     [Fact]
     public void SameSurfaceBodyOverlap_WithOverlappingDepth_Blocks()
     {

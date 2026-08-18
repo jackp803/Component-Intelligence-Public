@@ -287,6 +287,7 @@ public sealed class PhysicalPlacement
     public double XMm { get; set; }
     public double YMm { get; set; }
     public int RotationDegrees { get; set; }
+    public ComponentMountOrientation MountOrientation { get; set; } = ComponentMountOrientation.Front;
     public string? MountTargetId { get; set; }
     public MountingSurface Surface { get; set; } = MountingSurface.Unknown;
     public double DepthOffsetMm { get; set; }

@@ -19,15 +19,17 @@ public partial class ElectricalWorkspaceWindow : Window
     private readonly ProjectMutationHistory _history = new();
     private readonly DerivedBomEngine _derivedBomEngine = new();
     private readonly PreExportReviewService _preExportReviewService = new();
+    private readonly string? _centralWorkbookPath;
     private ElectricalProject _project;
 
     public ElectricalWorkspaceWindow(string databasePath, string? centralWorkbookPath = null)
     {
         InitializeComponent();
         _databasePath = databasePath;
+        _centralWorkbookPath = string.IsNullOrWhiteSpace(centralWorkbookPath) ? null : centralWorkbookPath.Trim();
         _repository = new ElectricalProjectRepository(new SqliteConnectionFactory(), _databasePath);
         _project = CreateProject();
-        TopologyCanvas.SetArchiveWorkbookPath(centralWorkbookPath);
+        TopologyCanvas.SetArchiveWorkbookPath(_centralWorkbookPath);
 
         NetLayerCombo.ItemsSource = Enum.GetValues<ElectricalLayer>();
         NetLayerCombo.SelectedItem = ElectricalLayer.Power;

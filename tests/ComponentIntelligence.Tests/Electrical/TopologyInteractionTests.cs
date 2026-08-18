@@ -6,6 +6,7 @@ using ComponentIntelligence.Electrical.Validation;
 using Xunit;
 using DomainPort = ComponentIntelligence.Electrical.Domain.ComponentPort;
 using ContractPort = ComponentIntelligence.Contracts.ComponentPort;
+using ContractPin = ComponentIntelligence.Contracts.ComponentPin;
 
 namespace ComponentIntelligence.Tests.Electrical;
 
@@ -81,6 +82,91 @@ public sealed class TopologyInteractionTests
         Assert.Single(instance.Ports);
         Assert.Equal("IO-Link", instance.Ports[0].Protocol);
         Assert.Equal("M12", instance.Ports[0].Connector!.Family);
+    }
+
+    [Fact]
+    public void AuthoritativeCentralSync_UpdatesKnowledgeButPreservesProjectEngineeringState()
+    {
+        var project = ProjectWithTwoPorts();
+        var instance = project.Components[0];
+        var connection = new TopologyConnectionEditor().ConnectPorts(project, "cmp-a:port:p1", "cmp-b:port:p1");
+        instance.DisplayName = "OLD NAME";
+        instance.Footprint = new PhysicalFootprint { WidthMm = 10, HeightMm = 20, DepthMm = 30 };
+        instance.Ports[0].Pins.Add(new ComponentIntelligence.Electrical.Domain.ComponentPin
+        {
+            PinId = "cmp-a:port:p1:pin:existing",
+            PinNumber = "1",
+            PinName = "OLD PIN"
+        });
+        instance.Placement = new PhysicalPlacement
+        {
+            ParentContainerId = "cab",
+            XMm = 123,
+            YMm = 456,
+            RotationDegrees = 90
+        };
+        var connectedPinId = instance.Ports[0].Pins[0].PinId;
+        var archive = new ComponentIR
+        {
+            Identity = new ComponentIrIdentity { ComponentId = instance.ComponentDefinitionId, Manufacturer = "IFM", Model = "UPDATED" },
+            Classification = new ComponentClassification { Category = "IO-Link Sensor" },
+            Ports =
+            [
+                new ContractPort
+                {
+                    PortId = "P1",
+                    PortName = "P1",
+                    Protocol = "IO-Link",
+                    PinCount = 1
+                }
+            ],
+            Pins =
+            [
+                new ContractPin { PinId = "PIN-1", PortId = "P1", PinNumber = "1", PinName = "UPDATED PIN", Function = "Signal" }
+            ],
+            Specifications =
+            [
+                new ComponentSpecification { Key = "dimensions", Name = "Dimensions", Value = "40 x 50 x 60 mm", Status = VerificationStatus.Verified }
+            ]
+        };
+
+        var result = new CentralArchiveProjectSynchronizer().Synchronize(project, [archive]);
+
+        Assert.Equal(1, result.UpdatedInstances);
+        Assert.Equal("IFM UPDATED", instance.DisplayName);
+        Assert.Equal("IO-Link Sensor", instance.TypeKey);
+        Assert.Equal(40, instance.Footprint!.WidthMm);
+        Assert.Equal(123, instance.Placement.XMm);
+        Assert.Equal(456, instance.Placement.YMm);
+        Assert.Equal(90, instance.Placement.RotationDegrees);
+        Assert.Equal(connectedPinId, instance.Ports[0].Pins[0].PinId);
+        Assert.Single(project.Connections);
+        Assert.Equal("cmp-a:port:p1", connection.FromEndpointId);
+        Assert.Equal("cmp-b:port:p1", connection.ToEndpointId);
+    }
+
+    [Fact]
+    public void AuthoritativeCentralSync_PreservesExplicitLayoutFootprintOverride()
+    {
+        var project = ProjectWithTwoPorts();
+        var instance = project.Components[0];
+        instance.Footprint = new PhysicalFootprint { WidthMm = 111, HeightMm = 222, DepthMm = 333 };
+        instance.FootprintOverride = true;
+        var archive = new ComponentIR
+        {
+            Identity = new ComponentIrIdentity { ComponentId = instance.ComponentDefinitionId, Manufacturer = "IFM", Model = "UPDATED" },
+            Classification = new ComponentClassification { Category = "Sensor" },
+            Specifications =
+            [
+                new ComponentSpecification { Key = "dimensions", Name = "Dimensions", Value = "40 x 50 x 60 mm", Status = VerificationStatus.Verified }
+            ]
+        };
+
+        new CentralArchiveProjectSynchronizer().Synchronize(project, [archive]);
+
+        Assert.Equal(111, instance.Footprint.WidthMm);
+        Assert.Equal(222, instance.Footprint.HeightMm);
+        Assert.Equal(333, instance.Footprint.DepthMm);
     }
 
     [Fact]

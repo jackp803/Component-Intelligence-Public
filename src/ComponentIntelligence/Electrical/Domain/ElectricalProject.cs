@@ -25,7 +25,7 @@ public sealed class ComponentInstance
 {
     public required string ComponentInstanceId { get; init; }
     public required string ComponentDefinitionId { get; init; }
-    public required string TypeKey { get; init; }
+    public required string TypeKey { get; set; }
     public string? ReferenceDesignator { get; set; }
     public ReferenceSource ReferenceSource { get; set; } = ReferenceSource.AutoAssigned;
     public bool ReferenceLocked { get; set; }
@@ -34,13 +34,14 @@ public sealed class ComponentInstance
     public ResponsibilityScope ResponsibilityScope { get; set; } = ResponsibilityScope.Unknown;
     public List<ComponentPort> Ports { get; init; } = new();
     public PhysicalFootprint? Footprint { get; set; }
+    public bool FootprintOverride { get; set; }
     public PhysicalPlacement? Placement { get; set; }
 }
 
 public sealed class ComponentPort
 {
     public required string PortId { get; init; }
-    public required string Name { get; init; }
+    public required string Name { get; set; }
     public string? Protocol { get; set; }
     public List<string> Capabilities { get; init; } = new();
     public ConnectorDefinition? Connector { get; set; }
@@ -52,7 +53,7 @@ public sealed class ComponentPort
 public sealed class ComponentPin
 {
     public required string PinId { get; init; }
-    public required string PinNumber { get; init; }
+    public required string PinNumber { get; set; }
     public string? PinName { get; set; }
     public string? Function { get; set; }
     public string? Protocol { get; set; }
@@ -71,7 +72,7 @@ public sealed class ComponentPin
 public sealed class ConnectorDefinition
 {
     public required string ConnectorId { get; init; }
-    public required string Family { get; init; }
+    public required string Family { get; set; }
     public string? SeriesOrSize { get; set; }
     public int? PinCount { get; set; }
     public string? Coding { get; set; }

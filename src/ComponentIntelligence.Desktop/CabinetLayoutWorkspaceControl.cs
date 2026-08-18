@@ -464,6 +464,12 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         target.Footprint.HeightMm = height;
         target.Footprint.DepthMm = depth;
         target.Footprint.MountingType = MapMountingType(surface, target.Footprint.MountingType);
+        if (target.Kind == LayoutObjectKind.Component)
+        {
+            var component = project.Components.First(item =>
+                string.Equals(item.ComponentInstanceId, target.ObjectId, StringComparison.OrdinalIgnoreCase));
+            component.FootprintOverride = true;
+        }
         target.Placement = new PhysicalPlacement
         {
             ParentContainerId = container.ContainerId,

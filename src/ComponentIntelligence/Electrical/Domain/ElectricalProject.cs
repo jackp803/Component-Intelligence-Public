@@ -18,6 +18,7 @@ public sealed class ElectricalProject
     public List<CableRoute> CableRoutes { get; init; } = new();
     public List<UnconnectedEndpointReview> EndpointReviews { get; init; } = new();
     public List<TopologyPlacement> TopologyPlacements { get; init; } = new();
+    public List<TopologyRouteGeometry> TopologyRoutes { get; init; } = new();
 }
 
 public sealed class ComponentInstance
@@ -357,4 +358,22 @@ public sealed class TopologyPlacement
     public double Width { get; set; } = 140;
     public double Height { get; set; } = 76;
     public int RotationDegrees { get; set; }
+}
+
+/// <summary>
+/// Saved topology-canvas geometry. These coordinates preserve the engineer's visual route across
+/// save/load and are never used as authoritative cable length or physical installation distance.
+/// </summary>
+public sealed class TopologyRouteGeometry
+{
+    public required string ConnectionId { get; init; }
+    public List<TopologyRoutePoint> Points { get; init; } = new();
+    public double? ManualWaypointX { get; set; }
+    public double? ManualWaypointY { get; set; }
+}
+
+public sealed class TopologyRoutePoint
+{
+    public double X { get; set; }
+    public double Y { get; set; }
 }

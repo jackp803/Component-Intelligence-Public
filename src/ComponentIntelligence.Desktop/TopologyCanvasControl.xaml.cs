@@ -43,8 +43,18 @@ public partial class TopologyCanvasControl : UserControl
     {
         _project = project ?? throw new ArgumentNullException(nameof(project));
         _pendingWireEndpointId = null;
+        BindRouteIsolationProject();
         ResetCanvasBoundsForProject();
         Render();
+    }
+
+    public void PersistCurrentRouteGeometry()
+    {
+        if (_project is null) return;
+        ReconcileRouteIsolation();
+        foreach (var pair in _stableRoutePoints)
+            PersistRouteGeometry(pair.Key, pair.Value);
+        PrunePersistedRouteGeometry(_project.Connections.Select(connection => connection.ConnectionId));
     }
 
     public void SetLayerFilter(ElectricalLayer? layer)

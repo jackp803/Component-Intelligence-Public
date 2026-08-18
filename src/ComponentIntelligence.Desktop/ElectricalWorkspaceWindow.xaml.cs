@@ -106,6 +106,7 @@ public partial class ElectricalWorkspaceWindow : Window
         }
         try
         {
+            TopologyCanvas.PersistCurrentRouteGeometry();
             await _repository.SaveAsync(_project);
             await RefreshSavedProjectChoicesAsync();
             WorkspaceStatusText.Text = $"已儲存 Project {_project.ProjectId} 到 SQLite。Schema={_project.SchemaVersion}";

@@ -148,6 +148,7 @@ public partial class TopologyCanvasControl
                             .ToArray();
                         geometryChanged |= SetRoutePoints(route, translated);
                         _stableRoutePoints[connection.ConnectionId] = translated;
+                        PersistRouteGeometry(connection.ConnectionId, translated);
                         fixedRoutes.Add(translated);
                         break;
                     }
@@ -168,6 +169,7 @@ public partial class TopologyCanvasControl
 
                 geometryChanged |= SetRoutePoints(item.Route, points);
                 _stableRoutePoints[item.Connection.ConnectionId] = points;
+                PersistRouteGeometry(item.Connection.ConnectionId, points);
                 fixedRoutes.Add(points);
             }
 
@@ -255,6 +257,19 @@ public partial class TopologyCanvasControl
         _stableManualRouteWaypoints.Clear();
         _manualRouteWaypoints.Clear();
         _globalReroutePassesRemaining = 0;
+
+        if (_project is null) return;
+        foreach (var saved in _project.TopologyRoutes)
+        {
+            if (saved.Points.Count < 2 || string.IsNullOrWhiteSpace(saved.ConnectionId)) continue;
+            var points = saved.Points.Select(point => new Point(point.X, point.Y)).ToArray();
+            _stableRoutePoints[saved.ConnectionId] = points;
+            if (saved.ManualWaypointX is not double waypointX || saved.ManualWaypointY is not double waypointY)
+                continue;
+            var waypoint = new Point(waypointX, waypointY);
+            _manualRouteWaypoints[saved.ConnectionId] = waypoint;
+            _stableManualRouteWaypoints[saved.ConnectionId] = waypoint;
+        }
     }
 
     private void PruneRouteIsolationState(IEnumerable<string> liveConnectionIds)
@@ -266,5 +281,38 @@ public partial class TopologyCanvasControl
             _stableManualRouteWaypoints.Remove(obsolete);
         foreach (var obsolete in _manualRouteWaypoints.Keys.Where(id => !live.Contains(id)).ToArray())
             _manualRouteWaypoints.Remove(obsolete);
+        PrunePersistedRouteGeometry(live);
+    }
+
+    private void PersistRouteGeometry(string connectionId, IReadOnlyList<Point> points)
+    {
+        if (_project is null || points.Count < 2) return;
+        var saved = _project.TopologyRoutes.FirstOrDefault(item =>
+            string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase));
+        if (saved is null)
+        {
+            saved = new TopologyRouteGeometry { ConnectionId = connectionId };
+            _project.TopologyRoutes.Add(saved);
+        }
+
+        saved.Points.Clear();
+        saved.Points.AddRange(points.Select(point => new TopologyRoutePoint { X = point.X, Y = point.Y }));
+        if (_manualRouteWaypoints.TryGetValue(connectionId, out var waypoint))
+        {
+            saved.ManualWaypointX = waypoint.X;
+            saved.ManualWaypointY = waypoint.Y;
+        }
+        else
+        {
+            saved.ManualWaypointX = null;
+            saved.ManualWaypointY = null;
+        }
+    }
+
+    private void PrunePersistedRouteGeometry(IEnumerable<string> liveConnectionIds)
+    {
+        if (_project is null) return;
+        var live = liveConnectionIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _project.TopologyRoutes.RemoveAll(route => !live.Contains(route.ConnectionId));
     }
 }

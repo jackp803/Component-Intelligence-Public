@@ -21,12 +21,13 @@ public partial class ElectricalWorkspaceWindow : Window
     private readonly PreExportReviewService _preExportReviewService = new();
     private ElectricalProject _project;
 
-    public ElectricalWorkspaceWindow(string databasePath)
+    public ElectricalWorkspaceWindow(string databasePath, string? centralWorkbookPath = null)
     {
         InitializeComponent();
         _databasePath = databasePath;
         _repository = new ElectricalProjectRepository(new SqliteConnectionFactory(), _databasePath);
         _project = CreateProject();
+        TopologyCanvas.SetArchiveWorkbookPath(centralWorkbookPath);
 
         NetLayerCombo.ItemsSource = Enum.GetValues<ElectricalLayer>();
         NetLayerCombo.SelectedItem = ElectricalLayer.Power;

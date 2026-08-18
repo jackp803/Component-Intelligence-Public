@@ -541,7 +541,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             .Select(component => new PaletteItem(
                 LayoutObjectKind.Component,
                 component.ComponentInstanceId,
-                component.ReferenceDesignator ?? component.DisplayName ?? component.ComponentInstanceId,
+                component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId,
                 DescribeSize(component.Footprint),
                 component.Placement?.Surface ?? MountingSurface.Unknown)));
         items.AddRange(project.TerminalBlocks.Select(block => new PaletteItem(
@@ -803,7 +803,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
     {
         foreach (var component in project.Components)
             yield return new LayoutTarget(LayoutObjectKind.Component, component.ComponentInstanceId,
-                component.ReferenceDesignator ?? component.DisplayName ?? component.ComponentInstanceId,
+                component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId,
                 component.Footprint, component.Placement,
                 footprint => component.Footprint = footprint,
                 placement => component.Placement = placement);

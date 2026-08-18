@@ -23,7 +23,8 @@ public static class TopologyPaletteMaterialPolicy
     private static readonly string[] JumperTerms =
     [
         "SHORTING JUMPER", "SHORTINGJUMPER", "JUMPER BAR", "JUMPER COMB",
-        "CROSS CONNECT", "SHORTING BAR", "短路片", "短接片", "橋接片"
+        "CROSS CONNECT", "SHORTING BAR", "PLUG IN BRIDGE", "BRIDGE JUMPER", "JUMPER",
+        "短路片", "短接片", "橋接片"
     ];
 
     public static TopologyPaletteMaterialKind Classify(string? typeKey)

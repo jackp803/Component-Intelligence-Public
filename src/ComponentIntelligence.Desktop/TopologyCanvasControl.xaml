@@ -45,21 +45,19 @@
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                         <TextBlock Text="元件 / Components" FontSize="16" FontWeight="SemiBold" />
-                        <TextBlock Text="這裡只顯示尚未放上畫布的 BOM／專案元件；拖到右側後會從清單消失，但不會刪除元件資料。" Foreground="#666" TextWrapping="Wrap" Margin="0,4,0,0" />
-                        <WrapPanel Margin="0,8,0,0">
-                            <ToggleButton x:Name="TerminalPaletteButton"
-                                          Content="端子台 / Terminal"
-                                          Padding="9,4" Margin="0,0,6,4"
-                                          Checked="PaletteCategoryToggle_Changed"
-                                          Unchecked="PaletteCategoryToggle_Changed"
-                                          ToolTip="只有開啟時，端子台電料才會出現在下方待放置清單" />
-                            <ToggleButton x:Name="JumperPaletteButton"
-                                          Content="短路片 / Jumper"
-                                          Padding="9,4" Margin="0,0,0,4"
-                                          Checked="PaletteCategoryToggle_Changed"
-                                          Unchecked="PaletteCategoryToggle_Changed"
-                                          ToolTip="只有開啟時，短路片／橋接片電料才會出現在下方待放置清單" />
-                        </WrapPanel>
+                        <TextBlock Text="下方顯示尚未放上畫布的專案元件。公用 Phoenix 端子台／短路片請從中央歸檔選擇後按＋；每按一次新增一個，並同步到 Layout。" Foreground="#666" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBlock Text="Phoenix 端子台" FontWeight="SemiBold" Margin="0,8,0,3" />
+                        <DockPanel>
+                            <Button Content="＋" DockPanel.Dock="Right" Width="34" Margin="6,0,0,0" Click="AddArchivedTerminal_Click" ToolTip="新增一個選定的公用端子台到 Topology 與 Layout" />
+                            <ComboBox x:Name="TerminalArchiveCombo" DisplayMemberPath="Display" DropDownOpened="ArchiveMaterialCombo_DropDownOpened" />
+                        </DockPanel>
+                        <TextBlock x:Name="TerminalProjectCountText" Text="專案數量：0" Foreground="#666" Margin="0,2,0,0" />
+                        <TextBlock Text="Phoenix 短路片" FontWeight="SemiBold" Margin="0,7,0,3" />
+                        <DockPanel>
+                            <Button Content="＋" DockPanel.Dock="Right" Width="34" Margin="6,0,0,0" Click="AddArchivedJumper_Click" ToolTip="新增一個選定的公用短路片到 Topology 與 Layout" />
+                            <ComboBox x:Name="JumperArchiveCombo" DisplayMemberPath="Display" DropDownOpened="ArchiveMaterialCombo_DropDownOpened" />
+                        </DockPanel>
+                        <TextBlock x:Name="JumperProjectCountText" Text="專案數量：0" Foreground="#666" Margin="0,2,0,0" />
                     </StackPanel>
                     <ListBox x:Name="TopologyPalette"
                              DisplayMemberPath="Display"

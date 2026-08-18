@@ -90,6 +90,32 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
             ["CENTRAL_WORKBOOK_READ_ONLY", "GPT_ARCHIVE_WORKFLOW_OWNS_WRITES"]));
     }
 
+    /// <summary>
+    /// Reads every component from the central archive for bounded library pickers. The workbook
+    /// remains read-only; callers decide which structured categories are relevant.
+    /// </summary>
+    public Task<IReadOnlyList<ComponentIR>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IsEnabled) return Task.FromResult<IReadOnlyList<ComponentIR>>(Array.Empty<ComponentIR>());
+
+        using var workbook = new XLWorkbook(_workbookPath);
+        if (!workbook.Worksheets.TryGetWorksheet("Components", out var componentsSheet) ||
+            !workbook.Worksheets.TryGetWorksheet("Ports", out var portsSheet) ||
+            !workbook.Worksheets.TryGetWorksheet("Pins", out var pinsSheet))
+            return Task.FromResult<IReadOnlyList<ComponentIR>>(Array.Empty<ComponentIR>());
+
+        var componentRows = ReadRows(componentsSheet);
+        var portRows = ReadRows(portsSheet);
+        var pinRows = ReadRows(pinsSheet);
+        IReadOnlyList<ComponentIR> result = componentRows
+            .Select(row => BuildComponent(row, portRows, pinRows))
+            .OrderBy(component => component.Identity.Manufacturer, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(component => component.Identity.Model, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return Task.FromResult(result);
+    }
+
     private ComponentIR BuildComponent(
         IReadOnlyDictionary<string, string> componentRow,
         IReadOnlyList<IReadOnlyDictionary<string, string>> portRows,

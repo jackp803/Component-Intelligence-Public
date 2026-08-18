@@ -94,6 +94,28 @@ public sealed class F0320CentralWorkbookIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task ListAsync_ReturnsEveryArchivedComponent()
+    {
+        var directory = CreateDirectory();
+        try
+        {
+            var workbookPath = Path.Combine(directory, "Component_Intelligence_Database.xlsx");
+            CreateWorkbook(workbookPath, includeUnusedPin3: true);
+
+            var components = await new WorkbookComponentKnowledgeStore(workbookPath).ListAsync();
+
+            var component = Assert.Single(components);
+            Assert.Equal("OMRON-F03-20", component.Identity.ComponentId);
+            Assert.Equal(2, component.Ports.Count);
+            Assert.Equal(3, component.Pins.Count);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
     private static string CreateDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"component-intelligence-f03-{Guid.NewGuid():N}");

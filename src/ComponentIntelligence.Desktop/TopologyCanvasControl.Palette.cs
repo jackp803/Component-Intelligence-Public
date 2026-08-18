@@ -4,7 +4,10 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using ComponentIntelligence.Contracts;
+using ComponentIntelligence.Electrical.Bridging;
 using ComponentIntelligence.Electrical.Topology;
+using ComponentIntelligence.Repository;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -15,6 +18,8 @@ public partial class TopologyCanvasControl
     private bool _topologyPaletteConfigured;
     private string? _topologyPaletteSignature;
     private bool _finalTopologyVisualRefreshScheduled;
+    private IReadOnlyList<ArchiveMaterialOption> _terminalArchiveOptions = Array.Empty<ArchiveMaterialOption>();
+    private IReadOnlyList<ArchiveMaterialOption> _jumperArchiveOptions = Array.Empty<ArchiveMaterialOption>();
 
     private void TopologyCanvas_Loaded(object sender, RoutedEventArgs e)
     {
@@ -27,6 +32,7 @@ public partial class TopologyCanvasControl
         ProjectChanged += TopologyCanvas_ProjectChangedRefreshVisuals;
 
         RefreshTopologyPaletteIfNeeded(force: true);
+        _ = ReloadArchiveMaterialsAsync();
         ScheduleFinalTopologyVisualRefresh();
     }
 
@@ -127,8 +133,6 @@ public partial class TopologyCanvasControl
             placement => placement.ObjectId,
             StringComparer.OrdinalIgnoreCase);
 
-        var showTerminals = TerminalPaletteButton?.IsChecked == true;
-        var showJumpers = JumperPaletteButton?.IsChecked == true;
         var terminalCount = 0;
         var jumperCount = 0;
         var items = new List<TopologyPaletteItem>();
@@ -139,12 +143,10 @@ public partial class TopologyCanvasControl
             if (materialKind == TopologyPaletteMaterialKind.TerminalBlock)
             {
                 terminalCount++;
-                if (!showTerminals) continue;
             }
             else if (materialKind == TopologyPaletteMaterialKind.ShortingJumper)
             {
                 jumperCount++;
-                if (!showJumpers) continue;
             }
 
             var label = component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId;
@@ -164,8 +166,6 @@ public partial class TopologyCanvasControl
         foreach (var block in _project.TerminalBlocks)
         {
             if (placementById.ContainsKey(block.TerminalBlockId)) continue;
-            terminalCount++;
-            if (!showTerminals) continue;
             var label = string.IsNullOrWhiteSpace(block.FunctionTag)
                 ? block.ReferenceDesignator
                 : $"{block.ReferenceDesignator} / {block.FunctionTag}";
@@ -176,10 +176,10 @@ public partial class TopologyCanvasControl
                 BuildPaletteDisplay(label, "Terminal Block｜端子台")));
         }
 
-        if (TerminalPaletteButton is not null)
-            TerminalPaletteButton.Content = $"端子台 / Terminal ({terminalCount})";
-        if (JumperPaletteButton is not null)
-            JumperPaletteButton.Content = $"短路片 / Jumper ({jumperCount})";
+        if (TerminalProjectCountText is not null)
+            TerminalProjectCountText.Text = $"專案數量：{terminalCount}";
+        if (JumperProjectCountText is not null)
+            JumperProjectCountText.Text = $"專案數量：{jumperCount}";
 
         var ordered = items
             .OrderBy(item => item.Label, StringComparer.OrdinalIgnoreCase)
@@ -192,18 +192,96 @@ public partial class TopologyCanvasControl
         TopologyPalette.ItemsSource = ordered;
     }
 
-    private void PaletteCategoryToggle_Changed(object sender, RoutedEventArgs e)
+    private async void ArchiveMaterialCombo_DropDownOpened(object sender, EventArgs e)
     {
-        RefreshTopologyPaletteIfNeeded(force: true);
-        if (sender is ToggleButton button)
-        {
-            var visible = button.IsChecked == true;
-            HintBanner.Visibility = Visibility.Visible;
-            HintText.Text = visible
-                ? $"已展開 {button.Content}；可從下方清單拖到畫布。"
-                : "已收起特殊電料清單；已放上畫布的元件不會被刪除。";
-        }
+        await ReloadArchiveMaterialsAsync(preserveSelection: true);
     }
+
+    private void AddArchivedTerminal_Click(object sender, RoutedEventArgs e) =>
+        AddArchivedMaterial(TerminalArchiveCombo.SelectedItem as ArchiveMaterialOption, TopologyPaletteMaterialKind.TerminalBlock);
+
+    private void AddArchivedJumper_Click(object sender, RoutedEventArgs e) =>
+        AddArchivedMaterial(JumperArchiveCombo.SelectedItem as ArchiveMaterialOption, TopologyPaletteMaterialKind.ShortingJumper);
+
+    private void AddArchivedMaterial(ArchiveMaterialOption? option, TopologyPaletteMaterialKind expectedKind)
+    {
+        if (_project is null) return;
+        if (option is null)
+        {
+            MessageBox.Show("中央歸檔中沒有可選項目，或尚未選擇型號。請確認中央工作簿路徑與 Category。", "公用元件", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (option.Kind != expectedKind) return;
+
+        MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Add archived common material {option.Component.Identity.ComponentId}"));
+        var existingCount = _project.Components.Count(component =>
+            string.Equals(component.ComponentDefinitionId, option.Component.Identity.ComponentId, StringComparison.OrdinalIgnoreCase));
+        var result = new ElectricalProjectComponentService().AddInstances(_project, new ComponentInstantiationRequest
+        {
+            Component = option.Component,
+            Quantity = 1,
+            TypeKey = FirstNonBlank(option.Component.Classification.Subcategory, option.Component.Classification.Category)
+        });
+        var instance = result.Instances.Single();
+        instance.EquipmentTag = $"{option.Component.Identity.Model} #{existingCount + 1}";
+        instance.Footprint = ComponentPhysicalKnowledgeMapper.TryCreateFootprint(option.Component);
+
+        var placedCount = _project.TopologyPlacements.Count;
+        var x = 80d + (placedCount % 4) * 280d;
+        var y = 80d + (placedCount / 4) * 180d;
+        _projection.EnsurePlacement(_project, instance.ComponentInstanceId, x, y);
+
+        HintBanner.Visibility = Visibility.Visible;
+        HintText.Text = $"已從中央歸檔新增 {option.Display}；目前此型號 {existingCount + 1} 個。Topology 已放入，Layout 待放置清單也已同步。";
+        SelectionText.Text = instance.EquipmentTag;
+        Render();
+        ProjectChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task ReloadArchiveMaterialsAsync(bool preserveSelection = false)
+    {
+        var terminalId = preserveSelection && TerminalArchiveCombo.SelectedItem is ArchiveMaterialOption terminal
+            ? terminal.Component.Identity.ComponentId
+            : null;
+        var jumperId = preserveSelection && JumperArchiveCombo.SelectedItem is ArchiveMaterialOption jumper
+            ? jumper.Component.Identity.ComponentId
+            : null;
+
+        IReadOnlyList<ComponentIR> components = Array.Empty<ComponentIR>();
+        if (!string.IsNullOrWhiteSpace(_archiveWorkbookPath))
+        {
+            try
+            {
+                components = await new WorkbookComponentKnowledgeStore(_archiveWorkbookPath).ListAsync();
+            }
+            catch (Exception exception)
+            {
+                HintBanner.Visibility = Visibility.Visible;
+                HintText.Text = $"中央歸檔讀取失敗：{exception.Message}";
+            }
+        }
+
+        var options = components
+            .Where(component => component.Identity.Manufacturer.Contains("PHOENIX", StringComparison.OrdinalIgnoreCase))
+            .Select(component => new ArchiveMaterialOption(
+                component,
+                TopologyPaletteMaterialPolicy.Classify(FirstNonBlank(component.Classification.Subcategory, component.Classification.Category))))
+            .Where(option => option.Kind is TopologyPaletteMaterialKind.TerminalBlock or TopologyPaletteMaterialKind.ShortingJumper)
+            .OrderBy(option => option.Component.Identity.Model, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        _terminalArchiveOptions = options.Where(option => option.Kind == TopologyPaletteMaterialKind.TerminalBlock).ToArray();
+        _jumperArchiveOptions = options.Where(option => option.Kind == TopologyPaletteMaterialKind.ShortingJumper).ToArray();
+
+        TerminalArchiveCombo.ItemsSource = _terminalArchiveOptions;
+        JumperArchiveCombo.ItemsSource = _jumperArchiveOptions;
+        TerminalArchiveCombo.SelectedItem = _terminalArchiveOptions.FirstOrDefault(option =>
+            string.Equals(option.Component.Identity.ComponentId, terminalId, StringComparison.OrdinalIgnoreCase)) ?? _terminalArchiveOptions.FirstOrDefault();
+        JumperArchiveCombo.SelectedItem = _jumperArchiveOptions.FirstOrDefault(option =>
+            string.Equals(option.Component.Identity.ComponentId, jumperId, StringComparison.OrdinalIgnoreCase)) ?? _jumperArchiveOptions.FirstOrDefault();
+    }
+
+    private static string? FirstNonBlank(params string?[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
 
     private static string BuildPaletteDisplay(string label, string kind) =>
         $"{label}\n{kind} · 待放置";
@@ -213,4 +291,9 @@ public partial class TopologyCanvasControl
         string ObjectKind,
         string Label,
         string Display);
+
+    private sealed record ArchiveMaterialOption(ComponentIR Component, TopologyPaletteMaterialKind Kind)
+    {
+        public string Display => $"{Component.Identity.Manufacturer} {Component.Identity.Model}";
+    }
 }

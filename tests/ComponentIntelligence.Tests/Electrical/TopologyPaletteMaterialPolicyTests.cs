@@ -14,6 +14,7 @@ public sealed class TopologyPaletteMaterialPolicyTests
 
     [Theory]
     [InlineData("Shorting Jumper")]
+    [InlineData("Plug-in Bridge / Jumper")]
     [InlineData("JUMPER_BAR")]
     [InlineData("短路片")]
     public void Classify_ShortingMaterial_IsOptInJumperGroup(string typeKey) =>

@@ -7,6 +7,7 @@ using System.Windows.Shapes;
 using ComponentIntelligence.Electrical.Bridging;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Topology;
+using ComponentIntelligence.Repository;
 using Microsoft.Win32;
 
 namespace ComponentIntelligence.Desktop;
@@ -27,6 +28,7 @@ public partial class TopologyCanvasControl : UserControl
     private string? _pendingWireEndpointId;
     private IReadOnlyList<BomConnectionMaterialOption> _availableCableMaterials =
         Array.Empty<BomConnectionMaterialOption>();
+    private string? _archiveWorkbookPath;
 
     public TopologyCanvasControl()
     {
@@ -67,6 +69,11 @@ public partial class TopologyCanvasControl : UserControl
     {
         ArgumentNullException.ThrowIfNull(materials);
         _availableCableMaterials = materials.ToArray();
+    }
+
+    public void SetArchiveWorkbookPath(string? workbookPath)
+    {
+        _archiveWorkbookPath = string.IsNullOrWhiteSpace(workbookPath) ? null : workbookPath.Trim();
     }
 
     public void AutoArrange()

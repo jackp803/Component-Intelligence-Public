@@ -27,6 +27,7 @@ public enum GroundReferenceType
 public enum PinStatus
 {
     Normal,
+    Unused,
     Optional,
     Nc,
     Reserved,
@@ -125,6 +126,17 @@ public enum MountingSurface
     Top,
     Bottom,
     External
+}
+
+/// <summary>
+/// Selects which physical face of a component is placed against the cabinet mounting surface.
+/// RotationDegrees then rotates that projected face in the mounting plane.
+/// </summary>
+public enum ComponentMountOrientation
+{
+    Front,
+    Side,
+    Top
 }
 
 public enum Polarity

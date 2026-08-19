@@ -42,9 +42,22 @@ public sealed class ComponentIntelligencePipeline
     }
 
     public Task<PipelineResult> ProcessAsync(BomRow row, CancellationToken cancellationToken = default) =>
-        ProcessAsync(row, forceRefresh: false, cancellationToken);
+        ProcessAsync(row, forceRefresh: false, enrichIncompleteExistingKnowledge: true, cancellationToken);
 
-    public async Task<PipelineResult> ProcessAsync(BomRow row, bool forceRefresh, CancellationToken cancellationToken = default)
+    public Task<PipelineResult> ProcessAsync(BomRow row, bool forceRefresh, CancellationToken cancellationToken = default) =>
+        ProcessAsync(row, forceRefresh, enrichIncompleteExistingKnowledge: true, cancellationToken);
+
+    /// <summary>
+    /// Processes a component lookup/import.
+    /// BOM and workflow callers keep enrichIncompleteExistingKnowledge=true so incomplete knowledge can be completed.
+    /// A normal interactive Search passes false: an existing central/local knowledge hit is returned immediately and
+    /// does not silently trigger network/PDF enrichment. Deep Search still sets forceRefresh=true explicitly.
+    /// </summary>
+    public async Task<PipelineResult> ProcessAsync(
+        BomRow row,
+        bool forceRefresh,
+        bool enrichIncompleteExistingKnowledge,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(row);
         var manufacturer = ManufacturerNormalizer.NormalizeKey(row.Manufacturer ?? row.RawManufacturer);
@@ -57,20 +70,19 @@ public sealed class ComponentIntelligencePipeline
         var localRepositoryHit = false;
         ComponentIR? local = null;
 
-        // Normal Search / Process BOM authority order:
+        // Authority order:
         //   1) Notion central knowledge (when configured)
         //   2) Local SQLite runtime/offline cache
         //   3) Manufacturer/online resolution and enrichment
-        // A Notion hit refreshes the local cache before readiness evaluation. A Notion miss or
-        // temporary Notion read failure falls back to SQLite so the desktop remains usable offline.
-        // Deep Search deliberately bypasses Notion/SQLite early reuse and forces online refresh.
+        // A normal interactive Search may stop at step 1/2 even when topology is incomplete; enrichment is then an
+        // explicit Deep Search action. BOM/workflow processing keeps the historical completion behavior.
         if (!forceRefresh && _centralKnowledge?.IsEnabled == true)
         {
             var central = await _centralKnowledge.FindByIdentityAsync(manufacturer!, normalizedModel!.Canonical, cancellationToken);
             centralDiagnostics.AddRange(central.Diagnostics);
             if (central.Component is not null)
             {
-                local = central.Component;
+                local = ApplyPinEngineeringGate(central.Component, centralDiagnostics, "NOTION_CENTRAL");
                 centralKnowledgeHit = true;
                 await _repository.SaveAsync(local, cancellationToken);
                 centralDiagnostics.Add("NOTION_CENTRAL_HYDRATED_LOCAL_CACHE");
@@ -89,6 +101,14 @@ public sealed class ComponentIntelligencePipeline
                 centralDiagnostics.Add(_centralKnowledge?.IsEnabled == true
                     ? "LOCAL_SQLITE_HIT_AFTER_NOTION"
                     : "LOCAL_SQLITE_HIT_NO_NOTION");
+
+            if (local is not null)
+            {
+                var filtered = ApplyPinEngineeringGate(local, centralDiagnostics, "LOCAL_SQLITE");
+                if (filtered.Pins.Count != local.Pins.Count)
+                    await _repository.SaveAsync(filtered, cancellationToken);
+                local = filtered;
+            }
         }
 
         RawComponentProfile? localRaw = null;
@@ -104,16 +124,22 @@ public sealed class ComponentIntelligencePipeline
             localVerification = ApplyTopologyPolicy(baseVerification, localTopology);
             verifiedLocal = local with { Readiness = localVerification.Readiness };
 
-            // Existing knowledge only stops the pipeline when it is genuinely topology-ready.
-            // With Notion configured, a normal lookup always evaluated Notion before SQLite.
-            if (!forceRefresh && localTopology.IsReady)
+            if (!forceRefresh && (localTopology.IsReady || !enrichIncompleteExistingKnowledge))
             {
                 var reuseDiagnostics = centralDiagnostics.ToList();
                 if (centralKnowledgeHit)
-                    reuseDiagnostics.Add("NOTION_CENTRAL_TOPOLOGY_READY");
+                    reuseDiagnostics.Add(localTopology.IsReady ? "NOTION_CENTRAL_TOPOLOGY_READY" : "NOTION_CENTRAL_SEARCH_HIT_NO_ENRICHMENT");
                 else if (localRepositoryHit)
                     reuseDiagnostics.Add(ResolutionDiagnostics.LocalRepositoryHit);
-                reuseDiagnostics.Add("EXISTING_KNOWLEDGE_TOPOLOGY_READY");
+
+                if (localTopology.IsReady)
+                    reuseDiagnostics.Add("EXISTING_KNOWLEDGE_TOPOLOGY_READY");
+                else
+                {
+                    reuseDiagnostics.Add("EXISTING_KNOWLEDGE_RETURNED_WITHOUT_ENRICHMENT");
+                    reuseDiagnostics.Add("EXPLICIT_DEEP_SEARCH_REQUIRED_FOR_REFRESH");
+                }
+
                 return new PipelineResult(
                     ResolutionStatus.Resolved,
                     verifiedLocal,
@@ -161,7 +187,12 @@ public sealed class ComponentIntelligencePipeline
             onlineRaw = await _enricher.EnrichAsync(resolution.ResolvedIdentity, cancellationToken);
 
         var raw = localRaw is null ? onlineRaw : MergeProfiles(localRaw, onlineRaw);
-        var component = await _normalizer.NormalizeAsync(raw, cancellationToken);
+        var normalizedComponent = await _normalizer.NormalizeAsync(raw, cancellationToken);
+        var rejectedOnlinePins = normalizedComponent.Pins.Count(pin => !PinEngineeringValidationPolicy.IsAccepted(pin));
+        var component = rejectedOnlinePins == 0
+            ? normalizedComponent
+            : normalizedComponent with { Pins = PinEngineeringValidationPolicy.AcceptedPins(normalizedComponent.Pins) };
+
         var baseOnlineVerification = await _verification.VerifyAsync(component, raw, cancellationToken);
         var topology = TopologyKnowledgePolicy.Evaluate(component);
         var verification = ApplyTopologyPolicy(baseOnlineVerification, topology);
@@ -172,6 +203,8 @@ public sealed class ComponentIntelligencePipeline
             .Concat(centralDiagnostics)
             .Concat(resolution.Diagnostics)
             .ToList();
+        if (rejectedOnlinePins > 0)
+            diagnostics.Add($"PIN_ENGINEERING_GATE_REJECTED:{rejectedOnlinePins}");
         if (_centralKnowledge?.IsEnabled == true)
         {
             var centralWrite = await _centralKnowledge.UpsertAsync(component, cancellationToken);
@@ -198,6 +231,15 @@ public sealed class ComponentIntelligencePipeline
             verification,
             false,
             diagnostics.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+    }
+
+    private static ComponentIR ApplyPinEngineeringGate(ComponentIR component, ICollection<string> diagnostics, string sourcePrefix)
+    {
+        var acceptedPins = PinEngineeringValidationPolicy.AcceptedPins(component.Pins);
+        var rejected = component.Pins.Count - acceptedPins.Count;
+        if (rejected <= 0) return component;
+        diagnostics.Add($"{sourcePrefix}_PIN_ENGINEERING_GATE_REJECTED:{rejected}");
+        return component with { Pins = acceptedPins };
     }
 
     private static VerificationSummary ApplyTopologyPolicy(

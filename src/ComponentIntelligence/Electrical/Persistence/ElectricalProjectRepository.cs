@@ -83,4 +83,35 @@ public sealed class ElectricalProjectRepository
         var project = JsonSerializer.Deserialize<ElectricalProject>(json, _jsonOptions);
         return project is null ? null : ElectricalProjectMigrator.Migrate(project);
     }
+
+    public async Task<IReadOnlyList<ElectricalProjectSummary>> ListAsync(CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        await InitializeAsync(ct);
+
+        var results = new List<ElectricalProjectSummary>();
+        using var connection = _connectionFactory.Open(_databasePath);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT ProjectId, Name, UpdatedUtc
+            FROM ElectricalProjects
+            ORDER BY UpdatedUtc DESC, ProjectId;
+            """;
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var updatedText = reader.GetString(2);
+            _ = DateTimeOffset.TryParse(updatedText, out var updatedUtc);
+            results.Add(new ElectricalProjectSummary(
+                reader.GetString(0),
+                reader.IsDBNull(1) ? null : reader.GetString(1),
+                updatedUtc));
+        }
+        return results;
+    }
+}
+
+public sealed record ElectricalProjectSummary(string ProjectId, string? Name, DateTimeOffset UpdatedUtc)
+{
+    public string Display => $"{(string.IsNullOrWhiteSpace(Name) ? "未命名專案" : Name)} | {ProjectId}";
 }

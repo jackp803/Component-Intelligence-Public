@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using ComponentIntelligence.Electrical.Bridging;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Topology;
 
@@ -8,6 +9,7 @@ namespace ComponentIntelligence.Desktop;
 public enum InlineConnectionOperation
 {
     Connector,
+    LooseWireMatedConnectorPair,
     Terminal,
     CableSegment,
     PinMapping,
@@ -24,11 +26,19 @@ public sealed class InlineConnectionDialog : Window
     private readonly ComboBox _genderA = new();
     private readonly ComboBox _genderB = new();
     private readonly TextBox _function = new();
-    private readonly TextBox _cableDefinition = new();
+    private readonly ComboBox _cableDefinition = new()
+    {
+        IsEditable = true,
+        IsTextSearchEnabled = true,
+        StaysOpenOnEdit = true
+    };
     private readonly TextBox _engineering = new();
     private readonly string _connectionSummary;
 
-    public InlineConnectionDialog(string connectionSummary)
+    public InlineConnectionDialog(
+        string connectionSummary,
+        IEnumerable<BomConnectionMaterialOption>? availableCableMaterials = null,
+        string? selectedCableDefinitionId = null)
     {
         _connectionSummary = connectionSummary;
         Title = "編輯線路 / Edit Connection";
@@ -42,6 +52,7 @@ public sealed class InlineConnectionDialog : Window
         _operation.ItemsSource = new[]
         {
             new Choice("編輯 Pin Mapping（腳位映射）— 明確指定 A Pin → B Pin，不自動猜直通", InlineConnectionOperation.PinMapping),
+            new Choice("插入 散線 → M12母 ↔ M12公 → 散線（建立兩個轉接頭與正式對接）", InlineConnectionOperation.LooseWireMatedConnectorPair),
             new Choice("插入 Connector（接頭）— 會把目前線路切成兩段", InlineConnectionOperation.Connector),
             new Choice("插入 Terminal（端子）— 建立一進一出 Feed-through", InlineConnectionOperation.Terminal),
             new Choice("設定 Cable Segment（線材）— 指定目前線段的線材實例", InlineConnectionOperation.CableSegment),
@@ -50,10 +61,33 @@ public sealed class InlineConnectionDialog : Window
         _operation.DisplayMemberPath = nameof(Choice.Label);
         _operation.SelectedIndex = 0;
 
+        void SelectCableOperation() => _operation.SelectedItem = _operation.Items
+            .Cast<Choice>()
+            .First(choice => choice.Operation == InlineConnectionOperation.CableSegment);
+
+        _cableDefinition.GotKeyboardFocus += (_, _) => SelectCableOperation();
+        _cableDefinition.SelectionChanged += (_, _) => SelectCableOperation();
+
         _genderA.ItemsSource = Enum.GetValues<ConnectorGender>();
         _genderB.ItemsSource = Enum.GetValues<ConnectorGender>();
         _genderA.SelectedItem = ConnectorGender.Female;
         _genderB.SelectedItem = ConnectorGender.Male;
+
+        var cableMaterials = (availableCableMaterials ?? Array.Empty<BomConnectionMaterialOption>())
+            .OrderBy(item => item.Manufacturer, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        _cableDefinition.ItemsSource = cableMaterials;
+        _cableDefinition.DisplayMemberPath = nameof(BomConnectionMaterialOption.DisplayLabel);
+        _cableDefinition.SelectedValuePath = nameof(BomConnectionMaterialOption.CableDefinitionId);
+        TextSearch.SetTextPath(_cableDefinition, nameof(BomConnectionMaterialOption.DisplayLabel));
+        if (!string.IsNullOrWhiteSpace(selectedCableDefinitionId) &&
+            !string.Equals(selectedCableDefinitionId, "UNRESOLVED-CABLE", StringComparison.OrdinalIgnoreCase))
+        {
+            _cableDefinition.SelectedItem = cableMaterials.FirstOrDefault(item =>
+                string.Equals(item.CableDefinitionId, selectedCableDefinitionId, StringComparison.OrdinalIgnoreCase));
+            if (_cableDefinition.SelectedItem is null) _cableDefinition.Text = selectedCableDefinitionId;
+        }
 
         _engineering.IsReadOnly = true;
         _engineering.AcceptsReturn = true;
@@ -105,7 +139,16 @@ public sealed class InlineConnectionDialog : Window
         fields.Children.Add(SectionTitle("Terminal（端子）設定"));
         fields.Children.Add(Field("Function / 功能，例如 54V+、RS485-A", _function));
         fields.Children.Add(SectionTitle("Cable Segment（線材）設定"));
-        fields.Children.Add(Field("Cable Definition ID / 型號（未知可留空）", _cableDefinition));
+        fields.Children.Add(Field("BOM 線材 / Cable（可下拉選擇，也可手動輸入）", _cableDefinition));
+        fields.Children.Add(new TextBlock
+        {
+            Text = cableMaterials.Length == 0
+                ? "目前 BOM 沒有已辨識為 Cable / Wire / Cable Assembly 的線材；仍可手動輸入型號。"
+                : $"已從目前 BOM 載入 {cableMaterials.Length} 種線材。選取後會保存對應的正式 Cable Definition ID。",
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = System.Windows.Media.Brushes.DimGray,
+            Margin = new Thickness(0, -6, 0, 10)
+        });
         scroll.Content = fields;
         Grid.SetRow(scroll, 2);
         root.Children.Add(scroll);
@@ -131,11 +174,24 @@ public sealed class InlineConnectionDialog : Window
     public ConnectorGender SideAGender => _genderA.SelectedItem is ConnectorGender value ? value : ConnectorGender.Unknown;
     public ConnectorGender SideBGender => _genderB.SelectedItem is ConnectorGender value ? value : ConnectorGender.Unknown;
     public string? TerminalFunction => BlankToNull(_function.Text);
-    public string? CableDefinitionId => BlankToNull(_cableDefinition.Text);
+    public string? CableDisplayName => _cableDefinition.SelectedItem is BomConnectionMaterialOption selected
+        ? $"{selected.Manufacturer} {selected.Model}".Trim()
+        : BlankToNull(_cableDefinition.Text);
+    public string? CableDefinitionId
+    {
+        get
+        {
+            var enteredText = BlankToNull(_cableDefinition.Text);
+            return _cableDefinition.SelectedItem is BomConnectionMaterialOption selected &&
+                   string.Equals(enteredText, selected.DisplayLabel, StringComparison.Ordinal)
+                ? selected.CableDefinitionId
+                : enteredText;
+        }
+    }
 
     public InlineConnectorOptions ConnectorOptions => new(ConnectorFamily, ConnectorCoding, ConnectorPinCount, SideAGender, SideBGender, ReferenceDesignator);
     public InlineTerminalOptions TerminalOptions => new(ReferenceDesignator, TerminalFunction);
-    public CableSegmentOptions CableOptions => new(ReferenceDesignator, CableDefinitionId);
+    public CableSegmentOptions CableOptions => new(ReferenceDesignator, CableDefinitionId, CableDisplayName);
 
     private void Apply_Click(object? sender, RoutedEventArgs e)
     {
@@ -184,7 +240,7 @@ public sealed class InlineConnectionDialog : Window
 
     private bool ValidateInput()
     {
-        if (Operation != InlineConnectionOperation.Connector) return true;
+        if (Operation is not (InlineConnectionOperation.Connector or InlineConnectionOperation.LooseWireMatedConnectorPair)) return true;
         if (!string.IsNullOrWhiteSpace(_family.Text)) return true;
         MessageBox.Show(this, "Connector Family 不可空白。", "資料需要補充", MessageBoxButton.OK, MessageBoxImage.Information);
         return false;

@@ -48,6 +48,29 @@ public sealed class PinoutExtractorTests
     }
 
     [Fact]
+    public void Extract_DoesNotMatchElectricalAbbreviationsInsideOrdinaryWordsOrModelNumbers()
+    {
+        var evidence = new Evidence
+        {
+            SourceType = ComponentSourceType.TrustedThirdParty,
+            SourceUrl = new Uri("https://datasheet.octopart.com/F0320-Omron-datasheet-21402030.pdf"),
+            DocumentUrl = new Uri("https://datasheet.octopart.com/F0320-Omron-datasheet-21402030.pdf"),
+            ExtractionMethod = ExtractionMethod.TableParser,
+            RetrievedAt = DateTimeOffset.UtcNow,
+            VerificationStatus = VerificationStatus.SingleSource
+        };
+        var specs = new[]
+        {
+            new RawSpecification { RawName = "2", Section = "PDF table / page 2", RawValue = "Liquid Leakage Sensor Amplifier K7L-AT50/-AT50D", Evidence = [evidence] },
+            new RawSpecification { RawName = "13", Section = "PDF table / page 9", RawValue = "13 Adhesive tape", Evidence = [evidence with { PageNumber = 9 }] },
+            new RawSpecification { RawName = "14", Section = "PDF table / page 9", RawValue = "Sensing Band F03-16PE/-16PT/-15/-16SF", Evidence = [evidence with { PageNumber = 9 }] },
+            new RawSpecification { RawName = "15", Section = "PDF table / page 10", RawValue = "Two, 3.5 dia.", Evidence = [evidence with { PageNumber = 10 }] }
+        };
+
+        Assert.Empty(new PinoutExtractor().Extract(specs));
+    }
+
+    [Fact]
     public void PdfTableExtractor_AllowsNumericRowsWhenValueLooksLikePinFunction()
     {
         var words = new[]

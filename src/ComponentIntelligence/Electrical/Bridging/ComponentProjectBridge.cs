@@ -40,7 +40,7 @@ public sealed class ComponentProjectBridge
             var explicitOwner = FindExplicitPinOwner(instance, sourcePin.PortId);
             if (explicitOwner is not null)
             {
-                explicitOwner.Pins.Add(MapPin(sourcePin, source, componentInstanceId, explicitOwner.Name));
+                explicitOwner.Pins.Add(MapPin(sourcePin, source, componentInstanceId, sourcePin.PortId));
                 continue;
             }
 
@@ -76,8 +76,12 @@ public sealed class ComponentProjectBridge
     private static DomainPort? FindExplicitPinOwner(ComponentInstance instance, string? logicalPortId)
     {
         if (string.IsNullOrWhiteSpace(logicalPortId)) return null;
+        var expected = logicalPortId.Trim();
         return instance.Ports.FirstOrDefault(port =>
-            string.Equals(port.Name, logicalPortId.Trim(), StringComparison.OrdinalIgnoreCase));
+            string.Equals(port.Name, expected, StringComparison.OrdinalIgnoreCase) ||
+            port.Capabilities.Any(capability =>
+                capability.StartsWith("SOURCE_PORT_ID:", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(capability["SOURCE_PORT_ID:".Length..].Trim(), expected, StringComparison.OrdinalIgnoreCase)));
     }
 
     private static DomainPort GetOrCreateUnassignedPinPort(ComponentInstance instance, string instanceId, ComponentIR source)
@@ -111,22 +115,28 @@ public sealed class ComponentProjectBridge
             {
                 ConnectorId = $"{portId}:connector",
                 Family = connectorFamily!,
-                Coding = source.Connector.Coding,
-                PinCount = source.Connector.Pins,
-                Gender = ConnectorGender.Unknown,
+                Coding = FirstNonBlank(sourcePort.ConnectorCoding, source.Connector.Coding),
+                PinCount = sourcePort.PinCount ?? source.Connector.Pins,
+                Gender = ParseConnectorGender(sourcePort.ConnectorGender),
                 MountType = ConnectorMountType.Device
             };
 
         var port = new DomainPort
         {
             PortId = portId,
-            // PortId is the physical/logical connection identity (ETH1, ETH2, PWR...). PortType and
-            // Protocol describe what the port is; using them as the visible name makes repeated ports
-            // indistinguishable on the topology canvas.
-            Name = FirstNonBlank(sourcePort.PortId, sourcePort.PortType, "PORT")!,
+            // PortId remains the stable engineering identity while PortName is the human-readable label
+            // from the central workbook (INPUT, OUTPUT, X01, FIELD_IO...).
+            Name = FirstNonBlank(sourcePort.PortName, sourcePort.PortId, sourcePort.PortType, "PORT")!,
             Protocol = NormalizeProtocol(FirstNonBlank(sourcePort.Protocol, sourcePort.SignalType)),
-            Connector = connector
+            Connector = connector,
+            PhysicalLocation = string.IsNullOrWhiteSpace(sourcePort.PhysicalSide)
+                ? null
+                : new PhysicalPortLocation { Side = sourcePort.PhysicalSide!.Trim() }
         };
+        if (!string.IsNullOrWhiteSpace(sourcePort.PortId)) port.Capabilities.Add($"SOURCE_PORT_ID:{sourcePort.PortId}");
+        if (!string.IsNullOrWhiteSpace(sourcePort.PortRole)) port.Capabilities.Add($"ROLE:{sourcePort.PortRole}");
+        if (!string.IsNullOrWhiteSpace(sourcePort.TopologyEndpointMode))
+            port.Capabilities.Add($"TOPOLOGY_ENDPOINT_MODE:{sourcePort.TopologyEndpointMode}");
         if (!string.IsNullOrWhiteSpace(sourcePort.SignalType)) port.Capabilities.Add(sourcePort.SignalType!);
         if (!string.IsNullOrWhiteSpace(sourcePort.Direction)) port.Capabilities.Add($"DIRECTION:{sourcePort.Direction}");
         if (!string.IsNullOrWhiteSpace(sourcePort.VoltageDomain)) port.Capabilities.Add($"VOLTAGE_DOMAIN:{sourcePort.VoltageDomain}");
@@ -151,19 +161,24 @@ public sealed class ComponentProjectBridge
 
     private static DomainPin MapPin(ContractPin sourcePin, ComponentIR source, string instanceId, string? ownerPortId)
     {
-        var raw = string.Join(' ', new[] { sourcePin.Function, sourcePin.SignalType, sourcePin.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
-        var layer = DetermineLayer(sourcePin.SignalType, sourcePin.Function);
+        var raw = string.Join(' ', new[] { sourcePin.Function, sourcePin.PinRole, sourcePin.SignalType, sourcePin.Description }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        var layer = DetermineLayer(sourcePin.SignalType, FirstNonBlank(sourcePin.Function, sourcePin.PinRole));
         var ownerIdentity = string.IsNullOrWhiteSpace(ownerPortId) ? "unassigned" : Sanitize(ownerPortId);
+        var stableSourcePinId = FirstNonBlank(
+            sourcePin.PinId,
+            $"{FirstNonBlank(ownerPortId, "unassigned")}:{sourcePin.PinNumber}")!;
+        var status = DeterminePinStatus(sourcePin.PinStatus, sourcePin.Function);
         return new DomainPin
         {
-            PinId = $"{instanceId}:port:{ownerIdentity}:pin:{Sanitize(sourcePin.PinNumber)}",
+            PinId = $"{instanceId}:port:{ownerIdentity}:pin:{EncodeStableIdSegment(stableSourcePinId)}",
             PinNumber = sourcePin.PinNumber,
-            PinName = NullIfBlank(sourcePin.Description),
-            Function = NullIfBlank(sourcePin.Function),
-            Protocol = NormalizeProtocol(sourcePin.SignalType),
-            SignalStandardRaw = NullIfBlank(sourcePin.SignalType),
+            PinName = FirstNonBlank(sourcePin.PinName, sourcePin.Description),
+            Function = FirstNonBlank(sourcePin.Function, sourcePin.PinRole),
+            Protocol = NormalizeProtocol(FirstNonBlank(sourcePin.SignalType, sourcePin.PinRole)),
+            SignalStandardRaw = FirstNonBlank(sourcePin.SignalType, sourcePin.PinRole),
             Layer = layer,
-            Status = DeterminePinStatus(sourcePin.Function),
+            Status = status,
+            IsRequired = status == PinStatus.Normal,
             GroundReferenceType = DetermineGroundReference(raw),
             Power = layer == ElectricalLayer.Power ? BuildPowerCapability(sourcePin, source.Power) : null
         };
@@ -173,9 +188,9 @@ public sealed class ComponentProjectBridge
     {
         var voltage = MapVoltage(sourcePower.OperatingVoltage);
         var role = DeterminePowerRole(pin.Direction);
-        var function = $"{pin.Function} {pin.Description}".ToUpperInvariant();
-        var isReturn = ContainsAny(function, "0V", "V-", "L-", "RETURN");
-        var isPositiveSupply = ContainsAny(function, "+24V", "+54V", "V+", "L+", "SUPPLY+", "POWER+") ||
+        var function = $"{pin.PinName} {pin.Function} {pin.PinRole} {pin.SignalType} {pin.VoltageDomain} {pin.Description}".ToUpperInvariant();
+        var isReturn = ContainsAny(function, "0V", "V-", "L-", "RETURN", "RTN");
+        var isPositiveSupply = ContainsAny(function, "+24V", "+54V", "V+", "L+", "SUPPLY+", "POWER+", "POSITIVE") ||
                                (!isReturn && ContainsAny(function, "SUPPLY", "POWER"));
 
         if (isReturn && role == PowerRole.Unknown) role = PowerRole.Return;
@@ -230,6 +245,7 @@ public sealed class ComponentProjectBridge
         var normalized = direction.Trim().ToUpperInvariant();
         if (ContainsAny(normalized, "OUTPUT", "SOURCE", "OUT")) return PowerRole.Source;
         if (ContainsAny(normalized, "INPUT", "SINK", "IN")) return PowerRole.Input;
+        if (ContainsAny(normalized, "RETURN")) return PowerRole.Return;
         return PowerRole.Unknown;
     }
 
@@ -239,9 +255,12 @@ public sealed class ComponentProjectBridge
     {
         var text = $"{signalType} {function}".ToUpperInvariant();
         if (ContainsAny(text, "RS485", "RS-485", "ETHERNET", "ETHERCAT", "IO-LINK", "IOLINK", "CAN", "PROFINET", "MODBUS")) return ElectricalLayer.Communication;
-        if (ContainsAny(text, "4-20MA", "4…20MA", "4..20MA", "0-10V", "ANALOG", "AI", "AO")) return ElectricalLayer.Analog;
-        if (ContainsAny(text, "DIGITAL", "DI", "DO", "PNP", "NPN")) return ElectricalLayer.Digital;
-        if (ContainsAny(text, "PE", "FE", "SHIELD", "CHASSIS", "SIGNAL GROUND", "SG")) return ElectricalLayer.Grounding;
+        if (ContainsAny(text, "4-20MA", "4…20MA", "4..20MA", "0-10V", "ANALOG") ||
+            ContainsToken(text, "AI") || ContainsToken(text, "AO")) return ElectricalLayer.Analog;
+        if (ContainsAny(text, "DIGITAL", "PNP", "NPN") ||
+            ContainsToken(text, "DI") || ContainsToken(text, "DO")) return ElectricalLayer.Digital;
+        if (ContainsAny(text, "SHIELD", "CHASSIS", "SIGNAL GROUND") ||
+            ContainsToken(text, "PE") || ContainsToken(text, "FE") || ContainsToken(text, "SG")) return ElectricalLayer.Grounding;
         if (ContainsAny(text, "+24V", "24V", "+54V", "54V", "0V", "V+", "V-", "L+", "L-", "POWER", "SUPPLY")) return ElectricalLayer.Power;
         return ElectricalLayer.Unknown;
     }
@@ -259,14 +278,38 @@ public sealed class ComponentProjectBridge
         return GroundReferenceType.None;
     }
 
-    private static PinStatus DeterminePinStatus(string? function)
+    private static PinStatus DeterminePinStatus(string? explicitStatus, string? function)
     {
+        var status = explicitStatus?.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (status is "USED" or "NORMAL") return PinStatus.Normal;
+            if (status is "UNUSED" or "OPEN") return PinStatus.Unused;
+            if (status is "NC" or "N.C." or "NOT CONNECTED") return PinStatus.Nc;
+            if (status.Contains("RESERVED", StringComparison.Ordinal)) return PinStatus.Reserved;
+            if (status.Contains("OPTION", StringComparison.Ordinal)) return PinStatus.Optional;
+            if (status is "UNKNOWN" or "NOTAPPLICABLE" or "NOT APPLICABLE") return PinStatus.Unknown;
+        }
+
         var text = function?.Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(text)) return PinStatus.Unknown;
         if (text is "NC" or "N.C." or "NOT CONNECTED") return PinStatus.Nc;
+        if (text.Contains("UNUSED", StringComparison.Ordinal) || text.Contains("OPEN", StringComparison.Ordinal)) return PinStatus.Unused;
         if (text.Contains("RESERVED", StringComparison.Ordinal)) return PinStatus.Reserved;
         if (text.Contains("OPTION", StringComparison.Ordinal)) return PinStatus.Optional;
         return PinStatus.Normal;
+    }
+
+    private static ConnectorGender ParseConnectorGender(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return ConnectorGender.Unknown;
+        return value.Trim().ToUpperInvariant() switch
+        {
+            "MALE" => ConnectorGender.Male,
+            "FEMALE" => ConnectorGender.Female,
+            "GENDERLESS" => ConnectorGender.Genderless,
+            _ => ConnectorGender.Unknown
+        };
     }
 
     private static string? NormalizeProtocol(string? value)
@@ -289,6 +332,26 @@ public sealed class ComponentProjectBridge
         var separators = new[] { ' ', '/', '\\', '-', '_', '+', ':', ';', ',', '(', ')', '[', ']' };
         return source.Split(separators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Any(part => string.Equals(part, token, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string EncodeStableIdSegment(string value)
+    {
+        var builder = new System.Text.StringBuilder();
+        foreach (var character in value.Trim())
+        {
+            if (char.IsLetterOrDigit(character) || character is '-' or '_')
+            {
+                builder.Append(char.ToLowerInvariant(character));
+                continue;
+            }
+
+            // Encode punctuation instead of deleting it. This keeps +, -, /, :, and other engineering
+            // identifiers deterministic and collision-free even for legacy rows without a central PinID.
+            builder.Append("_u")
+                .Append(((int)character).ToString("x4"))
+                .Append('_');
+        }
+        return builder.Length == 0 ? "empty" : builder.ToString();
     }
 
     private static string Sanitize(string value)

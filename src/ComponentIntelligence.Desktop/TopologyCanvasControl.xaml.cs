@@ -4,8 +4,10 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using ComponentIntelligence.Electrical.Bridging;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Topology;
+using ComponentIntelligence.Repository;
 using Microsoft.Win32;
 
 namespace ComponentIntelligence.Desktop;
@@ -20,13 +22,18 @@ public partial class TopologyCanvasControl : UserControl
     private string? _dragObjectId;
     private Point _dragStartMouse;
     private Point _dragStartObject;
+    private Dictionary<string, Point> _dragStartSelectionPositions = new(StringComparer.OrdinalIgnoreCase);
     private bool _dragRecorded;
     private InteractionMode _interactionMode = InteractionMode.Select;
     private string? _pendingWireEndpointId;
+    private IReadOnlyList<BomConnectionMaterialOption> _availableCableMaterials =
+        Array.Empty<BomConnectionMaterialOption>();
+    private string? _archiveWorkbookPath;
 
     public TopologyCanvasControl()
     {
         InitializeComponent();
+        ConfigureMarqueeSelection();
         UpdateModeButtons();
     }
 
@@ -37,9 +44,22 @@ public partial class TopologyCanvasControl : UserControl
     public void SetProject(ElectricalProject project)
     {
         _project = project ?? throw new ArgumentNullException(nameof(project));
-        _projection.EnsurePlacements(_project);
         _pendingWireEndpointId = null;
+        _selectedTopologyObjectIds.Clear();
+        _selectedTopologyConnectionIds.Clear();
+        _selectedRouteConnectionId = null;
+        BindRouteIsolationProject();
+        ResetCanvasBoundsForProject();
         Render();
+    }
+
+    public void PersistCurrentRouteGeometry()
+    {
+        if (_project is null) return;
+        ReconcileRouteIsolation();
+        foreach (var pair in _stableRoutePoints)
+            PersistRouteGeometry(pair.Key, pair.Value);
+        PrunePersistedRouteGeometry(_project.Connections.Select(connection => connection.ConnectionId));
     }
 
     public void SetLayerFilter(ElectricalLayer? layer)
@@ -48,13 +68,29 @@ public partial class TopologyCanvasControl : UserControl
         Render();
     }
 
+    public void SetAvailableCableMaterials(IEnumerable<BomConnectionMaterialOption> materials)
+    {
+        ArgumentNullException.ThrowIfNull(materials);
+        _availableCableMaterials = materials.ToArray();
+    }
+
+    public void SetArchiveWorkbookPath(string? workbookPath)
+    {
+        _archiveWorkbookPath = string.IsNullOrWhiteSpace(workbookPath) ? null : workbookPath.Trim();
+    }
+
     public void AutoArrange()
     {
         if (_project is null) return;
         MutationStarting?.Invoke(this, new TopologyMutationEventArgs("Auto arrange topology"));
-        _project.TopologyPlacements.Clear();
-        _projection.EnsurePlacements(_project);
+        if (_project.TopologyPlacements.Count == 0) _projection.EnsurePlacements(_project);
+        var arrangement = _projection.ArrangeConnectedPlacements(_project);
+        Surface.Width = Math.Max(3200d, arrangement.RequiredWidth + 160d);
+        Surface.Height = Math.Max(2000d, arrangement.RequiredHeight + 160d);
+        _manualRouteWaypoints.Clear();
         Render();
+        SelectionText.Text = $"自動排版完成：{arrangement.NodeCount} 個元件 / {arrangement.LayerCount} 層";
+        HintText.Text = "已依連線方向重新排列元件並整理線路；不滿意可按 Undo 復原。";
         ProjectChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -64,7 +100,6 @@ public partial class TopologyCanvasControl : UserControl
     {
         Surface.Children.Clear();
         if (_project is null) return;
-        _projection.EnsurePlacements(_project);
         var graph = _projection.Build(_project, _layerFilter);
         var nodes = graph.Nodes.ToDictionary(node => node.ObjectId, StringComparer.OrdinalIgnoreCase);
 
@@ -79,6 +114,7 @@ public partial class TopologyCanvasControl : UserControl
                 Y2 = to.Placement.Y + to.Placement.Height / 2,
                 Stroke = LayerBrush(edge.Layer),
                 StrokeThickness = 3,
+                Visibility = Visibility.Collapsed,
                 Tag = edge.ConnectionId,
                 Cursor = Cursors.Hand,
                 ToolTip = $"{edge.NetLabel ?? edge.NetId ?? edge.ConnectionId} | {edge.Layer}\n雙擊：切段 / 插入 Connector / Terminal / Cable"
@@ -154,6 +190,8 @@ public partial class TopologyCanvasControl : UserControl
 
             if (isComponent) RenderPorts(node);
         }
+        ApplyTopologySelectionVisuals();
+        ScheduleFinalTopologyVisualRefresh();
     }
 
     private void RenderPorts(TopologyNode node)
@@ -190,11 +228,17 @@ public partial class TopologyCanvasControl : UserControl
                 Text = port.Name,
                 FontSize = 9,
                 Foreground = Brushes.DimGray,
-                Background = Brushes.White,
+                Background = Brushes.Transparent,
                 IsHitTestVisible = false
             };
-            Canvas.SetLeft(portLabel, node.Placement.X + node.Placement.Width + 10);
-            Canvas.SetTop(portLabel, node.Placement.Y + spacing * (index + 1) - 7);
+            PositionEndpointLabel(
+                portLabel,
+                port.Name,
+                new TopologyPortAnchor(
+                    node.Placement.X + node.Placement.Width,
+                    node.Placement.Y + spacing * (index + 1),
+                    1d,
+                    0d));
             Surface.Children.Add(portLabel);
         }
     }
@@ -259,12 +303,24 @@ public partial class TopologyCanvasControl : UserControl
         SelectionText.Text = $"Line: {connection.FromEndpointId} → {connection.ToEndpointId}";
         if (e.ClickCount < 2)
         {
-            HintText.Text = "已選取線路。雙擊這條線可插入 Connector / Terminal、指定 Cable Segment，或刪除連線。";
+            SelectTopologyConnection(connectionId);
+            SelectionText.Text = _selectedTopologyConnectionIds.Count <= 1
+                ? $"Line: {connection.FromEndpointId} → {connection.ToEndpointId}"
+                : $"已選取 {_selectedTopologyConnectionIds.Count} 條線";
+            HintText.Text = "已選取線路。拖曳兩端圓形把手可改接 Pin / Port；中央方形把手可調整折線；Del 刪除；雙擊可設定線材。";
             e.Handled = true;
             return;
         }
 
-        var dialog = new InlineConnectionDialog(BuildConnectionSummary(connection)) { Owner = Window.GetWindow(this) };
+        var assignedCable = _project.Cables.FirstOrDefault(item =>
+            string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
+        var dialog = new InlineConnectionDialog(
+            BuildConnectionSummary(connection),
+            _availableCableMaterials,
+            assignedCable?.CableDefinitionId)
+        {
+            Owner = Window.GetWindow(this)
+        };
         if (dialog.ShowDialog() != true)
         {
             e.Handled = true;
@@ -279,6 +335,10 @@ public partial class TopologyCanvasControl : UserControl
                 case InlineConnectionOperation.Connector:
                     _connectionEditor.InsertInlineConnector(_project, connectionId, dialog.ConnectorOptions);
                     HintText.Text = "已插入 Connector（接頭），原本線路已拆成兩段；A/B 原端點資料保持不變。";
+                    break;
+                case InlineConnectionOperation.LooseWireMatedConnectorPair:
+                    _connectionEditor.InsertLooseWireMatedConnectorPair(_project, connectionId, dialog.ConnectorOptions);
+                    HintText.Text = "已建立：散線 → M12母 ↔ M12公 → 散線。中間為正式 Direct Mating；雙擊兩側線段可分別設定 Pin Mapping 與線材。";
                     break;
                 case InlineConnectionOperation.Terminal:
                     _connectionEditor.InsertInlineTerminal(_project, connectionId, dialog.TerminalOptions);
@@ -308,7 +368,7 @@ public partial class TopologyCanvasControl : UserControl
     {
         _interactionMode = InteractionMode.Select;
         _pendingWireEndpointId = null;
-        HintText.Text = "選取模式：拖曳元件可移動；雙擊元件可補 PDF / 圖片 / 文件；右鍵元件旋轉；點 Port 看資料；雙擊線路進入線路編輯。";
+        HintText.Text = "選取模式：框選元件與線路；按 Del 刪除線路，並將一般元件移回左側清單（端子台保留）。拖曳任一已選元件可整組移動。";
         UpdateModeButtons();
         Render();
     }
@@ -333,7 +393,7 @@ public partial class TopologyCanvasControl : UserControl
     private void ShowHelp_Click(object sender, RoutedEventArgs e)
     {
         HintBanner.Visibility = Visibility.Visible;
-        HintText.Text = "快速操作：① 拖曳元件排位置。② 雙擊元件，缺圖片就傳圖片、缺 PDF 就傳 PDF，也可重新 Deep Search。③ 按「拉線」，點 A Port 再點 B Port。④ 雙擊線路，選 Connector / Terminal / Cable Segment。⑤ 右鍵元件旋轉。⑥ 按「匯出 PDF」輸出目前可見拓樸。";
+        HintText.Text = "快速操作：① Ctrl + 滾輪縮放。② 框選後按 Del：刪線並將一般元件移回清單，端子台保留。③ 拉線後雙擊線路，可插入「散線→M12母↔M12公→散線」。④ 自動排版可 Undo。⑤ 右鍵元件旋轉。⑥ 匯出 PDF。";
     }
 
     private void DismissHint_Click(object sender, RoutedEventArgs e) => HintBanner.Visibility = Visibility.Collapsed;
@@ -384,14 +444,23 @@ public partial class TopologyCanvasControl : UserControl
             return;
         }
 
+        if (!SelectTopologyObjectForDrag(objectId))
+        {
+            e.Handled = true;
+            return;
+        }
+
         _dragElement = element;
         _dragObjectId = objectId;
         _dragStartMouse = e.GetPosition(Surface);
         var placement = _projection.GetPlacement(_project, objectId);
         _dragStartObject = new Point(placement.X, placement.Y);
+        _dragStartSelectionPositions = CaptureSelectedTopologyPositions();
         _dragRecorded = false;
         element.CaptureMouse();
-        SelectionText.Text = objectId;
+        SelectionText.Text = _selectedTopologyObjectIds.Count > 1
+            ? $"已選取 {_selectedTopologyObjectIds.Count} 個物件"
+            : objectId;
         e.Handled = true;
     }
 
@@ -403,16 +472,15 @@ public partial class TopologyCanvasControl : UserControl
         var dy = current.Y - _dragStartMouse.Y;
         if (!_dragRecorded && Math.Abs(dx) + Math.Abs(dy) >= 2)
         {
-            MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Move topology node {_dragObjectId}"));
+            MutationStarting?.Invoke(this, new TopologyMutationEventArgs(
+                _dragStartSelectionPositions.Count > 1
+                    ? $"Move {_dragStartSelectionPositions.Count} selected topology nodes"
+                    : $"Move topology node {_dragObjectId}"));
             _dragRecorded = true;
         }
         if (!_dragRecorded) return;
 
-        var x = Math.Max(0, _dragStartObject.X + dx);
-        var y = Math.Max(0, _dragStartObject.Y + dy);
-        _projection.Move(_project, _dragObjectId, x, y);
-        Canvas.SetLeft(_dragElement, x);
-        Canvas.SetTop(_dragElement, y);
+        MoveSelectedTopologyObjects(_dragStartSelectionPositions, dx, dy);
         e.Handled = true;
     }
 
@@ -423,6 +491,7 @@ public partial class TopologyCanvasControl : UserControl
         _dragElement?.ReleaseMouseCapture();
         _dragElement = null;
         _dragObjectId = null;
+        _dragStartSelectionPositions.Clear();
         _dragRecorded = false;
 
         if (moved)
@@ -438,7 +507,21 @@ public partial class TopologyCanvasControl : UserControl
         if (_project is null || sender is not FrameworkElement element || element.Tag is not string objectId) return;
         MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Rotate topology node {objectId}"));
         _projection.Rotate(_project, objectId, 90);
+
+        // A manual bend is stored in absolute canvas coordinates. Rotation moves every attached
+        // Port/Pin to a different edge, so discard only the affected bends and let the orthogonal
+        // router reconnect those wires to their new endpoint positions.
+        foreach (var connection in _project.Connections)
+        {
+            var fromOwner = FindTopologyEndpointOwner(connection.FromEndpointId);
+            var toOwner = FindTopologyEndpointOwner(connection.ToEndpointId);
+            if (string.Equals(fromOwner, objectId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(toOwner, objectId, StringComparison.OrdinalIgnoreCase))
+                _manualRouteWaypoints.Remove(connection.ConnectionId);
+        }
+
         Render();
+        SelectionText.Text = "元件、腳位與接線端點已一起旋轉 90°";
         ProjectChanged?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
     }

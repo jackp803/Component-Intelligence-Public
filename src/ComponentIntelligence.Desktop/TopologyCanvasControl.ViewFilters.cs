@@ -23,6 +23,7 @@ public partial class TopologyCanvasControl
     {
         base.OnInitialized(e);
         Loaded += (_, _) => ConfigureViewFilters();
+        InitializeRouteIsolation();
     }
 
     private void ConfigureViewFilters()
@@ -56,7 +57,6 @@ public partial class TopologyCanvasControl
             toolbar.Children.Add(check);
         }
 
-        Surface.LayoutUpdated += (_, _) => ApplyWireLayerVisibility();
         ApplyWireLayerVisibility();
     }
 
@@ -110,8 +110,39 @@ public partial class TopologyCanvasControl
                     var visible = showWires && edgeLayers.TryGetValue(connectionId, out var layer) &&
                         (showAllLayers || selectedLayers.Contains(layer));
                     var desired = visible ? Visibility.Visible : Visibility.Collapsed;
-                    if (line.Visibility != desired) line.Visibility = desired;
+                    // The Line is retained only for endpoint/label compatibility. The orthogonal
+                    // Polyline is the sole connection visual; never let the view filter resurrect
+                    // the legacy center-to-center line during LayoutUpdated.
+                    if (line.Visibility != Visibility.Collapsed) line.Visibility = Visibility.Collapsed;
                     pendingNetLabelVisibility = desired;
+                    continue;
+                }
+
+                if (child is Polyline route &&
+                    string.Equals(route.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
+                    route.Tag is string routeConnectionId)
+                {
+                    var visible = showWires && edgeLayers.TryGetValue(routeConnectionId, out var layer) &&
+                        (showAllLayers || selectedLayers.Contains(layer));
+                    var desired = visible ? Visibility.Visible : Visibility.Collapsed;
+                    if (route.Visibility != desired) route.Visibility = desired;
+                    continue;
+                }
+
+                if (child is FrameworkElement decoration &&
+                    (decoration.Uid.StartsWith("CI-CROSSING-", StringComparison.Ordinal) ||
+                     string.Equals(decoration.Uid, "CI-JUNCTION-DOT", StringComparison.Ordinal) ||
+                     string.Equals(decoration.Uid, "CI-ROUTE-IDENTITY", StringComparison.Ordinal)) &&
+                    decoration.Tag is TopologyDecorationTag decorationTag)
+                {
+                    bool IsConnectionVisible(string id) =>
+                        edgeLayers.TryGetValue(id, out var layer) &&
+                        (showAllLayers || selectedLayers.Contains(layer));
+                    var visible = showWires && (decorationTag.RequireAllConnectionsVisible
+                        ? decorationTag.ConnectionIds.All(IsConnectionVisible)
+                        : decorationTag.ConnectionIds.Any(IsConnectionVisible));
+                    var desired = visible ? Visibility.Visible : Visibility.Collapsed;
+                    if (decoration.Visibility != desired) decoration.Visibility = desired;
                     continue;
                 }
 
@@ -127,6 +158,9 @@ public partial class TopologyCanvasControl
                 if (child is not TextBlock)
                     pendingNetLabelVisibility = null;
             }
+            // Bend and endpoint-reconnect handles belong to the selected route.  They must not
+            // remain as floating controls when that route is hidden by a layer checkbox.
+            SyncSelectedRouteHandleVisibility();
         }
         finally
         {

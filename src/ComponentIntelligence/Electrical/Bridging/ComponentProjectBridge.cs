@@ -188,9 +188,9 @@ public sealed class ComponentProjectBridge
     {
         var voltage = MapVoltage(sourcePower.OperatingVoltage);
         var role = DeterminePowerRole(pin.Direction);
-        var function = $"{pin.Function} {pin.PinRole} {pin.Description}".ToUpperInvariant();
-        var isReturn = ContainsAny(function, "0V", "V-", "L-", "RETURN");
-        var isPositiveSupply = ContainsAny(function, "+24V", "+54V", "V+", "L+", "SUPPLY+", "POWER+") ||
+        var function = $"{pin.PinName} {pin.Function} {pin.PinRole} {pin.SignalType} {pin.VoltageDomain} {pin.Description}".ToUpperInvariant();
+        var isReturn = ContainsAny(function, "0V", "V-", "L-", "RETURN", "RTN");
+        var isPositiveSupply = ContainsAny(function, "+24V", "+54V", "V+", "L+", "SUPPLY+", "POWER+", "POSITIVE") ||
                                (!isReturn && ContainsAny(function, "SUPPLY", "POWER"));
 
         if (isReturn && role == PowerRole.Unknown) role = PowerRole.Return;
@@ -255,9 +255,12 @@ public sealed class ComponentProjectBridge
     {
         var text = $"{signalType} {function}".ToUpperInvariant();
         if (ContainsAny(text, "RS485", "RS-485", "ETHERNET", "ETHERCAT", "IO-LINK", "IOLINK", "CAN", "PROFINET", "MODBUS")) return ElectricalLayer.Communication;
-        if (ContainsAny(text, "4-20MA", "4…20MA", "4..20MA", "0-10V", "ANALOG", "AI", "AO")) return ElectricalLayer.Analog;
-        if (ContainsAny(text, "DIGITAL", "DI", "DO", "PNP", "NPN")) return ElectricalLayer.Digital;
-        if (ContainsAny(text, "PE", "FE", "SHIELD", "CHASSIS", "SIGNAL GROUND", "SG")) return ElectricalLayer.Grounding;
+        if (ContainsAny(text, "4-20MA", "4…20MA", "4..20MA", "0-10V", "ANALOG") ||
+            ContainsToken(text, "AI") || ContainsToken(text, "AO")) return ElectricalLayer.Analog;
+        if (ContainsAny(text, "DIGITAL", "PNP", "NPN") ||
+            ContainsToken(text, "DI") || ContainsToken(text, "DO")) return ElectricalLayer.Digital;
+        if (ContainsAny(text, "SHIELD", "CHASSIS", "SIGNAL GROUND") ||
+            ContainsToken(text, "PE") || ContainsToken(text, "FE") || ContainsToken(text, "SG")) return ElectricalLayer.Grounding;
         if (ContainsAny(text, "+24V", "24V", "+54V", "54V", "0V", "V+", "V-", "L+", "L-", "POWER", "SUPPLY")) return ElectricalLayer.Power;
         return ElectricalLayer.Unknown;
     }

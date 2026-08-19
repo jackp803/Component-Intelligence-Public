@@ -227,12 +227,19 @@ public partial class TopologyCanvasControl
         instance.Footprint = ComponentPhysicalKnowledgeMapper.TryCreateFootprint(option.Component);
 
         var placedCount = _project.TopologyPlacements.Count;
-        var x = 80d + (placedCount % 4) * 280d;
-        var y = 80d + (placedCount / 4) * 180d;
-        _projection.EnsurePlacement(_project, instance.ComponentInstanceId, x, y);
+        var placementPoint = expectedKind == TopologyPaletteMaterialKind.TerminalBlock
+            ? FindAvailablePointInVisibleTopologyViewport()
+            : new Point(80d + (placedCount % 4) * 280d, 80d + (placedCount / 4) * 180d);
+        _projection.EnsurePlacement(
+            _project,
+            instance.ComponentInstanceId,
+            placementPoint.X,
+            placementPoint.Y);
 
         HintBanner.Visibility = Visibility.Visible;
-        HintText.Text = $"已從中央歸檔新增 {option.Display}；目前此型號 {existingCount + 1} 個。Topology 已放入，Layout 待放置清單也已同步。";
+        HintText.Text = expectedKind == TopologyPaletteMaterialKind.TerminalBlock
+            ? $"已從中央歸檔新增 {option.Display}；端子台已放在目前可見畫面內，Layout 待放置清單也已同步。"
+            : $"已從中央歸檔新增 {option.Display}；目前此型號 {existingCount + 1} 個。Topology 已放入，Layout 待放置清單也已同步。";
         SelectionText.Text = instance.EquipmentTag;
         Render();
         ProjectChanged?.Invoke(this, EventArgs.Empty);

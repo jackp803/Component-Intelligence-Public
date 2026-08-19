@@ -7,7 +7,9 @@ public sealed class TopologyConnectionPotentialClassifierTests
 {
     [Theory]
     [InlineData("DC OUTPUT +V", TopologyPotentialClass.PositiveDc)]
+    [InlineData("+54.5V", TopologyPotentialClass.PositiveDc)]
     [InlineData("DC OUTPUT -V", TopologyPotentialClass.NegativeOrReturnDc)]
+    [InlineData("+54.5Vrtn", TopologyPotentialClass.NegativeOrReturnDc)]
     [InlineData("0V", TopologyPotentialClass.NegativeOrReturnDc)]
     [InlineData("FG", TopologyPotentialClass.ProtectiveOrFunctionalEarth)]
     public void PinEngineeringLabelClassifiesCanvasPotential(

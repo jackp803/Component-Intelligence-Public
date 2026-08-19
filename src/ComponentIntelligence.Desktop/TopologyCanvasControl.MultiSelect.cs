@@ -4,12 +4,15 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
+using ComponentIntelligence.Electrical.Topology;
 
 namespace ComponentIntelligence.Desktop;
 
 public partial class TopologyCanvasControl
 {
     private readonly HashSet<string> _selectedTopologyObjectIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _selectedTopologyConnectionIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly TopologyTerminalDeletionService _terminalDeletionService = new();
     private Dictionary<string, Point> _terminalDragStartSelectionPositions = new(StringComparer.OrdinalIgnoreCase);
     private Point _marqueeStart;
     private bool _marqueePointerCaptured;
@@ -32,7 +35,12 @@ public partial class TopologyCanvasControl
         _marqueeStart = e.GetPosition(Surface);
         _marqueePointerCaptured = true;
         _marqueeAdditive = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-        if (!_marqueeAdditive) _selectedTopologyObjectIds.Clear();
+        if (!_marqueeAdditive)
+        {
+            _selectedTopologyObjectIds.Clear();
+            _selectedTopologyConnectionIds.Clear();
+            _selectedRouteConnectionId = null;
+        }
         RemoveMarqueeRectangle();
         ApplyTopologySelectionVisuals();
         Surface.CaptureMouse();
@@ -74,22 +82,38 @@ public partial class TopologyCanvasControl
             {
                 if (FindTopologyNodeVisual(placement.ObjectId) is null) continue;
                 var objectBounds = new Rect(placement.X, placement.Y, placement.Width, placement.Height);
-                if (bounds.IntersectsWith(objectBounds))
+                // A narrow box drawn around wires may cross a large component body. Only treat a
+                // component as selected when the marquee contains the entire component rectangle.
+                if (bounds.Contains(objectBounds))
                     _selectedTopologyObjectIds.Add(placement.ObjectId);
             }
+
+            foreach (var route in Surface.Children.OfType<Polyline>().Where(route =>
+                         string.Equals(route.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
+                         route.Tag is string))
+            {
+                if (RouteIntersectsSelectionBounds(route.Points, bounds))
+                    _selectedTopologyConnectionIds.Add((string)route.Tag);
+            }
+            _selectedRouteConnectionId = _selectedTopologyConnectionIds.LastOrDefault();
         }
         else if (!_marqueeAdditive)
         {
             _selectedTopologyObjectIds.Clear();
+            _selectedTopologyConnectionIds.Clear();
+            _selectedRouteConnectionId = null;
         }
 
         ApplyTopologySelectionVisuals();
-        SelectionText.Text = _selectedTopologyObjectIds.Count == 0
+        var selectedCount = _selectedTopologyObjectIds.Count + _selectedTopologyConnectionIds.Count;
+        SelectionText.Text = selectedCount == 0
             ? "未選取"
-            : $"已選取 {_selectedTopologyObjectIds.Count} 個物件";
-        HintText.Text = _selectedTopologyObjectIds.Count > 1
-            ? "已完成框選。拖曳任一藍色高亮元件，可整組移動；點空白處可取消選取。"
-            : "在空白處按住左鍵拖曳，可框選多個元件。";
+            : $"已選取 {_selectedTopologyObjectIds.Count} 個物件、{_selectedTopologyConnectionIds.Count} 條線";
+        HintText.Text = _selectedTopologyConnectionIds.Count > 0
+            ? "已框選線路與元件。按 Del 可刪除線路；一般元件移回清單，端子台會從專案刪除。"
+            : _selectedTopologyObjectIds.Count > 1
+                ? "已完成框選。拖曳可整組移動；按 Del 將一般元件移回清單，端子台則直接刪除。"
+                : "在空白處按住左鍵拖曳，可框選元件與線路。";
         e.Handled = true;
     }
 
@@ -134,11 +158,81 @@ public partial class TopologyCanvasControl
         else if (!_selectedTopologyObjectIds.Contains(objectId))
         {
             _selectedTopologyObjectIds.Clear();
+            _selectedTopologyConnectionIds.Clear();
+            _selectedRouteConnectionId = null;
             _selectedTopologyObjectIds.Add(objectId);
         }
 
         ApplyTopologySelectionVisuals();
         return true;
+    }
+
+    private void SelectTopologyConnection(string connectionId)
+    {
+        var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+        if (!ctrl)
+        {
+            _selectedTopologyObjectIds.Clear();
+            _selectedTopologyConnectionIds.Clear();
+            _selectedTopologyConnectionIds.Add(connectionId);
+        }
+        else if (!_selectedTopologyConnectionIds.Add(connectionId))
+        {
+            _selectedTopologyConnectionIds.Remove(connectionId);
+        }
+
+        _selectedRouteConnectionId = _selectedTopologyConnectionIds.Contains(connectionId)
+            ? connectionId
+            : _selectedTopologyConnectionIds.LastOrDefault();
+        ApplyTopologySelectionVisuals();
+    }
+
+    private void DeleteSelectedTopologyItems()
+    {
+        if (_project is null) return;
+        var connectionIds = _selectedTopologyConnectionIds.ToArray();
+        var unplaceComponentIds = _selectedTopologyObjectIds
+            .Where(id => _project.Components.Any(component =>
+                string.Equals(component.ComponentInstanceId, id, StringComparison.OrdinalIgnoreCase) &&
+                TopologyPaletteMaterialPolicy.Classify(component.TypeKey) != TopologyPaletteMaterialKind.TerminalBlock))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var terminalIds = _selectedTopologyObjectIds
+            .Where(id =>
+                _project.TerminalBlocks.Any(block => string.Equals(block.TerminalBlockId, id, StringComparison.OrdinalIgnoreCase)) ||
+                _project.Components.Any(component =>
+                    string.Equals(component.ComponentInstanceId, id, StringComparison.OrdinalIgnoreCase) &&
+                    TopologyPaletteMaterialPolicy.Classify(component.TypeKey) == TopologyPaletteMaterialKind.TerminalBlock))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (connectionIds.Length == 0 && unplaceComponentIds.Count == 0 && terminalIds.Count == 0)
+        {
+            SelectionText.Text = "未選取可刪除項目";
+            HintText.Text = "請先框選線路或元件，再按 Del。";
+            return;
+        }
+
+        MutationStarting?.Invoke(this, new TopologyMutationEventArgs(
+            $"Delete {connectionIds.Length} topology connection(s), unplace {unplaceComponentIds.Count} component(s), and remove {terminalIds.Count} terminal(s)"));
+        var terminalResult = _terminalDeletionService.Delete(_project, terminalIds);
+        var removedConnections = terminalResult.RemovedConnections +
+                                 _connectionEditor.DeleteConnections(_project, connectionIds);
+        var removedComponents = _project.TopologyPlacements.RemoveAll(placement =>
+            unplaceComponentIds.Contains(placement.ObjectId));
+        foreach (var terminalId in terminalIds)
+            _baseTopologyPlacementSizes.Remove(terminalId);
+
+        _selectedTopologyConnectionIds.Clear();
+        _selectedTopologyObjectIds.Clear();
+        _selectedRouteConnectionId = null;
+        _hoveredRouteConnectionId = null;
+        RemoveRouteHandle();
+        PruneRouteIsolationState(_project.Connections.Select(connection => connection.ConnectionId));
+        Render();
+        SelectionText.Text = $"已刪除 {removedConnections} 條線、{terminalResult.RemovedTerminals} 個端子台；移回清單 {removedComponents} 個一般元件";
+        HintText.Text = terminalResult.RemovedTerminals > 0
+            ? "端子台已從專案與 Layout 移除，不會回到 BOM 元件清單；可使用 Undo 復原。"
+            : "一般元件已回到左側清單；線路已刪除。可使用 Undo 復原。";
+        ProjectChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private Dictionary<string, Point> CaptureSelectedTopologyPositions()
@@ -238,6 +332,11 @@ public partial class TopologyCanvasControl
         _selectedTopologyObjectIds.RemoveWhere(id =>
             _project.TopologyPlacements.All(placement =>
                 !string.Equals(placement.ObjectId, id, StringComparison.OrdinalIgnoreCase)));
+        var liveConnections = _project.Connections.Select(connection => connection.ConnectionId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _selectedTopologyConnectionIds.RemoveWhere(id => !liveConnections.Contains(id));
+        if (_selectedRouteConnectionId is not null && !liveConnections.Contains(_selectedRouteConnectionId))
+            _selectedRouteConnectionId = _selectedTopologyConnectionIds.LastOrDefault();
 
         foreach (var placement in _project.TopologyPlacements)
         {
@@ -253,6 +352,7 @@ public partial class TopologyCanvasControl
                 }
                 : null;
         }
+        ApplyRouteEmphasisVisuals();
     }
 
     private Border? FindTopologyNodeVisual(string objectId) =>
@@ -266,4 +366,20 @@ public partial class TopologyCanvasControl
             Math.Min(first.Y, second.Y),
             Math.Abs(second.X - first.X),
             Math.Abs(second.Y - first.Y));
+
+    private static bool RouteIntersectsSelectionBounds(IList<Point> points, Rect selection)
+    {
+        for (var index = 1; index < points.Count; index++)
+        {
+            var first = points[index - 1];
+            var second = points[index];
+            var segment = new Rect(
+                Math.Min(first.X, second.X) - 4d,
+                Math.Min(first.Y, second.Y) - 4d,
+                Math.Max(8d, Math.Abs(second.X - first.X) + 8d),
+                Math.Max(8d, Math.Abs(second.Y - first.Y) + 8d));
+            if (selection.IntersectsWith(segment)) return true;
+        }
+        return false;
+    }
 }

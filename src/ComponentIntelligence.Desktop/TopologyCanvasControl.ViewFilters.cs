@@ -158,6 +158,9 @@ public partial class TopologyCanvasControl
                 if (child is not TextBlock)
                     pendingNetLabelVisibility = null;
             }
+            // Bend and endpoint-reconnect handles belong to the selected route.  They must not
+            // remain as floating controls when that route is hidden by a layer checkbox.
+            SyncSelectedRouteHandleVisibility();
         }
         finally
         {

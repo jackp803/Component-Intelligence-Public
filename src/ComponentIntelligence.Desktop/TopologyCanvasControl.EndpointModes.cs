@@ -29,14 +29,17 @@ public partial class TopologyCanvasControl
                 string.Equals(item.ObjectId, component.ComponentInstanceId, StringComparison.OrdinalIgnoreCase));
             if (placement is null) continue;
 
+            var compactTerminal = IsCompactTerminalComponent(component);
             if (!_baseTopologyPlacementSizes.ContainsKey(component.ComponentInstanceId))
-                _baseTopologyPlacementSizes[component.ComponentInstanceId] = (placement.Width, placement.Height);
+                _baseTopologyPlacementSizes[component.ComponentInstanceId] = compactTerminal
+                    ? (Math.Min(placement.Width, 118d), Math.Min(placement.Height, 64d))
+                    : (placement.Width, placement.Height);
 
             var endpoints = BuildVisibleEndpoints(component);
-            AutoSizeComponentForEndpoints(component, placement, endpoints);
+            AutoSizeComponentForEndpoints(component, placement, endpoints, compactTerminal);
             ApplyComponentBorderSize(component.ComponentInstanceId, placement);
             HideAggregateMarkersForPinMode(component);
-            LayoutVisibleEndpoints(placement, endpoints);
+            LayoutVisibleEndpoints(placement, endpoints, compactTerminal);
         }
     }
 
@@ -66,14 +69,14 @@ public partial class TopologyCanvasControl
     private void AutoSizeComponentForEndpoints(
         ComponentInstance component,
         TopologyPlacement placement,
-        IReadOnlyList<VisualEndpoint> endpoints)
+        IReadOnlyList<VisualEndpoint> endpoints,
+        bool compactTerminal)
     {
         if (!_baseTopologyPlacementSizes.TryGetValue(component.ComponentInstanceId, out var baseline))
             baseline = (140, 76);
 
         var leftCount = endpoints.Count(endpoint => endpoint.Side == TopologyScreenSide.Left);
         var rightCount = endpoints.Count(endpoint => endpoint.Side == TopologyScreenSide.Right);
-        var maxSideCount = Math.Max(leftCount, rightCount);
         var hasPinLevelEndpoints = endpoints.Any(endpoint => !endpoint.IsAggregatePort);
         var leftLabelWidth = endpoints
             .Where(endpoint => endpoint.Side == TopologyScreenSide.Left)
@@ -86,17 +89,22 @@ public partial class TopologyCanvasControl
             .DefaultIfEmpty(0d)
             .Max();
 
-        // 22 px per endpoint preserves readable labels and clickable markers. The component is allowed
-        // to become large. Side labels live inside the component, so reserve independent left/right
-        // label lanes plus a central title lane; this keeps names away from external conductors.
-        var requiredHeight = Math.Max(baseline.Height, 52d + maxSideCount * 22d);
-        var requiredWidth = Math.Max(
+        var size = TopologyPortGeometry.CalculateEndpointComponentSize(
             baseline.Width,
-            Math.Max(hasPinLevelEndpoints ? 180d : 0d, leftLabelWidth + rightLabelWidth + 96d));
+            baseline.Height,
+            leftCount,
+            rightCount,
+            leftLabelWidth,
+            rightLabelWidth,
+            hasPinLevelEndpoints,
+            compactTerminal);
 
-        placement.Width = requiredWidth;
-        placement.Height = requiredHeight;
+        placement.Width = size.Width;
+        placement.Height = size.Height;
     }
+
+    private static bool IsCompactTerminalComponent(ComponentInstance component) =>
+        TopologyPaletteMaterialPolicy.Classify(component.TypeKey) == TopologyPaletteMaterialKind.TerminalBlock;
 
     private void ApplyComponentBorderSize(string componentInstanceId, TopologyPlacement placement)
     {
@@ -124,7 +132,10 @@ public partial class TopologyCanvasControl
         }
     }
 
-    private void LayoutVisibleEndpoints(TopologyPlacement placement, IReadOnlyList<VisualEndpoint> endpoints)
+    private void LayoutVisibleEndpoints(
+        TopologyPlacement placement,
+        IReadOnlyList<VisualEndpoint> endpoints,
+        bool compactTerminal)
     {
         foreach (var side in new[] { TopologyScreenSide.Left, TopologyScreenSide.Right })
         {
@@ -143,6 +154,10 @@ public partial class TopologyCanvasControl
                     : FindOrCreatePinMarker(endpoint.Port, endpoint.Pin!);
                 if (marker is null) continue;
 
+                var markerDiameter = compactTerminal ? 12d : 14d;
+                marker.Width = markerDiameter;
+                marker.Height = markerDiameter;
+                marker.CornerRadius = new CornerRadius(markerDiameter / 2d);
                 marker.Visibility = Visibility.Visible;
                 marker.Background = IsPendingEndpoint(endpoint.EndpointId)
                     ? Brushes.DarkOrange
@@ -153,7 +168,8 @@ public partial class TopologyCanvasControl
                 var label = endpoint.IsAggregatePort
                     ? FindPortLabelFollowing(marker, endpoint.Port.Name) ?? CreateEndpointLabel(endpoint.EndpointId, endpoint.Label)
                     : FindOrCreateEndpointLabel(endpoint.EndpointId, endpoint.Label);
-                PositionEndpointLabel(label, endpoint.Label, anchor);
+                label.FontSize = compactTerminal ? 8d : 9d;
+                PositionEndpointLabel(label, endpoint.Label, anchor, compactTerminal);
             }
         }
     }
@@ -207,8 +223,11 @@ public partial class TopologyCanvasControl
         Surface.Children.OfType<Border>().FirstOrDefault(element =>
             element.Tag is string tag &&
             string.Equals(tag, endpointId, StringComparison.OrdinalIgnoreCase) &&
-            Math.Abs(element.Width - 14d) < 0.1 &&
-            Math.Abs(element.Height - 14d) < 0.1);
+            IsEndpointMarkerVisual(element));
+
+    private static bool IsEndpointMarkerVisual(FrameworkElement element) =>
+        element is Border &&
+        TopologyPortGeometry.IsEndpointMarkerSize(element.Width, element.Height);
 
     private void HookEndpointMarker(Border marker)
     {
@@ -321,31 +340,32 @@ public partial class TopologyCanvasControl
         return label;
     }
 
-    private static void PositionEndpointLabel(TextBlock label, string text, TopologyPortAnchor anchor)
+    private static void PositionEndpointLabel(
+        TextBlock label,
+        string text,
+        TopologyPortAnchor anchor,
+        bool compact = false)
     {
         var estimatedWidth = EstimateEndpointLabelWidth(text);
-        const double estimatedHeight = 13d;
-        const double gap = 10d;
+        var estimatedHeight = compact ? 11d : 13d;
+        var gap = compact ? 7d : 10d;
+        var layout = TopologyPortGeometry.CalculateEndpointLabelLayout(
+            anchor,
+            estimatedWidth,
+            estimatedHeight,
+            gap);
 
-        // Move opposite the outward marker normal so the label follows its pin while remaining on
-        // the inside of whichever edge the rotated pin now occupies. Keep text horizontal so it is
-        // readable even when the component is at 90° or 270°.
-        var x = anchor.X - anchor.OutwardX * gap;
-        var y = anchor.Y - anchor.OutwardY * gap - estimatedHeight / 2d;
-        if (anchor.OutwardX > 0.25) x -= estimatedWidth;
-        else if (Math.Abs(anchor.OutwardX) <= 0.25) x -= estimatedWidth / 2d;
-
-        if (anchor.OutwardY > 0.25) y -= estimatedHeight / 2d;
-        else if (anchor.OutwardY < -0.25) y += estimatedHeight / 2d;
-
-        label.Width = estimatedWidth;
+        label.Width = layout.Width;
+        label.Height = layout.Height;
+        label.RenderTransformOrigin = new Point(0.5d, 0.5d);
+        label.RenderTransform = new RotateTransform(layout.RotationDegrees);
         label.TextAlignment = Math.Abs(anchor.OutwardX) <= 0.25
-            ? TextAlignment.Center
+            ? TextAlignment.Left
             : anchor.OutwardX > 0.25 ? TextAlignment.Right : TextAlignment.Left;
         label.Background = Brushes.Transparent;
         label.TextTrimming = TextTrimming.CharacterEllipsis;
-        Canvas.SetLeft(label, Math.Max(0, x));
-        Canvas.SetTop(label, Math.Max(0, y));
+        Canvas.SetLeft(label, Math.Max(0, layout.X));
+        Canvas.SetTop(label, Math.Max(0, layout.Y));
     }
 
     private static double EstimateEndpointLabelWidth(string text) =>

@@ -9,6 +9,7 @@ namespace ComponentIntelligence.Desktop;
 public enum InlineConnectionOperation
 {
     Connector,
+    LooseWireMatedConnectorPair,
     Terminal,
     CableSegment,
     PinMapping,
@@ -51,6 +52,7 @@ public sealed class InlineConnectionDialog : Window
         _operation.ItemsSource = new[]
         {
             new Choice("編輯 Pin Mapping（腳位映射）— 明確指定 A Pin → B Pin，不自動猜直通", InlineConnectionOperation.PinMapping),
+            new Choice("插入 散線 → M12母 ↔ M12公 → 散線（建立兩個轉接頭與正式對接）", InlineConnectionOperation.LooseWireMatedConnectorPair),
             new Choice("插入 Connector（接頭）— 會把目前線路切成兩段", InlineConnectionOperation.Connector),
             new Choice("插入 Terminal（端子）— 建立一進一出 Feed-through", InlineConnectionOperation.Terminal),
             new Choice("設定 Cable Segment（線材）— 指定目前線段的線材實例", InlineConnectionOperation.CableSegment),
@@ -238,7 +240,7 @@ public sealed class InlineConnectionDialog : Window
 
     private bool ValidateInput()
     {
-        if (Operation != InlineConnectionOperation.Connector) return true;
+        if (Operation is not (InlineConnectionOperation.Connector or InlineConnectionOperation.LooseWireMatedConnectorPair)) return true;
         if (!string.IsNullOrWhiteSpace(_family.Text)) return true;
         MessageBox.Show(this, "Connector Family 不可空白。", "資料需要補充", MessageBoxButton.OK, MessageBoxImage.Information);
         return false;

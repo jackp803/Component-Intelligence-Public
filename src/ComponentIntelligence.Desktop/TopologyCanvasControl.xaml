@@ -30,7 +30,7 @@
         <Border x:Name="HintBanner" Grid.Row="1" BorderBrush="#B9D7F2" BorderThickness="1" CornerRadius="5" Background="#EEF7FF" Padding="8" Margin="0,0,0,8">
             <DockPanel>
                 <Button Content="×" DockPanel.Dock="Right" Width="26" Height="24" Padding="0" Click="DismissHint_Click" ToolTip="關閉提示" />
-                <TextBlock x:Name="HintText" Text="操作提示：Ctrl + 滑鼠滾輪可縮放整張畫布；元件拖到上、下、左、右邊界附近會自動增加空間。按「拉線」後點 A Endpoint 再點 B Endpoint 完成精確接線。" TextWrapping="Wrap" Foreground="#245A85" VerticalAlignment="Center" />
+                <TextBlock x:Name="HintText" Text="操作提示：框選後按 Del 可刪線，並將一般元件移回左側清單；端子台會保留。Ctrl + 滑鼠滾輪可縮放。" TextWrapping="Wrap" Foreground="#245A85" VerticalAlignment="Center" />
             </DockPanel>
         </Border>
 

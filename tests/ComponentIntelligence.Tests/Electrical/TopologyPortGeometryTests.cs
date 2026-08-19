@@ -7,6 +7,30 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class TopologyPortGeometryTests
 {
     [Theory]
+    [InlineData(12, 12, true)]
+    [InlineData(14, 14, true)]
+    [InlineData(16, 16, false)]
+    [InlineData(140, 76, false)]
+    public void EndpointMarkerSize_AcceptsCompactAndRegularPinMarkers(
+        double width,
+        double height,
+        bool expected)
+    {
+        Assert.Equal(expected, TopologyPortGeometry.IsEndpointMarkerSize(width, height));
+    }
+
+    [Fact]
+    public void MostRecentlyEnrichedRoleWinsForLegacyProjectsWithDuplicateRoleMetadata()
+    {
+        var port = new ComponentPort { PortId = "p1", Name = "X21" };
+        port.Capabilities.Add("ROLE:Modbus TCP Ethernet Port");
+        port.Capabilities.Add("DIRECTION:Bidirectional");
+        port.Capabilities.Add("ROLE:Modbus TCP Network Input");
+
+        Assert.Equal(TopologyScreenSide.Left, TopologyPortGeometry.DetermineScreenSide(port));
+    }
+
+    [Theory]
     [InlineData("Input", TopologyScreenSide.Left)]
     [InlineData("OUTPUT", TopologyScreenSide.Right)]
     [InlineData("Bidirectional", TopologyScreenSide.Right)]
@@ -228,6 +252,45 @@ public sealed class TopologyPortGeometryTests
         Assert.Equal(expectedY, bounds.Y, 6);
         Assert.Equal(expectedWidth, bounds.Width, 6);
         Assert.Equal(expectedHeight, bounds.Height, 6);
+    }
+
+    [Theory]
+    [InlineData(100, 240, -1, 0, 110, 233.5, 0)]
+    [InlineData(240, 240, 1, 0, 166, 233.5, 0)]
+    [InlineData(170, 170, 0, -1, 138, 205.5, 90)]
+    [InlineData(170, 310, 0, 1, 138, 261.5, -90)]
+    public void EndpointLabel_FollowsEdgeAndRotatesIntoComponentWithoutOverlap(
+        double anchorX,
+        double anchorY,
+        double outwardX,
+        double outwardY,
+        double expectedX,
+        double expectedY,
+        double expectedRotation)
+    {
+        var layout = TopologyPortGeometry.CalculateEndpointLabelLayout(
+            new TopologyPortAnchor(anchorX, anchorY, outwardX, outwardY),
+            labelWidth: 64,
+            labelHeight: 13,
+            markerGap: 10);
+
+        Assert.Equal(expectedX, layout.X, 6);
+        Assert.Equal(expectedY, layout.Y, 6);
+        Assert.Equal(expectedRotation, layout.RotationDegrees, 6);
+    }
+
+    [Fact]
+    public void ArchivedTerminal_UsesCompactButStillClickableEndpointPitch()
+    {
+        var regular = TopologyPortGeometry.CalculateEndpointComponentSize(
+            140, 76, 18, 0, 42, 0, hasPinLevelEndpoints: true, compactTerminal: false);
+        var terminal = TopologyPortGeometry.CalculateEndpointComponentSize(
+            140, 76, 18, 0, 42, 0, hasPinLevelEndpoints: true, compactTerminal: true);
+
+        Assert.Equal(448d, regular.Height, 6);
+        Assert.Equal(260d, terminal.Height, 6);
+        Assert.True(terminal.Width <= regular.Width);
+        Assert.True(terminal.Height < regular.Height);
     }
 
     private static TopologyPlacement Placement(int degrees) => new()

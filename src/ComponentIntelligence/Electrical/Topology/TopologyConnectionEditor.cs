@@ -19,6 +19,11 @@ public sealed record CableSegmentOptions(
     string? CableDefinitionId = null,
     string? DisplayName = null);
 
+public sealed record InlineMatedConnectorPair(
+    ComponentInstance FemaleAdapter,
+    ComponentInstance MaleAdapter,
+    ElectricalConnection FemaleToMaleMating);
+
 public sealed class TopologyConnectionEditor
 {
     public ElectricalConnection ConnectPorts(
@@ -93,6 +98,66 @@ public sealed class TopologyConnectionEditor
         InsertPlacementAtConnectionMidpoint(project, connection, componentId, "COMPONENT", 130, 68);
         ReplaceWithTwoSegments(project, connection, sideA.PortId, sideB.PortId);
         return component;
+    }
+
+    /// <summary>
+    /// Expands one loose-wire connection into the explicit physical chain:
+    /// source wire -> M12 female field connector <-> M12 male field connector -> destination wire.
+    /// The two outer wire segments remain independently editable for cable selection and Pin Mapping;
+    /// the center segment is a formal DirectMating relationship validated by connector family/coding/gender.
+    /// </summary>
+    public InlineMatedConnectorPair InsertLooseWireMatedConnectorPair(
+        ElectricalProject project,
+        string connectionId,
+        InlineConnectorOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(options);
+        var original = FindConnection(project, connectionId);
+        var family = string.IsNullOrWhiteSpace(options.Family) ? "M12" : options.Family.Trim();
+        var baseReference = string.IsNullOrWhiteSpace(options.ReferenceDesignator)
+            ? NextReference(project, "X")
+            : options.ReferenceDesignator.Trim();
+
+        var femaleId = $"cmp-inline-{Guid.NewGuid():N}";
+        var femaleWire = BuildLooseWirePort(femaleId, "WIRE-A", options.PinCount, topologyInput: true);
+        var femaleMating = BuildConnectorPort(femaleId, "M12-F", family, options.Coding, options.PinCount, ConnectorGender.Female);
+        femaleMating.Capabilities.Add("ROLE:Mating Output");
+        var female = BuildFieldConnectorAdapter(
+            femaleId,
+            $"{baseReference}-F",
+            $"{family} female field connector (loose wire)",
+            femaleWire,
+            femaleMating);
+
+        var maleId = $"cmp-inline-{Guid.NewGuid():N}";
+        var maleMating = BuildConnectorPort(maleId, "M12-M", family, options.Coding, options.PinCount, ConnectorGender.Male);
+        maleMating.Capabilities.Add("ROLE:Mating Input");
+        var maleWire = BuildLooseWirePort(maleId, "WIRE-B", options.PinCount, topologyInput: false);
+        var male = BuildFieldConnectorAdapter(
+            maleId,
+            $"{baseReference}-M",
+            $"{family} male field connector (loose wire)",
+            maleMating,
+            maleWire);
+
+        project.Components.Add(female);
+        project.Components.Add(male);
+        InsertPairPlacementsAtConnection(project, original, femaleId, maleId);
+
+        project.Connections.Remove(original);
+        project.Connections.Add(CloneSegment(original, original.FromEndpointId, femaleWire.PortId));
+        var mating = new ElectricalConnection
+        {
+            ConnectionId = $"conn-{Guid.NewGuid():N}",
+            FromEndpointId = femaleMating.PortId,
+            ToEndpointId = maleMating.PortId,
+            NetId = original.NetId,
+            Kind = ConnectionKind.DirectMating
+        };
+        project.Connections.Add(mating);
+        project.Connections.Add(CloneSegment(original, maleWire.PortId, original.ToEndpointId));
+        return new InlineMatedConnectorPair(female, male, mating);
     }
 
     public TerminalBlock InsertInlineTerminal(
@@ -195,9 +260,33 @@ public sealed class TopologyConnectionEditor
 
     public void DeleteConnection(ElectricalProject project, string connectionId)
     {
+        DeleteConnections(project, [connectionId]);
+    }
+
+    public int DeleteConnections(ElectricalProject project, IEnumerable<string> connectionIds)
+    {
         ArgumentNullException.ThrowIfNull(project);
-        var connection = FindConnection(project, connectionId);
-        project.Connections.Remove(connection);
+        ArgumentNullException.ThrowIfNull(connectionIds);
+        var requested = connectionIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (requested.Count == 0) return 0;
+
+        var removed = project.Connections.Where(connection => requested.Contains(connection.ConnectionId)).ToArray();
+        if (removed.Length == 0) return 0;
+        project.Connections.RemoveAll(connection => requested.Contains(connection.ConnectionId));
+        project.TopologyRoutes.RemoveAll(route => requested.Contains(route.ConnectionId));
+
+        var removedCableIds = removed
+            .Select(connection => connection.CableInstanceId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        project.Cables.RemoveAll(cable =>
+            removedCableIds.Contains(cable.CableInstanceId) &&
+            project.Connections.All(connection =>
+                !string.Equals(connection.CableInstanceId, cable.CableInstanceId, StringComparison.OrdinalIgnoreCase)));
+        return removed.Length;
     }
 
     private static ComponentPort BuildConnectorPort(
@@ -239,6 +328,53 @@ public sealed class TopologyConnectionEditor
         }
         return port;
     }
+
+    private static ComponentPort BuildLooseWirePort(
+        string componentId,
+        string name,
+        int? pinCount,
+        bool topologyInput)
+    {
+        var port = new ComponentPort
+        {
+            PortId = $"{componentId}:PORT:{name}",
+            Name = name,
+            MaxConnections = 1
+        };
+        port.Capabilities.Add(topologyInput ? "ROLE:Loose Wire Input" : "ROLE:Loose Wire Output");
+        if (pinCount is > 0 and <= 64)
+        {
+            for (var index = 1; index <= pinCount.Value; index++)
+            {
+                port.Pins.Add(new ComponentPin
+                {
+                    PinId = $"{port.PortId}:PIN:{index}",
+                    PinNumber = index.ToString(),
+                    Status = PinStatus.Unknown,
+                    Layer = ElectricalLayer.Unknown
+                });
+            }
+        }
+        return port;
+    }
+
+    private static ComponentInstance BuildFieldConnectorAdapter(
+        string componentId,
+        string reference,
+        string displayName,
+        ComponentPort first,
+        ComponentPort second) => new()
+    {
+        ComponentInstanceId = componentId,
+        ComponentDefinitionId = $"inline-mated-adapter:{displayName}",
+        TypeKey = "INLINE_CONNECTOR",
+        ReferenceDesignator = reference,
+        ReferenceSource = ReferenceSource.Manual,
+        ReferenceLocked = true,
+        DisplayName = displayName,
+        ResponsibilityScope = ResponsibilityScope.InScope,
+        Ports = { first, second }
+    };
 
     private static void ReplaceWithTwoSegments(
         ElectricalProject project,
@@ -290,6 +426,47 @@ public sealed class TopologyConnectionEditor
             ObjectKind = objectKind,
             X = Math.Max(0, x),
             Y = Math.Max(0, y),
+            Width = width,
+            Height = height
+        });
+    }
+
+    private static void InsertPairPlacementsAtConnection(
+        ElectricalProject project,
+        ElectricalConnection connection,
+        string femaleId,
+        string maleId)
+    {
+        const double width = 150d;
+        const double height = 72d;
+        const double gap = 90d;
+        var fromOwner = FindEndpointOwner(project, connection.FromEndpointId);
+        var toOwner = FindEndpointOwner(project, connection.ToEndpointId);
+        var from = project.TopologyPlacements.FirstOrDefault(item => string.Equals(item.ObjectId, fromOwner, StringComparison.OrdinalIgnoreCase));
+        var to = project.TopologyPlacements.FirstOrDefault(item => string.Equals(item.ObjectId, toOwner, StringComparison.OrdinalIgnoreCase));
+        var centerX = 360d;
+        var centerY = 220d;
+        if (from is not null && to is not null)
+        {
+            centerX = ((from.X + from.Width / 2d) + (to.X + to.Width / 2d)) / 2d;
+            centerY = ((from.Y + from.Height / 2d) + (to.Y + to.Height / 2d)) / 2d;
+        }
+
+        project.TopologyPlacements.Add(new TopologyPlacement
+        {
+            ObjectId = femaleId,
+            ObjectKind = "COMPONENT",
+            X = Math.Max(0d, centerX - gap / 2d - width),
+            Y = Math.Max(0d, centerY - height / 2d),
+            Width = width,
+            Height = height
+        });
+        project.TopologyPlacements.Add(new TopologyPlacement
+        {
+            ObjectId = maleId,
+            ObjectKind = "COMPONENT",
+            X = Math.Max(0d, centerX + gap / 2d),
+            Y = Math.Max(0d, centerY - height / 2d),
             Width = width,
             Height = height
         });

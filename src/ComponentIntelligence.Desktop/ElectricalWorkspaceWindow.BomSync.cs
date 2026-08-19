@@ -69,6 +69,11 @@ public partial class ElectricalWorkspaceWindow
                 $"連線材料 {result.DeferredConnectionMaterialRows}（可選型號 {result.ConnectionMaterials.Count}）；" +
                 $"Qty ? {result.UnknownQuantityRows}；Spare-only 略過 {result.SkippedSpareOnlyRows}。" +
                 "舊專案的位置與接線已保留；請按「儲存」寫回更新後的專案。";
+
+            // Project instances are snapshots. Refresh their authoritative component knowledge
+            // after BOM merge so central PortRole/Direction/PhysicalSide changes appear immediately
+            // when the workspace is reopened, while project placement and wiring remain untouched.
+            await SynchronizeCentralArchiveOnLoadAsync();
         }
         catch (Exception exception)
         {

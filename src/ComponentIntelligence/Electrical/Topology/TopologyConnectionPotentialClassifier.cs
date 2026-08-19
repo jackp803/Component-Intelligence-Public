@@ -30,7 +30,8 @@ public static class TopologyConnectionPotentialClassifier
         var netClass = ClassifyGroundReference(net?.GroundReferenceType ?? GroundReferenceType.None);
         if (netClass != TopologyPotentialClass.Unknown) return netClass;
 
-        var pins = ResolveEndpointPins(project, connection).ToArray();
+        var connectedEndpoints = TopologyElectricalContinuity.ConnectedEndpoints(project, connection);
+        var pins = ResolveEndpointPins(project, connectedEndpoints).ToArray();
         var structuredValues = pins.Select(ClassifyPin)
             .Where(value => value != TopologyPotentialClass.Unknown)
             .Distinct()
@@ -39,19 +40,27 @@ public static class TopologyConnectionPotentialClassifier
             return structuredValues.Length == 1 ? structuredValues[0] : TopologyPotentialClass.Unknown;
 
         var labels = new List<string?> { net?.Label, net?.NetId };
-        labels.AddRange(ResolveEndpointLabels(project, connection.FromEndpointId));
-        labels.AddRange(ResolveEndpointLabels(project, connection.ToEndpointId));
+        foreach (var connected in project.Connections.Where(item =>
+                     connectedEndpoints.Contains(item.FromEndpointId) &&
+                     connectedEndpoints.Contains(item.ToEndpointId) &&
+                     !string.IsNullOrWhiteSpace(item.NetId)))
+        {
+            var connectedNet = project.Nets.FirstOrDefault(item =>
+                string.Equals(item.NetId, connected.NetId, StringComparison.OrdinalIgnoreCase));
+            labels.Add(connectedNet?.Label);
+            labels.Add(connectedNet?.NetId);
+        }
+        foreach (var endpointId in connectedEndpoints)
+            labels.AddRange(ResolveEndpointLabels(project, endpointId));
         return ResolveConsensus(labels.Select(ClassifyLabel));
     }
 
     private static IEnumerable<ComponentPin> ResolveEndpointPins(
         ElectricalProject project,
-        ElectricalConnection connection) =>
+        IReadOnlySet<string> endpointIds) =>
         project.Components.SelectMany(component => component.Ports)
             .SelectMany(port => port.Pins)
-            .Where(pin =>
-                string.Equals(pin.PinId, connection.FromEndpointId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(pin.PinId, connection.ToEndpointId, StringComparison.OrdinalIgnoreCase));
+            .Where(pin => endpointIds.Contains(pin.PinId));
 
     private static IEnumerable<string?> ResolveEndpointLabels(ElectricalProject project, string endpointId)
     {
@@ -119,6 +128,8 @@ public static class TopologyConnectionPotentialClassifier
             return TopologyPotentialClass.ProtectiveOrFunctionalEarth;
 
         if (compact is "0V" or "V-" or "-V" or "DC-" ||
+            compact.Contains("RTN", StringComparison.Ordinal) ||
+            compact.Contains("RETURN", StringComparison.Ordinal) ||
             compact.Contains("0V", StringComparison.Ordinal) ||
             compact.Contains("MINUS", StringComparison.Ordinal) ||
             compact.Contains("V-", StringComparison.Ordinal) ||
@@ -126,6 +137,8 @@ public static class TopologyConnectionPotentialClassifier
             return TopologyPotentialClass.NegativeOrReturnDc;
 
         if (compact is "V+" or "+V" or "DC+" ||
+            (compact.StartsWith('+') && compact.EndsWith('V')) ||
+            (compact.EndsWith("V+", StringComparison.Ordinal) && compact.Any(char.IsDigit)) ||
             compact.Contains("PLUS", StringComparison.Ordinal) ||
             compact.Contains("V+", StringComparison.Ordinal) ||
             compact.Contains("+V", StringComparison.Ordinal) ||

@@ -17,6 +17,10 @@ public enum TopologyScreenSide
 /// </summary>
 public static class TopologyPortGeometry
 {
+    public static bool IsEndpointMarkerSize(double width, double height) =>
+        width >= 11.9d && width <= 14.1d &&
+        height >= 11.9d && height <= 14.1d;
+
     public static TopologyPlacementBounds CalculateVisualBounds(TopologyPlacement placement)
     {
         ArgumentNullException.ThrowIfNull(placement);
@@ -165,6 +169,69 @@ public static class TopologyPortGeometry
             0d);
     }
 
+    /// <summary>
+    /// Places an endpoint label inside the component edge. Labels on the left/right edges remain
+    /// horizontal; labels on the top/bottom edges rotate so their long axis points into the
+    /// component. This preserves the endpoint spacing after a 90-degree component rotation instead
+    /// of stacking every label horizontally along the same short edge.
+    /// </summary>
+    public static TopologyEndpointLabelLayout CalculateEndpointLabelLayout(
+        TopologyPortAnchor anchor,
+        double labelWidth,
+        double labelHeight = 13d,
+        double markerGap = 10d)
+    {
+        ArgumentNullException.ThrowIfNull(anchor);
+        if (labelWidth <= 0d) throw new ArgumentOutOfRangeException(nameof(labelWidth));
+        if (labelHeight <= 0d) throw new ArgumentOutOfRangeException(nameof(labelHeight));
+        if (markerGap < 0d) throw new ArgumentOutOfRangeException(nameof(markerGap));
+
+        var isHorizontalEdge = Math.Abs(anchor.OutwardY) > 0.25d;
+        var rotationDegrees = isHorizontalEdge
+            ? anchor.OutwardY < 0d ? 90d : -90d
+            : 0d;
+        var inwardDistanceToCenter = markerGap + labelWidth / 2d;
+        var centerX = anchor.X - anchor.OutwardX * inwardDistanceToCenter;
+        var centerY = anchor.Y - anchor.OutwardY * inwardDistanceToCenter;
+
+        return new TopologyEndpointLabelLayout(
+            centerX - labelWidth / 2d,
+            centerY - labelHeight / 2d,
+            labelWidth,
+            labelHeight,
+            rotationDegrees);
+    }
+
+    public static TopologyEndpointComponentSize CalculateEndpointComponentSize(
+        double baselineWidth,
+        double baselineHeight,
+        int leftEndpointCount,
+        int rightEndpointCount,
+        double leftLabelWidth,
+        double rightLabelWidth,
+        bool hasPinLevelEndpoints,
+        bool compactTerminal)
+    {
+        if (baselineWidth <= 0d) throw new ArgumentOutOfRangeException(nameof(baselineWidth));
+        if (baselineHeight <= 0d) throw new ArgumentOutOfRangeException(nameof(baselineHeight));
+        if (leftEndpointCount < 0) throw new ArgumentOutOfRangeException(nameof(leftEndpointCount));
+        if (rightEndpointCount < 0) throw new ArgumentOutOfRangeException(nameof(rightEndpointCount));
+
+        // Compact terminal markers use a 12 px visual. A 13 px pitch leaves a visible separation
+        // while keeping large terminal strips substantially narrower than ordinary components.
+        var endpointPitch = compactTerminal ? 13d : 22d;
+        var verticalPadding = compactTerminal ? 26d : 52d;
+        var titleLane = compactTerminal ? 56d : 96d;
+        var minimumPinWidth = compactTerminal ? 118d : 180d;
+        var maxSideCount = Math.Max(leftEndpointCount, rightEndpointCount);
+
+        return new TopologyEndpointComponentSize(
+            Math.Max(
+                baselineWidth,
+                Math.Max(hasPinLevelEndpoints ? minimumPinWidth : 0d, leftLabelWidth + rightLabelWidth + titleLane)),
+            Math.Max(baselineHeight, verticalPadding + maxSideCount * endpointPitch));
+    }
+
     private static bool TryDetermineComponentPresentationSide(
         ComponentInstance component,
         ComponentPort port,
@@ -201,8 +268,11 @@ public static class TopologyPortGeometry
 
     private static string? GetCapabilityValue(ComponentPort port, string prefix)
     {
+        // Newer archive knowledge is appended during conservative enrichment. Reading the last
+        // declaration also repairs projects that were saved before authoritative synchronization
+        // learned to replace stale ROLE/DIRECTION metadata.
         var capability = port.Capabilities
-            .FirstOrDefault(value => value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            .LastOrDefault(value => value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
         if (string.IsNullOrWhiteSpace(capability)) return null;
 
         var separator = capability.IndexOf(':');
@@ -290,3 +360,10 @@ public static class TopologyPortGeometry
 
 public sealed record TopologyPortAnchor(double X, double Y, double OutwardX, double OutwardY);
 public sealed record TopologyPlacementBounds(double X, double Y, double Width, double Height);
+public sealed record TopologyEndpointLabelLayout(
+    double X,
+    double Y,
+    double Width,
+    double Height,
+    double RotationDegrees);
+public sealed record TopologyEndpointComponentSize(double Width, double Height);

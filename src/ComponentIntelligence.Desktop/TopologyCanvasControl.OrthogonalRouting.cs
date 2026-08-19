@@ -21,6 +21,9 @@ public partial class TopologyCanvasControl
     private string? _hoveredRouteConnectionId;
     private Border? _dragRouteHandle;
     private string? _dragRouteConnectionId;
+    private Border? _fromEndpointHandle;
+    private Border? _toEndpointHandle;
+    private RouteEndpointHandleTag? _dragEndpointHandle;
 
     /// <summary>
     /// Draws formal topology connections as orthogonal 90-degree polylines. Automatic routes score
@@ -61,7 +64,7 @@ public partial class TopologyCanvasControl
                     new[] { start }.Concat(routedCore).Append(end));
                 route.Points = new PointCollection(points);
                 route.Stroke = ResolveConnectionBrush(connection);
-                route.ToolTip = $"{BuildEndpointTraceLabel(connection.FromEndpointId)} → {BuildEndpointTraceLabel(connection.ToEndpointId)}\nOrthogonal Route（正交折線）\n單擊：選取並顯示拖曳折點\n雙擊：線路設定";
+                route.ToolTip = $"{BuildEndpointTraceLabel(connection.FromEndpointId)} → {BuildEndpointTraceLabel(connection.ToEndpointId)}\nOrthogonal Route（正交折線）\n單擊：選取並顯示折點與兩端改接把手\n雙擊：線路設定";
                 Panel.SetZIndex(route, -20);
                 completedRoutes.Add(points);
             }
@@ -90,7 +93,7 @@ public partial class TopologyCanvasControl
             Tag = connection.ConnectionId,
             StrokeLineJoin = PenLineJoin.Round,
             Cursor = Cursors.Hand,
-            ToolTip = "Orthogonal Route（正交折線）\n單擊：選取並顯示拖曳折點\n雙擊：線路設定"
+            ToolTip = "Orthogonal Route（正交折線）\n單擊：選取並顯示折點與兩端改接把手\n雙擊：線路設定"
         };
         route.MouseLeftButtonDown += OrthogonalRoute_MouseLeftButtonDown;
         route.MouseEnter += OrthogonalRoute_MouseEnter;
@@ -117,7 +120,6 @@ public partial class TopologyCanvasControl
     private void OrthogonalRoute_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is not FrameworkElement element || element.Tag is not string connectionId) return;
-        _selectedRouteConnectionId = connectionId;
         Edge_MouseLeftButtonDown(sender, e);
         if (e.ClickCount == 1)
         {
@@ -134,9 +136,12 @@ public partial class TopologyCanvasControl
         {
             var connectionId = (string)route.Tag;
             var hovered = string.Equals(_hoveredRouteConnectionId, connectionId, StringComparison.OrdinalIgnoreCase);
+            var selected = _selectedTopologyConnectionIds.Contains(connectionId) ||
+                           string.Equals(_selectedRouteConnectionId, connectionId, StringComparison.OrdinalIgnoreCase);
             route.StrokeThickness = hovered
                 ? 5d
-                : string.Equals(_selectedRouteConnectionId, connectionId, StringComparison.OrdinalIgnoreCase) ? 4d : 3d;
+                : selected ? 4d : 3d;
+            route.StrokeDashArray = selected ? new DoubleCollection { 8d, 3d } : null;
             route.Opacity = string.IsNullOrWhiteSpace(_hoveredRouteConnectionId) || hovered ? 1d : 0.18d;
         }
 
@@ -438,14 +443,7 @@ public partial class TopologyCanvasControl
             if (net is not null) return LayerBrush(net.Layer);
         }
 
-        var pinLayer = _project.Components.SelectMany(component => component.Ports)
-            .SelectMany(port => port.Pins)
-            .Where(pin =>
-                string.Equals(pin.PinId, connection.FromEndpointId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(pin.PinId, connection.ToEndpointId, StringComparison.OrdinalIgnoreCase))
-            .Select(pin => pin.Layer)
-            .FirstOrDefault(layer => layer != ElectricalLayer.Unknown);
-        return LayerBrush(pinLayer);
+        return LayerBrush(TopologyElectricalContinuity.ResolveLayer(_project, connection));
     }
 
     private void ApplyConnectionDecorations()
@@ -840,6 +838,136 @@ public partial class TopologyCanvasControl
         Canvas.SetLeft(_dragRouteHandle, Math.Max(0, point.X - 6));
         Canvas.SetTop(_dragRouteHandle, Math.Max(0, point.Y - 6));
         Panel.SetZIndex(_dragRouteHandle, 20_000);
+        UpdateEndpointReconnectHandles(route);
+    }
+
+    private void UpdateEndpointReconnectHandles(Polyline route)
+    {
+        if (route.Tag is not string connectionId || route.Points.Count < 2) return;
+        _fromEndpointHandle = EnsureEndpointReconnectHandle(_fromEndpointHandle, connectionId, reconnectFrom: true);
+        _toEndpointHandle = EnsureEndpointReconnectHandle(_toEndpointHandle, connectionId, reconnectFrom: false);
+        PositionEndpointReconnectHandle(_fromEndpointHandle, route.Points[0]);
+        PositionEndpointReconnectHandle(_toEndpointHandle, route.Points[^1]);
+    }
+
+    private Border EnsureEndpointReconnectHandle(Border? handle, string connectionId, bool reconnectFrom)
+    {
+        if (handle is null || !ReferenceEquals(handle.Parent, Surface))
+        {
+            handle = new Border
+            {
+                Width = 18,
+                Height = 18,
+                CornerRadius = new CornerRadius(9),
+                Background = Brushes.White,
+                BorderBrush = reconnectFrom ? Brushes.Teal : Brushes.MediumVioletRed,
+                BorderThickness = new Thickness(3),
+                Cursor = Cursors.Cross,
+                ToolTip = "拖曳到另一個 Pin / Port，即可改接這一端（線材設定會保留）"
+            };
+            handle.MouseLeftButtonDown += EndpointReconnectHandle_MouseLeftButtonDown;
+            handle.MouseMove += EndpointReconnectHandle_MouseMove;
+            handle.MouseLeftButtonUp += EndpointReconnectHandle_MouseLeftButtonUp;
+            Surface.Children.Add(handle);
+        }
+        handle.Tag = new RouteEndpointHandleTag(connectionId, reconnectFrom);
+        return handle;
+    }
+
+    private static void PositionEndpointReconnectHandle(FrameworkElement handle, Point point)
+    {
+        Canvas.SetLeft(handle, Math.Max(0, point.X - handle.Width / 2));
+        Canvas.SetTop(handle, Math.Max(0, point.Y - handle.Height / 2));
+        Panel.SetZIndex(handle, 20_100);
+    }
+
+    private void EndpointReconnectHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border handle || handle.Tag is not RouteEndpointHandleTag tag) return;
+        _dragEndpointHandle = tag;
+        handle.CaptureMouse();
+        SelectionText.Text = tag.ReconnectFrom ? "正在拖曳線路 A 端" : "正在拖曳線路 B 端";
+        HintText.Text = "把圓形把手放到另一個 Pin / Port 上；放開滑鼠即可改接，Esc 或放在空白處則取消。";
+        e.Handled = true;
+    }
+
+    private void EndpointReconnectHandle_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (_dragEndpointHandle is null || sender is not Border handle || e.LeftButton != MouseButtonState.Pressed) return;
+        PositionEndpointReconnectHandle(handle, e.GetPosition(Surface));
+        e.Handled = true;
+    }
+
+    private void EndpointReconnectHandle_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border handle || _dragEndpointHandle is not RouteEndpointHandleTag drag) return;
+        handle.ReleaseMouseCapture();
+        _dragEndpointHandle = null;
+        var dropPoint = e.GetPosition(Surface);
+        try
+        {
+            if (_project is null || !TryFindReconnectTarget(dropPoint, out var targetSelector, out var targetLabel))
+            {
+                HintText.Text = "未放在有效 Pin / Port 上，線路沒有變更。";
+                EnsureOrthogonalConnectionVisuals();
+                e.Handled = true;
+                return;
+            }
+
+            MutationStarting?.Invoke(this, new TopologyMutationEventArgs(
+                $"Reconnect {(drag.ReconnectFrom ? "A" : "B")} endpoint of {drag.ConnectionId} to {targetSelector}"));
+            var updated = _terminalJunctions.ReconnectEndpoint(
+                _project,
+                drag.ConnectionId,
+                drag.ReconnectFrom,
+                targetSelector);
+            _manualRouteWaypoints.Remove(drag.ConnectionId);
+            SelectionText.Text = $"Line: {updated.FromEndpointId} → {updated.ToEndpointId}";
+            HintText.Text = $"改接完成：{targetLabel}。原線材、線號與其他線路設定均已保留。";
+            Render();
+            ProjectChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(Window.GetWindow(this), exception.Message, "無法改接線路", MessageBoxButton.OK, MessageBoxImage.Information);
+            EnsureOrthogonalConnectionVisuals();
+        }
+        e.Handled = true;
+    }
+
+    private bool TryFindReconnectTarget(Point dropPoint, out string selector, out string label)
+    {
+        selector = string.Empty;
+        label = string.Empty;
+        if (_project is null) return false;
+
+        var candidates = new List<(double Distance, string Selector, string Label)>();
+        foreach (var marker in Surface.Children.OfType<Border>().Where(item => item.Visibility == Visibility.Visible))
+        {
+            if (marker.Tag is not string id) continue;
+            var left = Canvas.GetLeft(marker);
+            var top = Canvas.GetTop(marker);
+            if (double.IsNaN(left) || double.IsNaN(top)) continue;
+            var center = new Point(left + marker.Width / 2, top + marker.Height / 2);
+            var distance = Math.Sqrt(Math.Pow(center.X - dropPoint.X, 2) + Math.Pow(center.Y - dropPoint.Y, 2));
+            if (distance > 28) continue;
+
+            if (IsEndpointMarkerVisual(marker) && _endpointConnectionService.IsKnownEndpoint(_project, id))
+                candidates.Add((distance, id, DescribeEndpoint(id)));
+            else if (Math.Abs(marker.Width - 16) < 0.1 && Math.Abs(marker.Height - 16) < 0.1)
+            {
+                var block = _project.TerminalBlocks.FirstOrDefault(item =>
+                    string.Equals(item.TerminalBlockId, id, StringComparison.OrdinalIgnoreCase));
+                if (block is not null)
+                    candidates.Add((distance, TopologyTerminalJunctionService.Selector(id), $"{block.ReferenceDesignator} Terminal"));
+            }
+        }
+
+        var nearest = candidates.OrderBy(item => item.Distance).FirstOrDefault();
+        if (nearest.Selector is null) return false;
+        selector = nearest.Selector;
+        label = nearest.Label;
+        return true;
     }
 
     private void RouteHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -875,5 +1003,28 @@ public partial class TopologyCanvasControl
             Surface.Children.Remove(_dragRouteHandle);
         _dragRouteHandle = null;
         _dragRouteConnectionId = null;
+        if (_fromEndpointHandle is not null && ReferenceEquals(_fromEndpointHandle.Parent, Surface))
+            Surface.Children.Remove(_fromEndpointHandle);
+        if (_toEndpointHandle is not null && ReferenceEquals(_toEndpointHandle.Parent, Surface))
+            Surface.Children.Remove(_toEndpointHandle);
+        _fromEndpointHandle = null;
+        _toEndpointHandle = null;
+        _dragEndpointHandle = null;
     }
+
+    private void SyncSelectedRouteHandleVisibility()
+    {
+        var route = string.IsNullOrWhiteSpace(_selectedRouteConnectionId)
+            ? null
+            : Surface.Children.OfType<Polyline>().FirstOrDefault(polyline =>
+                string.Equals(polyline.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
+                polyline.Tag is string id &&
+                string.Equals(id, _selectedRouteConnectionId, StringComparison.OrdinalIgnoreCase));
+        var visibility = route?.Visibility ?? Visibility.Collapsed;
+        if (_dragRouteHandle is not null) _dragRouteHandle.Visibility = visibility;
+        if (_fromEndpointHandle is not null) _fromEndpointHandle.Visibility = visibility;
+        if (_toEndpointHandle is not null) _toEndpointHandle.Visibility = visibility;
+    }
+
+    private sealed record RouteEndpointHandleTag(string ConnectionId, bool ReconnectFrom);
 }

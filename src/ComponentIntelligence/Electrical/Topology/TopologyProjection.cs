@@ -516,26 +516,15 @@ public sealed class TopologyProjection
 
     private static ElectricalLayer? ResolveLayerFromEndpoints(ElectricalProject project, ElectricalConnection connection)
     {
+        var continuityLayer = TopologyElectricalContinuity.ResolveLayer(project, connection);
+        if (continuityLayer != ElectricalLayer.Unknown) return continuityLayer;
+
         foreach (var component in project.Components)
         foreach (var port in component.Ports)
-        {
-            if (string.Equals(port.PortId, connection.FromEndpointId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(port.PortId, connection.ToEndpointId, StringComparison.OrdinalIgnoreCase))
-            {
-                if (!string.IsNullOrWhiteSpace(port.Protocol)) return ElectricalLayer.Communication;
-                var portLayer = port.Pins.Select(pin => pin.Layer).FirstOrDefault(layer => layer != ElectricalLayer.Unknown);
-                if (portLayer != ElectricalLayer.Unknown) return portLayer;
-            }
-
-            foreach (var pin in port.Pins)
-            {
-                if (string.Equals(pin.PinId, connection.FromEndpointId, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(pin.PinId, connection.ToEndpointId, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (pin.Layer != ElectricalLayer.Unknown) return pin.Layer;
-                }
-            }
-        }
+            if ((string.Equals(port.PortId, connection.FromEndpointId, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(port.PortId, connection.ToEndpointId, StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrWhiteSpace(port.Protocol))
+                return ElectricalLayer.Communication;
         return null;
     }
 

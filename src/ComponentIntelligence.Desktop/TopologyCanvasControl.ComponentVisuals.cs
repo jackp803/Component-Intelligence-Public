@@ -69,7 +69,7 @@ public partial class TopologyCanvasControl
     {
         if (_project is null || _interactionMode != InteractionMode.Select || e.ClickCount < 2) return;
         var border = FindAncestor<Border>(e.OriginalSource as DependencyObject);
-        if (border?.Tag is not string portId || Math.Abs(border.Width - 14d) > 0.01 || Math.Abs(border.Height - 14d) > 0.01) return;
+        if (border?.Tag is not string portId || !IsEndpointMarkerVisual(border)) return;
         var port = _project.Components.SelectMany(component => component.Ports)
             .FirstOrDefault(candidate => string.Equals(candidate.PortId, portId, StringComparison.OrdinalIgnoreCase));
         if (port is null) return;

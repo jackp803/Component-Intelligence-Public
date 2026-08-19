@@ -89,6 +89,55 @@ public sealed class TopologyTerminalJunctionTests
             string.Equals(branch.ToEndpointId, "cmp-c:pwr:pin:plus", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void ReconnectEndpointPreservesCableSettingsAndClearsOldRoute()
+    {
+        var project = ProjectWithThreePorts();
+        var editor = new TopologyConnectionEditor();
+        var connection = editor.ConnectPorts(project, "cmp-a:pwr", "cmp-b:pwr", "net-24v");
+        connection.CableInstanceId = "cable-1";
+        connection.CableCoreId = "core-1";
+        connection.ConductorAreaMm2 = 0.75;
+        project.Cables.Add(new CableInstance
+        {
+            CableInstanceId = "cable-1",
+            CableDefinitionId = "IFM-EVC014",
+            DisplayName = "IFM EVC014",
+            CoreAssignments =
+            {
+                new CoreAssignment
+                {
+                    CoreId = "core-1",
+                    FromEndpointId = "cmp-a:pwr",
+                    ToEndpointId = "cmp-b:pwr",
+                    Status = "ASSIGNED"
+                }
+            }
+        });
+        project.TopologyRoutes.Add(new TopologyRouteGeometry
+        {
+            ConnectionId = connection.ConnectionId,
+            ManualWaypointX = 123,
+            ManualWaypointY = 456
+        });
+
+        var updated = new TopologyTerminalJunctionService().ReconnectEndpoint(
+            project,
+            connection.ConnectionId,
+            reconnectFrom: false,
+            "cmp-c:pwr");
+
+        Assert.Equal(connection.ConnectionId, updated.ConnectionId);
+        Assert.Equal("cmp-a:pwr", updated.FromEndpointId);
+        Assert.Equal("cmp-c:pwr", updated.ToEndpointId);
+        Assert.Equal("cable-1", updated.CableInstanceId);
+        Assert.Equal("core-1", updated.CableCoreId);
+        Assert.Equal(0.75, updated.ConductorAreaMm2);
+        Assert.Empty(project.TopologyRoutes);
+        var assignment = Assert.Single(project.Cables.Single().CoreAssignments);
+        Assert.Equal("cmp-c:pwr", assignment.ToEndpointId);
+    }
+
     private static ElectricalProject ProjectWithThreePorts()
     {
         var project = new ElectricalProject { ProjectId = "junction-test" };

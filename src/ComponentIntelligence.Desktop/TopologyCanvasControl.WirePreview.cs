@@ -34,6 +34,13 @@ public partial class TopologyCanvasControl
 
     private void TopologyCanvas_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (_interactionMode == InteractionMode.Select && e.Key is Key.Delete or Key.Back)
+        {
+            DeleteSelectedTopologyItems();
+            e.Handled = true;
+            return;
+        }
+
         if (_interactionMode != InteractionMode.Wire || e.Key != Key.Escape) return;
 
         CancelPendingWire("已取消拉線。左鍵點 Connector / Pin / 端子圓點可重新開始。", render: true);
@@ -144,9 +151,8 @@ public partial class TopologyCanvasControl
 
     private bool TryFindEndpointMarkerCenter(string endpointId, out Point center)
     {
-        // Pin-level endpoint markers use the same 14x14 visual contract as Port markers, but their Tag
-        // is the exact PinId. Looking for the requested endpoint first therefore anchors a Pin wire to
-        // that Pin instead of falling back to the parent Port.
+        // Pin-level endpoint markers use the compact 12-14 px endpoint visual contract. Their Tag is
+        // the exact PinId, so checking it first anchors the wire to that Pin rather than its parent Port.
         if (TryFindPortMarkerCenter(endpointId, out center)) return true;
         if (_project is null)
         {
@@ -182,9 +188,7 @@ public partial class TopologyCanvasControl
             if (element.Tag is not string tag || !string.Equals(tag, endpointId, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            // Port and Pin endpoint markers are the small 14 x 14 Border elements.
-            if (element is not Border || Math.Abs(element.Width - 14) > 0.1 || Math.Abs(element.Height - 14) > 0.1)
-                continue;
+            if (!IsEndpointMarkerVisual(element)) continue;
             if (element.Visibility != Visibility.Visible) continue;
 
             var left = Canvas.GetLeft(element);

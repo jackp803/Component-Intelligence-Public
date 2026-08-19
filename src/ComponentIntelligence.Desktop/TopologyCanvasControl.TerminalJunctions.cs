@@ -204,7 +204,7 @@ public partial class TopologyCanvasControl
         while (current is not null)
         {
             if (current is Border border && border.Tag is string tag &&
-                Math.Abs(border.Width - 14) < 0.1 && Math.Abs(border.Height - 14) < 0.1)
+                IsEndpointMarkerVisual(border))
             {
                 portId = tag;
                 return true;

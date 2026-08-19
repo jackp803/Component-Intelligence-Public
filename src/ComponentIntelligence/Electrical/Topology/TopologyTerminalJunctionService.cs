@@ -90,6 +90,103 @@ public sealed class TopologyTerminalJunctionService
         return connection;
     }
 
+    /// <summary>
+    /// Moves one end of an existing wire to another visible topology endpoint.  The connection
+    /// identity and cable assignment are preserved; only the selected endpoint changes.  Saved
+    /// route geometry is cleared so the canvas can calculate a fresh orthogonal route.
+    /// </summary>
+    public ElectricalConnection ReconnectEndpoint(
+        ElectricalProject project,
+        string connectionId,
+        bool reconnectFrom,
+        string targetSelector)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetSelector);
+
+        var index = project.Connections.FindIndex(item =>
+            string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase));
+        if (index < 0) throw new InvalidOperationException($"Connection '{connectionId}' does not exist.");
+        var original = project.Connections[index];
+        var oldEndpointId = reconnectFrom ? original.FromEndpointId : original.ToEndpointId;
+        var fixedEndpointId = reconnectFrom ? original.ToEndpointId : original.FromEndpointId;
+        var targetEndpointId = ResolveReconnectTarget(project, original, targetSelector, oldEndpointId);
+
+        if (string.Equals(targetEndpointId, fixedEndpointId, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("A wire cannot connect both ends to the same endpoint.");
+        if (string.Equals(targetEndpointId, oldEndpointId, StringComparison.OrdinalIgnoreCase))
+            return original;
+        if (project.Connections.Any(item =>
+                !string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase) &&
+                ((string.Equals(item.FromEndpointId, targetEndpointId, StringComparison.OrdinalIgnoreCase) &&
+                  string.Equals(item.ToEndpointId, fixedEndpointId, StringComparison.OrdinalIgnoreCase)) ||
+                 (string.Equals(item.ToEndpointId, targetEndpointId, StringComparison.OrdinalIgnoreCase) &&
+                  string.Equals(item.FromEndpointId, fixedEndpointId, StringComparison.OrdinalIgnoreCase)))))
+            throw new InvalidOperationException("These endpoints are already connected.");
+
+        var replacement = new ElectricalConnection
+        {
+            ConnectionId = original.ConnectionId,
+            FromEndpointId = reconnectFrom ? targetEndpointId : original.FromEndpointId,
+            ToEndpointId = reconnectFrom ? original.ToEndpointId : targetEndpointId,
+            NetId = original.NetId,
+            Kind = original.Kind,
+            CableInstanceId = original.CableInstanceId,
+            CableCoreId = original.CableCoreId,
+            ConductorAreaMm2 = original.ConductorAreaMm2,
+            ProvidedLengthMm = original.ProvidedLengthMm,
+            LengthSource = original.LengthSource,
+            MaxVoltageDropPercent = original.MaxVoltageDropPercent,
+            ConductorMaterial = original.ConductorMaterial,
+            InstallationMethod = original.InstallationMethod
+        };
+        project.Connections[index] = replacement;
+        project.TopologyRoutes.RemoveAll(route =>
+            string.Equals(route.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrWhiteSpace(original.CableInstanceId))
+        {
+            var cable = project.Cables.FirstOrDefault(item =>
+                string.Equals(item.CableInstanceId, original.CableInstanceId, StringComparison.OrdinalIgnoreCase));
+            if (cable is not null)
+            {
+                foreach (var assignment in cable.CoreAssignments)
+                {
+                    if (string.Equals(assignment.FromEndpointId, oldEndpointId, StringComparison.OrdinalIgnoreCase))
+                        assignment.FromEndpointId = targetEndpointId;
+                    if (string.Equals(assignment.ToEndpointId, oldEndpointId, StringComparison.OrdinalIgnoreCase))
+                        assignment.ToEndpointId = targetEndpointId;
+                }
+            }
+        }
+        return replacement;
+    }
+
+    private static string ResolveReconnectTarget(
+        ElectricalProject project,
+        ElectricalConnection original,
+        string selector,
+        string oldEndpointId)
+    {
+        if (TryGetTerminalBlockId(selector, out var blockId))
+        {
+            var block = FindTerminalBlock(project, blockId)
+                ?? throw new InvalidOperationException($"Unknown terminal junction '{blockId}'.");
+            var existingPointIds = block.Positions.SelectMany(position => position.Levels)
+                .SelectMany(level => level.ConnectionPoints)
+                .Select(point => point.ConnectionPointId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (existingPointIds.Contains(oldEndpointId)) return oldEndpointId;
+            return AllocateConnectionPoint(project, block);
+        }
+
+        var endpoint = FindComponentEndpoint(project, selector)
+            ?? throw new InvalidOperationException($"Unknown endpoint '{selector}'.");
+        EnsureEndpointCapacity(project, endpoint, original.ConnectionId);
+        return endpoint.EndpointId;
+    }
+
     private static ComponentEndpoint? FindComponentEndpoint(ElectricalProject project, string endpointId)
     {
         foreach (var port in project.Components.SelectMany(component => component.Ports))
@@ -108,12 +205,16 @@ public sealed class TopologyTerminalJunctionService
         project.TerminalBlocks.FirstOrDefault(block =>
             string.Equals(block.TerminalBlockId, terminalBlockId, StringComparison.OrdinalIgnoreCase));
 
-    private static void EnsureEndpointCapacity(ElectricalProject project, ComponentEndpoint endpoint)
+    private static void EnsureEndpointCapacity(
+        ElectricalProject project,
+        ComponentEndpoint endpoint,
+        string? ignoredConnectionId = null)
     {
         if (endpoint.MaxConnections is not > 0) return;
         var used = project.Connections.Count(connection =>
-            string.Equals(connection.FromEndpointId, endpoint.EndpointId, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(connection.ToEndpointId, endpoint.EndpointId, StringComparison.OrdinalIgnoreCase));
+            !string.Equals(connection.ConnectionId, ignoredConnectionId, StringComparison.OrdinalIgnoreCase) &&
+            (string.Equals(connection.FromEndpointId, endpoint.EndpointId, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(connection.ToEndpointId, endpoint.EndpointId, StringComparison.OrdinalIgnoreCase)));
         if (used >= endpoint.MaxConnections.Value)
             throw new InvalidOperationException(
                 $"Endpoint '{endpoint.EndpointId}' already reached its maximum connection count ({endpoint.MaxConnections}).");

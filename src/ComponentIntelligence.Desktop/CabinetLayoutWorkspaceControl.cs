@@ -544,18 +544,21 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         var items = new List<PaletteItem>();
         items.AddRange(project.Components
             .Where(component => component.ResponsibilityScope is not (ResponsibilityScope.OutOfScope or ResponsibilityScope.NotRequired))
+            .Where(component => component.Placement is null)
             .Select(component => new PaletteItem(
                 LayoutObjectKind.Component,
                 component.ComponentInstanceId,
                 component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId,
                 DescribeSize(component.Footprint),
                 component.Placement?.Surface ?? MountingSurface.Unknown)));
-        items.AddRange(project.TerminalBlocks.Select(block => new PaletteItem(
-            LayoutObjectKind.TerminalBlock,
-            block.TerminalBlockId,
-            block.ReferenceDesignator,
-            DescribeSize(block.Footprint),
-            block.Placement?.Surface ?? MountingSurface.Unknown)));
+        items.AddRange(project.TerminalBlocks
+            .Where(block => block.Placement is null)
+            .Select(block => new PaletteItem(
+                LayoutObjectKind.TerminalBlock,
+                block.TerminalBlockId,
+                block.ReferenceDesignator,
+                DescribeSize(block.Footprint),
+                block.Placement?.Surface ?? MountingSurface.Unknown)));
         _palette.ItemsSource = items.OrderBy(item => item.Label, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 

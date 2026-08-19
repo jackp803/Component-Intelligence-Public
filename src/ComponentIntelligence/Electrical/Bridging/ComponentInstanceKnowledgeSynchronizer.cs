@@ -12,6 +12,16 @@ namespace ComponentIntelligence.Electrical.Bridging;
 /// </summary>
 public sealed class ComponentInstanceKnowledgeSynchronizer
 {
+    private static readonly string[] ArchiveCapabilityPrefixes =
+    [
+        "SOURCE_PORT_ID:",
+        "ROLE:",
+        "TOPOLOGY_ENDPOINT_MODE:",
+        "DIRECTION:",
+        "VOLTAGE_DOMAIN:",
+        "ALLOWED:"
+    ];
+
     private readonly ComponentProjectBridge _bridge = new();
 
     public void Apply(ComponentInstance target, ComponentIR source, bool overwriteExistingKnowledge = false)
@@ -59,6 +69,13 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
                 existingPort.MaxConnections ??= incomingPort.MaxConnections;
                 existingPort.PhysicalLocation ??= incomingPort.PhysicalLocation;
             }
+            if (overwriteExistingKnowledge)
+            {
+                existingPort.Capabilities.RemoveAll(capability =>
+                    ArchiveCapabilityPrefixes.Any(prefix =>
+                        capability.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)));
+            }
+
             foreach (var capability in incomingPort.Capabilities)
                 if (!existingPort.Capabilities.Contains(capability, StringComparer.OrdinalIgnoreCase))
                     existingPort.Capabilities.Add(capability);

@@ -45,6 +45,9 @@ public partial class TopologyCanvasControl : UserControl
     {
         _project = project ?? throw new ArgumentNullException(nameof(project));
         _pendingWireEndpointId = null;
+        _selectedTopologyObjectIds.Clear();
+        _selectedTopologyConnectionIds.Clear();
+        _selectedRouteConnectionId = null;
         BindRouteIsolationProject();
         ResetCanvasBoundsForProject();
         Render();
@@ -300,7 +303,11 @@ public partial class TopologyCanvasControl : UserControl
         SelectionText.Text = $"Line: {connection.FromEndpointId} → {connection.ToEndpointId}";
         if (e.ClickCount < 2)
         {
-            HintText.Text = "已選取線路。雙擊這條線可插入 Connector / Terminal、指定 Cable Segment，或刪除連線。";
+            SelectTopologyConnection(connectionId);
+            SelectionText.Text = _selectedTopologyConnectionIds.Count <= 1
+                ? $"Line: {connection.FromEndpointId} → {connection.ToEndpointId}"
+                : $"已選取 {_selectedTopologyConnectionIds.Count} 條線";
+            HintText.Text = "已選取線路。拖曳兩端圓形把手可改接 Pin / Port；中央方形把手可調整折線；Del 刪除；雙擊可設定線材。";
             e.Handled = true;
             return;
         }
@@ -328,6 +335,10 @@ public partial class TopologyCanvasControl : UserControl
                 case InlineConnectionOperation.Connector:
                     _connectionEditor.InsertInlineConnector(_project, connectionId, dialog.ConnectorOptions);
                     HintText.Text = "已插入 Connector（接頭），原本線路已拆成兩段；A/B 原端點資料保持不變。";
+                    break;
+                case InlineConnectionOperation.LooseWireMatedConnectorPair:
+                    _connectionEditor.InsertLooseWireMatedConnectorPair(_project, connectionId, dialog.ConnectorOptions);
+                    HintText.Text = "已建立：散線 → M12母 ↔ M12公 → 散線。中間為正式 Direct Mating；雙擊兩側線段可分別設定 Pin Mapping 與線材。";
                     break;
                 case InlineConnectionOperation.Terminal:
                     _connectionEditor.InsertInlineTerminal(_project, connectionId, dialog.TerminalOptions);
@@ -357,7 +368,7 @@ public partial class TopologyCanvasControl : UserControl
     {
         _interactionMode = InteractionMode.Select;
         _pendingWireEndpointId = null;
-        HintText.Text = "選取模式：在空白處拖曳可框選多個元件；拖曳任一已選元件可整組移動。雙擊元件可補資料；右鍵元件旋轉；雙擊線路進入線路編輯。";
+        HintText.Text = "選取模式：框選元件與線路；按 Del 刪除線路，並將一般元件移回左側清單（端子台保留）。拖曳任一已選元件可整組移動。";
         UpdateModeButtons();
         Render();
     }
@@ -382,7 +393,7 @@ public partial class TopologyCanvasControl : UserControl
     private void ShowHelp_Click(object sender, RoutedEventArgs e)
     {
         HintBanner.Visibility = Visibility.Visible;
-        HintText.Text = "快速操作：① Ctrl + 滾輪縮放畫布；元件拖到任一邊界會自動增加空間。② 拖曳空白處框選元件，拖曳高亮元件可整組移動。③ 按「拉線」，點 A Endpoint 再點 B Endpoint。④ 按「自動排版」重排元件與配線；可 Undo。⑤ 右鍵元件旋轉。⑥ 匯出 PDF。";
+        HintText.Text = "快速操作：① Ctrl + 滾輪縮放。② 框選後按 Del：刪線並將一般元件移回清單，端子台保留。③ 拉線後雙擊線路，可插入「散線→M12母↔M12公→散線」。④ 自動排版可 Undo。⑤ 右鍵元件旋轉。⑥ 匯出 PDF。";
     }
 
     private void DismissHint_Click(object sender, RoutedEventArgs e) => HintBanner.Visibility = Visibility.Collapsed;

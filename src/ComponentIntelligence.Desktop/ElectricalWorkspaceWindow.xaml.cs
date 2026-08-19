@@ -144,6 +144,7 @@ public partial class ElectricalWorkspaceWindow : Window
             else
             {
                 WorkspaceStatusText.Text = $"已載入 Project {_project.ProjectId}。";
+                await SynchronizeCentralArchiveOnLoadAsync();
             }
         }
         catch (Exception exception)

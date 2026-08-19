@@ -57,6 +57,44 @@ public partial class TopologyCanvasControl
         Surface.Height = Math.Max(Surface.Height, Math.Max(MinimumCanvasHeight, requiredHeight));
     }
 
+    private Point FindAvailablePointInVisibleTopologyViewport()
+    {
+        const double nodeWidth = 150d;
+        const double nodeHeight = 76d;
+        const double margin = 36d;
+        const double columnStep = 190d;
+        const double rowStep = 116d;
+
+        var zoom = _canvasZoom > 0d && double.IsFinite(_canvasZoom) ? _canvasZoom : 1d;
+        var viewportWidth = TopologyScrollViewer.ViewportWidth > 0d
+            ? TopologyScrollViewer.ViewportWidth / zoom
+            : Math.Max(600d, ActualWidth / zoom);
+        var viewportHeight = TopologyScrollViewer.ViewportHeight > 0d
+            ? TopologyScrollViewer.ViewportHeight / zoom
+            : Math.Max(400d, ActualHeight / zoom);
+        var left = Math.Max(0d, TopologyScrollViewer.HorizontalOffset / zoom);
+        var top = Math.Max(0d, TopologyScrollViewer.VerticalOffset / zoom);
+        var maxX = Math.Max(left + margin, left + viewportWidth - nodeWidth - margin);
+        var maxY = Math.Max(top + margin, top + viewportHeight - nodeHeight - margin);
+
+        for (var y = top + margin; y <= maxY + 0.1d; y += rowStep)
+        for (var x = left + margin; x <= maxX + 0.1d; x += columnStep)
+        {
+            var candidate = new Rect(x, y, nodeWidth, nodeHeight);
+            var overlaps = _project?.TopologyPlacements.Any(placement =>
+                candidate.IntersectsWith(new Rect(
+                    placement.X - 16d,
+                    placement.Y - 16d,
+                    placement.Width + 32d,
+                    placement.Height + 32d))) == true;
+            if (!overlaps) return new Point(x, y);
+        }
+
+        return new Point(
+            Math.Clamp(left + viewportWidth / 2d - nodeWidth / 2d, left, maxX),
+            Math.Clamp(top + viewportHeight / 2d - nodeHeight / 2d, top, maxY));
+    }
+
     private Point ExpandCanvasForBounds(double left, double top, double right, double bottom)
     {
         if (_project is null) return new Point();

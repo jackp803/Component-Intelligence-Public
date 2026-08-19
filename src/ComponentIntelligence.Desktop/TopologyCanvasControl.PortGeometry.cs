@@ -35,8 +35,7 @@ public partial class TopologyCanvasControl
                     var marker = Surface.Children.OfType<Border>().FirstOrDefault(element =>
                         element.Tag is string tag &&
                         string.Equals(tag, port.PortId, StringComparison.OrdinalIgnoreCase) &&
-                        Math.Abs(element.Width - 14d) < 0.1 &&
-                        Math.Abs(element.Height - 14d) < 0.1);
+                        IsEndpointMarkerVisual(element));
                     if (marker is null) continue;
 
                     var anchor = TopologyPortGeometry.CalculateRotatedSide(

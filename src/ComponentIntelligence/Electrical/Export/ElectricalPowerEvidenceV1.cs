@@ -108,6 +108,18 @@ public sealed record ElectricalPowerEvidenceBlocker
 
 public static class ElectricalPowerEvidenceV1Builder
 {
+    private sealed record ResolvedConversionEndpoint(
+        string SourceKind,
+        string SourceId,
+        string RuntimeEndpointId)
+    {
+        public string SourceReference => $"{SourceKind}:{SourceId}";
+    }
+
+    private sealed record ConversionSideResolution(
+        IReadOnlyList<ResolvedConversionEndpoint> Mappings,
+        bool Blocked);
+
     public static ElectricalPowerEvidenceV1Contract Build(ElectricalProject project)
     {
         ArgumentNullException.ThrowIfNull(project);
@@ -244,10 +256,12 @@ public static class ElectricalPowerEvidenceV1Builder
                     MissingFields = missing.OrderBy(item => item, StringComparer.Ordinal).ToArray()
                 });
 
-            var inputMapping = ResolveConversionSideEndpoints(
+            var inputResolution = ResolveConversionSideEndpoints(
                 project, component, subjectId, "INPUT", inputPorts, inputPins, blockers);
-            var outputMapping = ResolveConversionSideEndpoints(
+            var outputResolution = ResolveConversionSideEndpoints(
                 project, component, subjectId, "OUTPUT", outputPorts, outputPins, blockers);
+            var (inputEndpointIds, outputEndpointIds) = ApplyRuntimeEndpointInjectivity(
+                subjectId, inputResolution, outputResolution, blockers);
 
             var conversion = new ElectricalPowerEvidenceConversion
             {
@@ -259,8 +273,8 @@ public static class ElectricalPowerEvidenceV1Builder
                 InputSourcePinIds = inputPins,
                 OutputSourcePortIds = outputPorts,
                 OutputSourcePinIds = outputPins,
-                InputEndpointIds = inputMapping,
-                OutputEndpointIds = outputMapping,
+                InputEndpointIds = inputEndpointIds,
+                OutputEndpointIds = outputEndpointIds,
                 EvidenceStatus = missing.Count == 0 ? "Confirmed" : "Unknown",
                 BlockingReason = missing.Count == 0 ? null : "POWER_CONVERSION_FIELDS_REQUIRED",
                 Provenance = provenance
@@ -278,7 +292,7 @@ public static class ElectricalPowerEvidenceV1Builder
         return result.OrderBy(ConversionCanonicalKey, StringComparer.Ordinal).ToArray();
     }
 
-    private static IReadOnlyList<string> ResolveConversionSideEndpoints(
+    private static ConversionSideResolution ResolveConversionSideEndpoints(
         ElectricalProject project,
         ComponentInstance component,
         string subjectId,
@@ -293,22 +307,20 @@ public static class ElectricalPowerEvidenceV1Builder
                 $"POWER_CONVERSION_{side}_SOURCE_REFERENCE_REQUIRED",
                 subjectId,
                 side == "INPUT" ? "inputSourcePortIds|inputSourcePinIds" : "outputSourcePortIds|outputSourcePinIds"));
-            return [];
+            return new ConversionSideResolution([], true);
         }
 
-        var resolved = new List<string>();
+        var resolved = new List<ResolvedConversionEndpoint>();
         var blocked = false;
         foreach (var sourcePortId in sourcePortIds)
         {
             var matches = component.Ports
                 .Where(port => string.Equals(ExplicitId(port.SourcePortId), sourcePortId, StringComparison.Ordinal))
-                .Select(port => port.PortId)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(value => value, StringComparer.Ordinal)
+                .Distinct(ReferenceEqualityComparer.Instance)
                 .ToArray();
             if (matches.Length == 1)
             {
-                resolved.Add(matches[0]);
+                resolved.Add(new ResolvedConversionEndpoint("Port", sourcePortId, matches[0].PortId));
                 continue;
             }
 
@@ -336,13 +348,11 @@ public static class ElectricalPowerEvidenceV1Builder
             var matches = component.Ports
                 .SelectMany(port => port.Pins)
                 .Where(pin => string.Equals(ExplicitId(pin.SourcePinId), sourcePinId, StringComparison.Ordinal))
-                .Select(pin => pin.PinId)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(value => value, StringComparer.Ordinal)
+                .Distinct(ReferenceEqualityComparer.Instance)
                 .ToArray();
             if (matches.Length == 1)
             {
-                resolved.Add(matches[0]);
+                resolved.Add(new ResolvedConversionEndpoint("Pin", sourcePinId, matches[0].PinId));
                 continue;
             }
 
@@ -365,7 +375,64 @@ public static class ElectricalPowerEvidenceV1Builder
                 sourcePinId));
         }
 
-        return blocked ? [] : NormalizeIds(resolved);
+        return new ConversionSideResolution(
+            resolved.OrderBy(item => item.SourceKind, StringComparer.Ordinal)
+                .ThenBy(item => item.SourceId, StringComparer.Ordinal)
+                .ThenBy(item => item.RuntimeEndpointId, StringComparer.Ordinal)
+                .ToArray(),
+            blocked);
+    }
+
+    private static (IReadOnlyList<string> InputEndpointIds, IReadOnlyList<string> OutputEndpointIds)
+        ApplyRuntimeEndpointInjectivity(
+            string subjectId,
+            ConversionSideResolution input,
+            ConversionSideResolution output,
+            ICollection<ElectricalPowerEvidenceBlocker> blockers)
+    {
+        var inputCollision = false;
+        var outputCollision = false;
+        var allMappings = input.Mappings.Select(item => (Side: "INPUT", Mapping: item))
+            .Concat(output.Mappings.Select(item => (Side: "OUTPUT", Mapping: item)))
+            .OrderBy(item => item.Mapping.RuntimeEndpointId, StringComparer.Ordinal)
+            .ThenBy(item => item.Side, StringComparer.Ordinal)
+            .ThenBy(item => item.Mapping.SourceReference, StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (var group in allMappings.GroupBy(item => item.Mapping.RuntimeEndpointId, StringComparer.Ordinal)
+                     .OrderBy(group => group.Key, StringComparer.Ordinal))
+        {
+            var sourceRefs = group.Select(item => item.Mapping.SourceReference)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToArray();
+            if (sourceRefs.Length <= 1) continue;
+
+            var missingFields = new[] { $"runtimeEndpointId:{group.Key}" }
+                .Concat(sourceRefs)
+                .ToArray();
+            var affectedSides = group.Select(item => item.Side)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToArray();
+            foreach (var side in affectedSides)
+            {
+                blockers.Add(Blocker(
+                    $"POWER_CONVERSION_{side}_RUNTIME_ENDPOINT_ID_COLLISION",
+                    subjectId,
+                    missingFields));
+                if (side == "INPUT") inputCollision = true;
+                if (side == "OUTPUT") outputCollision = true;
+            }
+        }
+
+        return (
+            input.Blocked || inputCollision
+                ? []
+                : NormalizeIds(input.Mappings.Select(item => item.RuntimeEndpointId)),
+            output.Blocked || outputCollision
+                ? []
+                : NormalizeIds(output.Mappings.Select(item => item.RuntimeEndpointId)));
     }
 
     private static IReadOnlyList<ElectricalPowerEvidenceConversion> ResolveConversionIdentities(

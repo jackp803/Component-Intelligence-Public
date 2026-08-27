@@ -37,7 +37,7 @@ public sealed class PowerEndpointCoverageAnalyzerTests
     }
 
     [Fact]
-    public void Multilevel_conversion_preserves_domain_semantics_and_covers_each_admitted_domain_side()
+    public void Multilevel_conversion_preserves_domain_semantics_but_blocks_physical_output_coverage_without_endpoint_evidence()
     {
         var graph = Graph(
             Evidence(
@@ -55,10 +55,17 @@ public sealed class PowerEndpointCoverageAnalyzerTests
 
         Assert.Equal(PowerTopologyAnalysisStatus.Accepted, adapter.Analysis!.Status);
         Assert.Equal(["X", "Y"], adapter.Analysis.ConversionTopologicalOrder);
-        Assert.Equal(PowerEndpointCoverageStatus.Accepted, result.Status);
+        Assert.Equal(PowerEndpointCoverageStatus.Blocked, result.Status);
         Assert.Equal("ExplicitProducerConnectivity", Participant(result, "CA").CoverageBasis);
-        Assert.Equal("ReachableConversionDomainAndConfirmedConductiveAnchor", Participant(result, "CB").CoverageBasis);
-        Assert.Equal("ReachableConversionDomainAndConfirmedConductiveAnchor", Participant(result, "CC").CoverageBasis);
+        Assert.True(Participant(result, "CA").Covered);
+        Assert.False(Participant(result, "CB").Covered);
+        Assert.False(Participant(result, "CC").Covered);
+        Assert.Equal("ConversionOutputEndpointEvidenceRequired", Participant(result, "CB").CoverageBasis);
+        Assert.Equal("ConversionOutputEndpointEvidenceRequired", Participant(result, "CC").CoverageBasis);
+        Assert.Contains(result.Diagnostics, item =>
+            item.Code == "PWR-COVERAGE-CONVERSION-OUTPUT-ENDPOINT-EVIDENCE-REQUIRED" && item.SubjectId == "CONSUMER:CB");
+        Assert.Contains(result.Diagnostics, item =>
+            item.Code == "PWR-COVERAGE-CONVERSION-OUTPUT-ENDPOINT-EVIDENCE-REQUIRED" && item.SubjectId == "CONSUMER:CC");
     }
 
     [Fact]

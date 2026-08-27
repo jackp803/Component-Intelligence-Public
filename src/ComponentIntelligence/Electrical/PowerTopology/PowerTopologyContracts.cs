@@ -40,13 +40,18 @@ public sealed record PowerConsumerFact
 
 /// <summary>
 /// Explicit conversion semantics. A conversion consumes one already-normalized input domain and
-/// produces one already-normalized output domain. No direction is inferred by this kernel.
+/// produces one already-normalized output domain. InputEndpointIds/OutputEndpointIds are opaque
+/// runtime endpoint identities transported by the accepted upstream E1 contract; E2 never
+/// reconstructs them from source references or weak signals. The semantic analyzer ignores these
+/// physical-anchor fields when determining the conversion DAG.
 /// </summary>
 public sealed record PowerConversionFact
 {
     public required string ConversionId { get; init; }
     public required string InputDomainId { get; init; }
     public required string OutputDomainId { get; init; }
+    public IReadOnlyList<string> InputEndpointIds { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> OutputEndpointIds { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>

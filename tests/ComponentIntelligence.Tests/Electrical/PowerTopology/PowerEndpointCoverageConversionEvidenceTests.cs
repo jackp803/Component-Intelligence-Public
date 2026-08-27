@@ -80,7 +80,7 @@ public sealed class PowerEndpointCoverageConversionEvidenceTests
     }
 
     [Fact]
-    public void Explicit_producer_participant_in_conversion_output_domain_uses_normal_conductive_reachability()
+    public void Conversion_output_plus_separate_explicit_producer_preserves_existing_duplicate_producer_gate()
     {
         var graph = Graph(
             Evidence(
@@ -92,13 +92,13 @@ public sealed class PowerEndpointCoverageConversionEvidenceTests
 
         var result = new PowerEndpointCoverageAnalyzer().Analyze(graph, adapter);
 
-        Assert.Equal(PowerTopologyAnalysisStatus.Accepted, adapter.Analysis!.Status);
-        Assert.Equal(PowerEndpointCoverageStatus.Accepted, result.Status);
-        var consumer = Assert.Single(result.Participants, item => item.EndpointId == "C");
-        Assert.True(consumer.Covered);
-        Assert.Equal("ExplicitProducerConnectivity", consumer.CoverageBasis);
-        Assert.DoesNotContain(result.Diagnostics, item =>
-            item.Code == "PWR-COVERAGE-CONVERSION-OUTPUT-ENDPOINT-EVIDENCE-REQUIRED");
+        Assert.Equal(PowerTopologyAdapterStatus.Accepted, adapter.Status);
+        Assert.Equal(PowerTopologyAnalysisStatus.Blocked, adapter.Analysis!.Status);
+        Assert.Contains(adapter.Analysis.Diagnostics, item =>
+            item.Code == "PWR-DUPLICATE-PRODUCER" && item.SubjectId == "DOMAIN:B");
+        Assert.Equal(PowerEndpointCoverageStatus.Blocked, result.Status);
+        Assert.Empty(result.Participants);
+        Assert.Contains(result.Diagnostics, item => item.Code == "PWR-COVERAGE-DOMAIN-ANALYSIS-BLOCKED");
     }
 
     private static ElectricalPowerEvidenceV1Contract Evidence(

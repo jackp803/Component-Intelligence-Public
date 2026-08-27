@@ -79,6 +79,28 @@ public sealed class PowerEndpointCoverageConversionEvidenceTests
             item.SubjectId == "CONSUMER:CC");
     }
 
+    [Fact]
+    public void Explicit_producer_participant_in_conversion_output_domain_uses_normal_conductive_reachability()
+    {
+        var graph = Graph(
+            Evidence(
+                [Domain("A"), Domain("B")],
+                [Producer("P", "A"), Producer("PB", "B"), Consumer("C", "B")],
+                [Conversion("X", "A", "B")]),
+            [Route("input", Edge("P", "INPUT")), Route("output", Edge("PB", "C"))]);
+        var adapter = new ElectricalPowerEvidencePowerTopologyAdapter().AdaptAndAnalyze(graph);
+
+        var result = new PowerEndpointCoverageAnalyzer().Analyze(graph, adapter);
+
+        Assert.Equal(PowerTopologyAnalysisStatus.Accepted, adapter.Analysis!.Status);
+        Assert.Equal(PowerEndpointCoverageStatus.Accepted, result.Status);
+        var consumer = Assert.Single(result.Participants, item => item.EndpointId == "C");
+        Assert.True(consumer.Covered);
+        Assert.Equal("ExplicitProducerConnectivity", consumer.CoverageBasis);
+        Assert.DoesNotContain(result.Diagnostics, item =>
+            item.Code == "PWR-COVERAGE-CONVERSION-OUTPUT-ENDPOINT-EVIDENCE-REQUIRED");
+    }
+
     private static ElectricalPowerEvidenceV1Contract Evidence(
         IReadOnlyList<ElectricalPowerEvidenceDomain> domains,
         IReadOnlyList<ElectricalPowerEvidenceParticipant> participants,

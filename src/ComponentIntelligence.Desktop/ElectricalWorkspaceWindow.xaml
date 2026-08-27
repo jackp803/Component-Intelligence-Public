@@ -81,6 +81,8 @@
                         <TextBlock Text="Layer Filter（圖層篩選）" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <ComboBox x:Name="TopologyLayerCombo" Width="190" Height="28" DisplayMemberPath="Label" SelectionChanged="TopologyLayerCombo_SelectionChanged" Margin="0,0,10,0" />
                         <Button Content="自動排列 Auto Arrange" Padding="14,5" Click="AutoArrangeTopology_Click" Margin="0,0,12,0" />
+                        <Button x:Name="AutoCadReviewButton" Content="產生 AutoCAD Electrical" Padding="14,5" Click="AutoCadReview_Click" Margin="0,0,12,0"
+                                ToolTip="預檢後建立隔離的 AutoCAD Electrical staging WDP 與 DWG。" />
                         <TextBlock Text="左鍵拖曳＝移動；右鍵＝旋轉 90°。Topology Placement（拓樸位置）與 Physical Placement（實體位置）分開保存。" Foreground="#666" VerticalAlignment="Center" />
                     </WrapPanel>
                     <local:TopologyCanvasControl x:Name="TopologyCanvas" Grid.Row="1" />

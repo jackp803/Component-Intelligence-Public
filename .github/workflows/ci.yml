@@ -2,7 +2,10 @@ name: Component Intelligence CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - codex/lrdu-electrical-layout-algorithm
+      - 'agent/**'
   pull_request:
     branches: [ main ]
   workflow_dispatch:

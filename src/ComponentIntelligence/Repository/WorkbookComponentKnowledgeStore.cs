@@ -9,9 +9,10 @@ namespace ComponentIntelligence.Repository;
 
 /// <summary>
 /// Read-only adapter for the zero-cost Component Intelligence central archive.
-/// The authoritative workbook contains exactly three engineering tables: Components, Ports, and Pins.
-/// PDF/image/drawing assets live beside the workbook under Documents/&lt;Manufacturer&gt;/&lt;Model&gt;/ and
-/// are referenced by relative path. Local SQLite remains the runtime/query cache.
+/// Components, Ports, and Pins are required engineering tables. PowerConversions is an optional,
+/// backward-compatible explicit engineering-evidence table. PDF/image/drawing assets live beside
+/// the workbook under Documents/&lt;Manufacturer&gt;/&lt;Model&gt;/ and are referenced by relative path.
+/// Local SQLite remains the runtime/query cache and is not structurally modified by this adapter.
 /// </summary>
 public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
 {
@@ -60,6 +61,12 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
             }
 
             var components = ReadRows(componentsSheet);
+            var ports = ReadRows(portsSheet);
+            var pins = ReadRows(pinsSheet);
+            var powerConversions = workbook.Worksheets.TryGetWorksheet("PowerConversions", out var powerConversionsSheet)
+                ? ReadRows(powerConversionsSheet)
+                : Array.Empty<IReadOnlyDictionary<string, string>>();
+
             var targetManufacturer = NormalizeManufacturer(manufacturer);
             var targetModel = NormalizeModel(model);
             var componentRow = components.FirstOrDefault(row =>
@@ -70,9 +77,14 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
                 return Task.FromResult(new ComponentKnowledgeLookup(null,
                     ["CENTRAL_WORKBOOK_COMPONENT_NOT_FOUND"]));
 
-            var component = BuildComponent(componentRow, ReadRows(portsSheet), ReadRows(pinsSheet));
-            return Task.FromResult(new ComponentKnowledgeLookup(component,
-                ["CENTRAL_WORKBOOK_COMPONENT_FOUND", "CENTRAL_WORKBOOK_READ_ONLY"]));
+            var component = BuildComponent(componentRow, ports, pins, powerConversions);
+            var diagnostics = new List<string>
+            {
+                "CENTRAL_WORKBOOK_COMPONENT_FOUND",
+                "CENTRAL_WORKBOOK_READ_ONLY"
+            };
+            diagnostics.AddRange(BuildUnresolvedConversionDiagnostics(components, powerConversions));
+            return Task.FromResult(new ComponentKnowledgeLookup(component, diagnostics));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -108,8 +120,11 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
         var componentRows = ReadRows(componentsSheet);
         var portRows = ReadRows(portsSheet);
         var pinRows = ReadRows(pinsSheet);
+        var powerConversionRows = workbook.Worksheets.TryGetWorksheet("PowerConversions", out var powerConversionsSheet)
+            ? ReadRows(powerConversionsSheet)
+            : Array.Empty<IReadOnlyDictionary<string, string>>();
         IReadOnlyList<ComponentIR> result = componentRows
-            .Select(row => BuildComponent(row, portRows, pinRows))
+            .Select(row => BuildComponent(row, portRows, pinRows, powerConversionRows))
             .OrderBy(component => component.Identity.Manufacturer, StringComparer.OrdinalIgnoreCase)
             .ThenBy(component => component.Identity.Model, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -119,7 +134,8 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
     private ComponentIR BuildComponent(
         IReadOnlyDictionary<string, string> componentRow,
         IReadOnlyList<IReadOnlyDictionary<string, string>> portRows,
-        IReadOnlyList<IReadOnlyDictionary<string, string>> pinRows)
+        IReadOnlyList<IReadOnlyDictionary<string, string>> pinRows,
+        IReadOnlyList<IReadOnlyDictionary<string, string>> powerConversionRows)
     {
         var componentId = Required(componentRow, "ComponentID");
         var manufacturer = Required(componentRow, "Manufacturer");
@@ -137,6 +153,18 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
             .Select(BuildPin)
             .Where(pin => pin is not null)
             .Cast<ComponentPin>()
+            .ToArray();
+        var powerConversions = powerConversionRows
+            .Where(row => string.Equals(Meaningful(Get(row, "ComponentID")), componentId, StringComparison.OrdinalIgnoreCase))
+            .Where(HasConversionPayload)
+            .Select(BuildPowerConversion)
+            .OrderBy(conversion => conversion.ConversionId ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(conversion => conversion.InputPowerDomainId ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(conversion => conversion.OutputPowerDomainId ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(conversion => CanonicalIdList(conversion.InputPortIds), StringComparer.Ordinal)
+            .ThenBy(conversion => CanonicalIdList(conversion.InputPinIds), StringComparer.Ordinal)
+            .ThenBy(conversion => CanonicalIdList(conversion.OutputPortIds), StringComparer.Ordinal)
+            .ThenBy(conversion => CanonicalIdList(conversion.OutputPinIds), StringComparer.Ordinal)
             .ToArray();
 
         var specifications = BuildSpecifications(componentRow);
@@ -175,6 +203,7 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
             Connector = rootConnector,
             Ports = ports,
             Pins = pins,
+            PowerConversions = powerConversions,
             Specifications = specifications,
             Assets = assets,
             Readiness = new ComponentReadiness
@@ -202,6 +231,7 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
             Direction = Meaningful(Get(row, "Direction")),
             SignalType = Meaningful(Get(row, "SignalType")),
             VoltageDomain = Meaningful(Get(row, "Voltage")),
+            PowerDomainId = Meaningful(Get(row, "PowerDomainId")),
             Protocol = Meaningful(Get(row, "Protocol")),
             ConnectorFamily = Meaningful(Get(row, "Connector")),
             ConnectorCoding = Meaningful(Get(row, "ConnectorCoding")),
@@ -228,10 +258,69 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
             Direction = Meaningful(Get(row, "Direction")),
             SignalType = Meaningful(Get(row, "SignalType")),
             VoltageDomain = Meaningful(Get(row, "Voltage")),
+            PowerDomainId = Meaningful(Get(row, "PowerDomainId")),
             Function = Meaningful(Get(row, "Function")),
             PinStatus = RawOrNull(Get(row, "PinStatus")),
             Description = Meaningful(Get(row, "Notes"))
         };
+    }
+
+    private static ComponentPowerConversion BuildPowerConversion(IReadOnlyDictionary<string, string> row) => new()
+    {
+        ConversionId = Meaningful(Get(row, "ConversionID")),
+        InputPowerDomainId = Meaningful(Get(row, "InputPowerDomainID")),
+        OutputPowerDomainId = Meaningful(Get(row, "OutputPowerDomainID")),
+        InputPortIds = ParseStableIdList(Get(row, "InputPortIDs")),
+        InputPinIds = ParseStableIdList(Get(row, "InputPinIDs")),
+        OutputPortIds = ParseStableIdList(Get(row, "OutputPortIDs")),
+        OutputPinIds = ParseStableIdList(Get(row, "OutputPinIDs"))
+    };
+
+    private static bool HasConversionPayload(IReadOnlyDictionary<string, string> row) =>
+        Meaningful(Get(row, "ConversionID")) is not null ||
+        Meaningful(Get(row, "InputPowerDomainID")) is not null ||
+        Meaningful(Get(row, "OutputPowerDomainID")) is not null ||
+        Meaningful(Get(row, "InputPortIDs")) is not null ||
+        Meaningful(Get(row, "InputPinIDs")) is not null ||
+        Meaningful(Get(row, "OutputPortIDs")) is not null ||
+        Meaningful(Get(row, "OutputPinIDs")) is not null;
+
+    private static IReadOnlyList<string> ParseStableIdList(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return Array.Empty<string>();
+        return raw.Split(';', StringSplitOptions.TrimEntries)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static string CanonicalIdList(IReadOnlyList<string> values) => string.Join(";", values);
+
+    private static IReadOnlyList<string> BuildUnresolvedConversionDiagnostics(
+        IReadOnlyList<IReadOnlyDictionary<string, string>> componentRows,
+        IReadOnlyList<IReadOnlyDictionary<string, string>> conversionRows)
+    {
+        if (conversionRows.Count == 0) return Array.Empty<string>();
+
+        var knownComponentIds = componentRows
+            .Select(row => Meaningful(Get(row, "ComponentID")))
+            .Where(value => value is not null)
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return conversionRows
+            .Where(HasConversionPayload)
+            .Select(row => new
+            {
+                ComponentId = Meaningful(Get(row, "ComponentID")),
+                ConversionId = Meaningful(Get(row, "ConversionID"))
+            })
+            .Where(item => item.ComponentId is null || !knownComponentIds.Contains(item.ComponentId))
+            .Select(item =>
+                $"CENTRAL_WORKBOOK_POWER_CONVERSION_COMPONENT_UNRESOLVED:ComponentID={item.ComponentId ?? "<blank>"};ConversionID={item.ConversionId ?? "<blank>"}")
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static IReadOnlyList<ComponentSpecification> BuildSpecifications(IReadOnlyDictionary<string, string> row)

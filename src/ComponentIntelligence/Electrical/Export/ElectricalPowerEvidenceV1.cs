@@ -314,10 +314,8 @@ public static class ElectricalPowerEvidenceV1Builder
         var blocked = false;
         foreach (var sourcePortId in sourcePortIds)
         {
-            var matches = component.Ports
-                .Where(port => string.Equals(ExplicitId(port.SourcePortId), sourcePortId, StringComparison.Ordinal))
-                .Distinct(ReferenceEqualityComparer.Instance)
-                .ToArray();
+            var matches = DistinctObjectsByReference(component.Ports
+                .Where(port => string.Equals(ExplicitId(port.SourcePortId), sourcePortId, StringComparison.Ordinal)));
             if (matches.Length == 1)
             {
                 resolved.Add(new ResolvedConversionEndpoint("Port", sourcePortId, matches[0].PortId));
@@ -345,11 +343,9 @@ public static class ElectricalPowerEvidenceV1Builder
 
         foreach (var sourcePinId in sourcePinIds)
         {
-            var matches = component.Ports
+            var matches = DistinctObjectsByReference(component.Ports
                 .SelectMany(port => port.Pins)
-                .Where(pin => string.Equals(ExplicitId(pin.SourcePinId), sourcePinId, StringComparison.Ordinal))
-                .Distinct(ReferenceEqualityComparer.Instance)
-                .ToArray();
+                .Where(pin => string.Equals(ExplicitId(pin.SourcePinId), sourcePinId, StringComparison.Ordinal)));
             if (matches.Length == 1)
             {
                 resolved.Add(new ResolvedConversionEndpoint("Pin", sourcePinId, matches[0].PinId));
@@ -515,6 +511,17 @@ public static class ElectricalPowerEvidenceV1Builder
         .OrderBy(item => item.Kind, StringComparer.Ordinal)
         .ThenBy(item => item.SourceId, StringComparer.Ordinal)
         .ToArray();
+
+    private static T[] DistinctObjectsByReference<T>(IEnumerable<T> values) where T : class
+    {
+        var result = new List<T>();
+        foreach (var value in values)
+        {
+            if (result.Any(existing => ReferenceEquals(existing, value))) continue;
+            result.Add(value);
+        }
+        return result.ToArray();
+    }
 
     private static IReadOnlyList<string> NormalizeIds(IEnumerable<string> values) => values
         .Where(value => !string.IsNullOrWhiteSpace(value))

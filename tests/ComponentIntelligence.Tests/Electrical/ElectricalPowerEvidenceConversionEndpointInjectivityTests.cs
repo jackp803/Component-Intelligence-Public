@@ -261,7 +261,8 @@ public sealed class ElectricalPowerEvidenceConversionEndpointInjectivityTests
             Port("runtime-output-shared", "OUT-A"),
             Port("runtime-output-shared", "OUT-B")
         };
-        foreach (var port in reverseObjects ? ports.Reverse() : ports)
+        IEnumerable<ComponentPort> orderedPorts = reverseObjects ? ports.AsEnumerable().Reverse() : ports;
+        foreach (var port in orderedPorts)
             converter.Ports.Add(port);
 
         var inputRefs = reverseReferences ? new[] { "IN-B", "IN-A" } : new[] { "IN-A", "IN-B" };
@@ -272,9 +273,10 @@ public sealed class ElectricalPowerEvidenceConversionEndpointInjectivityTests
 
     private static ElectricalProject BuildNoiseCollisionProject(bool noisy)
     {
-        var project = ProjectWithConverter("noise-collision");
+        var project = ProjectWithConverter(
+            "noise-collision",
+            noisy ? "MODEL-NOISE-B" : "MODEL-NOISE-A");
         var converter = project.Components[0];
-        converter.ComponentDefinitionId = noisy ? "MODEL-NOISE-B" : "MODEL-NOISE-A";
         converter.TypeKey = noisy ? "TYPE-NOISE-B" : "TYPE-NOISE-A";
 
         var first = Port("runtime-shared", "PORT-A");
@@ -310,19 +312,22 @@ public sealed class ElectricalPowerEvidenceConversionEndpointInjectivityTests
             new CableRoute { CableRouteId = "route-a", ConnectionOrCableId = "noise-a" },
             new CableRoute { CableRouteId = "route-b", ConnectionOrCableId = "noise-b" }
         };
-        foreach (var route in noisy ? routes.Reverse() : routes)
+        IEnumerable<CableRoute> orderedRoutes = noisy ? routes.AsEnumerable().Reverse() : routes;
+        foreach (var route in orderedRoutes)
             project.CableRoutes.Add(route);
 
         return project;
     }
 
-    private static ElectricalProject ProjectWithConverter(string projectId)
+    private static ElectricalProject ProjectWithConverter(
+        string projectId,
+        string componentDefinitionId = "converter-def")
     {
         var project = new ElectricalProject { ProjectId = projectId };
         project.Components.Add(new ComponentInstance
         {
             ComponentInstanceId = "converter",
-            ComponentDefinitionId = "converter-def",
+            ComponentDefinitionId = componentDefinitionId,
             TypeKey = "TEST"
         });
         return project;

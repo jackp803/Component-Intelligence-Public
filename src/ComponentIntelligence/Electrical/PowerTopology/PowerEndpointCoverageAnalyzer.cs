@@ -104,9 +104,14 @@ public sealed class PowerEndpointCoverageAnalyzer
                 diagnostics))
             .ToArray();
 
-        var conversionProducedDomains = adapterResult.Input.Conversions
-            .Select(item => item.OutputDomainId)
-            .ToHashSet(IdComparer);
+        var conversionsByOutputDomain = adapterResult.Input.Conversions
+            .OrderBy(item => item.OutputDomainId, IdComparer)
+            .ThenBy(item => item.ConversionId, IdComparer)
+            .GroupBy(item => item.OutputDomainId, IdComparer)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(item => item.ConversionId).OrderBy(item => item, IdComparer).ToArray(),
+                IdComparer);
         var producersByDomain = resolvedProducers
             .Where(item => item.Anchor is not null)
             .GroupBy(item => item.DomainId, IdComparer)
@@ -137,27 +142,31 @@ public sealed class PowerEndpointCoverageAnalyzer
             {
                 covered = IsReachable(consumer.Anchor.Key, producerAnchors, topology.Adjacency);
                 basis = "ExplicitProducerConnectivity";
+                if (!covered)
+                {
+                    diagnostics.Add(Diagnostic(
+                        "PWR-COVERAGE-CONSUMER-UNREACHABLE",
+                        $"CONSUMER:{consumer.EndpointId}",
+                        $"Consumer '{consumer.EndpointId}' is not conductively connected to an explicit Producer anchor in power domain '{consumer.DomainId}'."));
+                }
             }
-            else if (conversionProducedDomains.Contains(consumer.DomainId))
+            else if (conversionsByOutputDomain.TryGetValue(consumer.DomainId, out var conversionIds))
             {
-                // The accepted conversion contract proves domain-level production/reachability, but
-                // its source-reference IDs are upstream provenance identities rather than an accepted
-                // runtime topology-endpoint join. Do not guess that bridge. For such a domain, endpoint
-                // coverage therefore requires the admitted consumer to participate in at least one
-                // explicit confirmed conductive edge while the existing E2 analyzer supplies the
-                // conversion-domain reachability proof.
-                covered = topology.Adjacency.TryGetValue(consumer.Anchor.Key, out var neighbors) && neighbors.Count > 0;
-                basis = "ReachableConversionDomainAndConfirmedConductiveAnchor";
+                basis = "ConversionOutputEndpointEvidenceRequired";
+                var conversionDescription = conversionIds.Length == 1
+                    ? $"conversion '{conversionIds[0]}'"
+                    : $"conversions [{string.Join(", ", conversionIds.Select(id => $"'{id}'"))}]";
+                diagnostics.Add(Diagnostic(
+                    "PWR-COVERAGE-CONVERSION-OUTPUT-ENDPOINT-EVIDENCE-REQUIRED",
+                    $"CONSUMER:{consumer.EndpointId}",
+                    $"Consumer '{consumer.EndpointId}' is in conversion-produced power domain '{consumer.DomainId}' from {conversionDescription}, but no explicit Producer participant anchor exists in that output domain and the accepted contract defines no converter-output runtime endpoint bridge."));
             }
-
-            if (!covered)
+            else
             {
                 diagnostics.Add(Diagnostic(
                     "PWR-COVERAGE-CONSUMER-UNREACHABLE",
                     $"CONSUMER:{consumer.EndpointId}",
-                    producersByDomain.ContainsKey(consumer.DomainId)
-                        ? $"Consumer '{consumer.EndpointId}' is not conductively connected to an explicit Producer anchor in power domain '{consumer.DomainId}'."
-                        : $"Consumer '{consumer.EndpointId}' has no confirmed conductive endpoint path for semantically reachable power domain '{consumer.DomainId}'."));
+                    $"Consumer '{consumer.EndpointId}' has no explicit Producer endpoint path for power domain '{consumer.DomainId}'."));
             }
 
             consumerParticipants.Add(ToParticipant(consumer, covered, basis));

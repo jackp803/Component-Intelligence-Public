@@ -86,7 +86,14 @@ public sealed record AutocadStagingGraphV2Contract
         ArgumentNullException.ThrowIfNull(drawingEvidence);
         ArgumentNullException.ThrowIfNull(project);
 
-        var routes = source.Routes.OrderBy(route => route.RouteId, StringComparer.Ordinal).ToArray();
+        var routes = source.Routes
+            .Select(route => route with
+            {
+                Nodes = route.Nodes.OrderBy(node => node.NodeId, StringComparer.Ordinal).ToArray(),
+                Segments = route.Segments.OrderBy(segment => segment.SegmentId, StringComparer.Ordinal).ToArray()
+            })
+            .OrderBy(route => route.RouteId, StringComparer.Ordinal)
+            .ToArray();
         var pageIntents = BuildPageIntents(drawingEvidence);
         var powerFlow = BuildPowerFlowEvidence(drawingEvidence);
         var powerEvidence = ElectricalPowerEvidenceV1Builder.Build(project);
@@ -119,7 +126,15 @@ public sealed record AutocadStagingGraphV2Contract
                 CableFamilies = source.CableFamilies.OrderBy(item => item.CableFamilyId, StringComparer.Ordinal).ToArray(),
                 CableInstances = source.CableInstances.OrderBy(item => item.CableInstanceId, StringComparer.Ordinal).ToArray(),
                 TerminalContinuities = source.TerminalContinuities.OrderBy(item => item.ContinuityId, StringComparer.Ordinal).ToArray(),
-                CrossPageContinuations = source.CrossPageContinuations.OrderBy(item => item.PairIdentity, StringComparer.Ordinal).ToArray()
+                CrossPageContinuations = source.CrossPageContinuations
+                    .OrderBy(item => item.PairIdentity, StringComparer.Ordinal)
+                    .ThenBy(item => item.SourceEndpointId, StringComparer.Ordinal)
+                    .ThenBy(item => item.DestinationEndpointId, StringComparer.Ordinal)
+                    .ThenBy(item => item.SourcePageId, StringComparer.Ordinal)
+                    .ThenBy(item => item.DestinationPageId, StringComparer.Ordinal)
+                    .ThenBy(item => item.EvidenceStatus)
+                    .ThenBy(item => item.EvidenceSource, StringComparer.Ordinal)
+                    .ToArray()
             },
             Interventions = source.Interventions.OrderBy(item => item.InterventionId, StringComparer.Ordinal).ToArray(),
             WriterInterface = source.WriterInterface
@@ -249,37 +264,128 @@ public sealed record AutocadStagingGraphV2Contract
             BlockingReason = "PLANNER_TERMINAL_CLASSIFICATION_AND_SCHEMATIC_POINT_REQUIRED"
         }).ToArray();
 
+    private sealed record CrossPageCandidate(string RouteId, string NetIdentity, string SegmentId);
+
     private static IReadOnlyList<AutocadStagingV2CrossPageContinuation> BuildCrossPageContinuations(
         IReadOnlyList<AutocadStagingCrossPageContinuation> sourceContinuations,
         IReadOnlyList<AutocadStagingRoute> routes)
     {
-        var segments = routes.SelectMany(route => route.Segments)
-            .Where(segment => string.Equals(segment.TopologyStatus, "Confirmed", StringComparison.Ordinal))
-            .ToArray();
-
-        return sourceContinuations.OrderBy(item => item.PairIdentity, StringComparer.Ordinal)
-            .Select(item =>
+        return sourceContinuations
+            .GroupBy(item => item.PairIdentity, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group =>
             {
+                var items = group
+                    .OrderBy(item => CrossPageSourceCanonicalKey(item), StringComparer.Ordinal)
+                    .ToArray();
+                if (items.Length != 1)
+                    return DuplicateCrossPageContinuation(group.Key, items);
+
+                var item = items[0];
                 var sourceNodeId = $"node:{item.SourceEndpointId}";
                 var destinationNodeId = $"node:{item.DestinationEndpointId}";
-                var matches = segments.Where(segment =>
-                        string.Equals(segment.FromNodeId, sourceNodeId, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(segment.ToNodeId, destinationNodeId, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(segment => segment.SegmentId, StringComparer.Ordinal)
+                var candidates = routes
+                    .SelectMany(route => route.Segments
+                        .Where(segment =>
+                            string.Equals(segment.TopologyStatus, "Confirmed", StringComparison.Ordinal) &&
+                            UnorderedNodePairMatches(segment.FromNodeId, segment.ToNodeId, sourceNodeId, destinationNodeId) &&
+                            !string.IsNullOrWhiteSpace(route.RouteId) &&
+                            !string.IsNullOrWhiteSpace(route.NetIdentity) &&
+                            !string.IsNullOrWhiteSpace(segment.SegmentId))
+                        .Select(segment => new CrossPageCandidate(route.RouteId, route.NetIdentity, segment.SegmentId)))
+                    .OrderBy(candidate => candidate.RouteId, StringComparer.Ordinal)
+                    .ThenBy(candidate => candidate.NetIdentity, StringComparer.Ordinal)
+                    .ThenBy(candidate => candidate.SegmentId, StringComparer.Ordinal)
                     .ToArray();
+
+                var exact = candidates.Length == 1 ? candidates[0] : null;
+                var blockingReason = candidates.Length switch
+                {
+                    0 => "EXACT_CONFIRMED_ROUTE_NET_SEGMENT_REQUIRED",
+                    > 1 => "EXACT_CONFIRMED_ROUTE_NET_SEGMENT_AMBIGUOUS",
+                    _ when item.EvidenceStatus != DrawingEvidenceStatus.Confirmed =>
+                        "CONFIRMED_CROSS_PAGE_CONTINUATION_EVIDENCE_REQUIRED",
+                    _ => null
+                };
+
                 return new AutocadStagingV2CrossPageContinuation
                 {
                     PairIdentity = item.PairIdentity,
-                    SegmentId = matches.Length == 1 ? matches[0].SegmentId : string.Empty,
+                    RouteId = exact?.RouteId ?? string.Empty,
+                    NetIdentity = exact?.NetIdentity ?? string.Empty,
+                    SegmentId = exact?.SegmentId ?? string.Empty,
+                    SourceEndpointId = item.SourceEndpointId,
+                    DestinationEndpointId = item.DestinationEndpointId,
                     SourcePageId = item.SourcePageId,
                     DestinationPageId = item.DestinationPageId,
                     SourceNodeId = sourceNodeId,
                     DestinationNodeId = destinationNodeId,
                     EvidenceStatus = item.EvidenceStatus,
                     EvidenceSource = item.EvidenceSource,
-                    BlockingReason = matches.Length == 1 ? null : "EXACT_CONFIRMED_SEGMENT_ID_REQUIRED"
+                    BlockingReason = blockingReason
                 };
             }).ToArray();
+    }
+
+    private static AutocadStagingV2CrossPageContinuation DuplicateCrossPageContinuation(
+        string pairIdentity,
+        IReadOnlyList<AutocadStagingCrossPageContinuation> items)
+    {
+        var sourceEndpointId = UnanimousRequired(items.Select(item => item.SourceEndpointId));
+        var destinationEndpointId = UnanimousRequired(items.Select(item => item.DestinationEndpointId));
+        var sourcePageId = UnanimousRequired(items.Select(item => item.SourcePageId));
+        var destinationPageId = UnanimousRequired(items.Select(item => item.DestinationPageId));
+        var evidenceStatus = items.Select(item => item.EvidenceStatus).Distinct().Count() == 1
+            ? items[0].EvidenceStatus
+            : DrawingEvidenceStatus.Unknown;
+        var evidenceSource = UnanimousOptional(items.Select(item => item.EvidenceSource));
+        return new AutocadStagingV2CrossPageContinuation
+        {
+            PairIdentity = pairIdentity,
+            RouteId = string.Empty,
+            NetIdentity = string.Empty,
+            SegmentId = string.Empty,
+            SourceEndpointId = sourceEndpointId,
+            DestinationEndpointId = destinationEndpointId,
+            SourcePageId = sourcePageId,
+            DestinationPageId = destinationPageId,
+            SourceNodeId = sourceEndpointId.Length == 0 ? string.Empty : $"node:{sourceEndpointId}",
+            DestinationNodeId = destinationEndpointId.Length == 0 ? string.Empty : $"node:{destinationEndpointId}",
+            EvidenceStatus = evidenceStatus,
+            EvidenceSource = evidenceSource,
+            BlockingReason = "DUPLICATE_CROSS_PAGE_PAIR_IDENTITY"
+        };
+    }
+
+    private static bool UnorderedNodePairMatches(
+        string first,
+        string second,
+        string sourceNodeId,
+        string destinationNodeId) =>
+        string.Equals(first, sourceNodeId, StringComparison.Ordinal) &&
+        string.Equals(second, destinationNodeId, StringComparison.Ordinal) ||
+        string.Equals(first, destinationNodeId, StringComparison.Ordinal) &&
+        string.Equals(second, sourceNodeId, StringComparison.Ordinal);
+
+    private static string CrossPageSourceCanonicalKey(AutocadStagingCrossPageContinuation item) => string.Join("\u001f",
+        item.PairIdentity,
+        item.SourceEndpointId,
+        item.DestinationEndpointId,
+        item.SourcePageId,
+        item.DestinationPageId,
+        item.EvidenceStatus.ToString(),
+        item.EvidenceSource ?? string.Empty);
+
+    private static string UnanimousRequired(IEnumerable<string> values)
+    {
+        var distinct = values.Distinct(StringComparer.Ordinal).ToArray();
+        return distinct.Length == 1 ? distinct[0] : string.Empty;
+    }
+
+    private static string? UnanimousOptional(IEnumerable<string?> values)
+    {
+        var distinct = values.Distinct(StringComparer.Ordinal).ToArray();
+        return distinct.Length == 1 ? distinct[0] : null;
     }
 
     private static IReadOnlyList<AutocadStagingV2DeviceRole> BuildDeviceRoles(
@@ -408,7 +514,11 @@ public sealed record AutocadStagingV2TerminalContinuity
 public sealed record AutocadStagingV2CrossPageContinuation
 {
     [JsonPropertyName("pairIdentity")] public required string PairIdentity { get; init; }
+    [JsonPropertyName("routeId")] public string RouteId { get; init; } = string.Empty;
+    [JsonPropertyName("netIdentity")] public string NetIdentity { get; init; } = string.Empty;
     [JsonPropertyName("segmentId")] public required string SegmentId { get; init; }
+    [JsonPropertyName("sourceEndpointId")] public string SourceEndpointId { get; init; } = string.Empty;
+    [JsonPropertyName("destinationEndpointId")] public string DestinationEndpointId { get; init; } = string.Empty;
     [JsonPropertyName("sourcePageId")] public required string SourcePageId { get; init; }
     [JsonPropertyName("destinationPageId")] public required string DestinationPageId { get; init; }
     [JsonPropertyName("sourceNodeId")] public required string SourceNodeId { get; init; }

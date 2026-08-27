@@ -27,6 +27,58 @@ public sealed class PowerEndpointCoverageConversionEvidenceTests
             item.SubjectId == "CONSUMER:C");
     }
 
+    [Fact]
+    public void Arbitrarily_named_output_anchor_does_not_establish_converter_output_coverage()
+    {
+        var graph = Graph(
+            Evidence(
+                [Domain("A"), Domain("B")],
+                [Producer("P", "A"), Consumer("C", "B")],
+                [Conversion("X", "A", "B")]),
+            [Route("input", Edge("P", "INPUT")), Route("output", Edge("X-OUTPUT-ANCHOR", "C"))]);
+        var adapter = new ElectricalPowerEvidencePowerTopologyAdapter().AdaptAndAnalyze(graph);
+
+        var result = new PowerEndpointCoverageAnalyzer().Analyze(graph, adapter);
+
+        Assert.Equal(PowerTopologyAnalysisStatus.Accepted, adapter.Analysis!.Status);
+        Assert.Equal(PowerEndpointCoverageStatus.Blocked, result.Status);
+        Assert.False(Assert.Single(result.Participants, item => item.EndpointId == "C").Covered);
+        Assert.Contains(result.Diagnostics, item =>
+            item.Code == "PWR-COVERAGE-CONVERSION-OUTPUT-ENDPOINT-EVIDENCE-REQUIRED" &&
+            item.Message.Contains("conversion 'X'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Multilevel_conversion_domain_semantics_remain_accepted_while_physical_output_coverage_blocks()
+    {
+        var graph = Graph(
+            Evidence(
+                [Domain("A"), Domain("B"), Domain("C")],
+                [Producer("P", "A"), Consumer("CA", "A"), Consumer("CB", "B"), Consumer("CC", "C")],
+                [Conversion("X", "A", "B"), Conversion("Y", "B", "C")]),
+            [
+                Route("a", Edge("P", "CA")),
+                Route("b", Edge("X-OUTPUT-ANCHOR", "CB")),
+                Route("c", Edge("Y-OUTPUT-ANCHOR", "CC"))
+            ]);
+        var adapter = new ElectricalPowerEvidencePowerTopologyAdapter().AdaptAndAnalyze(graph);
+
+        var result = new PowerEndpointCoverageAnalyzer().Analyze(graph, adapter);
+
+        Assert.Equal(PowerTopologyAnalysisStatus.Accepted, adapter.Analysis!.Status);
+        Assert.Equal(["X", "Y"], adapter.Analysis.ConversionTopologicalOrder);
+        Assert.Equal(PowerEndpointCoverageStatus.Blocked, result.Status);
+        Assert.True(Assert.Single(result.Participants, item => item.EndpointId == "CA").Covered);
+        Assert.False(Assert.Single(result.Participants, item => item.EndpointId == "CB").Covered);
+        Assert.False(Assert.Single(result.Participants, item => item.EndpointId == "CC").Covered);
+        Assert.Contains(result.Diagnostics, item =>
+            item.Code == "PWR-COVERAGE-CONVERSION-OUTPUT-ENDPOINT-EVIDENCE-REQUIRED" &&
+            item.SubjectId == "CONSUMER:CB");
+        Assert.Contains(result.Diagnostics, item =>
+            item.Code == "PWR-COVERAGE-CONVERSION-OUTPUT-ENDPOINT-EVIDENCE-REQUIRED" &&
+            item.SubjectId == "CONSUMER:CC");
+    }
+
     private static ElectricalPowerEvidenceV1Contract Evidence(
         IReadOnlyList<ElectricalPowerEvidenceDomain> domains,
         IReadOnlyList<ElectricalPowerEvidenceParticipant> participants,

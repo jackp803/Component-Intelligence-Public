@@ -211,9 +211,9 @@ public sealed class AutocadStagingGraphV2AdapterTests
             }
         };
 
-        foreach (var net in reverse ? nets.Reverse() : nets) project.Nets.Add(net);
-        foreach (var component in reverse ? components.Reverse() : components) project.Components.Add(component);
-        foreach (var connection in reverse ? connections.Reverse() : connections) project.Connections.Add(connection);
+        foreach (var net in reverse ? nets.AsEnumerable().Reverse() : nets) project.Nets.Add(net);
+        foreach (var component in reverse ? components.AsEnumerable().Reverse() : components) project.Components.Add(component);
+        foreach (var connection in reverse ? connections.AsEnumerable().Reverse() : connections) project.Connections.Add(connection);
         return project;
     }
 

@@ -26,11 +26,6 @@ public sealed record ElectricalPowerEvidenceV1Contract
                 $"Power evidence schema '{schemaVersion ?? "<missing>"}' is unsupported; expected '{SupportedSchemaVersion}'.");
     }
 
-    /// <summary>
-    /// Consumer-side structural guard. The normalized builder never emits duplicate stable identities;
-    /// callers/deserializers presenting a conflicting contract are rejected rather than interpreted by
-    /// last-write-wins behavior.
-    /// </summary>
     public void EnsureUniqueStableIdentities()
     {
         EnsureSupportedSchema(SchemaVersion);
@@ -78,6 +73,8 @@ public sealed record ElectricalPowerEvidenceConversion
     [JsonPropertyName("inputSourcePinIds")] public IReadOnlyList<string> InputSourcePinIds { get; init; } = [];
     [JsonPropertyName("outputSourcePortIds")] public IReadOnlyList<string> OutputSourcePortIds { get; init; } = [];
     [JsonPropertyName("outputSourcePinIds")] public IReadOnlyList<string> OutputSourcePinIds { get; init; } = [];
+    [JsonPropertyName("inputEndpointIds")] public IReadOnlyList<string> InputEndpointIds { get; init; } = [];
+    [JsonPropertyName("outputEndpointIds")] public IReadOnlyList<string> OutputEndpointIds { get; init; } = [];
     [JsonPropertyName("evidenceStatus")] public string EvidenceStatus { get; init; } = "Unknown";
     [JsonPropertyName("blockingReason")] public string? BlockingReason { get; init; }
     [JsonPropertyName("provenance")] public IReadOnlyList<ElectricalPowerEvidenceSourceEvidence> Provenance { get; init; } = [];
@@ -247,6 +244,11 @@ public static class ElectricalPowerEvidenceV1Builder
                     MissingFields = missing.OrderBy(item => item, StringComparer.Ordinal).ToArray()
                 });
 
+            var inputMapping = ResolveConversionSideEndpoints(
+                project, component, subjectId, "INPUT", inputPorts, inputPins, blockers);
+            var outputMapping = ResolveConversionSideEndpoints(
+                project, component, subjectId, "OUTPUT", outputPorts, outputPins, blockers);
+
             var conversion = new ElectricalPowerEvidenceConversion
             {
                 ConversionId = conversionId,
@@ -257,6 +259,8 @@ public static class ElectricalPowerEvidenceV1Builder
                 InputSourcePinIds = inputPins,
                 OutputSourcePortIds = outputPorts,
                 OutputSourcePinIds = outputPins,
+                InputEndpointIds = inputMapping,
+                OutputEndpointIds = outputMapping,
                 EvidenceStatus = missing.Count == 0 ? "Confirmed" : "Unknown",
                 BlockingReason = missing.Count == 0 ? null : "POWER_CONVERSION_FIELDS_REQUIRED",
                 Provenance = provenance
@@ -272,6 +276,96 @@ public static class ElectricalPowerEvidenceV1Builder
                 AddDomainProvenance(domainProvenance, outputDomain, conversionRef);
         }
         return result.OrderBy(ConversionCanonicalKey, StringComparer.Ordinal).ToArray();
+    }
+
+    private static IReadOnlyList<string> ResolveConversionSideEndpoints(
+        ElectricalProject project,
+        ComponentInstance component,
+        string subjectId,
+        string side,
+        IReadOnlyList<string> sourcePortIds,
+        IReadOnlyList<string> sourcePinIds,
+        ICollection<ElectricalPowerEvidenceBlocker> blockers)
+    {
+        if (sourcePortIds.Count == 0 && sourcePinIds.Count == 0)
+        {
+            blockers.Add(Blocker(
+                $"POWER_CONVERSION_{side}_SOURCE_REFERENCE_REQUIRED",
+                subjectId,
+                side == "INPUT" ? "inputSourcePortIds|inputSourcePinIds" : "outputSourcePortIds|outputSourcePinIds"));
+            return [];
+        }
+
+        var resolved = new List<string>();
+        var blocked = false;
+        foreach (var sourcePortId in sourcePortIds)
+        {
+            var matches = component.Ports
+                .Where(port => string.Equals(ExplicitId(port.SourcePortId), sourcePortId, StringComparison.Ordinal))
+                .Select(port => port.PortId)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToArray();
+            if (matches.Length == 1)
+            {
+                resolved.Add(matches[0]);
+                continue;
+            }
+
+            blocked = true;
+            if (matches.Length > 1)
+            {
+                blockers.Add(Blocker($"POWER_CONVERSION_{side}_SOURCE_PORT_AMBIGUOUS", subjectId, sourcePortId));
+                continue;
+            }
+
+            var existsElsewhere = project.Components
+                .Where(other => !ReferenceEquals(other, component))
+                .Any(other => other.Ports.Any(port =>
+                    string.Equals(ExplicitId(port.SourcePortId), sourcePortId, StringComparison.Ordinal)));
+            blockers.Add(Blocker(
+                existsElsewhere
+                    ? $"POWER_CONVERSION_{side}_SOURCE_PORT_CROSS_COMPONENT"
+                    : $"POWER_CONVERSION_{side}_SOURCE_PORT_UNRESOLVED",
+                subjectId,
+                sourcePortId));
+        }
+
+        foreach (var sourcePinId in sourcePinIds)
+        {
+            var matches = component.Ports
+                .SelectMany(port => port.Pins)
+                .Where(pin => string.Equals(ExplicitId(pin.SourcePinId), sourcePinId, StringComparison.Ordinal))
+                .Select(pin => pin.PinId)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToArray();
+            if (matches.Length == 1)
+            {
+                resolved.Add(matches[0]);
+                continue;
+            }
+
+            blocked = true;
+            if (matches.Length > 1)
+            {
+                blockers.Add(Blocker($"POWER_CONVERSION_{side}_SOURCE_PIN_AMBIGUOUS", subjectId, sourcePinId));
+                continue;
+            }
+
+            var existsElsewhere = project.Components
+                .Where(other => !ReferenceEquals(other, component))
+                .Any(other => other.Ports.SelectMany(port => port.Pins).Any(pin =>
+                    string.Equals(ExplicitId(pin.SourcePinId), sourcePinId, StringComparison.Ordinal)));
+            blockers.Add(Blocker(
+                existsElsewhere
+                    ? $"POWER_CONVERSION_{side}_SOURCE_PIN_CROSS_COMPONENT"
+                    : $"POWER_CONVERSION_{side}_SOURCE_PIN_UNRESOLVED",
+                subjectId,
+                sourcePinId));
+        }
+
+        return blocked ? [] : NormalizeIds(resolved);
     }
 
     private static IReadOnlyList<ElectricalPowerEvidenceConversion> ResolveConversionIdentities(
@@ -428,6 +522,8 @@ public static class ElectricalPowerEvidenceV1Builder
         string.Join("\u001e", item.InputSourcePinIds),
         string.Join("\u001e", item.OutputSourcePortIds),
         string.Join("\u001e", item.OutputSourcePinIds),
+        string.Join("\u001e", item.InputEndpointIds),
+        string.Join("\u001e", item.OutputEndpointIds),
         item.EvidenceStatus,
         item.BlockingReason ?? string.Empty,
         string.Join("\u001e", item.Provenance.Select(SourceEvidenceCanonicalKey)));

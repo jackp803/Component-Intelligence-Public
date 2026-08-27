@@ -1,8 +1,9 @@
 using System.Text.Json;
-using ComponentIntelligence.Contracts;
 using ComponentIntelligence.Electrical.Bridging;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Export;
+using ContractComponentIR = ComponentIntelligence.Contracts.ComponentIR;
+using ContractComponentIrIdentity = ComponentIntelligence.Contracts.ComponentIrIdentity;
 using ContractPowerConversion = ComponentIntelligence.Contracts.ComponentPowerConversion;
 using ContractPort = ComponentIntelligence.Contracts.ComponentPort;
 
@@ -170,9 +171,9 @@ public sealed class ElectricalPowerEvidenceConversionEndpointInjectivityTests
     [Fact]
     public void ComponentProjectBridgeLossyPortNormalizationCollision_FailsClosedEndToEnd()
     {
-        var source = new ComponentIR
+        var source = new ContractComponentIR
         {
-            Identity = new ComponentIrIdentity
+            Identity = new ContractComponentIrIdentity
             {
                 ComponentId = "CONVERTER-DEF",
                 Manufacturer = "TEST",

@@ -37,7 +37,8 @@ public sealed record PowerTopologyAdapterResult
 /// <summary>
 /// Production adapter for accepted explicit power evidence only. It deliberately ignores drawing,
 /// page, route, voltage, name, TypeKey, geometry, and endpoint-order signals and creates no terminal
-/// continuity or inferred power semantics.
+/// continuity or inferred power semantics. Accepted conversion input/output endpoint arrays are
+/// copied as opaque runtime endpoint identities; this adapter never reconstructs them from source IDs.
 /// </summary>
 public sealed class ElectricalPowerEvidencePowerTopologyAdapter
 {
@@ -149,7 +150,9 @@ public sealed class ElectricalPowerEvidencePowerTopologyAdapter
                 {
                     ConversionId = conversion.ConversionId!,
                     InputDomainId = conversion.InputPowerDomainId!,
-                    OutputDomainId = conversion.OutputPowerDomainId!
+                    OutputDomainId = conversion.OutputPowerDomainId!,
+                    InputEndpointIds = CanonicalEndpointIds(conversion.InputEndpointIds),
+                    OutputEndpointIds = CanonicalEndpointIds(conversion.OutputEndpointIds)
                 })
                 .ToArray()
         });
@@ -220,12 +223,18 @@ public sealed class ElectricalPowerEvidencePowerTopologyAdapter
                      .OrderBy(item => item.ConversionId ?? string.Empty, IdComparer)
                      .ThenBy(item => item.ComponentInstanceId, IdComparer))
         {
-            if (IsConfirmedComplete(conversion)) continue;
-            diagnostics.Add(Diagnostic(
-                "PWR-ADAPTER-CONVERSION-INCOMPLETE",
-                conversion.ConversionId ?? conversion.ComponentInstanceId,
-                ConversionMissingFields(conversion),
-                "Only Confirmed conversions with explicit stable conversion/input/output domain identities are admissible."));
+            if (!IsConfirmedComplete(conversion))
+            {
+                diagnostics.Add(Diagnostic(
+                    "PWR-ADAPTER-CONVERSION-INCOMPLETE",
+                    conversion.ConversionId ?? conversion.ComponentInstanceId,
+                    ConversionMissingFields(conversion),
+                    "Only Confirmed conversions with explicit stable conversion/input/output domain identities are admissible."));
+                continue;
+            }
+
+            AddEndpointIdentityDiagnostics(conversion.ConversionId!, "inputEndpointIds", conversion.InputEndpointIds, diagnostics);
+            AddEndpointIdentityDiagnostics(conversion.ConversionId!, "outputEndpointIds", conversion.OutputEndpointIds, diagnostics);
         }
 
         return diagnostics
@@ -234,6 +243,22 @@ public sealed class ElectricalPowerEvidencePowerTopologyAdapter
             .ThenBy(item => string.Join("\u001f", item.MissingFields), IdComparer)
             .ThenBy(item => item.Message, IdComparer)
             .ToArray();
+    }
+
+    private static void AddEndpointIdentityDiagnostics(
+        string conversionId,
+        string field,
+        IReadOnlyList<string> endpointIds,
+        ICollection<PowerTopologyAdapterDiagnostic> diagnostics)
+    {
+        foreach (var endpointId in endpointIds.Where(endpointId => !IsStableIdentity(endpointId)))
+        {
+            diagnostics.Add(Diagnostic(
+                "PWR-ADAPTER-CONVERSION-ENDPOINT-IDENTITY-INVALID",
+                $"CONVERSION:{conversionId}",
+                [field],
+                $"Conversion '{conversionId}' {field} contains invalid runtime endpoint identity '{RenderIdentity(endpointId)}'."));
+        }
     }
 
     private static IReadOnlyList<string> ConversionMissingFields(ElectricalPowerEvidenceConversion conversion)
@@ -256,6 +281,9 @@ public sealed class ElectricalPowerEvidencePowerTopologyAdapter
         IsStableIdentity(conversion.InputPowerDomainId) &&
         IsStableIdentity(conversion.OutputPowerDomainId);
 
+    private static IReadOnlyList<string> CanonicalEndpointIds(IReadOnlyList<string> endpointIds) =>
+        endpointIds.OrderBy(item => item, IdComparer).ToArray();
+
     private static PowerTopologyInput Canonicalize(PowerTopologyInput input) => new()
     {
         Domains = input.Domains
@@ -273,6 +301,11 @@ public sealed class ElectricalPowerEvidencePowerTopologyAdapter
             .OrderBy(item => item.ConversionId, IdComparer)
             .ThenBy(item => item.InputDomainId, IdComparer)
             .ThenBy(item => item.OutputDomainId, IdComparer)
+            .Select(item => item with
+            {
+                InputEndpointIds = CanonicalEndpointIds(item.InputEndpointIds),
+                OutputEndpointIds = CanonicalEndpointIds(item.OutputEndpointIds)
+            })
             .ToArray()
     };
 

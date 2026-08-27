@@ -186,10 +186,10 @@ public sealed class AutocadStagingGraphV2CrossPageContinuationIdentityTests
     public void VisibleLabelSignalAndNodeDisplayNoise_CannotChangeContinuationSelection()
     {
         var plain = CreateV2(SourceGraph(
-            [Route("route:net-a", "net-a", Segment("segment:wire-1", "node:left:pin", "node:right:pin", signalCode: "PLAIN"), visibleLabel: "PLAIN")],
+            [Route("route:net-a", "net-a", [Segment("segment:wire-1", "node:left:pin", "node:right:pin", signalCode: "PLAIN")], "PLAIN")],
             [Continuation("pair-1", "left:pin", "right:pin", "P-01", "P-02")]));
         var noisy = CreateV2(SourceGraph(
-            [Route("route:net-a", "net-a", Segment("segment:wire-1", "node:left:pin", "node:right:pin", signalCode: "MISLEADING-SIGNAL"), visibleLabel: "MISLEADING-LABEL")],
+            [Route("route:net-a", "net-a", [Segment("segment:wire-1", "node:left:pin", "node:right:pin", signalCode: "MISLEADING-SIGNAL")], "MISLEADING-LABEL")],
             [Continuation("pair-1", "left:pin", "right:pin", "P-01", "P-02")]));
 
         Assert.Equal(

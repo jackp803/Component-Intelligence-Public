@@ -33,6 +33,7 @@ public sealed class ComponentInstance
     public string? DisplayName { get; set; }
     public ResponsibilityScope ResponsibilityScope { get; set; } = ResponsibilityScope.Unknown;
     public List<ComponentPort> Ports { get; init; } = new();
+    public List<PowerConversionEvidence> PowerConversions { get; init; } = new();
     public PhysicalFootprint? Footprint { get; set; }
     public bool FootprintOverride { get; set; }
     public PhysicalPlacement? Placement { get; set; }
@@ -42,6 +43,8 @@ public sealed class ComponentPort
 {
     public required string PortId { get; init; }
     public required string Name { get; set; }
+    public string? SourcePortId { get; set; }
+    public string? PowerDomainId { get; set; }
     public string? Protocol { get; set; }
     public List<string> Capabilities { get; init; } = new();
     public ConnectorDefinition? Connector { get; set; }
@@ -53,6 +56,8 @@ public sealed class ComponentPort
 public sealed class ComponentPin
 {
     public required string PinId { get; init; }
+    public string? SourcePinId { get; set; }
+    public string? PowerDomainId { get; set; }
     public required string PinNumber { get; set; }
     public string? PinName { get; set; }
     public string? Function { get; set; }

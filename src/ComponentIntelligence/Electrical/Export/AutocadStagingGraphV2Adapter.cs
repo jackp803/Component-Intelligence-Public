@@ -32,7 +32,7 @@ public sealed class AutocadStagingGraphV2Builder
         return new AutocadStagingGraphV2PreparationResult
         {
             Preflight = source.Preflight,
-            Graph = AutocadStagingGraphV2Contract.Create(source.Graph, drawingEvidence)
+            Graph = AutocadStagingGraphV2Contract.Create(source.Graph, drawingEvidence, project)
         };
     }
 }
@@ -57,6 +57,7 @@ public sealed record AutocadStagingGraphV2Contract
     // These eight arrays are the pinned downstream v2 structural boundary. They are never omitted.
     [JsonPropertyName("pageIntents")] public required IReadOnlyList<AutocadStagingV2PageIntent> PageIntents { get; init; }
     [JsonPropertyName("powerFlowOrientation")] public required IReadOnlyList<AutocadStagingV2PowerFlowEvidence> PowerFlowOrientation { get; init; }
+    [JsonPropertyName("powerEvidence")] public ElectricalPowerEvidenceV1Contract PowerEvidence { get; init; } = new();
     [JsonPropertyName("cableFamilies")] public required IReadOnlyList<AutocadStagingV2CableFamily> CableFamilies { get; init; }
     [JsonPropertyName("cableInstances")] public required IReadOnlyList<AutocadStagingV2CableInstance> CableInstances { get; init; }
     [JsonPropertyName("terminalContinuities")] public required IReadOnlyList<AutocadStagingV2TerminalContinuity> TerminalContinuities { get; init; }
@@ -78,14 +79,17 @@ public sealed record AutocadStagingGraphV2Contract
 
     internal static AutocadStagingGraphV2Contract Create(
         AutocadStagingGraphContract source,
-        AutocadEngineeringDrawingEvidence drawingEvidence)
+        AutocadEngineeringDrawingEvidence drawingEvidence,
+        ElectricalProject project)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(drawingEvidence);
+        ArgumentNullException.ThrowIfNull(project);
 
         var routes = source.Routes.OrderBy(route => route.RouteId, StringComparer.Ordinal).ToArray();
         var pageIntents = BuildPageIntents(drawingEvidence);
         var powerFlow = BuildPowerFlowEvidence(drawingEvidence);
+        var powerEvidence = ElectricalPowerEvidenceV1Builder.Build(project);
         var cableFamilies = BuildCableFamilies(source.CableFamilies);
         var cableInstances = BuildCableInstances(source.CableInstances, routes);
         var terminalContinuities = BuildTerminalContinuities(source.TerminalContinuities);
@@ -102,6 +106,7 @@ public sealed record AutocadStagingGraphV2Contract
             Routes = routes,
             PageIntents = pageIntents,
             PowerFlowOrientation = powerFlow,
+            PowerEvidence = powerEvidence,
             CableFamilies = cableFamilies,
             CableInstances = cableInstances,
             TerminalContinuities = terminalContinuities,

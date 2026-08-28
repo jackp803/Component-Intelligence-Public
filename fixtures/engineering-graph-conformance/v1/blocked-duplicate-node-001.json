@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-BLOCKED-DUPLICATE-NODE-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "BLOCKED",
+  "expectedFingerprint": null,
+  "blockerCodes": ["EGC_DUPLICATE_NODE_IDENTITY"],
+  "importantIdentities": ["node:duplicate"],
+  "purpose": "BLOCKED duplicate nodeId where node identity must be unique in the conformance graph.",
+  "canonicalIdentity": "N|route:dup-node|node:duplicate|ComponentPin|cmp-node-a|def:node-a|node-a:pin-1|SYNTH:node-a|XTERM:node-a\nN|route:dup-node|node:duplicate|ComponentPin|cmp-node-b|def:node-b|node-b:pin-1|SYNTH:node-b|XTERM:node-b\nPROJECT|egc-blocked-duplicate-node\nR|route:dup-node|net-dup-node|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:dup-node|segment:dup-node|InternalWire|node:duplicate|node:duplicate|Confirmed"
+}

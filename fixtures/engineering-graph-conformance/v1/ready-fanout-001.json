@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-READY-FANOUT-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "READY",
+  "expectedFingerprint": "834BEED7010BAB7CDBE11EF93C7FD93B1C68DEFC16B3EA114CADFC5AE6D8746D",
+  "blockerCodes": [],
+  "importantIdentities": ["route:net-shared","net-shared","node:fan-src:pin-1","node:fan-a:pin-1","node:fan-b:pin-1","fan-src:pin-1","fan-a:pin-1","fan-b:pin-1","XTERM:fan-src","XTERM:fan-a","XTERM:fan-b","segment:fan-a","segment:fan-b"],
+  "purpose": "READY fanout/shared-node graph with one shared source node and injective endpoint identities.",
+  "canonicalIdentity": "N|route:net-shared|node:fan-a:pin-1|ComponentPin|cmp-fan-a|def:synthetic-fan-a|fan-a:pin-1|SYNTH:fan-a|XTERM:fan-a\nN|route:net-shared|node:fan-b:pin-1|ComponentPin|cmp-fan-b|def:synthetic-fan-b|fan-b:pin-1|SYNTH:fan-b|XTERM:fan-b\nN|route:net-shared|node:fan-src:pin-1|ComponentPin|cmp-fan-src|def:synthetic-fan-src|fan-src:pin-1|SYNTH:fan-src|XTERM:fan-src\nPROJECT|egc-ready-fanout\nR|route:net-shared|net-shared|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:net-shared|segment:fan-a|InternalWire|node:fan-src:pin-1|node:fan-a:pin-1|Confirmed\nS|route:net-shared|segment:fan-b|InternalWire|node:fan-src:pin-1|node:fan-b:pin-1|Confirmed"
+}

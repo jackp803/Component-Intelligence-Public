@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-BLOCKED-DUPLICATE-ROUTE-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "BLOCKED",
+  "expectedFingerprint": null,
+  "blockerCodes": ["EGC_DUPLICATE_ROUTE_IDENTITY"],
+  "importantIdentities": ["route:duplicate"],
+  "purpose": "BLOCKED duplicate routeId where route identity must be unique in the conformance graph.",
+  "canonicalIdentity": "N|route:duplicate|node:route-a-1|ComponentPin|cmp-route-a-1|def:route-a-1|route-a-1:pin-1|SYNTH:route-a-1|XTERM:route-a-1\nN|route:duplicate|node:route-a-2|ComponentPin|cmp-route-a-2|def:route-a-2|route-a-2:pin-1|SYNTH:route-a-2|XTERM:route-a-2\nN|route:duplicate|node:route-b-1|ComponentPin|cmp-route-b-1|def:route-b-1|route-b-1:pin-1|SYNTH:route-b-1|XTERM:route-b-1\nN|route:duplicate|node:route-b-2|ComponentPin|cmp-route-b-2|def:route-b-2|route-b-2:pin-1|SYNTH:route-b-2|XTERM:route-b-2\nPROJECT|egc-blocked-duplicate-route\nR|route:duplicate|net-dup-a|Confirmed\nR|route:duplicate|net-dup-b|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:duplicate|segment:route-a|InternalWire|node:route-a-1|node:route-a-2|Confirmed\nS|route:duplicate|segment:route-b|InternalWire|node:route-b-1|node:route-b-2|Confirmed"
+}

@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-BLOCKED-UNKNOWN-EVIDENCE-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "BLOCKED",
+  "expectedFingerprint": null,
+  "blockerCodes": ["CONFIRMED_CROSS_PAGE_CONTINUATION_EVIDENCE_REQUIRED"],
+  "importantIdentities": ["pair:unknown-001","route:net-unknown","segment:unknown"],
+  "purpose": "BLOCKED unknown continuation evidence; semantic direction/page meaning may not be reconstructed.",
+  "canonicalIdentity": "C|pair:unknown-001|route:net-unknown|net-unknown|segment:unknown|unknown-src:pin-1|unknown-dst:pin-1|P-01|P-02|node:unknown-src:pin-1|node:unknown-dst:pin-1|Unknown|synthetic-test-evidence|CONFIRMED_CROSS_PAGE_CONTINUATION_EVIDENCE_REQUIRED\nN|route:net-unknown|node:unknown-dst:pin-1|ComponentPin|cmp-unknown-dst|def:unknown-dst|unknown-dst:pin-1|SYNTH:unknown-dst|XTERM:unknown-dst\nN|route:net-unknown|node:unknown-src:pin-1|ComponentPin|cmp-unknown-src|def:unknown-src|unknown-src:pin-1|SYNTH:unknown-src|XTERM:unknown-src\nPROJECT|egc-blocked-unknown-evidence\nR|route:net-unknown|net-unknown|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:net-unknown|segment:unknown|InternalWire|node:unknown-src:pin-1|node:unknown-dst:pin-1|Confirmed"
+}

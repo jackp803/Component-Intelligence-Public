@@ -1,0 +1,109 @@
+{
+  "corpusSchemaVersion": "engineering-graph-conformance.v1",
+  "syntheticTestOnly": true,
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "fingerprintSchemaVersion": "engineering-graph-conformance-fingerprint.v1",
+  "description": "Synthetic test-only canonical Engineering Graph identity corpus. No Product Owner, AutoCAD, DWG/WDP, symbol, layout, routing, Drawing IR, writer, power-domain or converter approval/evidence is implied.",
+  "fixtures": [
+    {
+      "fixtureId": "EGC-READY-DIRECT-001",
+      "fixtureFile": "ready-direct-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "READY",
+      "expectedFingerprint": "89A5F9A6001FFCC7F4D5F43801BA04F0A8737350EB844481B2E32D6566F3102A",
+      "importantIdentities": ["route:net-control", "net-control", "node:src:pin-1", "node:load:pin-1", "src:pin-1", "load:pin-1", "XTERM:src", "XTERM:load", "segment:wire-direct"],
+      "blockerCodes": [],
+      "purpose": "READY direct single-route identity chain with exact component, node, pin, connection-point, net and segment identity."
+    },
+    {
+      "fixtureId": "EGC-READY-FANOUT-001",
+      "fixtureFile": "ready-fanout-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "READY",
+      "expectedFingerprint": "834BEED7010BAB7CDBE11EF93C7FD93B1C68DEFC16B3EA114CADFC5AE6D8746D",
+      "importantIdentities": ["route:net-shared", "net-shared", "node:fan-src:pin-1", "node:fan-a:pin-1", "node:fan-b:pin-1", "fan-src:pin-1", "fan-a:pin-1", "fan-b:pin-1", "XTERM:fan-src", "XTERM:fan-a", "XTERM:fan-b", "segment:fan-a", "segment:fan-b"],
+      "blockerCodes": [],
+      "purpose": "READY fanout/shared-node graph with one shared source node and injective endpoint identities."
+    },
+    {
+      "fixtureId": "EGC-READY-CROSS-PAGE-001",
+      "fixtureFile": "ready-cross-page-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "READY",
+      "expectedFingerprint": "2AF3081230AA113C3A9F365346E00092D2376B2CE869AE398B3DF74358453920",
+      "importantIdentities": ["pair:cross-001", "route:net-cross", "net-cross", "segment:wire-cross", "cross-src:pin-1", "cross-dst:pin-1", "node:cross-src:pin-1", "node:cross-dst:pin-1", "P-01", "P-02", "XTERM:cross-src", "XTERM:cross-dst"],
+      "blockerCodes": [],
+      "purpose": "READY cross-page continuation with exact pair, route, net, segment, endpoint, page and node identity."
+    },
+    {
+      "fixtureId": "EGC-BLOCKED-DUPLICATE-ENDPOINT-001",
+      "fixtureFile": "blocked-duplicate-endpoint-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "BLOCKED",
+      "expectedFingerprint": null,
+      "importantIdentities": ["dup-pin:pin-1", "node:dup-a", "node:dup-b"],
+      "blockerCodes": ["EGC_DUPLICATE_PIN_ENDPOINT_IDENTITY"],
+      "purpose": "BLOCKED two distinct nodes claiming the same exact pin endpoint identity."
+    },
+    {
+      "fixtureId": "EGC-BLOCKED-CONTINUATION-MISSING-001",
+      "fixtureFile": "blocked-continuation-missing-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "BLOCKED",
+      "expectedFingerprint": null,
+      "importantIdentities": ["pair:missing-001", "missing-src:pin-1", "missing-dst:pin-1"],
+      "blockerCodes": ["EXACT_CONFIRMED_ROUTE_NET_SEGMENT_REQUIRED"],
+      "purpose": "BLOCKED cross-page evidence with no exact confirmed route/net/segment candidate."
+    },
+    {
+      "fixtureId": "EGC-BLOCKED-CONTINUATION-AMBIGUOUS-001",
+      "fixtureFile": "blocked-continuation-ambiguous-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "BLOCKED",
+      "expectedFingerprint": null,
+      "importantIdentities": ["pair:ambiguous-001", "segment:amb-a", "segment:amb-b"],
+      "blockerCodes": ["EXACT_CONFIRMED_ROUTE_NET_SEGMENT_AMBIGUOUS"],
+      "purpose": "BLOCKED cross-page evidence with more than one exact confirmed route/net/segment candidate."
+    },
+    {
+      "fixtureId": "EGC-BLOCKED-DUPLICATE-ROUTE-001",
+      "fixtureFile": "blocked-duplicate-route-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "BLOCKED",
+      "expectedFingerprint": null,
+      "importantIdentities": ["route:duplicate"],
+      "blockerCodes": ["EGC_DUPLICATE_ROUTE_IDENTITY"],
+      "purpose": "BLOCKED duplicate routeId where route identity must be unique in the conformance graph."
+    },
+    {
+      "fixtureId": "EGC-BLOCKED-DUPLICATE-NODE-001",
+      "fixtureFile": "blocked-duplicate-node-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "BLOCKED",
+      "expectedFingerprint": null,
+      "importantIdentities": ["node:duplicate"],
+      "blockerCodes": ["EGC_DUPLICATE_NODE_IDENTITY"],
+      "purpose": "BLOCKED duplicate nodeId where node identity must be unique in the conformance graph."
+    },
+    {
+      "fixtureId": "EGC-BLOCKED-DUPLICATE-SEGMENT-001",
+      "fixtureFile": "blocked-duplicate-segment-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "BLOCKED",
+      "expectedFingerprint": null,
+      "importantIdentities": ["segment:duplicate"],
+      "blockerCodes": ["EGC_DUPLICATE_SEGMENT_IDENTITY"],
+      "purpose": "BLOCKED duplicate segmentId where segment identity must be unique in the conformance graph."
+    },
+    {
+      "fixtureId": "EGC-BLOCKED-UNKNOWN-EVIDENCE-001",
+      "fixtureFile": "blocked-unknown-evidence-001.json",
+      "graphSchemaVersion": "lrdu-staging-route.v2",
+      "expectedStatus": "BLOCKED",
+      "expectedFingerprint": null,
+      "importantIdentities": ["pair:unknown-001", "route:net-unknown", "segment:unknown"],
+      "blockerCodes": ["CONFIRMED_CROSS_PAGE_CONTINUATION_EVIDENCE_REQUIRED"],
+      "purpose": "BLOCKED unknown continuation evidence; semantic direction/page meaning may not be reconstructed."
+    }
+  ]
+}

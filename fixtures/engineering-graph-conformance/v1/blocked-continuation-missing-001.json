@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-BLOCKED-CONTINUATION-MISSING-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "BLOCKED",
+  "expectedFingerprint": null,
+  "blockerCodes": ["EXACT_CONFIRMED_ROUTE_NET_SEGMENT_REQUIRED"],
+  "importantIdentities": ["pair:missing-001","missing-src:pin-1","missing-dst:pin-1"],
+  "purpose": "BLOCKED cross-page evidence with no exact confirmed route/net/segment candidate.",
+  "canonicalIdentity": "C|pair:missing-001||||missing-src:pin-1|missing-dst:pin-1|P-01|P-02|node:missing-src:pin-1|node:missing-dst:pin-1|Confirmed|synthetic-test-evidence|EXACT_CONFIRMED_ROUTE_NET_SEGMENT_REQUIRED\nN|route:net-other|node:other-a|ComponentPin|cmp-other-a|def:other-a|other-a:pin-1|SYNTH:other-a|XTERM:other-a\nN|route:net-other|node:other-b|ComponentPin|cmp-other-b|def:other-b|other-b:pin-1|SYNTH:other-b|XTERM:other-b\nPROJECT|egc-blocked-continuation-missing\nR|route:net-other|net-other|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:net-other|segment:other|InternalWire|node:other-a|node:other-b|Confirmed"
+}

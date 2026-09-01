@@ -159,6 +159,83 @@ public sealed class AutocadStagingGraphV2AdapterTests
         AutocadStagingGraphV2Contract.EnsureSupportedSchema("lrdu-staging-route.v2");
     }
 
+    [Fact]
+    public void Week1FirstSlice_ThreePinResolvedConnections_ArePreservedInV2()
+    {
+        var result = new AutocadStagingGraphV2Builder().Prepare(
+            Week1FirstSliceV2Fixture.CreateProject(),
+            Week1FirstSliceV2Fixture.AuditedBindings(),
+            Week1FirstSliceV2Fixture.DrawingEvidence());
+
+        Assert.True(result.Preflight.CanStageForReview);
+        var graph = Assert.IsType<AutocadStagingGraphV2Contract>(result.Graph);
+        Assert.Equal("lrdu-staging-route.v2", graph.SchemaVersion);
+        Assert.Equal(Week1FirstSliceV2Fixture.ProjectId, graph.ProjectId);
+        Assert.Equal(
+            Week1FirstSliceV2Fixture.ConnectionIds.Select(id => $"segment:{id}"),
+            graph.Routes.SelectMany(route => route.Segments).Select(segment => segment.SegmentId).Order());
+        var componentIds = graph.Routes.SelectMany(route => route.Nodes)
+            .Select(node => node.ComponentInstanceId)
+            .Where(id => id is not null)
+            .ToHashSet(StringComparer.Ordinal);
+        Assert.Contains(Week1FirstSliceV2Fixture.BelimoComponentId, componentIds);
+        Assert.Contains(Week1FirstSliceV2Fixture.X3ComponentId, componentIds);
+        Assert.Equal(3, graph.Routes.Count);
+        Assert.All(graph.Routes, route => Assert.StartsWith("NET-TBD-", route.NetIdentity));
+    }
+
+    [Fact]
+    public void Week1FirstSlice_DerivedNetIdentity_IsNotPromotedToVisibleLabel()
+    {
+        var graph = Assert.IsType<AutocadStagingGraphV2Contract>(
+            new AutocadStagingGraphV2Builder().Prepare(
+                Week1FirstSliceV2Fixture.CreateProject(),
+                Week1FirstSliceV2Fixture.AuditedBindings(),
+                Week1FirstSliceV2Fixture.DrawingEvidence()).Graph);
+
+        Assert.All(graph.Routes, route =>
+        {
+            Assert.StartsWith("NET-TBD-", route.NetIdentity);
+            Assert.NotEqual(route.NetIdentity, route.VisibleLabel);
+            Assert.False(route.VisibleLabel.StartsWith("NET-TBD-", StringComparison.Ordinal));
+        });
+        Assert.False(JsonSerializer.Serialize(graph).Contains("wireNumber", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Week1FirstSlice_UnresolvedDrawingPolicy_RemainsFailClosed()
+    {
+        var graph = Assert.IsType<AutocadStagingGraphV2Contract>(
+            new AutocadStagingGraphV2Builder().Prepare(
+                Week1FirstSliceV2Fixture.CreateProject(),
+                Week1FirstSliceV2Fixture.AuditedBindings(),
+                Week1FirstSliceV2Fixture.DrawingEvidence()).Graph);
+
+        Assert.Equal("Missing", graph.WireLayerPolicy.ApprovalStatus);
+        Assert.Empty(graph.WireLayerPolicy.PolicyId);
+        Assert.Empty(graph.WireLayerPolicy.SegmentLayers);
+        Assert.Empty(graph.PageIntents);
+        Assert.Empty(graph.CrossPageContinuations);
+        Assert.Empty(graph.HeavyDutyConnectors);
+    }
+
+    [Fact]
+    public void Week1FirstSlice_InputPermutation_ProducesIdenticalLogicalV2Json()
+    {
+        var first = Assert.IsType<AutocadStagingGraphV2Contract>(
+            new AutocadStagingGraphV2Builder().Prepare(
+                Week1FirstSliceV2Fixture.CreateProject(),
+                Week1FirstSliceV2Fixture.AuditedBindings(),
+                Week1FirstSliceV2Fixture.DrawingEvidence()).Graph);
+        var second = Assert.IsType<AutocadStagingGraphV2Contract>(
+            new AutocadStagingGraphV2Builder().Prepare(
+                Week1FirstSliceV2Fixture.CreateProject(reverseInputOrder: true),
+                Week1FirstSliceV2Fixture.AuditedBindings(reverseInputOrder: true),
+                Week1FirstSliceV2Fixture.DrawingEvidence(reverseInputOrder: true)).Graph);
+
+        Assert.Equal(JsonSerializer.Serialize(first), JsonSerializer.Serialize(second));
+    }
+
     private static ElectricalProject DirectWireProject()
     {
         var project = new ElectricalProject { ProjectId = "2fe3fb260c7d4c0eb3f5661e4b112a01" };

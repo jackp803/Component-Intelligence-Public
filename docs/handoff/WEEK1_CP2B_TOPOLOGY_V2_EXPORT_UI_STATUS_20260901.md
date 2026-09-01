@@ -82,6 +82,42 @@ Behavior:
 - The input `ElectricalProject` remains unchanged.
 - No symbol acceptance registry is required for this pure contract export.
 
+## CP2-B2 - Separate Topology Editor v2 Export Action
+
+```text
+status: COMPLETE
+payload_commit: 5547f192e8856cdbaafc3882be2826af2bbb95ed
+payload_tree: c3f6065746f7a61b659f1d0396187f78c07c3080
+remote_sha_confirmed: true
+```
+
+Files:
+
+- `src/ComponentIntelligence.Desktop/ElectricalWorkspaceWindow.xaml`
+- `src/ComponentIntelligence.Desktop/ElectricalWorkspaceWindow.AutocadV2Export.cs`
+- `tests/ComponentIntelligence.Tests/Electrical/AutocadTopologyExportUiBoundaryTests.cs`
+
+TDD and build evidence:
+
+- RED: the XAML lacked `ExportAutocadV2Button` and the dedicated handler file did not exist.
+- GREEN UI boundary suite: `3 passed, 0 failed, 0 skipped`.
+- Combined CP2-B focused suite: `33 passed, 0 failed, 0 skipped`.
+- Desktop build: `0 errors`; existing obsolete API warnings remain.
+- Initial `--no-restore` build: `NOT_PASS` because the fresh worktree had no Desktop
+  `project.assets.json`; the normal restore/build then completed with 0 errors.
+- CP2-A v1 handler SHA-256 remains
+  `2CBABB109812834A088DA5BB3A00536C2B60A34155687ACA410DDD4343DB5F09`.
+- Exact-source-to-head diff for `ElectricalWorkspaceWindow.AutocadReview.cs`: empty.
+- Exact-source-to-head diff for `ElectricalProject.cs`: empty.
+- Dedicated v2 handler prohibited launch/dependency scan: empty.
+
+UI behavior:
+
+- Existing `產生 AutoCAD Electrical` button and `AutoCadReview_Click` remain present and unchanged.
+- New `準備 AutoCAD 繪圖資料 v2` button invokes only the dedicated non-launch coordinator.
+- Success shows schema, project identity and the local artifact path.
+- Blocking evidence is displayed without creating a misleading success message.
+
 ## Explicitly Not Run / Not Changed
 
 `NOT_RUN != PASS`.
@@ -110,4 +146,4 @@ These remain explicit and are not required to complete the pure v2 artifact expo
 ## Next Action
 
 Next owner: Codex within the same authorized CP2-B task.  
-Next action: add the separate Topology Editor v2 export action while preserving the existing v1 action and runner behavior.
+Next action: run final verification, rehash protected assets, finalize this status and update Draft PR #14.

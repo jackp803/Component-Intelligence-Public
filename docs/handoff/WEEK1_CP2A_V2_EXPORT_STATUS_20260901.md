@@ -2,9 +2,10 @@
 
 Task ID: `CODEX-W1-20260901-002`
 Checkpoint ID: `CP2-A`
-State: `IN_PROGRESS`
-Disposition: `PENDING_CP2_A2_A3_AND_FINAL_VERIFICATION`
+State: `COMPLETE`
+Disposition: `PASS_WITH_BLOCKERS`
 Started: `2026-09-01T10:24:00+08:00`
+Completed: `2026-09-01T10:49:21+08:00`
 
 ## Authority
 
@@ -17,6 +18,14 @@ Started: `2026-09-01T10:24:00+08:00`
 | Implementation branch | `codex/week1-cp2a-first-slice-v2-export-20260901` |
 | Draft implementation PR | `jackp803/Component-Intelligence-Public#13` |
 | PR state | `DRAFT / OPEN / UNMERGED` |
+
+Final handoff payload:
+
+```text
+commit: PENDING_AFTER_COMMIT
+tree: PENDING_AFTER_COMMIT
+remote_sha_confirmed: false
+```
 
 The implementation worktree was created from the exact pinned commit outside the pre-existing dirty Product Owner checkout. The task worktree was clean before baseline tests.
 
@@ -131,10 +140,27 @@ Regression evidence:
 | CP2-A3 | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~AutocadReviewPreflightCoordinatorTests\|FullyQualifiedName~AutocadStagingGraphBuilderTests\|FullyQualifiedName~AutocadStagingGraphV2AdapterTests\|FullyQualifiedName~AutocadStagingGraphV2ExporterTests` | PASS: 30 passed, 0 failed, 0 skipped; pre-existing warnings |
 | CP2-A3 UI path diff | `git diff <exact-base> -- src/ComponentIntelligence.Desktop/ElectricalWorkspaceWindow.AutocadReview.cs` | PASS: empty |
 | CP2-A3 dependency scan | exporter scan for runner/process/AutoCAD UI dependencies | PASS: empty |
-| Final focused | Electrical/AutoCAD filter | NOT_RUN: final verification not started |
-| Full test project | Complete test project | NOT_RUN: final verification not started |
+| Final focused | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~Electrical\|FullyQualifiedName~Autocad` | PASS: 421 passed, 0 failed, 0 skipped; pre-existing warnings |
+| Full test project | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj` | PASS: 602 passed, 0 failed, 0 skipped |
+| Base-to-HEAD scope | changed-file list, schema/UI diffs, protected-extension scan and `git diff --check` | PASS: six authorized files; schema/UI diffs empty; no protected extension; no whitespace error |
+| Exporter static boundary | builder call count and prohibited dependency scan | PASS: one builder `Prepare` call; zero runner/process/UI tokens |
+| Protected rehash | production SQLite, selected WDP/DWG and existing library block | PASS: all four hashes match baseline |
+| Repository/process boundary | AutoCAD repo identity/status, AutoCAD process counts, dirty Product Owner checkout write-time audit | PASS: AutoCAD repo clean at accepted head; 0 AutoCAD/accoreconsole processes; 50 pre-existing dirty paths and 0 written after task start |
 
 `NOT_RUN != PASS`.
+
+## Files Changed From Exact Base
+
+```text
+ADDED docs/handoff/WEEK1_CP2A_V2_EXPORT_STATUS_20260901.md
+ADDED src/ComponentIntelligence/Electrical/Export/AutocadStagingGraphV2Exporter.cs
+MODIFIED tests/ComponentIntelligence.Tests/Electrical/AutocadReviewPreflightCoordinatorTests.cs
+MODIFIED tests/ComponentIntelligence.Tests/Electrical/AutocadStagingGraphV2AdapterTests.cs
+ADDED tests/ComponentIntelligence.Tests/Electrical/AutocadStagingGraphV2ExporterTests.cs
+ADDED tests/ComponentIntelligence.Tests/Electrical/Week1FirstSliceV2Fixture.cs
+```
+
+No other source, UI, schema, repository, asset, or contract file changed.
 
 ## Preserved Product Policy
 
@@ -167,9 +193,21 @@ accoreconsole launched: NO
 cloud/Notion write: NO
 AutoCAD implementation repository modified: NO
 coordination repository modified by CP2-A: NO
+authorized GitHub branch/PR write: YES
 ```
 
 The implementation plan's final coordination-pointer step is `NOT_RUN` because the direct Product Owner instruction and CP2-A handoff authorize modifications only in `Component-Intelligence-Public`. This implementation status file and Draft PR are the authorized durable evidence surfaces.
+
+Other deliberately non-executed actions:
+
+```text
+AutoCAD/accoreconsole execution: NOT_RUN — prohibited by CP2-A
+WDP/DWG/DWT/library writer execution: NOT_RUN — prohibited by CP2-A
+Component Intelligence runtime application: NOT_RUN — artifact API covered by unit tests only
+production SQLite/workbook write: NOT_RUN — prohibited by CP2-A
+cloud/Notion asset write: NOT_RUN — prohibited by CP2-A
+downstream page planner/routing/Drawing IR: NOT_RUN — outside CP2-A
+```
 
 ## Blockers Retained
 
@@ -185,6 +223,6 @@ The implementation plan's final coordination-pointer step is `NOT_RUN` because t
 ## Next Owner / Action
 
 ```text
-next_owner: Codex CP2-A implementation
-next_action: Execute final focused/full verification and protected-state rehash. Stop after the complete CP2-A handoff for PM/Product Owner review.
+next_owner: Product Owner / PM
+next_action: Review Draft implementation PR 13 and this exact checkpoint history. Do not start CP2-B, UI hookup, template staging, page policy, or AutoCAD work without a new PM authorization.
 ```

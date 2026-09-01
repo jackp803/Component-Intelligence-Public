@@ -79,11 +79,25 @@ The A1 invariants passed on the existing v2 builder. A1 made no production-code 
 ### CP2-A2 — Deterministic v2 Artifact Exporter
 
 ```text
-status: NOT_STARTED
-payload_commit: PENDING
-payload_tree: PENDING
-remote_sha_confirmed: false
+status: COMPLETE
+payload_commit: bd40674d644d64a2c68910917d9b2da75484ed9e
+payload_tree: 45b72625c7c1be6616a1a0d9ad3533268b4860ce
+remote_sha_confirmed: true
 ```
+
+Files:
+
+- `src/ComponentIntelligence/Electrical/Export/AutocadStagingGraphV2Exporter.cs`
+- `tests/ComponentIntelligence.Tests/Electrical/AutocadStagingGraphV2ExporterTests.cs`
+
+TDD evidence:
+
+- RED: focused exporter tests failed at five compile sites because `AutocadStagingGraphV2Exporter` did not exist.
+- GREEN: exporter-only tests passed `4/4`; combined A2 suite passed `35/35`.
+- The exporter calls the existing v2 builder once, validates the supported schema, and writes one fixed UTF-8 no-BOM/LF-only JSON artifact only when `Preparation.Graph` exists.
+- A preflight hard error creates no output directory or artifact.
+- Equivalent permuted inputs produce byte-identical JSON.
+- No process, runner, persistence, page policy, wire layer, explicit NetId, or visible `NET-TBD-*` promotion was added.
 
 ### CP2-A3 — Legacy v1 Review Path Guard
 
@@ -100,7 +114,9 @@ remote_sha_confirmed: false
 |---|---|---|
 | Baseline | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~AutocadStagingGraphV2AdapterTests\|FullyQualifiedName~AutocadStagingGraphBuilderTests\|FullyQualifiedName~AutocadMachineNetIdentityResolverTests` | PASS: 27 passed, 0 failed, 0 skipped; pre-existing warnings |
 | CP2-A1 | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~AutocadStagingGraphV2AdapterTests` | PASS: 12 passed, 0 failed, 0 skipped; pre-existing warnings |
-| CP2-A2 | Exporter-focused suite | NOT_RUN: checkpoint not started |
+| CP2-A2 RED | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~AutocadStagingGraphV2ExporterTests` before production implementation | EXPECTED FAIL: exporter type missing at five compile sites |
+| CP2-A2 GREEN | Same exporter-focused command after minimum implementation | PASS: 4 passed, 0 failed, 0 skipped; pre-existing warnings |
+| CP2-A2 combined | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~AutocadStagingGraphV2ExporterTests\|FullyQualifiedName~AutocadStagingGraphV2AdapterTests\|FullyQualifiedName~AutocadStagingGraphBuilderTests\|FullyQualifiedName~AutocadMachineNetIdentityResolverTests` | PASS: 35 passed, 0 failed, 0 skipped |
 | CP2-A3 | v1/v2 boundary suite | NOT_RUN: checkpoint not started |
 | Final focused | Electrical/AutoCAD filter | NOT_RUN: final verification not started |
 | Full test project | Complete test project | NOT_RUN: final verification not started |
@@ -157,5 +173,5 @@ The implementation plan's final coordination-pointer step is `NOT_RUN` because t
 
 ```text
 next_owner: Codex CP2-A implementation
-next_action: Execute CP2-A2 test-first, then CP2-A3 and final verification. Stop after the complete CP2-A handoff for PM/Product Owner review.
+next_action: Execute CP2-A3 v1-path regression guard, then final verification. Stop after the complete CP2-A handoff for PM/Product Owner review.
 ```

@@ -17,7 +17,8 @@ public sealed record InlineTerminalOptions(
 public sealed record CableSegmentOptions(
     string? ReferenceDesignator = null,
     string? CableDefinitionId = null,
-    string? DisplayName = null);
+    string? DisplayName = null,
+    CableConstructionType CableConstructionType = CableConstructionType.Unknown);
 
 public sealed record InlineMatedConnectorPair(
     ComponentInstance FemaleAdapter,
@@ -237,6 +238,7 @@ public sealed class TopologyConnectionEditor
         {
             existing.CableDefinitionId = definitionId;
             existing.DisplayName = displayName;
+            existing.CableConstructionType = options.CableConstructionType;
             if (!string.IsNullOrWhiteSpace(options.ReferenceDesignator))
                 existing.ReferenceDesignator = options.ReferenceDesignator.Trim();
             else if (string.IsNullOrWhiteSpace(existing.ReferenceDesignator))
@@ -250,6 +252,7 @@ public sealed class TopologyConnectionEditor
             CableInstanceId = $"cbl-{Guid.NewGuid():N}",
             CableDefinitionId = definitionId,
             DisplayName = displayName,
+            CableConstructionType = options.CableConstructionType,
             ReferenceDesignator = string.IsNullOrWhiteSpace(options.ReferenceDesignator) ? NextCableReference(project) : options.ReferenceDesignator.Trim()
         };
         project.Cables.Add(cable);

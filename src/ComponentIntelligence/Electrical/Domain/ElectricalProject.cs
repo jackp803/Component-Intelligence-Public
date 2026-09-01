@@ -160,6 +160,7 @@ public sealed class CableInstance
     public string? ReferenceDesignator { get; set; }
     public double? ProvidedLengthMm { get; set; }
     public CableLengthSource LengthSource { get; set; } = CableLengthSource.Unknown;
+    public CableConstructionType CableConstructionType { get; set; } = CableConstructionType.Unknown;
     public List<CoreAssignment> CoreAssignments { get; init; } = new();
 }
 

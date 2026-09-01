@@ -26,6 +26,7 @@ public sealed class AutocadReviewPreflightCoordinatorTests : IDisposable
 
         Assert.True(result.CanLaunch);
         var graph = Assert.IsType<AutocadStagingGraphContract>(result.Preparation!.Graph);
+        Assert.Equal("lrdu-staging-route.v1", graph.SchemaVersion);
         Assert.Equal(DrawingPageArchetype.Interface, graph.PageArchetypeHint.Archetype);
         var roles = Assert.Single(graph.Routes).Nodes
             .Where(node => node.ComponentInstanceId is not null)

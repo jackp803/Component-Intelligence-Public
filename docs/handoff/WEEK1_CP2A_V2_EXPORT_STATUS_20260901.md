@@ -22,10 +22,14 @@ Completed: `2026-09-01T10:49:21+08:00`
 Final handoff payload:
 
 ```text
-commit: PENDING_AFTER_COMMIT
-tree: PENDING_AFTER_COMMIT
-remote_sha_confirmed: false
+commit: 11bb515c0ede585d0b161fc300cbc51e2fff29ef
+tree: 8e09dae4fc598c76ebf25c20adf871d5bddae0ae
+remote_sha_confirmed: true
 ```
+
+The commit above is the verified implementation-and-handoff payload. The following
+status-only commit records its remote confirmation and becomes the final branch head;
+it does not change implementation behavior.
 
 The implementation worktree was created from the exact pinned commit outside the pre-existing dirty Product Owner checkout. The task worktree was clean before baseline tests.
 

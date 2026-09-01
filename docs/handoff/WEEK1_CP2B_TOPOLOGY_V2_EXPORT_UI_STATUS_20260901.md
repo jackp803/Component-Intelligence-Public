@@ -1,10 +1,11 @@
 # Week 1 CP2-B Topology v2 Export UI Status
 
-Project ID: `electrical-drawing-automation`  
-Task ID: `CODEX-W1-20260901-003`  
-Checkpoint ID: `CP2-B`  
-State: `IN_PROGRESS`  
-Disposition: `NOT_FINAL`
+Project ID: `electrical-drawing-automation`
+Task ID: `CODEX-W1-20260901-003`
+Checkpoint ID: `CP2-B`
+State: `COMPLETE`
+Disposition: `PASS_WITH_BLOCKERS`
+Completed: `2026-09-01T11:43:46+08:00`
 
 ## Authority
 
@@ -17,6 +18,14 @@ Disposition: `NOT_FINAL`
 | Implementation branch | `codex/week1-cp2b-topology-v2-export-ui-20260901` |
 | Draft PR base | `codex/week1-cp2a-first-slice-v2-export-20260901` |
 | Draft PR | `jackp803/Component-Intelligence-Public#14` (`DRAFT / OPEN / UNMERGED`) |
+
+Final verified handoff payload:
+
+```text
+commit: PENDING_AFTER_COMMIT
+tree: PENDING_AFTER_COMMIT
+remote_sha_confirmed: false
+```
 
 The implementation uses a clean linked worktree created directly from the exact source commit.
 The Product Owner's pre-existing dirty checkout was not used for implementation.
@@ -118,6 +127,54 @@ UI behavior:
 - Success shows schema, project identity and the local artifact path.
 - Blocking evidence is displayed without creating a misleading success message.
 
+## Final Verification
+
+| Verification | Result |
+|---|---|
+| Electrical/AutoCAD focused test suite | `428 passed, 0 failed, 0 skipped` |
+| Full Component Intelligence test project | `609 passed, 0 failed, 0 skipped` |
+| Desktop project build | `0 errors`; 20 existing obsolete API warnings |
+| Combined CP2-B focused boundary suite | `33 passed, 0 failed, 0 skipped` |
+| `git diff --check` | PASS after removing status-only Markdown trailing whitespace |
+| Exact-source v1 handler diff | empty |
+| Exact-source `ElectricalProject.cs` diff | empty |
+| Protected-extension commit scan | empty |
+| Private absolute locator scan | empty |
+| Dedicated coordinator/UI launch dependency scan | empty |
+
+Changed files relative to the exact CP2-A source:
+
+- `docs/handoff/WEEK1_CP2B_TOPOLOGY_V2_EXPORT_UI_STATUS_20260901.md`
+- `src/ComponentIntelligence.Desktop/AutocadStagingGraphV2ExportCoordinator.cs`
+- `src/ComponentIntelligence.Desktop/ElectricalWorkspaceWindow.AutocadV2Export.cs`
+- `src/ComponentIntelligence.Desktop/ElectricalWorkspaceWindow.xaml`
+- `tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj`
+- `tests/ComponentIntelligence.Tests/Electrical/AutocadStagingGraphV2ExportCoordinatorTests.cs`
+- `tests/ComponentIntelligence.Tests/Electrical/AutocadTopologyExportUiBoundaryTests.cs`
+
+Output/storage behavior:
+
+```text
+existing Component Intelligence local staging root
+  / <UTC timestamp>-<GUID>
+      / lrdu-staging-route.v2.json
+```
+
+The action writes no other artifact. The output is an inspectable local staging contract,
+not a new topology, component, project, cloud, or drawing authority.
+
+## Final Protected-State Rehash
+
+All baseline comparisons passed:
+
+- production SQLite SHA-256: unchanged;
+- configured central workbook SHA-256: unchanged;
+- 1,878 WDP/DWG/DWT candidate manifest: unchanged;
+- 35 formal ACADE library DWG manifest: unchanged;
+- AutoCAD implementation repository: clean at the baseline head;
+- AutoCAD / accoreconsole process count: 0;
+- Product Owner dirty source checkout count: unchanged; implementation writes: 0.
+
 ## Explicitly Not Run / Not Changed
 
 `NOT_RUN != PASS`.
@@ -145,5 +202,6 @@ These remain explicit and are not required to complete the pure v2 artifact expo
 
 ## Next Action
 
-Next owner: Codex within the same authorized CP2-B task.  
-Next action: run final verification, rehash protected assets, finalize this status and update Draft PR #14.
+Next owner: PM / Product Owner.
+Next action: review stacked Draft PR #14 and this durable evidence. Do not begin downstream
+Page Planner, cable, placement, routing, Drawing IR, AutoCAD, or policy work without a new task.

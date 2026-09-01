@@ -98,7 +98,7 @@ public sealed record AutocadStagingGraphV2Contract
         var powerFlow = BuildPowerFlowEvidence(drawingEvidence);
         var powerEvidence = ElectricalPowerEvidenceV1Builder.Build(project);
         var cableFamilies = BuildCableFamilies(source.CableFamilies);
-        var cableInstances = BuildCableInstances(source.CableInstances, routes);
+        var cableInstances = BuildCableInstances(source.CableInstances, routes, project.Cables);
         var terminalContinuities = BuildTerminalContinuities(source.TerminalContinuities);
         var crossPage = BuildCrossPageContinuations(source.CrossPageContinuations, routes);
         var deviceRoles = BuildDeviceRoles(drawingEvidence);
@@ -204,11 +204,18 @@ public sealed record AutocadStagingGraphV2Contract
 
     private static IReadOnlyList<AutocadStagingV2CableInstance> BuildCableInstances(
         IReadOnlyList<AutocadStagingCableInstance> sourceInstances,
-        IReadOnlyList<AutocadStagingRoute> routes)
+        IReadOnlyList<AutocadStagingRoute> routes,
+        IReadOnlyList<CableInstance> projectInstances)
     {
         var segments = routes.SelectMany(route => route.Segments)
             .Where(segment => string.Equals(segment.TopologyStatus, "Confirmed", StringComparison.Ordinal))
             .ToArray();
+        var constructionTypeByCableId = projectInstances
+            .GroupBy(item => item.CableInstanceId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First().CableConstructionType,
+                StringComparer.OrdinalIgnoreCase);
 
         return sourceInstances.OrderBy(item => item.CableInstanceId, StringComparer.Ordinal)
             .Select(item =>
@@ -234,6 +241,9 @@ public sealed record AutocadStagingGraphV2Contract
                     PinCoreMap = [],
                     CableDefinitionId = item.CableDefinitionId,
                     LengthSource = item.LengthSource,
+                    CableConstructionType = constructionTypeByCableId.GetValueOrDefault(
+                        item.CableInstanceId,
+                        CableConstructionType.Unknown),
                     EvidenceStatus = exactSegment is null ? "BlockingUnknown" : "Partial",
                     BlockingReason = "PLANNER_PIN_CORE_FUNCTION_MAP_REQUIRED"
                 };
@@ -488,6 +498,8 @@ public sealed record AutocadStagingV2CableInstance
     [JsonPropertyName("pinCoreMap")] public required IReadOnlyList<object> PinCoreMap { get; init; }
     [JsonPropertyName("cableDefinitionId")] public required string CableDefinitionId { get; init; }
     [JsonPropertyName("lengthSource")] public CableLengthSource LengthSource { get; init; }
+    [JsonPropertyName("cableConstructionType"), JsonConverter(typeof(JsonStringEnumConverter))]
+    public CableConstructionType CableConstructionType { get; init; } = CableConstructionType.Unknown;
     [JsonPropertyName("evidenceStatus")] public required string EvidenceStatus { get; init; }
     [JsonPropertyName("blockingReason")] public required string BlockingReason { get; init; }
 }

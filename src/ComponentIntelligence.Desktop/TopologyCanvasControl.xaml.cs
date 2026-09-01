@@ -317,7 +317,8 @@ public partial class TopologyCanvasControl : UserControl
         var dialog = new InlineConnectionDialog(
             BuildConnectionSummary(connection),
             _availableCableMaterials,
-            assignedCable?.CableDefinitionId)
+            assignedCable?.CableDefinitionId,
+            assignedCable?.CableConstructionType ?? CableConstructionType.Unknown)
         {
             Owner = Window.GetWindow(this)
         };

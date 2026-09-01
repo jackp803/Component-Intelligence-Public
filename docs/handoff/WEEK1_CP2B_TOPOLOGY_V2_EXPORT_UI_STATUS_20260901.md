@@ -16,7 +16,7 @@ Disposition: `NOT_FINAL`
 | Exact source tree | `154d23c1e7168c5603b3d6c35cf96bc1e49ed073` |
 | Implementation branch | `codex/week1-cp2b-topology-v2-export-ui-20260901` |
 | Draft PR base | `codex/week1-cp2a-first-slice-v2-export-20260901` |
-| Draft PR | `PENDING` |
+| Draft PR | `jackp803/Component-Intelligence-Public#14` (`DRAFT / OPEN / UNMERGED`) |
 
 The implementation uses a clean linked worktree created directly from the exact source commit.
 The Product Owner's pre-existing dirty checkout was not used for implementation.

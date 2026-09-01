@@ -102,11 +102,22 @@ TDD evidence:
 ### CP2-A3 — Legacy v1 Review Path Guard
 
 ```text
-status: NOT_STARTED
-payload_commit: PENDING
-payload_tree: PENDING
-remote_sha_confirmed: false
+status: COMPLETE
+payload_commit: 33a6676fb010b1faa6e853aa42af72dc10bec26a
+payload_tree: 74bbbf4e5d2ca022a8060937f2d8e55ad927f454
+remote_sha_confirmed: true
 ```
+
+File:
+
+- `tests/ComponentIntelligence.Tests/Electrical/AutocadReviewPreflightCoordinatorTests.cs`
+
+Regression evidence:
+
+- existing coordinator preparation explicitly asserts `lrdu-staging-route.v1`;
+- v1/v2 boundary suite passed `30/30`;
+- exact base-to-HEAD diff for `ElectricalWorkspaceWindow.AutocadReview.cs` is empty;
+- the new exporter contains no `AutocadStagingReviewRunner`, process, `accoreconsole`, or `AutoCadReview_Click` dependency.
 
 ## Verification Commands And Results
 
@@ -117,7 +128,9 @@ remote_sha_confirmed: false
 | CP2-A2 RED | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~AutocadStagingGraphV2ExporterTests` before production implementation | EXPECTED FAIL: exporter type missing at five compile sites |
 | CP2-A2 GREEN | Same exporter-focused command after minimum implementation | PASS: 4 passed, 0 failed, 0 skipped; pre-existing warnings |
 | CP2-A2 combined | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~AutocadStagingGraphV2ExporterTests\|FullyQualifiedName~AutocadStagingGraphV2AdapterTests\|FullyQualifiedName~AutocadStagingGraphBuilderTests\|FullyQualifiedName~AutocadMachineNetIdentityResolverTests` | PASS: 35 passed, 0 failed, 0 skipped |
-| CP2-A3 | v1/v2 boundary suite | NOT_RUN: checkpoint not started |
+| CP2-A3 | `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter FullyQualifiedName~AutocadReviewPreflightCoordinatorTests\|FullyQualifiedName~AutocadStagingGraphBuilderTests\|FullyQualifiedName~AutocadStagingGraphV2AdapterTests\|FullyQualifiedName~AutocadStagingGraphV2ExporterTests` | PASS: 30 passed, 0 failed, 0 skipped; pre-existing warnings |
+| CP2-A3 UI path diff | `git diff <exact-base> -- src/ComponentIntelligence.Desktop/ElectricalWorkspaceWindow.AutocadReview.cs` | PASS: empty |
+| CP2-A3 dependency scan | exporter scan for runner/process/AutoCAD UI dependencies | PASS: empty |
 | Final focused | Electrical/AutoCAD filter | NOT_RUN: final verification not started |
 | Full test project | Complete test project | NOT_RUN: final verification not started |
 
@@ -173,5 +186,5 @@ The implementation plan's final coordination-pointer step is `NOT_RUN` because t
 
 ```text
 next_owner: Codex CP2-A implementation
-next_action: Execute CP2-A3 v1-path regression guard, then final verification. Stop after the complete CP2-A handoff for PM/Product Owner review.
+next_action: Execute final focused/full verification and protected-state rehash. Stop after the complete CP2-A handoff for PM/Product Owner review.
 ```

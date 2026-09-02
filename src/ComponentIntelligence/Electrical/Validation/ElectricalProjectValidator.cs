@@ -40,6 +40,7 @@ public sealed class ElectricalProjectValidator
         ValidateRs485Pairs(project, connectedEndpointIds, results);
         ValidateTerminalCapacity(project, results);
         ValidateBusAddresses(project, results);
+        ValidateCableAssemblies(project, results);
 
         var readiness = results.Any(result => result.Severity == ValidationSeverity.Block && result.AffectsDrawingExport)
             ? DrawingReadiness.Blocked
@@ -351,6 +352,93 @@ public sealed class ElectricalProjectValidator
                 SourceObjectIds = duplicate.Select(pair => pair.Key).Prepend(bus.BusId).ToList(),
                 RequiresPreExportReview = true
             });
+        }
+    }
+
+    private static void ValidateCableAssemblies(ElectricalProject project, ICollection<ValidationResult> results)
+    {
+        var cableIds = project.Cables
+            .Select(cable => cable.CableInstanceId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var assembly in project.CableAssemblies
+                     .OrderBy(item => item.CableAssemblyId, StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(item => item.CableAssemblyId, StringComparer.Ordinal))
+        {
+            var members = assembly.Members
+                .OrderBy(member => member.CableInstanceId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(member => member.CableInstanceId, StringComparer.Ordinal)
+                .ToArray();
+
+            var trunks = members
+                .Where(member => member.SegmentRoleType == CableAssemblySegmentRoleType.Trunk)
+                .ToArray();
+            if (trunks.Length > 1)
+            {
+                results.Add(Block(
+                    "RULE-CABLE-ASSEMBLY-001",
+                    $"Cable assembly '{assembly.CableAssemblyId}' has more than one Trunk member.",
+                    trunks.Select(member => member.CableInstanceId).Prepend(assembly.CableAssemblyId)));
+            }
+
+            foreach (var duplicateBranch in members
+                         .Where(member => member.SegmentRoleType == CableAssemblySegmentRoleType.Branch && member.SegmentRoleIndex > 0)
+                         .GroupBy(member => member.SegmentRoleIndex!.Value)
+                         .Where(group => group.Count() > 1)
+                         .OrderBy(group => group.Key))
+            {
+                results.Add(Block(
+                    "RULE-CABLE-ASSEMBLY-002",
+                    $"Cable assembly '{assembly.CableAssemblyId}' has duplicate Branch index {duplicateBranch.Key}.",
+                    duplicateBranch.Select(member => member.CableInstanceId).Prepend(assembly.CableAssemblyId)));
+            }
+
+            foreach (var member in members)
+            {
+                if (member.SegmentRoleType == CableAssemblySegmentRoleType.Branch && member.SegmentRoleIndex is null or <= 0)
+                {
+                    results.Add(Block(
+                        "RULE-CABLE-ASSEMBLY-003",
+                        $"Branch member '{member.CableInstanceId}' requires a positive Branch index.",
+                        new[] { assembly.CableAssemblyId, member.CableInstanceId }));
+                }
+
+                if (member.SegmentRoleType == CableAssemblySegmentRoleType.Trunk && member.SegmentRoleIndex is not null)
+                {
+                    results.Add(Block(
+                        "RULE-CABLE-ASSEMBLY-004",
+                        $"Trunk member '{member.CableInstanceId}' must not carry a Branch index.",
+                        new[] { assembly.CableAssemblyId, member.CableInstanceId }));
+                }
+
+                if (member.SegmentRoleType == CableAssemblySegmentRoleType.Other && string.IsNullOrWhiteSpace(member.SegmentRoleName))
+                {
+                    results.Add(Block(
+                        "RULE-CABLE-ASSEMBLY-005",
+                        $"Other member '{member.CableInstanceId}' requires a role name.",
+                        new[] { assembly.CableAssemblyId, member.CableInstanceId }));
+                }
+
+                if (!cableIds.Contains(member.CableInstanceId))
+                {
+                    results.Add(Block(
+                        "RULE-CABLE-ASSEMBLY-006",
+                        $"Cable assembly member '{member.CableInstanceId}' does not reference an existing CableInstance.",
+                        new[] { assembly.CableAssemblyId, member.CableInstanceId }));
+                }
+            }
+
+            foreach (var duplicateMember in members
+                         .GroupBy(member => member.CableInstanceId, StringComparer.OrdinalIgnoreCase)
+                         .Where(group => group.Count() > 1)
+                         .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(group => group.Key, StringComparer.Ordinal))
+            {
+                results.Add(Block(
+                    "RULE-CABLE-ASSEMBLY-007",
+                    $"Cable assembly '{assembly.CableAssemblyId}' contains duplicate member '{duplicateMember.Key}'.",
+                    new[] { assembly.CableAssemblyId, duplicateMember.Key }));
+            }
         }
     }
 

@@ -50,7 +50,7 @@ public sealed class ElectricalMigrationV03Tests
 
         var migrated = ElectricalProjectMigrator.Migrate(oldProject);
 
-        Assert.Equal("0.3", migrated.SchemaVersion);
+        Assert.Equal(ElectricalProjectMigrator.CurrentSchemaVersion, migrated.SchemaVersion);
         Assert.Same(oldProject.Components, migrated.Components);
         Assert.Same(oldProject.Connections, migrated.Connections);
         Assert.Same(oldProject.Cables, migrated.Cables);

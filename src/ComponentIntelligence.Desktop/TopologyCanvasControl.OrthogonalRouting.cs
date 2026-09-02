@@ -127,6 +127,7 @@ public partial class TopologyCanvasControl
             Tag = connection.ConnectionId,
             StrokeLineJoin = PenLineJoin.Round,
             Cursor = Cursors.Hand,
+            ContextMenu = BuildCableAssemblyContextMenu(connection.ConnectionId),
             ToolTip = "Orthogonal Route（正交折線）\n單擊：選取並顯示折點與兩端改接把手\n雙擊：線路設定"
         };
         route.MouseLeftButtonDown += OrthogonalRoute_MouseLeftButtonDown;

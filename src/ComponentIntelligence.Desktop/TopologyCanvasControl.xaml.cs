@@ -138,6 +138,7 @@ public partial class TopologyCanvasControl : UserControl
                 Visibility = Visibility.Collapsed,
                 Tag = edge.ConnectionId,
                 Cursor = Cursors.Hand,
+                ContextMenu = BuildCableAssemblyContextMenu(edge.ConnectionId),
                 ToolTip = $"{edge.NetLabel ?? edge.NetId ?? edge.ConnectionId} | {edge.Layer}\n雙擊：切段 / 插入 Connector / Terminal / Cable"
             };
             line.MouseLeftButtonDown += Edge_MouseLeftButtonDown;
@@ -337,6 +338,12 @@ public partial class TopologyCanvasControl : UserControl
             return;
         }
 
+        if (TryOpenCableAssemblyEditor(connection))
+        {
+            e.Handled = true;
+            return;
+        }
+
         var assignedCable = _project.Cables.FirstOrDefault(item =>
             string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
         var selectedConnectionIds = _selectedTopologyConnectionIds.Count >= 2 &&
@@ -351,6 +358,7 @@ public partial class TopologyCanvasControl : UserControl
             _availableCableMaterials,
             assignedCable?.CableDefinitionId,
             assignedCable?.CableConstructionType ?? CableConstructionType.Unknown,
+            hasExplicitCable: connection.CableInstanceId is not null,
             selectedConnectionCount: selectedConnectionIds.Length)
         {
             Owner = Window.GetWindow(this)

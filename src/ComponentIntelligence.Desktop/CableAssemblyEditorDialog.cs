@@ -367,11 +367,18 @@ public sealed class CableAssemblyEditorDialog : Window
         if (_closingFromButton || !_dirty || DialogResult == true) return;
         var answer = MessageBox.Show(
             this,
-            "尚有未儲存的複合線變更。要捨棄這些變更嗎？",
+            "尚有未儲存的複合線變更。\n\n是：儲存\n否：捨棄\n取消：返回編輯",
             "未儲存的變更",
-            MessageBoxButton.YesNo,
+            MessageBoxButton.YesNoCancel,
             MessageBoxImage.Question);
-        if (answer == MessageBoxResult.No) e.Cancel = true;
+        if (answer == MessageBoxResult.No) return;
+        e.Cancel = true;
+        if (answer != MessageBoxResult.Yes || !_service.Validate(_project, Draft).CanSave) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            _closingFromButton = true;
+            DialogResult = true;
+        });
     }
 
     private static FrameworkElement LabeledField(string label, FrameworkElement control)

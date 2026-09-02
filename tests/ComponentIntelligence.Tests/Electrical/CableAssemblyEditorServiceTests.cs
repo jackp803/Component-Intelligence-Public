@@ -300,6 +300,56 @@ public sealed class CableAssemblyEditorServiceTests
         Assert.DoesNotContain(draft.Members, item => item.CableInstanceId == "cable-c");
     }
 
+    [Fact]
+    public void ExistingAssemblyMayRemoveMembershipWithoutInventingANewStructuralRule()
+    {
+        var project = ProjectWithCables("cable-a", "cable-b");
+        project.CableAssemblies.Add(new CableAssembly
+        {
+            CableAssemblyId = "assembly-existing",
+            IsCustom = true,
+            Members =
+            {
+                new CableAssemblyMember { CableInstanceId = "cable-a", Purpose = "legacy-purpose" },
+                new CableAssemblyMember { CableInstanceId = "cable-b" }
+            }
+        });
+        var draft = _service.PrepareExistingFromConnection(project, "conn-a").Draft!;
+
+        _service.RemoveMember(draft, "cable-b");
+        var applied = _service.Apply(project, draft);
+
+        Assert.Equal("assembly-existing", applied.CableAssemblyId);
+        Assert.True(applied.IsCustom);
+        Assert.Single(applied.Members);
+        Assert.Equal("legacy-purpose", applied.Members[0].Purpose);
+        Assert.Contains(project.Cables, cable => cable.CableInstanceId == "cable-b");
+        Assert.Contains(project.Connections, connection => connection.CableInstanceId == "cable-b");
+    }
+
+    [Theory]
+    [InlineData(CableLengthSource.Unknown, null)]
+    [InlineData(CableLengthSource.User, 1000d)]
+    [InlineData(CableLengthSource.Imported, 2000d)]
+    [InlineData(CableLengthSource.Mechanical, 3000d)]
+    public void UntouchedLengthEvidenceIsPreservedExactly(CableLengthSource source, double? length)
+    {
+        var project = ProjectWithCables("cable-a", "cable-b");
+        project.Cables[0].LengthSource = source;
+        project.Cables[0].ProvidedLengthMm = length;
+        project.TopologyRoutes.Add(new TopologyRouteGeometry
+        {
+            ConnectionId = "conn-a",
+            Points = { new TopologyRoutePoint { X = 0, Y = 0 }, new TopologyRoutePoint { X = 9999, Y = 9999 } }
+        });
+        var draft = _service.PrepareNewFromConnections(project, ["conn-a", "conn-b"]);
+
+        _service.Apply(project, draft);
+
+        Assert.Equal(length, project.Cables[0].ProvidedLengthMm);
+        Assert.Equal(source, project.Cables[0].LengthSource);
+    }
+
     private static ElectricalProject ProjectWithCables(params string[] cableIds)
     {
         var project = new ElectricalProject { ProjectId = "project-1" };

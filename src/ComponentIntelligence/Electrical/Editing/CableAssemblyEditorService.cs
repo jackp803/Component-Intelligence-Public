@@ -223,7 +223,7 @@ public sealed class CableAssemblyEditorService
         ArgumentNullException.ThrowIfNull(draft);
         var issues = new List<CableAssemblyEditIssue>();
 
-        if (draft.Members.Count < 2)
+        if (draft.IsNew && draft.Members.Count < 2)
             issues.Add(Block("INPUT-ASSEMBLY-MEMBERS", "複合線至少需要兩個線段。", [draft.CableAssemblyId]));
 
         foreach (var member in draft.Members.Where(member => !string.IsNullOrWhiteSpace(member.LengthInputError)))

@@ -312,13 +312,20 @@ public partial class TopologyCanvasControl : UserControl
             return;
         }
 
+        if (TryOpenCableAssemblyEditor(connection))
+        {
+            e.Handled = true;
+            return;
+        }
+
         var assignedCable = _project.Cables.FirstOrDefault(item =>
             string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
         var dialog = new InlineConnectionDialog(
             BuildConnectionSummary(connection),
             _availableCableMaterials,
             assignedCable?.CableDefinitionId,
-            assignedCable?.CableConstructionType ?? CableConstructionType.Unknown)
+            assignedCable?.CableConstructionType ?? CableConstructionType.Unknown,
+            connection.CableInstanceId is not null)
         {
             Owner = Window.GetWindow(this)
         };

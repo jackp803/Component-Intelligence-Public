@@ -27,6 +27,41 @@ public sealed class TopologyInteractionTests
     }
 
     [Fact]
+    public void OrdinaryPortConnectionRemainsWireWithoutCableAuthority()
+    {
+        var project = ProjectWithTwoPorts();
+
+        var connection = new TopologyConnectionEditor().ConnectPorts(
+            project,
+            "cmp-a:port:p1",
+            "cmp-b:port:p1");
+
+        Assert.Equal(ConnectionKind.Wire, connection.Kind);
+        Assert.Null(connection.CableInstanceId);
+        Assert.Empty(project.Cables);
+    }
+
+    [Theory]
+    [InlineData(CableConstructionType.Purchased)]
+    [InlineData(CableConstructionType.Custom)]
+    public void ExplicitCableClassificationCreatesAndBindsOneCable(CableConstructionType constructionType)
+    {
+        var project = ProjectWithTwoPorts();
+        var editor = new TopologyConnectionEditor();
+        var connection = editor.ConnectPorts(project, "cmp-a:port:p1", "cmp-b:port:p1");
+
+        var cable = editor.AssignCableSegment(
+            project,
+            connection.ConnectionId,
+            new CableSegmentOptions("CBL-01", "DEF-01", "Cable 01", constructionType));
+
+        Assert.Equal(ConnectionKind.Cable, connection.Kind);
+        Assert.Equal(cable.CableInstanceId, connection.CableInstanceId);
+        Assert.Equal(constructionType, cable.CableConstructionType);
+        Assert.Single(project.Cables);
+    }
+
+    [Fact]
     public void DoubleClickStyleInlineConnectorOperationSplitsOneConnectionIntoTwo()
     {
         var project = ProjectWithTwoPorts();

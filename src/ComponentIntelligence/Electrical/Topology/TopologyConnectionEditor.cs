@@ -58,7 +58,7 @@ public sealed class TopologyConnectionEditor
             FromEndpointId = fromPortId,
             ToEndpointId = toPortId,
             NetId = netId,
-            Kind = ConnectionKind.Cable
+            Kind = ConnectionKind.Wire
         };
         project.Connections.Add(connection);
         return connection;

@@ -27,8 +27,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         BomGrid.ItemsSource = _rows;
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        _databasePath = Path.Combine(appData, "ComponentIntelligence", "component-intelligence.db");
+        _databasePath = DesktopDatabasePathResolver.Resolve();
         DatabasePathText.Text = _databasePath;
         ApplyLanguageText();
     }

@@ -122,6 +122,13 @@ public partial class TopologyCanvasControl
                     string.Equals(route.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
                     route.Tag is string routeConnectionId)
                 {
+                    if (_collapsedCableCoreConnectionIds.Contains(routeConnectionId) ||
+                        _visuallyMatedConnectionIds.Contains(routeConnectionId))
+                    {
+                        if (route.Visibility != Visibility.Collapsed)
+                            route.Visibility = Visibility.Collapsed;
+                        continue;
+                    }
                     var visible = showWires && edgeLayers.TryGetValue(routeConnectionId, out var layer) &&
                         (showAllLayers || selectedLayers.Contains(layer));
                     var desired = visible ? Visibility.Visible : Visibility.Collapsed;

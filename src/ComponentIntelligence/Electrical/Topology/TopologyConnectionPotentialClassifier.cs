@@ -17,6 +17,23 @@ public enum TopologyPotentialClass
 /// </summary>
 public static class TopologyConnectionPotentialClassifier
 {
+    public static TopologyPotentialClass ClassifyEndpoint(ElectricalProject project, string endpointId)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpointId);
+
+        var pin = project.Components.SelectMany(component => component.Ports)
+            .SelectMany(port => port.Pins)
+            .FirstOrDefault(item => string.Equals(item.PinId, endpointId, StringComparison.OrdinalIgnoreCase));
+        if (pin is not null)
+        {
+            var structured = ClassifyPin(pin);
+            if (structured != TopologyPotentialClass.Unknown) return structured;
+        }
+
+        return ResolveConsensus(ResolveEndpointLabels(project, endpointId).Select(ClassifyLabel));
+    }
+
     public static TopologyPotentialClass Classify(ElectricalProject project, ElectricalConnection connection)
     {
         ArgumentNullException.ThrowIfNull(project);
@@ -127,7 +144,9 @@ public static class TopologyConnectionPotentialClassifier
             compact.Contains("FUNCTIONALEARTH", StringComparison.Ordinal))
             return TopologyPotentialClass.ProtectiveOrFunctionalEarth;
 
-        if (compact is "0V" or "V-" or "-V" or "DC-" ||
+        if (compact is "0V" or "V-" or "-V" or "DC-" or "GND" or "COM" or "COMMON" ||
+            compact.StartsWith("COMBLACK", StringComparison.Ordinal) ||
+            compact.Contains("SIGNALGROUND", StringComparison.Ordinal) ||
             compact.Contains("RTN", StringComparison.Ordinal) ||
             compact.Contains("RETURN", StringComparison.Ordinal) ||
             compact.Contains("0V", StringComparison.Ordinal) ||

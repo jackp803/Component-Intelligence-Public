@@ -173,8 +173,15 @@ public partial class TopologyCanvasControl
         if (!ctrl)
         {
             _selectedTopologyObjectIds.Clear();
-            _selectedTopologyConnectionIds.Clear();
-            _selectedTopologyConnectionIds.Add(connectionId);
+            // Preserve an existing multi-line selection when one of its members is clicked.
+            // This makes the following second click open the bundle editor instead of silently
+            // collapsing the marquee selection to one wire.
+            if (_selectedTopologyConnectionIds.Count <= 1 ||
+                !_selectedTopologyConnectionIds.Contains(connectionId))
+            {
+                _selectedTopologyConnectionIds.Clear();
+                _selectedTopologyConnectionIds.Add(connectionId);
+            }
         }
         else if (!_selectedTopologyConnectionIds.Add(connectionId))
         {
@@ -280,9 +287,14 @@ public partial class TopologyCanvasControl
             placement.Y = origin.Y + dy;
         }
 
-        // A manually dragged bend stores an absolute canvas coordinate. Once either endpoint owner
-        // moves that coordinate is stale, so return the affected connection to automatic routing.
-        var movedIds = origins.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        UpdateSelectedTopologyVisualPositions(placements);
+        RefreshRoutesDuringGroupDrag(origins.Keys);
+    }
+
+    private void InvalidateManualRoutesForMovedObjects(IEnumerable<string> objectIds)
+    {
+        if (_project is null) return;
+        var movedIds = objectIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var connection in _project.Connections)
         {
             var fromOwner = FindTopologyEndpointOwner(connection.FromEndpointId);
@@ -291,25 +303,109 @@ public partial class TopologyCanvasControl
                 (toOwner is not null && movedIds.Contains(toOwner)))
                 _manualRouteWaypoints.Remove(connection.ConnectionId);
         }
-
-        UpdateSelectedTopologyVisualPositions(placements);
-        RefreshRoutesDuringGroupDrag();
     }
 
-    private void RefreshRoutesDuringGroupDrag()
+    private void RefreshRoutesDuringGroupDrag(IEnumerable<string> movedObjectIds)
     {
         var now = Environment.TickCount64;
-        if (now - _lastLiveRouteRefreshTick < 50) return;
+        if (now - _lastLiveRouteRefreshTick < 24) return;
         _lastLiveRouteRefreshTick = now;
 
-        // About 20 fps keeps endpoints and wires visibly attached without rebuilding the whole
-        // project view on every mouse pixel. The normal mouse-up Render performs the final exact pass.
-        _hoveredRouteConnectionId = null;
-        ApplyRotatedPortVisuals();
-        ApplyTerminalJunctionVisuals();
-        EnsureEndpointModeVisuals();
-        EnsureOrthogonalConnectionVisuals();
-        ApplyTopologySelectionVisuals();
+        // Drag preview is deliberately local. Re-running the obstacle router, crossing bridges,
+        // labels and route-isolation pass for the entire project on every mouse move makes large
+        // drawings feel sticky. Move only the selected endpoints and their incident polylines;
+        // mouse-up Render performs the one authoritative full routing pass.
+        var movedIds = movedObjectIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        UpdateMovedEndpointVisualPositions(movedIds);
+        UpdateIncidentRoutePreviews(movedIds);
+    }
+
+    private void UpdateMovedEndpointVisualPositions(IReadOnlySet<string> movedIds)
+    {
+        if (_project is null) return;
+        foreach (var component in _project.Components.Where(component => movedIds.Contains(component.ComponentInstanceId)))
+        {
+            var placement = _project.TopologyPlacements.FirstOrDefault(item =>
+                string.Equals(item.ObjectId, component.ComponentInstanceId, StringComparison.OrdinalIgnoreCase));
+            if (placement is null) continue;
+            var endpoints = BuildVisibleEndpoints(component);
+            LayoutVisibleEndpoints(
+                placement,
+                endpoints,
+                IsCompactTerminalComponent(component),
+                IsCompactInlineConnector(component));
+        }
+
+        foreach (var blockId in movedIds)
+        {
+            if (!_project.TerminalBlocks.Any(block =>
+                    string.Equals(block.TerminalBlockId, blockId, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            var placement = _project.TopologyPlacements.FirstOrDefault(item =>
+                string.Equals(item.ObjectId, blockId, StringComparison.OrdinalIgnoreCase));
+            var marker = Surface.Children.OfType<Border>().FirstOrDefault(element =>
+                element.Tag is string tag && string.Equals(tag, blockId, StringComparison.OrdinalIgnoreCase));
+            if (placement is null || marker is null) continue;
+            Canvas.SetLeft(marker, placement.X + placement.Width / 2d - marker.Width / 2d);
+            Canvas.SetTop(marker, placement.Y + placement.Height / 2d - marker.Height / 2d);
+        }
+    }
+
+    private void UpdateIncidentRoutePreviews(IReadOnlySet<string> movedIds)
+    {
+        if (_project is null) return;
+        foreach (var connection in _project.Connections)
+        {
+            var fromOwner = FindTopologyEndpointOwner(connection.FromEndpointId);
+            var toOwner = FindTopologyEndpointOwner(connection.ToEndpointId);
+            var fromMoved = fromOwner is not null && movedIds.Contains(fromOwner);
+            var toMoved = toOwner is not null && movedIds.Contains(toOwner);
+            if (!fromMoved && !toMoved) continue;
+
+            var route = Surface.Children.OfType<Polyline>().FirstOrDefault(polyline =>
+                string.Equals(polyline.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
+                polyline.Tag is string id &&
+                string.Equals(id, connection.ConnectionId, StringComparison.OrdinalIgnoreCase));
+            if (route is null || route.Points.Count < 2 ||
+                !TryFindTopologyEndpointMarkerCenter(connection.FromEndpointId, out var start) ||
+                !TryFindTopologyEndpointMarkerCenter(connection.ToEndpointId, out var end))
+                continue;
+
+            var points = route.Points.ToArray();
+            if (fromMoved && toMoved)
+            {
+                var dx = start.X - points[0].X;
+                var dy = start.Y - points[0].Y;
+                points = points.Select(point => new Point(point.X + dx, point.Y + dy)).ToArray();
+                points[^1] = end;
+            }
+            else
+            {
+                if (fromMoved)
+                {
+                    var oldStart = points[0];
+                    points[0] = start;
+                    if (points.Length > 2)
+                    {
+                        if (Math.Abs(oldStart.Y - points[1].Y) < 0.5d) points[1].Y = start.Y;
+                        else points[1].X = start.X;
+                    }
+                }
+                if (toMoved)
+                {
+                    var oldEnd = points[^1];
+                    points[^1] = end;
+                    if (points.Length > 2)
+                    {
+                        if (Math.Abs(oldEnd.Y - points[^2].Y) < 0.5d) points[^2].Y = end.Y;
+                        else points[^2].X = end.X;
+                    }
+                }
+                if (points.Length == 2)
+                    points = BuildPreviewOrthogonalRoute(start, end).ToArray();
+            }
+            route.Points = new PointCollection(points);
+        }
     }
 
     private void UpdateSelectedTopologyVisualPositions(IEnumerable<ComponentIntelligence.Electrical.Domain.TopologyPlacement> placements)

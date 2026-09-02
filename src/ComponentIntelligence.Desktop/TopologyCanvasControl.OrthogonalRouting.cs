@@ -24,6 +24,11 @@ public partial class TopologyCanvasControl
     private Border? _fromEndpointHandle;
     private Border? _toEndpointHandle;
     private RouteEndpointHandleTag? _dragEndpointHandle;
+    private long _lastLiveWireDragTick;
+    private IReadOnlyList<TopologyTerminalVisualGroup>? _activeRoutingTerminalGroups;
+    private IReadOnlyList<Rect>? _activeRoutingObstacles;
+    private readonly HashSet<string> _collapsedCableCoreConnectionIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _primaryCableTrunkConnectionIds = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Draws formal topology connections as orthogonal 90-degree polylines. Automatic routes score
@@ -41,6 +46,17 @@ public partial class TopologyCanvasControl
 
             var liveIds = _project.Connections.Select(connection => connection.ConnectionId)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _activeRoutingTerminalGroups = _terminalGroupingPolicy.BuildGroups(_project);
+            _activeRoutingObstacles = BuildRoutingObstacles(_activeRoutingTerminalGroups);
+            var compactCableRoutes = BuildCompactCableRouteMap();
+            RefreshVisuallyMatedConnectionIds();
+            _collapsedCableCoreConnectionIds.Clear();
+            _primaryCableTrunkConnectionIds.Clear();
+            foreach (var (connectionId, info) in compactCableRoutes)
+            {
+                if (info.Index == 0) _primaryCableTrunkConnectionIds.Add(connectionId);
+                else _collapsedCableCoreConnectionIds.Add(connectionId);
+            }
             foreach (var obsolete in Surface.Children.OfType<Polyline>()
                          .Where(polyline => string.Equals(polyline.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
                                             polyline.Tag is string id && !liveIds.Contains(id))
@@ -55,16 +71,32 @@ public partial class TopologyCanvasControl
                     continue;
 
                 var route = FindOrCreateRoutePolyline(connection);
-                var escapedStart = CalculateEndpointEscapePoint(connection.FromEndpointId, start, end);
-                var escapedEnd = CalculateEndpointEscapePoint(connection.ToEndpointId, end, start);
-                var routedCore = _manualRouteWaypoints.TryGetValue(connection.ConnectionId, out var waypoint)
-                    ? BuildManualOrthogonalRoute(escapedStart, escapedEnd, waypoint)
-                    : BuildAutomaticOrthogonalRoute(escapedStart, escapedEnd, completedRoutes);
-                var points = CompactOrthogonalPoints(
-                    new[] { start }.Concat(routedCore).Append(end));
+                IReadOnlyList<Point> points;
+                if (compactCableRoutes.TryGetValue(connection.ConnectionId, out var compactCable))
+                {
+                    points = BuildCollapsedMatedCableRoute(start, end);
+                }
+                else
+                {
+                    var escapedStart = CalculateEndpointEscapePoint(connection.FromEndpointId, start, end);
+                    var escapedEnd = CalculateEndpointEscapePoint(connection.ToEndpointId, end, start);
+                    var routedCore = _manualRouteWaypoints.TryGetValue(connection.ConnectionId, out var waypoint)
+                        ? BuildManualOrthogonalRoute(escapedStart, escapedEnd, waypoint)
+                        : BuildAutomaticOrthogonalRoute(escapedStart, escapedEnd, completedRoutes);
+                    points = CompactOrthogonalPoints(
+                        new[] { start }.Concat(routedCore).Append(end));
+                }
                 route.Points = new PointCollection(points);
-                route.Stroke = ResolveConnectionBrush(connection);
-                route.ToolTip = $"{BuildEndpointTraceLabel(connection.FromEndpointId)} → {BuildEndpointTraceLabel(connection.ToEndpointId)}\nOrthogonal Route（正交折線）\n單擊：選取並顯示折點與兩端改接把手\n雙擊：線路設定";
+                route.Stroke = compactCableRoutes.ContainsKey(connection.ConnectionId)
+                    ? Brushes.DimGray
+                    : ResolveConnectionBrush(connection);
+                route.Visibility = _collapsedCableCoreConnectionIds.Contains(connection.ConnectionId) ||
+                                   _visuallyMatedConnectionIds.Contains(connection.ConnectionId)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+                route.ToolTip = compactCableRoutes.TryGetValue(connection.ConnectionId, out var cableInfo)
+                    ? $"Multi-core cable（多芯電纜）｜{cableInfo.Count} cores\n畫面折疊為單一 M12-F ↔ M12-M 對接線；逐芯資料仍保留在 Pin Mapping。"
+                    : $"{BuildEndpointTraceLabel(connection.FromEndpointId)} → {BuildEndpointTraceLabel(connection.ToEndpointId)}\nOrthogonal Route（正交折線）\n單擊：選取並顯示折點與兩端改接把手\n雙擊：線路設定";
                 Panel.SetZIndex(route, -20);
                 completedRoutes.Add(points);
             }
@@ -75,6 +107,8 @@ public partial class TopologyCanvasControl
         }
         finally
         {
+            _activeRoutingObstacles = null;
+            _activeRoutingTerminalGroups = null;
             _routingVisualsUpdating = false;
         }
     }
@@ -138,10 +172,11 @@ public partial class TopologyCanvasControl
             var hovered = string.Equals(_hoveredRouteConnectionId, connectionId, StringComparison.OrdinalIgnoreCase);
             var selected = _selectedTopologyConnectionIds.Contains(connectionId) ||
                            string.Equals(_selectedRouteConnectionId, connectionId, StringComparison.OrdinalIgnoreCase);
+            var cableTrunk = _primaryCableTrunkConnectionIds.Contains(connectionId);
             route.StrokeThickness = hovered
-                ? 5d
-                : selected ? 4d : 3d;
-            route.StrokeDashArray = selected ? new DoubleCollection { 8d, 3d } : null;
+                ? cableTrunk ? 6d : 5d
+                : selected ? cableTrunk ? 6d : 4d : cableTrunk ? 5d : 3d;
+            route.StrokeDashArray = selected && !cableTrunk ? new DoubleCollection { 8d, 3d } : null;
             route.Opacity = string.IsNullOrWhiteSpace(_hoveredRouteConnectionId) || hovered ? 1d : 0.18d;
         }
 
@@ -161,7 +196,7 @@ public partial class TopologyCanvasControl
         Point end,
         IReadOnlyList<IReadOnlyList<Point>> completedRoutes)
     {
-        var obstacles = BuildRoutingObstacles();
+        var obstacles = _activeRoutingObstacles ?? BuildRoutingObstacles();
 
         const double routingGrid = 12d;
         static double SnapToGrid(double value) => Math.Round(value / routingGrid) * routingGrid;
@@ -246,19 +281,92 @@ public partial class TopologyCanvasControl
             end
         ]);
 
-    private List<Rect> BuildRoutingObstacles()
+    private Dictionary<string, CompactCableRouteInfo> BuildCompactCableRouteMap()
+    {
+        if (_project is null) return [];
+        var result = new Dictionary<string, CompactCableRouteInfo>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in _project.Connections
+                     .Where(connection => !string.IsNullOrWhiteSpace(connection.CableInstanceId) &&
+                                          !string.IsNullOrWhiteSpace(connection.CableCoreId))
+                     .GroupBy(connection => connection.CableInstanceId!, StringComparer.OrdinalIgnoreCase))
+        {
+            var ordered = group
+                .OrderBy(connection => int.TryParse(connection.CableCoreId, out var core) ? core : int.MaxValue)
+                .ThenBy(connection => connection.CableCoreId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(connection => connection.ConnectionId, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (ordered.Length < 2) continue;
+
+            var fromOwners = ordered.Select(connection => FindTopologyEndpointOwner(connection.FromEndpointId))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            var toOwners = ordered.Select(connection => FindTopologyEndpointOwner(connection.ToEndpointId))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            if (fromOwners.Length != 1 || toOwners.Length != 1 ||
+                string.IsNullOrWhiteSpace(fromOwners[0]) || string.IsNullOrWhiteSpace(toOwners[0]))
+                continue;
+            var fromComponent = _project.Components.FirstOrDefault(component =>
+                string.Equals(component.ComponentInstanceId, fromOwners[0], StringComparison.OrdinalIgnoreCase));
+            var toComponent = _project.Components.FirstOrDefault(component =>
+                string.Equals(component.ComponentInstanceId, toOwners[0], StringComparison.OrdinalIgnoreCase));
+            if (!string.Equals(fromComponent?.TypeKey, "INLINE_CONNECTOR", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(toComponent?.TypeKey, "INLINE_CONNECTOR", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            for (var index = 0; index < ordered.Length; index++)
+                result[ordered[index].ConnectionId] = new CompactCableRouteInfo(index, ordered.Length);
+        }
+        return result;
+    }
+
+    private static IReadOnlyList<Point> BuildCollapsedMatedCableRoute(Point start, Point end)
+    {
+        if (Math.Abs(end.X - start.X) >= Math.Abs(end.Y - start.Y))
+        {
+            var middleX = (start.X + end.X) / 2d;
+            return CompactOrthogonalPoints([
+                start,
+                new Point(middleX, start.Y),
+                new Point(middleX, end.Y),
+                end
+            ]);
+        }
+
+        var middleY = (start.Y + end.Y) / 2d;
+        return CompactOrthogonalPoints([
+            start,
+            new Point(start.X, middleY),
+            new Point(end.X, middleY),
+            end
+        ]);
+    }
+
+    private List<Rect> BuildRoutingObstacles(
+        IReadOnlyList<TopologyTerminalVisualGroup>? knownTerminalGroups = null)
     {
         if (_project is null) return [];
 
-        return _project.TopologyPlacements
+        var terminalGroups = knownTerminalGroups ?? _terminalGroupingPolicy.BuildGroups(_project);
+        var groupedIds = terminalGroups
+            .SelectMany(group => group.ComponentInstanceIds)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var obstacles = _project.TopologyPlacements
+            .Where(placement => !groupedIds.Contains(placement.ObjectId))
             .Select(TopologyPortGeometry.CalculateVisualBounds)
-            .Select(bounds => new Rect(
-                bounds.X - RoutingObstacleMargin,
-                bounds.Y - RoutingObstacleMargin,
-                bounds.Width + RoutingObstacleMargin * 2,
-                bounds.Height + RoutingObstacleMargin * 2))
+            .Select(bounds => ExpandRoutingObstacle(new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height)))
             .ToList();
+        obstacles.AddRange(terminalGroups.Select(group => ExpandRoutingObstacle(new Rect(
+            group.Bounds.X,
+            group.Bounds.Y,
+            group.Bounds.Width,
+            group.Bounds.Height))));
+        return obstacles;
     }
+
+    private static Rect ExpandRoutingObstacle(Rect bounds) => new(
+        bounds.X - RoutingObstacleMargin,
+        bounds.Y - RoutingObstacleMargin,
+        bounds.Width + RoutingObstacleMargin * 2,
+        bounds.Height + RoutingObstacleMargin * 2);
 
     private Point CalculateEndpointEscapePoint(string endpointId, Point anchor, Point otherAnchor)
     {
@@ -268,7 +376,21 @@ public partial class TopologyCanvasControl
             string.Equals(item.ObjectId, ownerId, StringComparison.OrdinalIgnoreCase));
         if (placement is null) return anchor;
 
-        var bounds = TopologyPortGeometry.CalculateVisualBounds(placement);
+        var placementBounds = TopologyPortGeometry.CalculateVisualBounds(placement);
+        var visualBounds = new Rect(
+            placementBounds.X,
+            placementBounds.Y,
+            placementBounds.Width,
+            placementBounds.Height);
+        var terminalGroup = (_activeRoutingTerminalGroups ?? _terminalGroupingPolicy.BuildGroups(_project))
+            .FirstOrDefault(group => group.ComponentInstanceIds.Contains(ownerId, StringComparer.OrdinalIgnoreCase));
+        var bounds = terminalGroup is null
+            ? visualBounds
+            : new Rect(
+                terminalGroup.Bounds.X,
+                terminalGroup.Bounds.Y,
+                terminalGroup.Bounds.Width,
+                terminalGroup.Bounds.Height);
         var left = bounds.X;
         var right = bounds.X + bounds.Width;
         var top = bounds.Y;
@@ -458,7 +580,10 @@ public partial class TopologyCanvasControl
 
         var routes = Surface.Children.OfType<Polyline>()
             .Where(route => string.Equals(route.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
-                            route.Tag is string && route.Points.Count >= 2)
+                            route.Tag is string id &&
+                            !_collapsedCableCoreConnectionIds.Contains(id) &&
+                            !_visuallyMatedConnectionIds.Contains(id) &&
+                            route.Points.Count >= 2)
             .OrderBy(route => (string)route.Tag, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var emitted = new HashSet<string>(StringComparer.Ordinal);
@@ -492,6 +617,7 @@ public partial class TopologyCanvasControl
     {
         if (_project is null) return;
         var occupiedLabels = new List<Rect>();
+        var emittedCableLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var componentBounds = _project.TopologyPlacements
             .Select(placement => new Rect(
                 placement.X - 4d,
@@ -505,6 +631,22 @@ public partial class TopologyCanvasControl
             var connection = _project.Connections.FirstOrDefault(item =>
                 string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase));
             if (connection is null) continue;
+            IReadOnlyList<string> labelConnectionIds = [connectionId];
+            if (!string.IsNullOrWhiteSpace(connection.CableInstanceId))
+            {
+                var cableConnectionIds = _project.Connections
+                    .Where(item => string.Equals(
+                        item.CableInstanceId,
+                        connection.CableInstanceId,
+                        StringComparison.OrdinalIgnoreCase))
+                    .Select(item => item.ConnectionId)
+                    .ToArray();
+                if (cableConnectionIds.Length > 1)
+                {
+                    if (!emittedCableLabels.Add(connection.CableInstanceId)) continue;
+                    labelConnectionIds = cableConnectionIds;
+                }
+            }
             var text = BuildRouteIdentityLabel(connection);
             var segments = Enumerable.Range(0, route.Points.Count - 1)
                 .Select(index => new
@@ -549,7 +691,7 @@ public partial class TopologyCanvasControl
             var label = new TextBlock
             {
                 Uid = "CI-ROUTE-IDENTITY",
-                Tag = new TopologyDecorationTag([connectionId], RequireAllConnectionsVisible: true),
+                Tag = new TopologyDecorationTag(labelConnectionIds, RequireAllConnectionsVisible: true),
                 Text = text,
                 FontSize = 9,
                 FontWeight = FontWeights.SemiBold,
@@ -793,6 +935,8 @@ public partial class TopologyCanvasControl
         Bottom
     }
 
+    private sealed record CompactCableRouteInfo(int Index, int Count);
+
     private void UpdateRouteHandle()
     {
         if (_project is null || string.IsNullOrWhiteSpace(_selectedRouteConnectionId))
@@ -885,6 +1029,7 @@ public partial class TopologyCanvasControl
     {
         if (sender is not Border handle || handle.Tag is not RouteEndpointHandleTag tag) return;
         _dragEndpointHandle = tag;
+        _lastLiveWireDragTick = 0;
         handle.CaptureMouse();
         SelectionText.Text = tag.ReconnectFrom ? "正在拖曳線路 A 端" : "正在拖曳線路 B 端";
         HintText.Text = "把圓形把手放到另一個 Pin / Port 上；放開滑鼠即可改接，Esc 或放在空白處則取消。";
@@ -893,9 +1038,30 @@ public partial class TopologyCanvasControl
 
     private void EndpointReconnectHandle_MouseMove(object sender, MouseEventArgs e)
     {
-        if (_dragEndpointHandle is null || sender is not Border handle || e.LeftButton != MouseButtonState.Pressed) return;
-        PositionEndpointReconnectHandle(handle, e.GetPosition(Surface));
+        if (_dragEndpointHandle is not RouteEndpointHandleTag drag || sender is not Border handle ||
+            e.LeftButton != MouseButtonState.Pressed) return;
+        var point = e.GetPosition(Surface);
+        PositionEndpointReconnectHandle(handle, point);
+
+        var now = Environment.TickCount64;
+        if (now - _lastLiveWireDragTick >= 16)
+        {
+            _lastLiveWireDragTick = now;
+            UpdateEndpointReconnectPreview(drag, point);
+        }
         e.Handled = true;
+    }
+
+    private void UpdateEndpointReconnectPreview(RouteEndpointHandleTag drag, Point point)
+    {
+        var route = FindRoutePolyline(drag.ConnectionId);
+        if (route is null || route.Points.Count < 2) return;
+
+        var bounded = new Point(Math.Max(0, point.X), Math.Max(0, point.Y));
+        var fixedPoint = drag.ReconnectFrom ? route.Points[^1] : route.Points[0];
+        route.Points = new PointCollection(drag.ReconnectFrom
+            ? BuildPreviewOrthogonalRoute(bounded, fixedPoint)
+            : BuildPreviewOrthogonalRoute(fixedPoint, bounded));
     }
 
     private void EndpointReconnectHandle_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -974,6 +1140,7 @@ public partial class TopologyCanvasControl
     {
         if (sender is not Border handle || handle.Tag is not string connectionId) return;
         _dragRouteConnectionId = connectionId;
+        _lastLiveWireDragTick = 0;
         handle.CaptureMouse();
         MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Adjust topology route {connectionId}"));
         e.Handled = true;
@@ -983,9 +1150,44 @@ public partial class TopologyCanvasControl
     {
         if (_dragRouteConnectionId is null || sender is not Border handle || e.LeftButton != MouseButtonState.Pressed) return;
         var point = e.GetPosition(Surface);
-        _manualRouteWaypoints[_dragRouteConnectionId] = new Point(Math.Max(0, point.X), Math.Max(0, point.Y));
-        EnsureOrthogonalConnectionVisuals();
+        var waypoint = new Point(Math.Max(0, point.X), Math.Max(0, point.Y));
+        _manualRouteWaypoints[_dragRouteConnectionId] = waypoint;
+        PositionRouteHandle(handle, waypoint);
+
+        var now = Environment.TickCount64;
+        if (now - _lastLiveWireDragTick >= 16)
+        {
+            _lastLiveWireDragTick = now;
+            UpdateManualRoutePreview(_dragRouteConnectionId, waypoint);
+        }
         e.Handled = true;
+    }
+
+    private void UpdateManualRoutePreview(string connectionId, Point waypoint)
+    {
+        if (_project is null) return;
+        var connection = _project.Connections.FirstOrDefault(item =>
+            string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase));
+        var route = FindRoutePolyline(connectionId);
+        if (connection is null || route is null ||
+            !TryFindTopologyEndpointMarkerCenter(connection.FromEndpointId, out var start) ||
+            !TryFindTopologyEndpointMarkerCenter(connection.ToEndpointId, out var end))
+            return;
+
+        route.Points = new PointCollection(BuildManualOrthogonalRoute(start, end, waypoint));
+    }
+
+    private Polyline? FindRoutePolyline(string connectionId) =>
+        Surface.Children.OfType<Polyline>().FirstOrDefault(polyline =>
+            string.Equals(polyline.Uid, "CI-ORTHOGONAL-ROUTE", StringComparison.Ordinal) &&
+            polyline.Tag is string id &&
+            string.Equals(id, connectionId, StringComparison.OrdinalIgnoreCase));
+
+    private static void PositionRouteHandle(FrameworkElement handle, Point point)
+    {
+        Canvas.SetLeft(handle, Math.Max(0, point.X - handle.Width / 2));
+        Canvas.SetTop(handle, Math.Max(0, point.Y - handle.Height / 2));
+        Panel.SetZIndex(handle, 20_000);
     }
 
     private void RouteHandle_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -993,7 +1195,11 @@ public partial class TopologyCanvasControl
         if (sender is Border handle) handle.ReleaseMouseCapture();
         var changed = _dragRouteConnectionId is not null;
         _dragRouteConnectionId = null;
-        if (changed) ProjectChanged?.Invoke(this, EventArgs.Empty);
+        if (changed)
+        {
+            EnsureOrthogonalConnectionVisuals();
+            ProjectChanged?.Invoke(this, EventArgs.Empty);
+        }
         e.Handled = true;
     }
 

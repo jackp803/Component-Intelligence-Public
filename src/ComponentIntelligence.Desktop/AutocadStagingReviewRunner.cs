@@ -237,9 +237,7 @@ public static class AutocadStagingReviewManifest
 
         var projectPath = RequireExistingFile(document.ProjectPath, "AutoCAD Electrical WDP", allowedRoot, ".wdp");
         var drawingPaths = RequireExistingFiles(document.DrawingPaths, "AutoCAD drawing", allowedRoot, ".dwg");
-        var pdfPaths = document.PdfPaths is null || document.PdfPaths.Count == 0
-            ? Array.Empty<string>()
-            : RequireExistingFiles(document.PdfPaths, "AutoCAD review PDF", allowedRoot, ".pdf");
+        var pdfPaths = RequireExistingFiles(document.PdfPaths, "AutoCAD review PDF", allowedRoot, ".pdf");
         return new AutocadStagingReviewRunResult(manifestPath, projectPath, drawingPaths, pdfPaths, document.FormalDwgModified!);
     }
 

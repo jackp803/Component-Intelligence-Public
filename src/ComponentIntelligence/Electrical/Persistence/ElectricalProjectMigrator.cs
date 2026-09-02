@@ -42,7 +42,8 @@ public static class ElectricalProjectMigrator
             CableRoutes = source.CableRoutes,
             EndpointReviews = source.EndpointReviews,
             TopologyPlacements = source.TopologyPlacements,
-            TopologyRoutes = source.TopologyRoutes
+            TopologyRoutes = source.TopologyRoutes,
+            TerminalStripSections = source.TerminalStripSections
         };
     }
 
@@ -69,7 +70,8 @@ public static class ElectricalProjectMigrator
             CableRoutes = source.CableRoutes,
             EndpointReviews = source.EndpointReviews,
             TopologyPlacements = source.TopologyPlacements,
-            TopologyRoutes = source.TopologyRoutes
+            TopologyRoutes = source.TopologyRoutes,
+            TerminalStripSections = source.TerminalStripSections
         };
     }
 }

@@ -1,11 +1,14 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Layout;
+using ComponentIntelligence.Electrical.Topology;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -13,7 +16,7 @@ namespace ComponentIntelligence.Desktop;
 /// Practical 2D editor for the 2.5D cabinet-fit model. It intentionally does not calculate cable
 /// length. Mechanical/User/Imported cable length remains a separate engineering input.
 /// </summary>
-public sealed class CabinetLayoutWorkspaceControl : UserControl
+public sealed partial class CabinetLayoutWorkspaceControl : UserControl
 {
     private const string PaletteDataFormat = "ComponentIntelligence.CabinetLayout.PaletteItem";
 
@@ -21,6 +24,10 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
     private readonly Action<string> _recordMutation;
     private readonly Action _projectChanged;
     private readonly Action<string> _status;
+    private readonly Func<string, Task<Uri?>>? _componentImageResolver;
+    private readonly TopologyImageCache _componentImageCache = new();
+    private readonly PhysicalTerminalGroupingPolicy _terminalGroupingPolicy = new();
+    private readonly TopologyTerminalGroupingPolicy _topologyTerminalGroupingPolicy = new();
 
     private readonly ComboBox _containerCombo = new() { MinWidth = 180, DisplayMemberPath = nameof(ContainerChoice.Label) };
     private readonly ComboBox _surfaceCombo = new() { MinWidth = 130 };
@@ -50,6 +57,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
     private LayoutSelection? _selection;
     private Point _paletteMouseDown;
     private DragState? _drag;
+    private Dictionary<LayoutSelection, Point> _dragGroupOrigins = new();
     private double _scale = 1;
     private bool _refreshing;
 
@@ -57,12 +65,14 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         Func<ElectricalProject> projectAccessor,
         Action<string> recordMutation,
         Action projectChanged,
-        Action<string> status)
+        Action<string> status,
+        Func<string, Task<Uri?>>? componentImageResolver = null)
     {
         _projectAccessor = projectAccessor ?? throw new ArgumentNullException(nameof(projectAccessor));
         _recordMutation = recordMutation ?? throw new ArgumentNullException(nameof(recordMutation));
         _projectChanged = projectChanged ?? throw new ArgumentNullException(nameof(projectChanged));
         _status = status ?? throw new ArgumentNullException(nameof(status));
+        _componentImageResolver = componentImageResolver;
 
         _surfaceCombo.ItemsSource = EditableSurfaces();
         _surfaceCombo.SelectedItem = MountingSurface.Backplate;
@@ -82,8 +92,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         _surfaceCombo.SelectionChanged += (_, _) =>
         {
             if (_refreshing) return;
-            _selection = null;
-            LoadSelection();
+            ClearLayoutSelection();
             RefreshCanvasAndFit();
         };
         _overlayOpposite.Checked += (_, _) => RefreshCanvas();
@@ -92,11 +101,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         _palette.PreviewMouseMove += Palette_PreviewMouseMove;
         _canvas.DragOver += Canvas_DragOver;
         _canvas.Drop += Canvas_Drop;
-        _canvas.MouseLeftButtonDown += (_, _) =>
-        {
-            _selection = null;
-            LoadSelection();
-        };
+        ConfigureLayoutInteractions();
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible) RefreshWorkspace();
@@ -126,6 +131,17 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         finally
         {
             _refreshing = false;
+        }
+
+        var selectedContainer = SelectedContainer(project);
+        var selectedSurface = _surfaceCombo.SelectedItem is MountingSurface surface
+            ? surface
+            : MountingSurface.Backplate;
+        if (selectedContainer is not null &&
+            _terminalGroupingPolicy.ArrangeContiguously(project, selectedContainer.ContainerId, selectedSurface))
+        {
+            _status("Layout 已修正端子排：端子保持相連，並依真實投影尺寸排列，不再互相重疊。請儲存專案。");
+            _projectChanged();
         }
 
         LoadContainerFields();
@@ -203,21 +219,16 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         center.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         var centerHint = new TextBlock
         {
-            Text = "2D 操作 + 2.5D 驗證：不同安裝面的 XY 重疊不等於碰撞；深度/關門空間由驗證器判斷。Layout 不計算線長。",
+            Text = "Ctrl + 滾輪縮放；空白處拖曳可框選；拖曳可群組移動；在選取物件上按右鍵可整組旋轉 90°。Layout 不計算線長。",
             Foreground = Brushes.DimGray,
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 6)
         };
         center.Children.Add(centerHint);
         _canvasFrame.Child = _canvas;
-        var scroller = new ScrollViewer
-        {
-            Content = _canvasFrame,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
-        };
-        Grid.SetRow(scroller, 1);
-        center.Children.Add(scroller);
+        _layoutScrollViewer.Content = _canvasFrame;
+        Grid.SetRow(_layoutScrollViewer, 1);
+        center.Children.Add(_layoutScrollViewer);
         Grid.SetColumn(center, 2);
         main.Children.Add(center);
 
@@ -246,6 +257,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         clear.Margin = new Thickness(6, 0, 0, 0);
         propertyButtons.Children.Add(clear);
         properties.Children.Add(propertyButtons);
+        properties.Children.Add(BuildTerminalSectionEditor());
         properties.Children.Add(new TextBlock
         {
             Text = "尺寸欄位是 Project Layout Override（專案佈局覆寫）。若元件本身資料缺尺寸，建議先回拓樸雙擊元件補 Datasheet / 圖片 / 資料來源。",
@@ -346,10 +358,13 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
 
         var target = ResolveObject(project, item.ObjectId, item.Kind);
         if (target is null) return;
-        if (target.Footprint is null || target.Footprint.WidthMm <= 0 || target.Footprint.HeightMm <= 0)
+        var dropTargets = ResolveTerminalGroupDropTargets(project, target);
+        var missingSize = dropTargets.FirstOrDefault(candidate =>
+            candidate.Footprint is null || candidate.Footprint.WidthMm <= 0 || candidate.Footprint.HeightMm <= 0);
+        if (missingSize is not null)
         {
             MessageBox.Show(
-                $"{item.Label} 缺少 Width / Height（寬／高），不能用假尺寸放進 Cabinet。\n\n請先在拓樸雙擊元件補資料，或選取後在右側填入 Project Layout Override。",
+                $"{missingSize.Label} 缺少 Width / Height（寬／高），不能用假尺寸放進 Cabinet。\n\n請先在拓樸雙擊元件補資料，或選取後在右側填入 Project Layout Override。",
                 "需要尺寸資料",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -359,17 +374,27 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         }
 
         var point = e.GetPosition(_canvas);
-        _recordMutation($"Place {item.Label} on {surface}");
-        target.Placement = new PhysicalPlacement
+        _recordMutation(dropTargets.Count > 1
+            ? $"Place terminal group ({dropTargets.Count}) on {surface}"
+            : $"Place {item.Label} on {surface}");
+        var xMm = Math.Max(0, point.X / _scale);
+        var yMm = Math.Max(0, point.Y / _scale);
+        foreach (var dropTarget in dropTargets)
         {
-            ParentContainerId = container.ContainerId,
-            XMm = Math.Max(0, point.X / _scale),
-            YMm = Math.Max(0, point.Y / _scale),
-            Surface = surface,
-            DepthOffsetMm = 0
-        };
+            dropTarget.Placement = new PhysicalPlacement
+            {
+                ParentContainerId = container.ContainerId,
+                XMm = xMm,
+                YMm = yMm,
+                Surface = surface,
+                DepthOffsetMm = 0
+            };
+            xMm += PhysicalFootprintProjection.Project(dropTarget.Footprint!, dropTarget.Placement).WidthMm;
+        }
         _selection = new LayoutSelection(item.Kind, item.ObjectId);
-        _status($"已將 {item.Label} 放到 {container.Name} / {surface}。2D 重疊不會單獨被判成碰撞。 ");
+        _status(dropTargets.Count > 1
+            ? $"已將 {dropTargets.Count} 顆相鄰端子一起放到 {container.Name} / {surface}，並保持可共同移動的端子排。"
+            : $"已將 {item.Label} 放到 {container.Name} / {surface}。2D 重疊不會單獨被判成碰撞。 ");
         _projectChanged();
         RefreshWorkspace();
     }
@@ -378,12 +403,15 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
     {
         if (sender is not FrameworkElement element || element.Tag is not NodeTag tag) return;
         e.Handled = true;
-        _selection = new LayoutSelection(tag.Kind, tag.ObjectId);
+        var clicked = new LayoutSelection(tag.Kind, tag.ObjectId);
+        if (!SelectLayoutItemForDrag(clicked)) return;
+        _selection = clicked;
         LoadSelection();
         var project = _projectAccessor();
         var target = ResolveObject(project, tag.ObjectId, tag.Kind);
         if (target?.Placement is null) return;
         _drag = new DragState(tag.Kind, tag.ObjectId, e.GetPosition(_canvas), target.Placement.XMm, target.Placement.YMm, false);
+        _dragGroupOrigins = ResolvePhysicalDragGroup(project, target);
         element.CaptureMouse();
     }
 
@@ -402,10 +430,34 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             _drag = _drag with { Recorded = true };
         }
         if (!_drag.Recorded) return;
-        target.Placement.XMm = _drag.XStart + dxPx / _scale;
-        target.Placement.YMm = _drag.YStart + dyPx / _scale;
-        Canvas.SetLeft(element, target.Placement.XMm * _scale);
-        Canvas.SetTop(element, target.Placement.YMm * _scale);
+        var dxMm = dxPx / _scale;
+        var dyMm = dyPx / _scale;
+        if (_dragGroupOrigins.Count > 0)
+        {
+            dxMm = Math.Max(dxMm, -_dragGroupOrigins.Values.Min(point => point.X));
+            dyMm = Math.Max(dyMm, -_dragGroupOrigins.Values.Min(point => point.Y));
+            foreach (var (member, origin) in _dragGroupOrigins)
+            {
+                var memberTarget = ResolveObject(project, member.ObjectId, member.Kind);
+                if (memberTarget?.Placement is null) continue;
+                memberTarget.Placement.XMm = origin.X + dxMm;
+                memberTarget.Placement.YMm = origin.Y + dyMm;
+                var memberVisual = _canvas.Children.OfType<Border>().FirstOrDefault(border =>
+                    border.Tag is NodeTag node &&
+                    node.Kind == member.Kind &&
+                    string.Equals(node.ObjectId, member.ObjectId, StringComparison.OrdinalIgnoreCase));
+                if (memberVisual is null) continue;
+                Canvas.SetLeft(memberVisual, memberTarget.Placement.XMm * _scale);
+                Canvas.SetTop(memberVisual, memberTarget.Placement.YMm * _scale);
+            }
+        }
+        else
+        {
+            target.Placement.XMm = Math.Max(0d, _drag.XStart + dxMm);
+            target.Placement.YMm = Math.Max(0d, _drag.YStart + dyMm);
+            Canvas.SetLeft(element, target.Placement.XMm * _scale);
+            Canvas.SetTop(element, target.Placement.YMm * _scale);
+        }
     }
 
     private void Node_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -418,6 +470,69 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             LoadSelection();
         }
         _drag = null;
+        _dragGroupOrigins.Clear();
+    }
+
+    private IReadOnlyList<LayoutTarget> ResolveTerminalGroupDropTargets(
+        ElectricalProject project,
+        LayoutTarget selected)
+    {
+        if (selected.Kind != LayoutObjectKind.Component) return [selected];
+        var group = _topologyTerminalGroupingPolicy.BuildGroups(project)
+            .FirstOrDefault(candidate => candidate.ComponentInstanceIds.Contains(
+                selected.ObjectId,
+                StringComparer.OrdinalIgnoreCase));
+        if (group is null) return [selected];
+
+        var targets = group.ComponentInstanceIds
+            .Select(id => ResolveObject(project, id, LayoutObjectKind.Component))
+            .Where(target => target is not null && target.Placement is null)
+            .Cast<LayoutTarget>()
+            .ToArray();
+        return targets.Length == 0 ? [selected] : targets;
+    }
+
+    private Dictionary<LayoutSelection, Point> ResolvePhysicalDragGroup(
+        ElectricalProject project,
+        LayoutTarget selected)
+    {
+        if (selected.Placement is null) return [];
+        var selectedSelection = new LayoutSelection(selected.Kind, selected.ObjectId);
+        var requested = _selectedLayoutItems.Contains(selectedSelection) && _selectedLayoutItems.Count > 1
+            ? _selectedLayoutItems.ToArray()
+            : [selectedSelection];
+        var members = new HashSet<PhysicalTerminalGroupMember>();
+        var physicalGroups = _terminalGroupingPolicy.BuildGroups(
+            project,
+            selected.Placement.ParentContainerId,
+            selected.Placement.Surface);
+        foreach (var selection in requested)
+        {
+            var target = ResolveObject(project, selection.ObjectId, selection.Kind);
+            if (target?.Placement is null ||
+                !string.Equals(target.Placement.ParentContainerId, selected.Placement.ParentContainerId, StringComparison.OrdinalIgnoreCase) ||
+                target.Placement.Surface != selected.Placement.Surface)
+                continue;
+            var member = ToTerminalMember(target);
+            var terminalGroup = physicalGroups.FirstOrDefault(group => group.Members.Contains(member));
+            if (terminalGroup is null)
+                members.Add(member);
+            else
+                members.UnionWith(terminalGroup.Members);
+        }
+        var result = new Dictionary<LayoutSelection, Point>();
+        foreach (var member in members)
+        {
+            var selection = new LayoutSelection(
+                member.Kind == PhysicalTerminalObjectKind.Component
+                    ? LayoutObjectKind.Component
+                    : LayoutObjectKind.TerminalBlock,
+                member.ObjectId);
+            var target = ResolveObject(project, selection.ObjectId, selection.Kind);
+            if (target?.Placement is not null)
+                result[selection] = new Point(target.Placement.XMm, target.Placement.YMm);
+        }
+        return result;
     }
 
     private void ApplySelection()
@@ -488,16 +603,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
 
     private void RotateSelection()
     {
-        if (_selection is null) return;
-        var target = ResolveObject(_projectAccessor(), _selection.ObjectId, _selection.Kind);
-        if (target?.Placement is null) return;
-
-        _recordMutation($"Rotate {target.Label} in cabinet layout");
-        target.Placement.RotationDegrees = PhysicalFootprintProjection.NormalizeRotation(target.Placement.RotationDegrees + 90);
-        _status($"已將 {target.Label} 旋轉至 {target.Placement.RotationDegrees}°。");
-        _projectChanged();
-        RefreshCanvasAndFit();
-        LoadSelection();
+        RotateSelectedLayoutItems();
     }
 
     private void MarkExternal()
@@ -662,44 +768,80 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
                 DrawObject(target, overlay: true);
         }
 
-        foreach (var target in AllObjects(project).Where(target =>
+        var visibleTargets = AllObjects(project).Where(target =>
                      target.Placement is not null &&
                      string.Equals(target.Placement.ParentContainerId, container.ContainerId, StringComparison.OrdinalIgnoreCase) &&
                      target.Placement.Surface == surface &&
-                     target.Footprint is not null))
-            DrawObject(target, overlay: false);
+                     target.Footprint is not null).ToArray();
+        var terminalGroups = _terminalGroupingPolicy.BuildGroups(project, container.ContainerId, surface);
+        DrawTerminalSectionFrames(project, container.ContainerId, surface);
+        DrawTerminalGroupFrames(project, terminalGroups);
+        var groupedMembers = terminalGroups
+            .SelectMany(group => group.Members)
+            .ToHashSet();
+        foreach (var target in visibleTargets)
+            DrawObject(target, overlay: false, groupedTerminal: groupedMembers.Contains(ToTerminalMember(target)));
     }
 
-    private void DrawObject(LayoutTarget target, bool overlay)
+    private void DrawObject(LayoutTarget target, bool overlay, bool groupedTerminal = false)
     {
         var placement = target.Placement!;
         var footprint = target.Footprint!;
         var projection = PhysicalFootprintProjection.Project(footprint, placement);
         var width = projection.WidthMm * _scale;
         var height = projection.HeightMm * _scale;
-        var isSelected = _selection is not null && _selection.Kind == target.Kind && string.Equals(_selection.ObjectId, target.ObjectId, StringComparison.OrdinalIgnoreCase);
+        var selection = new LayoutSelection(target.Kind, target.ObjectId);
+        var isSelected = _selectedLayoutItems.Contains(selection) ||
+                         (_selection is not null && _selection.Kind == target.Kind && string.Equals(_selection.ObjectId, target.ObjectId, StringComparison.OrdinalIgnoreCase));
 
         var border = new Border
         {
-            Width = Math.Max(12, width),
-            Height = Math.Max(12, height),
+            Width = groupedTerminal ? Math.Max(1d, width) : Math.Max(12d, width),
+            Height = groupedTerminal ? Math.Max(1d, height) : Math.Max(12d, height),
             BorderBrush = overlay ? Brushes.MediumPurple : isSelected ? Brushes.DarkBlue : Brushes.DimGray,
             BorderThickness = new Thickness(isSelected ? 3 : 1.5),
             Background = overlay ? Brushes.Lavender : Brushes.WhiteSmoke,
             Opacity = overlay ? 0.35 : 0.92,
-            CornerRadius = new CornerRadius(3),
+            CornerRadius = new CornerRadius(groupedTerminal ? 0 : 3),
+            ClipToBounds = groupedTerminal,
+            Effect = isSelected ? SelectedLayoutEffect() : null,
             Tag = new NodeTag(target.Kind, target.ObjectId),
             ToolTip = $"{target.Label}\nSurface: {placement.Surface}\nMounted face: {placement.MountOrientation}, {PhysicalFootprintProjection.NormalizeRotation(placement.RotationDegrees)}°\nSource W/H/D: {footprint.WidthMm:0.###}/{footprint.HeightMm:0.###}/{(footprint.DepthMm?.ToString("0.###", CultureInfo.InvariantCulture) ?? "?")} mm\nShown W/H: {projection.WidthMm:0.###}/{projection.HeightMm:0.###} mm\nProtrusion: {(projection.ProtrusionMm?.ToString("0.###", CultureInfo.InvariantCulture) ?? "?")} mm\nDepth offset: {placement.DepthOffsetMm:0.###} mm"
         };
-        border.Child = new TextBlock
+        var content = new StackPanel
         {
-            Text = $"{target.Label}\nD:{(footprint.DepthMm?.ToString("0.#", CultureInfo.InvariantCulture) ?? "?")} mm",
-            TextWrapping = TextWrapping.Wrap,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
+            Orientation = Orientation.Vertical
+        };
+        if (!IsTerminalTarget(target) && target.ComponentDefinitionId is not null && _componentImageResolver is not null)
+        {
+            var image = new Image
+            {
+                MaxWidth = Math.Max(10d, width - 8d),
+                MaxHeight = Math.Max(10d, height - 30d),
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(2d),
+                Visibility = Visibility.Collapsed,
+                ToolTip = "Product Image（產品圖片）— 僅作視覺表示，不作工程真值"
+            };
+            content.Children.Add(image);
+            _ = LoadLayoutComponentImageAsync(target.ComponentDefinitionId, image);
+        }
+        if (!groupedTerminal || (width >= 16d && height >= 14d))
+            content.Children.Add(new TextBlock
+        {
+            Text = groupedTerminal
+                ? ShortTerminalLabel(target.Label)
+                : $"{target.Label}\nD:{(footprint.DepthMm?.ToString("0.#", CultureInfo.InvariantCulture) ?? "?")} mm",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = groupedTerminal ? 9d : SystemFonts.MessageFontSize,
+            HorizontalAlignment = HorizontalAlignment.Center,
             TextAlignment = TextAlignment.Center,
             Margin = new Thickness(4)
-        };
+        });
+        border.Child = content;
         Canvas.SetLeft(border, placement.XMm * _scale);
         Canvas.SetTop(border, placement.YMm * _scale);
         if (!overlay)
@@ -707,8 +849,138 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             border.MouseLeftButtonDown += Node_MouseLeftButtonDown;
             border.MouseMove += Node_MouseMove;
             border.MouseLeftButtonUp += Node_MouseLeftButtonUp;
+            border.MouseRightButtonDown += Node_MouseRightButtonDown;
         }
         _canvas.Children.Add(border);
+    }
+
+    private async Task LoadLayoutComponentImageAsync(string componentDefinitionId, Image target)
+    {
+        try
+        {
+            var source = _componentImageResolver is null
+                ? null
+                : await _componentImageResolver(componentDefinitionId);
+            var localPath = await _componentImageCache.GetLocalPathAsync(source);
+            if (localPath is null || !File.Exists(localPath)) return;
+            var imagePath = localPath;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.UriSource = new Uri(imagePath, UriKind.Absolute);
+                bitmap.EndInit();
+                bitmap.Freeze();
+                target.Source = bitmap;
+                target.Visibility = Visibility.Visible;
+                target.ToolTip = $"Product Image（產品圖片）— 僅作視覺表示，不作工程真值\nCache: {imagePath}";
+            });
+        }
+        catch
+        {
+            // A missing or unreadable product image must not block physical layout editing.
+        }
+    }
+
+    private void DrawTerminalGroupFrames(
+        ElectricalProject project,
+        IReadOnlyList<PhysicalTerminalVisualGroup> groups)
+    {
+        foreach (var group in groups)
+        {
+            var labels = group.Members
+                .Select(member => ResolveTerminalGroupLabel(project, member))
+                .Where(label => !string.IsNullOrWhiteSpace(label))
+                .ToArray();
+            var title = BuildPhysicalTerminalGroupTitle(labels, group.Members.Count);
+            var frame = new Border
+            {
+                Width = group.Bounds.Width * _scale + 8d,
+                Height = group.Bounds.Height * _scale + 8d,
+                BorderBrush = Brushes.DarkSlateGray,
+                BorderThickness = new Thickness(2d),
+                CornerRadius = new CornerRadius(4d),
+                Background = new SolidColorBrush(Color.FromArgb(18, 47, 79, 79)),
+                IsHitTestVisible = false,
+                ToolTip = $"{title}\nLayout 自動端子排；{group.Members.Count} 顆端子仍各自保留尺寸、位置與 BOM 數量。"
+            };
+            Panel.SetZIndex(frame, -10);
+            Canvas.SetLeft(frame, Math.Max(0d, group.Bounds.X * _scale - 4d));
+            Canvas.SetTop(frame, Math.Max(0d, group.Bounds.Y * _scale - 4d));
+            _canvas.Children.Add(frame);
+
+            var caption = new TextBlock
+            {
+                Text = title,
+                FontSize = 10d,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.DarkSlateGray,
+                Background = Brushes.White,
+                Padding = new Thickness(4d, 1d, 4d, 1d),
+                IsHitTestVisible = false
+            };
+            Panel.SetZIndex(caption, 20);
+            Canvas.SetLeft(caption, Math.Max(0d, group.Bounds.X * _scale + 3d));
+            Canvas.SetTop(caption, Math.Max(0d, group.Bounds.Y * _scale - 19d));
+            _canvas.Children.Add(caption);
+        }
+    }
+
+    private static PhysicalTerminalGroupMember ToTerminalMember(LayoutTarget target) => new(
+        target.Kind == LayoutObjectKind.Component
+            ? PhysicalTerminalObjectKind.Component
+            : PhysicalTerminalObjectKind.TerminalBlock,
+        target.ObjectId);
+
+    private static string ResolveTerminalGroupLabel(
+        ElectricalProject project,
+        PhysicalTerminalGroupMember member) => member.Kind switch
+    {
+        PhysicalTerminalObjectKind.Component => project.Components
+            .FirstOrDefault(component => string.Equals(
+                component.ComponentInstanceId,
+                member.ObjectId,
+                StringComparison.OrdinalIgnoreCase)) is { } component
+                ? component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? member.ObjectId
+                : member.ObjectId,
+        _ => project.TerminalBlocks
+            .FirstOrDefault(block => string.Equals(
+                block.TerminalBlockId,
+                member.ObjectId,
+                StringComparison.OrdinalIgnoreCase))?.ReferenceDesignator ?? member.ObjectId
+    };
+
+    private static string BuildPhysicalTerminalGroupTitle(IReadOnlyList<string> labels, int count)
+    {
+        var families = labels
+            .Select(RemoveTerminalSequenceSuffix)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var family = families.Length == 1 && !string.IsNullOrWhiteSpace(families[0])
+            ? families[0]
+            : "Terminal strip｜端子排";
+        return $"{family} × {count}";
+    }
+
+    private static string ShortTerminalLabel(string label)
+    {
+        var index = label.LastIndexOf('#');
+        if (index >= 0 && index < label.Length - 1) return label[index..].Trim();
+        index = label.LastIndexOf(':');
+        return index >= 0 && index < label.Length - 1 ? label[index..].Trim() : label;
+    }
+
+    private static string RemoveTerminalSequenceSuffix(string label)
+    {
+        var index = label.LastIndexOf('#');
+        if (index >= 0 && int.TryParse(label[(index + 1)..].Trim(), out _))
+            return label[..index].Trim();
+        index = label.LastIndexOf(':');
+        return index >= 0 && int.TryParse(label[(index + 1)..].Trim(), out _)
+            ? label[..index].Trim()
+            : label.Trim();
     }
 
     private void RefreshFit()
@@ -746,11 +1018,14 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         if (_selection is null)
         {
             _selectedLabel.Text = "尚未選取 / Nothing selected";
+            LoadTerminalSectionFields();
             return;
         }
         var target = ResolveObject(_projectAccessor(), _selection.ObjectId, _selection.Kind);
         if (target is null) return;
-        _selectedLabel.Text = $"{target.Label}\n{target.Kind} | {target.ObjectId}";
+        _selectedLabel.Text = _selectedLayoutItems.Count > 1
+            ? $"已選取 {_selectedLayoutItems.Count} 個物件\n主要物件：{target.Label}"
+            : $"{target.Label}\n{target.Kind} | {target.ObjectId}";
         _selectedSurface.SelectedItem = target.Placement?.Surface ?? MountingSurface.Unknown;
         var mountOrientation = target.Placement?.MountOrientation ?? ComponentMountOrientation.Front;
         _mountOrientation.SelectedItem = OrientationChoices.First(choice => choice.Value == mountOrientation);
@@ -761,6 +1036,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         _height.Text = target.Footprint is null || target.Footprint.HeightMm <= 0 ? string.Empty : Format(target.Footprint.HeightMm);
         _depth.Text = target.Footprint?.DepthMm is double depth ? Format(depth) : string.Empty;
         _depthOffset.Text = Format(target.Placement?.DepthOffsetMm ?? 0);
+        LoadTerminalSectionFields();
     }
 
     private LayoutContainer? SelectedContainer(ElectricalProject project)
@@ -813,11 +1089,13 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         foreach (var component in project.Components)
             yield return new LayoutTarget(LayoutObjectKind.Component, component.ComponentInstanceId,
                 component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId,
+                component.ComponentDefinitionId,
                 component.Footprint, component.Placement,
                 footprint => component.Footprint = footprint,
                 placement => component.Placement = placement);
         foreach (var block in project.TerminalBlocks)
             yield return new LayoutTarget(LayoutObjectKind.TerminalBlock, block.TerminalBlockId, block.ReferenceDesignator,
+                null,
                 block.Footprint, block.Placement,
                 footprint => block.Footprint = footprint,
                 placement => block.Placement = placement);
@@ -897,6 +1175,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             LayoutObjectKind kind,
             string objectId,
             string label,
+            string? componentDefinitionId,
             PhysicalFootprint? footprint,
             PhysicalPlacement? placement,
             Action<PhysicalFootprint?> setFootprint,
@@ -905,6 +1184,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             Kind = kind;
             ObjectId = objectId;
             Label = label;
+            ComponentDefinitionId = componentDefinitionId;
             _setFootprint = setFootprint;
             _setPlacement = setPlacement;
             Footprint = footprint;
@@ -914,6 +1194,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         public LayoutObjectKind Kind { get; }
         public string ObjectId { get; }
         public string Label { get; }
+        public string? ComponentDefinitionId { get; }
         public PhysicalFootprint? Footprint
         {
             get => _footprint;

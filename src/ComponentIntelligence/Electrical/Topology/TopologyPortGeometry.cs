@@ -85,6 +85,34 @@ public static class TopologyPortGeometry
         return TopologyScreenSide.Right;
     }
 
+    /// <summary>
+    /// A standalone cable-end connector has two visual faces: the mating Port and the conductor
+    /// Pins leaving the back of the connector. When the user expands that Port, show its Pins on
+    /// the physically opposite edge. This is presentation-only and does not change any Pin ID,
+    /// connection endpoint, or engineering metadata.
+    /// </summary>
+    public static TopologyScreenSide DetermineExpandedPinSide(
+        ComponentInstance component,
+        ComponentPort port,
+        TopologyScreenSide connectorSide)
+    {
+        ArgumentNullException.ThrowIfNull(component);
+        ArgumentNullException.ThrowIfNull(port);
+
+        var isStandaloneCableEnd = string.Equals(
+                                       component.TypeKey,
+                                       "INLINE_CONNECTOR",
+                                       StringComparison.OrdinalIgnoreCase) &&
+                                   port.Capabilities.Any(capability => string.Equals(
+                                       capability,
+                                       "ROLE:Cable End",
+                                       StringComparison.OrdinalIgnoreCase));
+        if (!isStandaloneCableEnd) return connectorSide;
+        return connectorSide == TopologyScreenSide.Left
+            ? TopologyScreenSide.Right
+            : TopologyScreenSide.Left;
+    }
+
     public static TopologyPortAnchor Calculate(TopologyPlacement placement, int portIndex, int portCount)
     {
         ArgumentNullException.ThrowIfNull(placement);
@@ -288,6 +316,18 @@ public static class TopologyPortGeometry
 
         var tokens = role
             .Split([' ', '\t', '-', '_', '/', '\\', ':', '(', ')', '[', ']'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var isCableEnd = tokens.Any(token => token.Equals("CABLE", StringComparison.OrdinalIgnoreCase)) &&
+                         tokens.Any(token => token.Equals("END", StringComparison.OrdinalIgnoreCase));
+        if (isCableEnd && tokens.Any(token => token.Equals("A", StringComparison.OrdinalIgnoreCase)))
+        {
+            side = TopologyScreenSide.Right;
+            return true;
+        }
+        if (isCableEnd && tokens.Any(token => token.Equals("B", StringComparison.OrdinalIgnoreCase)))
+        {
+            side = TopologyScreenSide.Left;
+            return true;
+        }
         var hasInputRole = tokens.Any(token => token.Equals("INPUT", StringComparison.OrdinalIgnoreCase));
         var hasOutputRole = tokens.Any(token => token.Equals("OUTPUT", StringComparison.OrdinalIgnoreCase));
 

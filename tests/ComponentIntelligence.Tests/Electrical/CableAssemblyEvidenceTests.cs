@@ -1,5 +1,6 @@
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Persistence;
+using ComponentIntelligence.Electrical.Validation;
 using ComponentIntelligence.Repository;
 
 namespace ComponentIntelligence.Tests.Electrical;
@@ -205,6 +206,148 @@ public sealed class CableAssemblyEvidenceTests
         }
     }
 
+    [Fact]
+    public void Validator_BlocksMoreThanOneTrunk_WithStableIdentities()
+    {
+        var project = AssemblyProject(
+            Member("cable-b", CableAssemblySegmentRoleType.Trunk),
+            Member("cable-a", CableAssemblySegmentRoleType.Trunk));
+
+        var result = AssertRule(project, "RULE-CABLE-ASSEMBLY-001");
+
+        Assert.Equal(["assembly-1", "cable-a", "cable-b"], result.SourceObjectIds);
+    }
+
+    [Fact]
+    public void Validator_BlocksDuplicateBranchIndex_WithStableIdentities()
+    {
+        var project = AssemblyProject(
+            Member("cable-b", CableAssemblySegmentRoleType.Branch, index: 2),
+            Member("cable-a", CableAssemblySegmentRoleType.Branch, index: 2));
+
+        var result = AssertRule(project, "RULE-CABLE-ASSEMBLY-002");
+
+        Assert.Equal(["assembly-1", "cable-a", "cable-b"], result.SourceObjectIds);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Validator_BlocksMissingOrNonPositiveBranchIndex(int? index)
+    {
+        var project = AssemblyProject(Member("cable-a", CableAssemblySegmentRoleType.Branch, index));
+
+        var result = AssertRule(project, "RULE-CABLE-ASSEMBLY-003");
+
+        Assert.Equal(["assembly-1", "cable-a"], result.SourceObjectIds);
+    }
+
+    [Fact]
+    public void Validator_BlocksTrunkCarryingIndex()
+    {
+        var project = AssemblyProject(Member("cable-a", CableAssemblySegmentRoleType.Trunk, index: 1));
+
+        var result = AssertRule(project, "RULE-CABLE-ASSEMBLY-004");
+
+        Assert.Equal(["assembly-1", "cable-a"], result.SourceObjectIds);
+    }
+
+    [Fact]
+    public void Validator_BlocksOtherWithoutRoleName()
+    {
+        var project = AssemblyProject(Member("cable-a", CableAssemblySegmentRoleType.Other, name: " "));
+
+        var result = AssertRule(project, "RULE-CABLE-ASSEMBLY-005");
+
+        Assert.Equal(["assembly-1", "cable-a"], result.SourceObjectIds);
+    }
+
+    [Fact]
+    public void Validator_BlocksMemberReferencingMissingCableInstance()
+    {
+        var project = AssemblyProject(Member("missing-cable", CableAssemblySegmentRoleType.Unknown));
+        project.Cables.Clear();
+
+        var result = AssertRule(project, "RULE-CABLE-ASSEMBLY-006");
+
+        Assert.Equal(["assembly-1", "missing-cable"], result.SourceObjectIds);
+    }
+
+    [Fact]
+    public void Validator_BlocksDuplicateCableInstanceMembership()
+    {
+        var project = AssemblyProject(
+            Member("cable-a", CableAssemblySegmentRoleType.Unknown),
+            Member("cable-a", CableAssemblySegmentRoleType.Branch, index: 1));
+
+        var result = AssertRule(project, "RULE-CABLE-ASSEMBLY-007");
+
+        Assert.Equal(["assembly-1", "cable-a"], result.SourceObjectIds);
+    }
+
+    [Fact]
+    public void Validator_AcceptsTrunkWithNonContiguousBranchIndexes()
+    {
+        var project = AssemblyProject(
+            Member("cable-trunk", CableAssemblySegmentRoleType.Trunk),
+            Member("cable-branch-1", CableAssemblySegmentRoleType.Branch, index: 1),
+            Member("cable-branch-3", CableAssemblySegmentRoleType.Branch, index: 3));
+
+        Assert.Empty(CableAssemblyResults(project));
+    }
+
+    [Fact]
+    public void Validator_AcceptsNonContiguousBranchesWithoutTrunk()
+    {
+        var project = AssemblyProject(
+            Member("cable-branch-1", CableAssemblySegmentRoleType.Branch, index: 1),
+            Member("cable-branch-3", CableAssemblySegmentRoleType.Branch, index: 3));
+
+        Assert.Empty(CableAssemblyResults(project));
+    }
+
+    [Fact]
+    public void Validator_PreservesUnknownRoleWithoutInferringFromPurpose()
+    {
+        var member = Member("cable-a", CableAssemblySegmentRoleType.Unknown);
+        member.Purpose = "TRUNK";
+        var project = AssemblyProject(member);
+
+        Assert.Empty(CableAssemblyResults(project));
+        Assert.Equal(CableAssemblySegmentRoleType.Unknown, member.SegmentRoleType);
+        Assert.Null(member.SegmentRoleIndex);
+        Assert.Null(member.SegmentRoleName);
+    }
+
+    [Fact]
+    public void Validator_ProducesDeterministicCableAssemblyDiagnostics()
+    {
+        var first = AssemblyProject(
+            Member("cable-b", CableAssemblySegmentRoleType.Trunk, index: 2),
+            Member("cable-a", CableAssemblySegmentRoleType.Trunk, index: 1),
+            Member("missing-cable", CableAssemblySegmentRoleType.Other));
+        first.Cables.RemoveAll(cable => cable.CableInstanceId == "missing-cable");
+
+        var second = AssemblyProject(
+            Member("missing-cable", CableAssemblySegmentRoleType.Other),
+            Member("cable-a", CableAssemblySegmentRoleType.Trunk, index: 1),
+            Member("cable-b", CableAssemblySegmentRoleType.Trunk, index: 2));
+        second.Cables.RemoveAll(cable => cable.CableInstanceId == "missing-cable");
+
+        var expected = new[]
+        {
+            "RULE-CABLE-ASSEMBLY-001|assembly-1,cable-a,cable-b",
+            "RULE-CABLE-ASSEMBLY-004|assembly-1,cable-a",
+            "RULE-CABLE-ASSEMBLY-004|assembly-1,cable-b",
+            "RULE-CABLE-ASSEMBLY-005|assembly-1,missing-cable",
+            "RULE-CABLE-ASSEMBLY-006|assembly-1,missing-cable"
+        };
+
+        Assert.Equal(expected, DiagnosticProjection(first));
+        Assert.Equal(expected, DiagnosticProjection(second));
+    }
+
     private static ElectricalProject Project(string schemaVersion) => new()
     {
         SchemaVersion = schemaVersion,
@@ -216,6 +359,47 @@ public sealed class CableAssemblyEvidenceTests
         CableInstanceId = cableInstanceId,
         CableDefinitionId = $"definition:{cableInstanceId}"
     };
+
+    private static ElectricalProject AssemblyProject(params CableAssemblyMember[] members)
+    {
+        var project = Project("0.4");
+        project.Cables.AddRange(members
+            .Select(member => member.CableInstanceId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(Cable));
+        project.CableAssemblies.Add(new CableAssembly
+        {
+            CableAssemblyId = "assembly-1",
+            Members = { }
+        });
+        project.CableAssemblies[0].Members.AddRange(members);
+        return project;
+    }
+
+    private static CableAssemblyMember Member(
+        string cableInstanceId,
+        CableAssemblySegmentRoleType role,
+        int? index = null,
+        string? name = null) => new()
+    {
+        CableInstanceId = cableInstanceId,
+        SegmentRoleType = role,
+        SegmentRoleIndex = index,
+        SegmentRoleName = name
+    };
+
+    private static ValidationResult AssertRule(ElectricalProject project, string ruleId) =>
+        Assert.Single(CableAssemblyResults(project), result => result.RuleId == ruleId);
+
+    private static IReadOnlyList<ValidationResult> CableAssemblyResults(ElectricalProject project) =>
+        new ElectricalProjectValidator().Validate(project).Results
+            .Where(result => result.RuleId.StartsWith("RULE-CABLE-ASSEMBLY-", StringComparison.Ordinal))
+            .ToArray();
+
+    private static string[] DiagnosticProjection(ElectricalProject project) =>
+        CableAssemblyResults(project)
+            .Select(result => $"{result.RuleId}|{string.Join(",", result.SourceObjectIds)}")
+            .ToArray();
 
     private static string TemporaryDatabasePath() =>
         Path.Combine(Path.GetTempPath(), $"component-intelligence-cp2e1-{Guid.NewGuid():N}.db");

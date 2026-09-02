@@ -24,6 +24,9 @@ CP2-E1 stopped at the first authority boundary that prevents the authorized sche
 | Completed Task 1 commit | `868b9255696a4ecfc54e4c1fa5b38d70be3453a4` |
 | Completed Task 1 tree | `9e03a9900dbacb3337cb982cbb62204b109018d1` |
 | Task 1 remote SHA confirmed | `YES` |
+| Verified BLOCKED handoff payload commit | `beb98e79082f5a2adae6ea6bd6050f79065921a6` |
+| Verified BLOCKED handoff payload tree | `bdc6037ee434d255389c5e4fda80fd2249d37755` |
+| Handoff payload remote SHA confirmed | `YES` |
 | Stacked Draft PR | `jackp803/Component-Intelligence-Public#16` |
 | PR base | `codex/week1-cp2d-cable-construction-type-evidence-20260901` |
 | PR head | `codex/week1-cp2e1-cable-assembly-segment-role-evidence-20260901` |
@@ -140,4 +143,4 @@ Baseline and final values are identical:
 - `tests/ComponentIntelligence.Tests/Electrical/CableAssemblyEvidenceTests.cs`
 - `docs/handoff/WEEK1_CP2E1_CABLE_ASSEMBLY_SEGMENT_ROLE_STATUS_20260901.md`
 
-The status-only commit containing this document records the BLOCKED checkpoint and does not change implementation behavior.
+The verified handoff payload commit above contains the implementation and BLOCKED evidence. The following status-only remote-confirmation commit becomes the final branch head and does not change implementation behavior.

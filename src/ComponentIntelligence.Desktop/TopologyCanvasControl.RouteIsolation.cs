@@ -64,11 +64,11 @@ public partial class TopologyCanvasControl
     {
         if (_routingVisualsUpdating || _routeIsolationApplying) return;
 
-        // Synchronous reconciliation is important during dragging. The legacy/full router has
-        // already run in the child MouseMove handler; restore every unaffected route now, before
-        // the frame is presented to the user.
-        if (_dragRouteConnectionId is not null || _dragRecorded || _terminalDragRecorded)
-            ReconcileRouteIsolation();
+        // Live dragging owns only the selected object/route. The authoritative reconciliation runs
+        // once on mouse-up; doing it for every pointer event makes large drawings visibly stutter.
+        if (_dragRecorded || _terminalDragRecorded || _dragRouteConnectionId is not null ||
+            _dragEndpointHandle is not null)
+            return;
     }
 
     private void ScheduleRouteIsolationReconcile()
@@ -84,7 +84,8 @@ public partial class TopologyCanvasControl
 
     private void ReconcileRouteIsolation()
     {
-        if (_routeIsolationApplying || _routingVisualsUpdating || _project is null || Surface is null) return;
+        if (_routeIsolationApplying || _routingVisualsUpdating || _project is null || Surface is null ||
+            _dragRouteConnectionId is not null || _dragEndpointHandle is not null) return;
         BindRouteIsolationProject();
 
         var liveConnections = _project.Connections.ToDictionary(

@@ -10,6 +10,9 @@ public enum InlineConnectionOperation
 {
     Connector,
     LooseWireMatedConnectorPair,
+    BundleCableAssembly,
+    CustomTwoEndCableAssembly,
+    CustomYCableAssembly,
     Terminal,
     CableSegment,
     PinMapping,
@@ -33,14 +36,21 @@ public sealed class InlineConnectionDialog : Window
         StaysOpenOnEdit = true
     };
     private readonly TextBox _engineering = new();
+    private readonly TextBox _trunkLength = new();
+    private readonly TextBox _branchALength = new();
+    private readonly TextBox _branchBLength = new();
     private readonly string _connectionSummary;
+    private readonly int _selectedConnectionCount;
 
     public InlineConnectionDialog(
         string connectionSummary,
         IEnumerable<BomConnectionMaterialOption>? availableCableMaterials = null,
-        string? selectedCableDefinitionId = null)
+        string? selectedCableDefinitionId = null,
+        int selectedConnectionCount = 1,
+        InlineConnectionOperation? preferredOperation = null)
     {
         _connectionSummary = connectionSummary;
+        _selectedConnectionCount = Math.Max(1, selectedConnectionCount);
         Title = "編輯線路 / Edit Connection";
         Width = 680;
         Height = 760;
@@ -49,7 +59,7 @@ public sealed class InlineConnectionDialog : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.CanResize;
 
-        _operation.ItemsSource = new[]
+        var choices = new List<Choice>
         {
             new Choice("編輯 Pin Mapping（腳位映射）— 明確指定 A Pin → B Pin，不自動猜直通", InlineConnectionOperation.PinMapping),
             new Choice("插入 散線 → M12母 ↔ M12公 → 散線（建立兩個轉接頭與正式對接）", InlineConnectionOperation.LooseWireMatedConnectorPair),
@@ -58,12 +68,34 @@ public sealed class InlineConnectionDialog : Window
             new Choice("設定 Cable Segment（線材）— 指定目前線段的線材實例", InlineConnectionOperation.CableSegment),
             new Choice("刪除目前連線 / Delete connection", InlineConnectionOperation.DeleteConnection)
         };
+        choices.Insert(1, new Choice(
+            _selectedConnectionCount == 1
+                ? "建立／更新自製 Cable（不需要原始 BOM）"
+                : $"建立／更新自製 Cable（將目前接頭側 {_selectedConnectionCount} 條導體歸為同一條 Cable）",
+            InlineConnectionOperation.CustomTwoEndCableAssembly));
+        if (_selectedConnectionCount >= 2)
+        {
+            choices.Insert(0, new Choice(
+                $"合併 {_selectedConnectionCount} 條散線 → 一條多芯電纜（M12母端 ↔ M12公端）",
+                InlineConnectionOperation.BundleCableAssembly));
+        }
+        _operation.ItemsSource = choices;
         _operation.DisplayMemberPath = nameof(Choice.Label);
-        _operation.SelectedIndex = 0;
+        _operation.SelectedItem = preferredOperation is null
+            ? choices[0]
+            : choices.FirstOrDefault(choice => choice.Operation == preferredOperation) ?? choices[0];
 
-        void SelectCableOperation() => _operation.SelectedItem = _operation.Items
-            .Cast<Choice>()
-            .First(choice => choice.Operation == InlineConnectionOperation.CableSegment);
+        void SelectCableOperation()
+        {
+            if ((_operation.SelectedItem as Choice)?.Operation is
+                InlineConnectionOperation.BundleCableAssembly or
+                InlineConnectionOperation.CustomTwoEndCableAssembly or
+                InlineConnectionOperation.CustomYCableAssembly)
+                return;
+            _operation.SelectedItem = _operation.Items
+                .Cast<Choice>()
+                .First(choice => choice.Operation == InlineConnectionOperation.CableSegment);
+        }
 
         _cableDefinition.GotKeyboardFocus += (_, _) => SelectCableOperation();
         _cableDefinition.SelectionChanged += (_, _) => SelectCableOperation();
@@ -106,7 +138,10 @@ public sealed class InlineConnectionDialog : Window
 
         var intro = new TextBlock
         {
-            Text = "操作提示：雙擊線路會開啟這個視窗。Pin Mapping 只保存明確指定的 A Pin → B Pin；沒有資料就保持 Unknown。插入 Connector / Terminal 會保留原本 A、B 端點並把原連線安全拆成兩段。\n\n" + connectionSummary,
+            Text = (_selectedConnectionCount >= 2
+                ? $"目前已選 {_selectedConnectionCount} 條線。選『合併…多芯電纜』後，Pin 1～{_selectedConnectionCount} 會依線路固定順序一對一配置；Pin Count 必須至少 {_selectedConnectionCount}。"
+                : "操作提示：雙擊線路會開啟這個視窗。Pin Mapping 只保存明確指定的 A Pin → B Pin；沒有資料就保持 Unknown。插入 Connector / Terminal 會保留原本 A、B 端點並把原連線安全拆成兩段。") +
+                "\n\n" + connectionSummary,
             TextWrapping = TextWrapping.Wrap,
             Foreground = System.Windows.Media.Brushes.DimGray,
             Margin = new Thickness(0, 0, 0, 14)
@@ -149,6 +184,17 @@ public sealed class InlineConnectionDialog : Window
             Foreground = System.Windows.Media.Brushes.DimGray,
             Margin = new Thickness(0, -6, 0, 10)
         });
+        fields.Children.Add(SectionTitle("自製線束 / Fabricated Harness"));
+        fields.Children.Add(new TextBlock
+        {
+            Text = "自製一般線束使用 TRUNK 長度；Y 型線束使用 TRUNK、BRANCH-A、BRANCH-B 三段。可暫時留白表示長度待確認，不會用畫布距離猜測。Y 型時，開啟視窗的那條線固定為 TRUNK。",
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = System.Windows.Media.Brushes.DimGray,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        fields.Children.Add(Field("TRUNK / MAIN Length mm（主幹／一般線長）", _trunkLength));
+        fields.Children.Add(Field("BRANCH-A Length mm（Y 分支 A）", _branchALength));
+        fields.Children.Add(Field("BRANCH-B Length mm（Y 分支 B）", _branchBLength));
         scroll.Content = fields;
         Grid.SetRow(scroll, 2);
         root.Children.Add(scroll);
@@ -192,6 +238,12 @@ public sealed class InlineConnectionDialog : Window
     public InlineConnectorOptions ConnectorOptions => new(ConnectorFamily, ConnectorCoding, ConnectorPinCount, SideAGender, SideBGender, ReferenceDesignator);
     public InlineTerminalOptions TerminalOptions => new(ReferenceDesignator, TerminalFunction);
     public CableSegmentOptions CableOptions => new(ReferenceDesignator, CableDefinitionId, CableDisplayName);
+    public CustomCableAssemblyOptions CustomCableOptions => new(
+        ReferenceDesignator,
+        CableDisplayName,
+        PositiveDoubleOrNull(_trunkLength.Text),
+        PositiveDoubleOrNull(_branchALength.Text),
+        PositiveDoubleOrNull(_branchBLength.Text));
 
     private void Apply_Click(object? sender, RoutedEventArgs e)
     {
@@ -240,7 +292,31 @@ public sealed class InlineConnectionDialog : Window
 
     private bool ValidateInput()
     {
-        if (Operation is not (InlineConnectionOperation.Connector or InlineConnectionOperation.LooseWireMatedConnectorPair)) return true;
+        if (Operation is InlineConnectionOperation.CustomTwoEndCableAssembly or InlineConnectionOperation.CustomYCableAssembly)
+        {
+            var lengthFields = Operation == InlineConnectionOperation.CustomYCableAssembly
+                ? new[] { _trunkLength.Text, _branchALength.Text, _branchBLength.Text }
+                : new[] { _trunkLength.Text };
+            if (lengthFields.Any(value => !IsBlankOrPositiveDouble(value)))
+            {
+                MessageBox.Show(this, "線長請輸入大於 0 的 mm 數值；尚未確認可留白。", "線長格式不正確", MessageBoxButton.OK, MessageBoxImage.Information);
+                return false;
+            }
+        }
+        if (Operation is InlineConnectionOperation.CustomYCableAssembly && _selectedConnectionCount != 3)
+        {
+            MessageBox.Show(this, "Y 型線束必須剛好選取三條線。", "線路數量不正確", MessageBoxButton.OK, MessageBoxImage.Information);
+            return false;
+        }
+        if (Operation is InlineConnectionOperation.CustomTwoEndCableAssembly && _selectedConnectionCount < 1)
+            return false;
+        if (Operation is not (InlineConnectionOperation.Connector or InlineConnectionOperation.LooseWireMatedConnectorPair or InlineConnectionOperation.BundleCableAssembly)) return true;
+        if (Operation == InlineConnectionOperation.BundleCableAssembly &&
+            int.TryParse(_pinCount.Text, out var count) && count < _selectedConnectionCount)
+        {
+            MessageBox.Show(this, $"Pin Count 必須至少 {_selectedConnectionCount}，才能容納目前選取的 {_selectedConnectionCount} 條線。", "Pin 數不足", MessageBoxButton.OK, MessageBoxImage.Information);
+            return false;
+        }
         if (!string.IsNullOrWhiteSpace(_family.Text)) return true;
         MessageBox.Show(this, "Connector Family 不可空白。", "資料需要補充", MessageBoxButton.OK, MessageBoxImage.Information);
         return false;
@@ -265,5 +341,9 @@ public sealed class InlineConnectionDialog : Window
     };
 
     private static string? BlankToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static double? PositiveDoubleOrNull(string? value) =>
+        double.TryParse(value, out var parsed) && parsed > 0 ? parsed : null;
+    private static bool IsBlankOrPositiveDouble(string? value) =>
+        string.IsNullOrWhiteSpace(value) || double.TryParse(value, out var parsed) && parsed > 0;
     private sealed record Choice(string Label, InlineConnectionOperation Operation);
 }

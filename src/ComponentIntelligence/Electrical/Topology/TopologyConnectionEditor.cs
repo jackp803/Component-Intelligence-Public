@@ -19,13 +19,146 @@ public sealed record CableSegmentOptions(
     string? CableDefinitionId = null,
     string? DisplayName = null);
 
+public sealed record CustomCableAssemblyOptions(
+    string? ReferenceDesignator,
+    string? DisplayName,
+    double? TrunkLengthMm,
+    double? BranchALengthMm = null,
+    double? BranchBLengthMm = null);
+
+public sealed record CustomCableAssemblyResult(
+    CableAssembly Assembly,
+    IReadOnlyList<CableInstance> CableMembers);
+
 public sealed record InlineMatedConnectorPair(
     ComponentInstance FemaleAdapter,
     ComponentInstance MaleAdapter,
     ElectricalConnection FemaleToMaleMating);
 
+public sealed record MultiCoreCableBundle(
+    ComponentInstance FemaleAdapter,
+    ComponentInstance MaleAdapter,
+    CableInstance Cable,
+    CableAssembly Assembly,
+    IReadOnlyList<ElectricalConnection> CableCoreConnections);
+
 public sealed class TopologyConnectionEditor
 {
+    /// <summary>
+    /// Groups one ordinary route, or exactly three routes for a Y harness, into one project-local
+    /// fabricated cable assembly. No imported BOM product is required.
+    /// </summary>
+    public CustomCableAssemblyResult CreateCustomCableAssembly(
+        ElectricalProject project,
+        IReadOnlyCollection<string> connectionIds,
+        bool isYHarness,
+        CustomCableAssemblyOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(connectionIds);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var requested = connectionIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var expectedCount = isYHarness ? 3 : 1;
+        if (requested.Length != expectedCount)
+            throw new InvalidOperationException(isYHarness
+                ? "A custom Y harness requires exactly three selected wire segments."
+                : "A custom two-end harness requires exactly one selected wire segment.");
+
+        var connections = requested.Select(id => FindConnection(project, id)).ToArray();
+        var existingAssemblyCableIds = project.CableAssemblies
+            .SelectMany(assembly => assembly.Members)
+            .Select(member => member.CableInstanceId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (connections.Any(connection => !string.IsNullOrWhiteSpace(connection.CableInstanceId) &&
+                                          existingAssemblyCableIds.Contains(connection.CableInstanceId!)))
+            throw new InvalidOperationException("At least one selected segment already belongs to another cable assembly.");
+
+        var reference = string.IsNullOrWhiteSpace(options.ReferenceDesignator)
+            ? NextCableReference(project)
+            : options.ReferenceDesignator.Trim();
+        if (project.CableAssemblies.Any(assembly =>
+                string.Equals(assembly.ReferenceDesignator, reference, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException($"Cable assembly reference '{reference}' is already in use.");
+
+        var displayName = string.IsNullOrWhiteSpace(options.DisplayName)
+            ? isYHarness ? $"Custom Y harness {reference}" : $"Custom cable {reference}"
+            : options.DisplayName.Trim();
+        var roles = isYHarness ? new[] { "TRUNK", "BRANCH-A", "BRANCH-B" } : new[] { "MAIN" };
+        var lengths = isYHarness
+            ? new[] { options.TrunkLengthMm, options.BranchALengthMm, options.BranchBLengthMm }
+            : new[] { options.TrunkLengthMm };
+        if (lengths.Any(length => length is <= 0))
+            throw new InvalidOperationException("Cable length must be greater than zero when supplied.");
+
+        var cableMembers = new List<CableInstance>(connections.Length);
+        for (var index = 0; index < connections.Length; index++)
+        {
+            var connection = connections[index];
+            var role = roles[index];
+            var cable = string.IsNullOrWhiteSpace(connection.CableInstanceId)
+                ? null
+                : project.Cables.FirstOrDefault(item =>
+                    string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
+            if (cable is null)
+            {
+                cable = new CableInstance
+                {
+                    CableInstanceId = $"cbl-{Guid.NewGuid():N}",
+                    CableDefinitionId = "UNRESOLVED-CABLE"
+                };
+                project.Cables.Add(cable);
+                connection.CableInstanceId = cable.CableInstanceId;
+            }
+
+            cable.ReferenceDesignator = isYHarness ? $"{reference}-{role}" : reference;
+            cable.DisplayName = isYHarness ? $"{displayName} / {role}" : displayName;
+            cable.ProvidedLengthMm = lengths[index];
+            cable.LengthSource = lengths[index] is null ? CableLengthSource.Unknown : CableLengthSource.User;
+            connection.Kind = ConnectionKind.Cable;
+
+            if (cable.CoreAssignments.Count == 0)
+            {
+                var net = string.IsNullOrWhiteSpace(connection.NetId)
+                    ? null
+                    : project.Nets.FirstOrDefault(item =>
+                        string.Equals(item.NetId, connection.NetId, StringComparison.OrdinalIgnoreCase));
+                cable.CoreAssignments.Add(new CoreAssignment
+                {
+                    CoreId = "1",
+                    NetId = connection.NetId,
+                    Signal = net?.Label,
+                    Layer = net?.Layer ?? ElectricalLayer.Unknown,
+                    Status = "ASSIGNED",
+                    FromEndpointId = connection.FromEndpointId,
+                    ToEndpointId = connection.ToEndpointId
+                });
+                connection.CableCoreId ??= "1";
+            }
+            cableMembers.Add(cable);
+        }
+
+        var assembly = new CableAssembly
+        {
+            CableAssemblyId = $"ca-{Guid.NewGuid():N}",
+            ReferenceDesignator = reference,
+            IsCustom = true
+        };
+        for (var index = 0; index < cableMembers.Count; index++)
+        {
+            assembly.Members.Add(new CableAssemblyMember
+            {
+                CableInstanceId = cableMembers[index].CableInstanceId,
+                Purpose = roles[index]
+            });
+        }
+        project.CableAssemblies.Add(assembly);
+        return new CustomCableAssemblyResult(assembly, cableMembers);
+    }
+
     public ElectricalConnection ConnectPorts(
         ElectricalProject project,
         string fromPortId,
@@ -160,6 +293,164 @@ public sealed class TopologyConnectionEditor
         return new InlineMatedConnectorPair(female, male, mating);
     }
 
+    /// <summary>
+    /// Replaces two or more selected loose-wire connections with one explicit multi-core cable:
+    /// original A endpoints -> M12 female pins -> cable cores -> M12 male pins -> original B endpoints.
+    /// Every selected circuit keeps its own net while the physical cable and its two connectors are
+    /// represented once. Core assignment is deterministic in the caller-provided connection order.
+    /// </summary>
+    public MultiCoreCableBundle BundleLooseWireConnections(
+        ElectricalProject project,
+        IReadOnlyCollection<string> connectionIds,
+        InlineConnectorOptions connectorOptions,
+        CableSegmentOptions cableOptions)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(connectionIds);
+        ArgumentNullException.ThrowIfNull(connectorOptions);
+        ArgumentNullException.ThrowIfNull(cableOptions);
+
+        var requested = connectionIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (requested.Length < 2)
+            throw new InvalidOperationException("Select at least two loose-wire connections to create a multi-core cable.");
+
+        var originals = requested.Select(id => FindConnection(project, id)).ToArray();
+        var pinCount = connectorOptions.PinCount ?? originals.Length;
+        if (pinCount < originals.Length)
+            throw new InvalidOperationException($"Connector Pin Count ({pinCount}) must be at least the selected connection count ({originals.Length}).");
+        if (pinCount is < 1 or > 64)
+            throw new InvalidOperationException("Connector Pin Count must be between 1 and 64.");
+
+        var family = string.IsNullOrWhiteSpace(connectorOptions.Family) ? "M12" : connectorOptions.Family.Trim();
+        var baseReference = string.IsNullOrWhiteSpace(connectorOptions.ReferenceDesignator)
+            ? NextReference(project, "X")
+            : connectorOptions.ReferenceDesignator.Trim();
+
+        var femaleId = $"cmp-inline-{Guid.NewGuid():N}";
+        var femaleWire = BuildLooseWirePort(femaleId, "WIRE-A", pinCount, topologyInput: true);
+        var femaleMating = BuildConnectorPort(femaleId, "M12-F", family, connectorOptions.Coding, pinCount, ConnectorGender.Female);
+        femaleMating.Capabilities.Add("ROLE:Mating Output");
+        femaleMating.Capabilities.Add("ROLE:Cable End A");
+        var female = BuildFieldConnectorAdapter(
+            femaleId,
+            $"{baseReference}-F",
+            $"{family} female cable end ({originals.Length} cores)",
+            femaleWire,
+            femaleMating);
+
+        var maleId = $"cmp-inline-{Guid.NewGuid():N}";
+        var maleMating = BuildConnectorPort(maleId, "M12-M", family, connectorOptions.Coding, pinCount, ConnectorGender.Male);
+        maleMating.Capabilities.Add("ROLE:Mating Input");
+        maleMating.Capabilities.Add("ROLE:Cable End B");
+        var maleWire = BuildLooseWirePort(maleId, "WIRE-B", pinCount, topologyInput: false);
+        var male = BuildFieldConnectorAdapter(
+            maleId,
+            $"{baseReference}-M",
+            $"{family} male cable end ({originals.Length} cores)",
+            maleMating,
+            maleWire);
+
+        project.Components.Add(female);
+        project.Components.Add(male);
+        InsertPairPlacementsAtConnection(project, originals[0], femaleId, maleId);
+
+        var oldCableIds = originals
+            .Select(connection => connection.CableInstanceId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        project.Connections.RemoveAll(connection => requested.Contains(connection.ConnectionId, StringComparer.OrdinalIgnoreCase));
+        project.TopologyRoutes.RemoveAll(route => requested.Contains(route.ConnectionId, StringComparer.OrdinalIgnoreCase));
+
+        var definitionId = string.IsNullOrWhiteSpace(cableOptions.CableDefinitionId)
+            ? "UNRESOLVED-CABLE"
+            : cableOptions.CableDefinitionId.Trim();
+        var cableReference = string.IsNullOrWhiteSpace(cableOptions.ReferenceDesignator)
+            ? NextCableReference(project)
+            : cableOptions.ReferenceDesignator.Trim();
+        var cable = new CableInstance
+        {
+            CableInstanceId = $"cbl-{Guid.NewGuid():N}",
+            CableDefinitionId = definitionId,
+            DisplayName = string.IsNullOrWhiteSpace(cableOptions.DisplayName) ? null : cableOptions.DisplayName.Trim(),
+            ReferenceDesignator = cableReference
+        };
+        project.Cables.Add(cable);
+
+        var coreConnections = new List<ElectricalConnection>(originals.Length);
+        for (var index = 0; index < originals.Length; index++)
+        {
+            var original = originals[index];
+            var coreId = (index + 1).ToString();
+            var femaleWirePin = femaleWire.Pins[index];
+            var femaleMatingPin = femaleMating.Pins[index];
+            var maleMatingPin = maleMating.Pins[index];
+            var maleWirePin = maleWire.Pins[index];
+            var net = string.IsNullOrWhiteSpace(original.NetId)
+                ? null
+                : project.Nets.FirstOrDefault(item => string.Equals(item.NetId, original.NetId, StringComparison.OrdinalIgnoreCase));
+
+            project.Connections.Add(CloneLooseWireSegment(original, original.FromEndpointId, femaleWirePin.PinId));
+            var coreConnection = new ElectricalConnection
+            {
+                ConnectionId = $"conn-{Guid.NewGuid():N}",
+                FromEndpointId = femaleMatingPin.PinId,
+                ToEndpointId = maleMatingPin.PinId,
+                NetId = original.NetId,
+                Kind = ConnectionKind.Cable,
+                CableInstanceId = cable.CableInstanceId,
+                CableCoreId = coreId,
+                ConductorAreaMm2 = original.ConductorAreaMm2,
+                MaxVoltageDropPercent = original.MaxVoltageDropPercent,
+                ConductorMaterial = original.ConductorMaterial,
+                InstallationMethod = original.InstallationMethod
+            };
+            project.Connections.Add(coreConnection);
+            coreConnections.Add(coreConnection);
+            project.Connections.Add(CloneLooseWireSegment(original, maleWirePin.PinId, original.ToEndpointId));
+
+            cable.CoreAssignments.Add(new CoreAssignment
+            {
+                CoreId = coreId,
+                NetId = original.NetId,
+                Signal = net?.Label,
+                Layer = net?.Layer ?? ElectricalLayer.Unknown,
+                Status = "ASSIGNED",
+                FromEndpointId = femaleMatingPin.PinId,
+                ToEndpointId = maleMatingPin.PinId
+            });
+        }
+
+        var assembly = new CableAssembly
+        {
+            CableAssemblyId = $"ca-{Guid.NewGuid():N}",
+            ReferenceDesignator = cableReference,
+            IsCustom = string.Equals(definitionId, "UNRESOLVED-CABLE", StringComparison.OrdinalIgnoreCase),
+            EndAConnectorId = femaleMating.Connector!.ConnectorId,
+            EndBConnectorId = maleMating.Connector!.ConnectorId,
+            Members =
+            {
+                new CableAssemblyMember
+                {
+                    CableInstanceId = cable.CableInstanceId,
+                    Purpose = $"{family} female-to-male multi-core cable"
+                }
+            }
+        };
+        project.CableAssemblies.Add(assembly);
+        project.Cables.RemoveAll(existing =>
+            oldCableIds.Contains(existing.CableInstanceId) &&
+            project.Connections.All(connection =>
+                !string.Equals(connection.CableInstanceId, existing.CableInstanceId, StringComparison.OrdinalIgnoreCase)) &&
+            project.CableAssemblies.SelectMany(item => item.Members).All(member =>
+                !string.Equals(member.CableInstanceId, existing.CableInstanceId, StringComparison.OrdinalIgnoreCase)));
+
+        return new MultiCoreCableBundle(female, male, cable, assembly, coreConnections);
+    }
+
     public TerminalBlock InsertInlineTerminal(
         ElectricalProject project,
         string connectionId,
@@ -282,6 +573,11 @@ public sealed class TopologyConnectionEditor
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Cast<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var affectedAssemblyIds = project.CableAssemblies
+            .Where(assembly => assembly.Members.Any(member => removedCableIds.Contains(member.CableInstanceId)))
+            .Select(assembly => assembly.CableAssemblyId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        project.CableAssemblies.RemoveAll(assembly => affectedAssemblyIds.Contains(assembly.CableAssemblyId));
         project.Cables.RemoveAll(cable =>
             removedCableIds.Contains(cable.CableInstanceId) &&
             project.Connections.All(connection =>
@@ -342,6 +638,7 @@ public sealed class TopologyConnectionEditor
             MaxConnections = 1
         };
         port.Capabilities.Add(topologyInput ? "ROLE:Loose Wire Input" : "ROLE:Loose Wire Output");
+        port.Capabilities.Add("ALLOW_MANUAL_BRANCHING");
         if (pinCount is > 0 and <= 64)
         {
             for (var index = 1; index <= pinCount.Value; index++)
@@ -399,6 +696,19 @@ public sealed class TopologyConnectionEditor
         ConductorAreaMm2 = source.ConductorAreaMm2
     };
 
+    private static ElectricalConnection CloneLooseWireSegment(ElectricalConnection source, string from, string to) => new()
+    {
+        ConnectionId = $"conn-{Guid.NewGuid():N}",
+        FromEndpointId = from,
+        ToEndpointId = to,
+        NetId = source.NetId,
+        Kind = ConnectionKind.Wire,
+        ConductorAreaMm2 = source.ConductorAreaMm2,
+        MaxVoltageDropPercent = source.MaxVoltageDropPercent,
+        ConductorMaterial = source.ConductorMaterial,
+        InstallationMethod = source.InstallationMethod
+    };
+
     private static void InsertPlacementAtConnectionMidpoint(
         ElectricalProject project,
         ElectricalConnection connection,
@@ -437,9 +747,9 @@ public sealed class TopologyConnectionEditor
         string femaleId,
         string maleId)
     {
-        const double width = 150d;
-        const double height = 72d;
-        const double gap = 90d;
+        const double width = 88d;
+        const double height = 52d;
+        const double gap = 52d;
         var fromOwner = FindEndpointOwner(project, connection.FromEndpointId);
         var toOwner = FindEndpointOwner(project, connection.ToEndpointId);
         var from = project.TopologyPlacements.FirstOrDefault(item => string.Equals(item.ObjectId, fromOwner, StringComparison.OrdinalIgnoreCase));

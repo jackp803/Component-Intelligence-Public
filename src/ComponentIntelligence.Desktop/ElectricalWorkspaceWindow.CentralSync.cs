@@ -48,14 +48,14 @@ public partial class ElectricalWorkspaceWindow
         if (string.IsNullOrWhiteSpace(_centralWorkbookPath) || !File.Exists(_centralWorkbookPath)) return null;
 
         var archive = await new WorkbookComponentKnowledgeStore(_centralWorkbookPath).ListAsync();
+        archive = await new CentralArchiveImageSynchronizer().SynchronizeAsync(archive);
         var preview = new CentralArchiveProjectSynchronizer().Synchronize(CloneForPreview(_project), archive);
-        if (preview.UpdatedInstances == 0)
+        var result = preview;
+        if (preview.UpdatedInstances > 0)
         {
-            return preview;
+            if (recordMutation) RecordMutation("Synchronize project components from central archive");
+            result = new CentralArchiveProjectSynchronizer().Synchronize(_project, archive);
         }
-
-        if (recordMutation) RecordMutation("Synchronize project components from central archive");
-        var result = new CentralArchiveProjectSynchronizer().Synchronize(_project, archive);
 
         var sqlite = new SqliteComponentIrRepository(_databasePath);
         foreach (var component in archive)
@@ -68,9 +68,10 @@ public partial class ElectricalWorkspaceWindow
     private void SetCentralArchiveSyncStatus(CentralArchiveSyncResult result)
     {
         WorkspaceStatusText.Text = result.UpdatedInstances == 0
-            ? $"中央庫同步：沒有可更新元件；未找到 {result.MissingInstanceIds.Count} 個。"
+            ? $"中央庫同步：資料沒有可更新元件；圖片快取已檢查；未找到 {result.MissingInstanceIds.Count} 個。"
             : $"中央庫同步完成：更新 {result.UpdatedInstances} 個元件（{result.UpdatedDefinitions} 個型號）；" +
-              $"中央庫未找到 {result.MissingInstanceIds.Count} 個。數量、位置、旋轉與接線均保留；請按儲存。";
+              $"圖片快取已刷新；中央庫未找到 {result.MissingInstanceIds.Count} 個。" +
+              "數量、位置、旋轉與接線均保留；請按儲存。";
     }
 
     private static Electrical.Domain.ElectricalProject CloneForPreview(Electrical.Domain.ElectricalProject project)

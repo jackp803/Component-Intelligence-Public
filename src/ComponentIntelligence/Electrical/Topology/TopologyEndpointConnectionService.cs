@@ -36,9 +36,13 @@ public sealed class TopologyEndpointConnectionService
 
         EnsureCapacity(project, from);
         EnsureCapacity(project, to);
+        ValidateBranchPotential(project, from, to);
+        var resolvedNetId = ResolveBranchNet(project, from, to, netId);
 
         var kind = from.Kind == EndpointKind.Port && to.Kind == EndpointKind.Port
-            ? ConnectionKind.Cable
+            ? AreDirectMates(from.Connector, to.Connector)
+                ? ConnectionKind.DirectMating
+                : ConnectionKind.Cable
             : ConnectionKind.Wire;
 
         var connection = new ElectricalConnection
@@ -46,7 +50,7 @@ public sealed class TopologyEndpointConnectionService
             ConnectionId = $"conn-{Guid.NewGuid():N}",
             FromEndpointId = fromEndpointId,
             ToEndpointId = toEndpointId,
-            NetId = netId,
+            NetId = resolvedNetId,
             Kind = kind
         };
         project.Connections.Add(connection);
@@ -62,10 +66,16 @@ public sealed class TopologyEndpointConnectionService
         foreach (var port in component.Ports)
         {
             if (string.Equals(port.PortId, endpointId, StringComparison.OrdinalIgnoreCase))
-                return new EndpointInfo(endpointId, EndpointKind.Port, port.MaxConnections);
+                return new EndpointInfo(endpointId, EndpointKind.Port, port.MaxConnections, Connector: port.Connector);
 
-            if (port.Pins.Any(pin => string.Equals(pin.PinId, endpointId, StringComparison.OrdinalIgnoreCase)))
-                return new EndpointInfo(endpointId, EndpointKind.Pin, 1);
+            var pin = port.Pins.FirstOrDefault(pin =>
+                string.Equals(pin.PinId, endpointId, StringComparison.OrdinalIgnoreCase));
+            if (pin is not null)
+                return new EndpointInfo(
+                    endpointId,
+                    EndpointKind.Pin,
+                    TopologyEndpointBranchPolicy.MaximumConnections(port, pin),
+                    TopologyEndpointBranchPolicy.AllowsBranching(port, pin));
         }
 
         foreach (var block in project.TerminalBlocks)
@@ -74,7 +84,7 @@ public sealed class TopologyEndpointConnectionService
                      .SelectMany(level => level.ConnectionPoints))
         {
             if (string.Equals(point.ConnectionPointId, endpointId, StringComparison.OrdinalIgnoreCase))
-                return new EndpointInfo(endpointId, EndpointKind.TerminalPoint, Math.Max(1, point.MaxConductors));
+                return new EndpointInfo(endpointId, EndpointKind.TerminalPoint, Math.Max(1, point.MaxConductors), false);
         }
 
         return null;
@@ -92,6 +102,83 @@ public sealed class TopologyEndpointConnectionService
                 $"Endpoint '{endpoint.EndpointId}' already reached its maximum connection count ({endpoint.MaxConnections}).");
     }
 
+    private static string? ResolveBranchNet(
+        ElectricalProject project,
+        EndpointInfo from,
+        EndpointInfo to,
+        string? requestedNetId)
+    {
+        var shared = new[] { from, to }.Where(endpoint => endpoint.AllowsBranching &&
+            CountConnections(project, endpoint.EndpointId) > 0).ToArray();
+        if (shared.Length == 0) return requestedNetId;
+
+        var related = shared.SelectMany(endpoint => project.Connections.Where(connection =>
+                Touches(connection, endpoint.EndpointId)))
+            .DistinctBy(connection => connection.ConnectionId)
+            .ToArray();
+        var netIds = related.Select(connection => connection.NetId)
+            .Append(requestedNetId)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (netIds.Length > 1)
+            throw new InvalidOperationException(
+                "This common Pin is already connected to a different Net. Branched wires must share the same electrical Net.");
+
+        var resolved = netIds.SingleOrDefault();
+        if (resolved is not null)
+            foreach (var connection in related.Where(connection => string.IsNullOrWhiteSpace(connection.NetId)))
+                connection.NetId = resolved;
+        return resolved;
+    }
+
+    private static void ValidateBranchPotential(
+        ElectricalProject project,
+        EndpointInfo from,
+        EndpointInfo to)
+    {
+        foreach (var shared in new[] { from, to }.Where(endpoint => endpoint.AllowsBranching &&
+                     CountConnections(project, endpoint.EndpointId) > 0))
+        {
+            var newRemote = string.Equals(shared.EndpointId, from.EndpointId, StringComparison.OrdinalIgnoreCase)
+                ? to.EndpointId
+                : from.EndpointId;
+            var endpoints = project.Connections.Where(connection => Touches(connection, shared.EndpointId))
+                .Select(connection => string.Equals(connection.FromEndpointId, shared.EndpointId, StringComparison.OrdinalIgnoreCase)
+                    ? connection.ToEndpointId
+                    : connection.FromEndpointId)
+                .Append(shared.EndpointId)
+                .Append(newRemote);
+            var potentials = endpoints
+                .Select(endpointId => TopologyConnectionPotentialClassifier.ClassifyEndpoint(project, endpointId))
+                .Where(value => value != TopologyPotentialClass.Unknown)
+                .Distinct()
+                .ToArray();
+            if (potentials.Length > 1)
+                throw new InvalidOperationException(
+                    "The selected common Pin would join incompatible electrical potentials. Only the same GND / COM / 0V Net may branch here.");
+        }
+    }
+
+    private static int CountConnections(ElectricalProject project, string endpointId) =>
+        project.Connections.Count(connection => Touches(connection, endpointId));
+
+    private static bool Touches(ElectricalConnection connection, string endpointId) =>
+        string.Equals(connection.FromEndpointId, endpointId, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(connection.ToEndpointId, endpointId, StringComparison.OrdinalIgnoreCase);
+
+    private static bool AreDirectMates(ConnectorDefinition? first, ConnectorDefinition? second)
+    {
+        if (first is null || second is null) return false;
+        if (!string.Equals(first.Family, second.Family, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!string.IsNullOrWhiteSpace(first.Coding) && !string.IsNullOrWhiteSpace(second.Coding) &&
+            !string.Equals(first.Coding, second.Coding, StringComparison.OrdinalIgnoreCase)) return false;
+        if (first.PinCount is > 0 && second.PinCount is > 0 && first.PinCount != second.PinCount) return false;
+        return first.Gender is ConnectorGender.Male && second.Gender is ConnectorGender.Female ||
+               first.Gender is ConnectorGender.Female && second.Gender is ConnectorGender.Male;
+    }
+
     private enum EndpointKind
     {
         Port,
@@ -99,5 +186,10 @@ public sealed class TopologyEndpointConnectionService
         TerminalPoint
     }
 
-    private sealed record EndpointInfo(string EndpointId, EndpointKind Kind, int? MaxConnections);
+    private sealed record EndpointInfo(
+        string EndpointId,
+        EndpointKind Kind,
+        int? MaxConnections,
+        bool AllowsBranching = false,
+        ConnectorDefinition? Connector = null);
 }

@@ -127,6 +127,7 @@ public partial class TopologyCanvasControl
         {
             MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Move terminal junction {_terminalDragBlockId}"));
             _terminalDragRecorded = true;
+            InvalidateManualRoutesForMovedObjects(_terminalDragStartSelectionPositions.Keys);
         }
         if (!_terminalDragRecorded) return;
 

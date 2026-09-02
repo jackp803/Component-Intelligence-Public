@@ -16,6 +16,7 @@ public partial class TopologyCanvasControl : UserControl
 {
     private readonly TopologyProjection _projection = new();
     private readonly TopologyConnectionEditor _connectionEditor = new();
+    private readonly ConnectorCableTopologyService _connectorCableTopology = new();
     private ElectricalProject? _project;
     private ElectricalLayer? _layerFilter;
     private FrameworkElement? _dragElement;
@@ -26,6 +27,7 @@ public partial class TopologyCanvasControl : UserControl
     private bool _dragRecorded;
     private InteractionMode _interactionMode = InteractionMode.Select;
     private string? _pendingWireEndpointId;
+    private string? _selectedConnectorPortId;
     private IReadOnlyList<BomConnectionMaterialOption> _availableCableMaterials =
         Array.Empty<BomConnectionMaterialOption>();
     private string? _archiveWorkbookPath;
@@ -33,6 +35,7 @@ public partial class TopologyCanvasControl : UserControl
     public TopologyCanvasControl()
     {
         InitializeComponent();
+        ConfigureComponentVisualHooks();
         ConfigureMarqueeSelection();
         UpdateModeButtons();
     }
@@ -44,12 +47,16 @@ public partial class TopologyCanvasControl : UserControl
     public void SetProject(ElectricalProject project)
     {
         _project = project ?? throw new ArgumentNullException(nameof(project));
+        CommonConnectorCatalog.UpgradeLegacyM12CableEnds(_project);
+        CommonConnectorCatalog.UpgradeLegacyRj45CableEnds(_project);
         _pendingWireEndpointId = null;
+        _selectedConnectorPortId = null;
         _selectedTopologyObjectIds.Clear();
         _selectedTopologyConnectionIds.Clear();
         _selectedRouteConnectionId = null;
         BindRouteIsolationProject();
         ResetCanvasBoundsForProject();
+        ReconcileAlreadyTouchingMatedConnectors();
         Render();
     }
 
@@ -95,6 +102,20 @@ public partial class TopologyCanvasControl : UserControl
     }
 
     public void RefreshCanvas() => Render();
+
+    public void ExportCurrentVisualPdf(string filePath)
+    {
+        if (_project is null)
+            throw new InvalidOperationException("Topology canvas has no project to export.");
+
+        var highlightedConnectionId = _selectedRouteConnectionId ?? _selectedTopologyConnectionIds.FirstOrDefault();
+        new TopologyPdfExporter().ExportVisual(
+            _project,
+            filePath,
+            Surface,
+            _layerFilter,
+            highlightedConnectionId);
+    }
 
     private void Render()
     {
@@ -251,8 +272,11 @@ public partial class TopologyCanvasControl : UserControl
 
         if (_interactionMode == InteractionMode.Select)
         {
+            _selectedConnectorPortId = port.Connector is null ? null : port.PortId;
             SelectionText.Text = PortSummary(port);
-            HintText.Text = "已選取 Port。若要拉線，按「拉線 / Wire」，再依序點兩個 Port。";
+            HintText.Text = port.Connector is null
+                ? "已選取 Port。若要拉線，按「拉線 / Wire」，再依序點兩個 Port。"
+                : "已選取接頭。雙擊圓點可展開 Pin；完成手動接線後，按「自製 Cable / Harness」依實際 Pin 連線設定 Cable。";
             e.Handled = true;
             return;
         }
@@ -299,6 +323,7 @@ public partial class TopologyCanvasControl : UserControl
         if (_project is null || sender is not FrameworkElement element || element.Tag is not string connectionId) return;
         var connection = _project.Connections.FirstOrDefault(item => string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase));
         if (connection is null) return;
+        _selectedConnectorPortId = null;
 
         SelectionText.Text = $"Line: {connection.FromEndpointId} → {connection.ToEndpointId}";
         if (e.ClickCount < 2)
@@ -314,10 +339,18 @@ public partial class TopologyCanvasControl : UserControl
 
         var assignedCable = _project.Cables.FirstOrDefault(item =>
             string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
+        var selectedConnectionIds = _selectedTopologyConnectionIds.Count >= 2 &&
+                                    _selectedTopologyConnectionIds.Contains(connectionId)
+            ? new[] { connectionId }.Concat(_project.Connections
+                .Where(item => _selectedTopologyConnectionIds.Contains(item.ConnectionId) &&
+                               !string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase))
+                .Select(item => item.ConnectionId)).ToArray()
+            : new[] { connectionId };
         var dialog = new InlineConnectionDialog(
             BuildConnectionSummary(connection),
             _availableCableMaterials,
-            assignedCable?.CableDefinitionId)
+            assignedCable?.CableDefinitionId,
+            selectedConnectionIds.Length)
         {
             Owner = Window.GetWindow(this)
         };
@@ -339,6 +372,23 @@ public partial class TopologyCanvasControl : UserControl
                 case InlineConnectionOperation.LooseWireMatedConnectorPair:
                     _connectionEditor.InsertLooseWireMatedConnectorPair(_project, connectionId, dialog.ConnectorOptions);
                     HintText.Text = "已建立：散線 → M12母 ↔ M12公 → 散線。中間為正式 Direct Mating；雙擊兩側線段可分別設定 Pin Mapping 與線材。";
+                    break;
+                case InlineConnectionOperation.BundleCableAssembly:
+                    var bundle = _connectionEditor.BundleLooseWireConnections(
+                        _project,
+                        selectedConnectionIds,
+                        dialog.ConnectorOptions,
+                        dialog.CableOptions);
+                    _selectedTopologyConnectionIds.Clear();
+                    _selectedRouteConnectionId = null;
+                    HintText.Text = $"已將 {selectedConnectionIds.Length} 條散線合併為 {bundle.Cable.ReferenceDesignator ?? bundle.Cable.CableInstanceId}：散線 → M12母端 → {selectedConnectionIds.Length} 芯電纜 → M12公端 → 散線。";
+                    break;
+                case InlineConnectionOperation.CustomTwoEndCableAssembly:
+                case InlineConnectionOperation.CustomYCableAssembly:
+                    ApplyCustomCableAssembly(
+                        selectedConnectionIds,
+                        dialog.Operation == InlineConnectionOperation.CustomYCableAssembly,
+                        dialog.CustomCableOptions);
                     break;
                 case InlineConnectionOperation.Terminal:
                     _connectionEditor.InsertInlineTerminal(_project, connectionId, dialog.TerminalOptions);
@@ -362,6 +412,126 @@ public partial class TopologyCanvasControl : UserControl
             MessageBox.Show(Window.GetWindow(this), exception.Message, "線路編輯失敗", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         e.Handled = true;
+    }
+
+    private void CreateCustomHarness_Click(object sender, RoutedEventArgs e)
+    {
+        if (_project is null) return;
+        if (!string.IsNullOrWhiteSpace(_selectedConnectorPortId))
+        {
+            EditSelectedConnectorCable(_selectedConnectorPortId);
+            return;
+        }
+
+        var selected = _project.Connections
+            .Where(connection => _selectedTopologyConnectionIds.Contains(connection.ConnectionId))
+            .Select(connection => connection.ConnectionId)
+            .ToArray();
+        if (selected.Length != 1)
+        {
+            MessageBox.Show(
+                Window.GetWindow(this),
+                "請先新增 M12／RJ45 接頭、雙擊展開 Pin 並自行完成接線，再點選接頭按此按鈕。程式只會依你實際畫好的 Pin 連線建立 Cable。\n\n也可以只選一條普通散線，把它建立成單芯自製 Cable。",
+                "請選接頭或單一線段",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        var trunk = !string.IsNullOrWhiteSpace(_selectedRouteConnectionId) && selected.Contains(
+            _selectedRouteConnectionId,
+            StringComparer.OrdinalIgnoreCase)
+            ? _selectedRouteConnectionId
+            : selected[0];
+        var ordered = new[] { trunk! }.Concat(selected.Where(id =>
+            !string.Equals(id, trunk, StringComparison.OrdinalIgnoreCase))).ToArray();
+        var operation = InlineConnectionOperation.CustomTwoEndCableAssembly;
+        var first = _project.Connections.First(connection =>
+            string.Equals(connection.ConnectionId, ordered[0], StringComparison.OrdinalIgnoreCase));
+        var dialog = new InlineConnectionDialog(
+            BuildConnectionSummary(first),
+            _availableCableMaterials,
+            selectedConnectionCount: ordered.Length,
+            preferredOperation: operation)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (dialog.ShowDialog() != true) return;
+        if (dialog.Operation is not (InlineConnectionOperation.CustomTwoEndCableAssembly or InlineConnectionOperation.CustomYCableAssembly))
+        {
+            HintText.Text = "自製線束按鈕只建立一般或 Y 型自製線束；其他線路操作請雙擊線路。";
+            return;
+        }
+
+        try
+        {
+            MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Create custom cable assembly from {ordered.Length} connection(s)"));
+            ApplyCustomCableAssembly(ordered, false, dialog.CustomCableOptions);
+            Render();
+            ProjectChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(Window.GetWindow(this), exception.Message, "自製線束建立失敗", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void EditSelectedConnectorCable(string connectorPortId)
+    {
+        if (_project is null) return;
+        try
+        {
+            var topology = _connectorCableTopology.AnalyzeConnector(_project, connectorPortId);
+            if (topology.Candidates.Count == 0)
+            {
+                MessageBox.Show(
+                    Window.GetWindow(this),
+                    "這個接頭目前沒有已畫好的 Pin 連線。請先雙擊接頭圓點展開 Pin，再自行拉線到另一個接頭或散線端。",
+                    "尚無 Cable 導體",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new ConnectorCableEditorDialog(
+                topology.Candidates,
+                _project.Cables,
+                _availableCableMaterials)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Assign connector side {connectorPortId} as cable"));
+            var result = _connectorCableTopology.AssignCandidateAsCable(
+                _project,
+                dialog.SelectedCandidate,
+                dialog.CableOptions,
+                dialog.ProvidedLengthMm);
+            _selectedTopologyConnectionIds.Clear();
+            _selectedRouteConnectionId = null;
+            HintText.Text = $"已建立／更新 {result.Cable.ReferenceDesignator ?? result.Cable.CableInstanceId}：{result.Candidate.Display}。只整理你實際畫好的 {result.Candidate.Connections.Count} 條 Pin 連線，沒有改接任何端點。";
+            Render();
+            ProjectChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(Window.GetWindow(this), exception.Message, "接頭 Cable 編輯失敗", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ApplyCustomCableAssembly(
+        IReadOnlyCollection<string> connectionIds,
+        bool isYHarness,
+        CustomCableAssemblyOptions options)
+    {
+        if (_project is null) return;
+        var result = _connectionEditor.CreateCustomCableAssembly(_project, connectionIds, isYHarness, options);
+        _selectedTopologyConnectionIds.Clear();
+        _selectedRouteConnectionId = null;
+        HintText.Text = isYHarness
+            ? $"已建立自製 Y 型線束 {result.Assembly.ReferenceDesignator}：TRUNK、BRANCH-A、BRANCH-B 共用同一線束編號；不需要原始 BOM。各線可再雙擊編輯 Pin Mapping。"
+            : $"已建立自製一般線束 {result.Assembly.ReferenceDesignator}；不需要原始 BOM。可再雙擊線路編輯 Pin Mapping。";
     }
 
     private void SelectMode_Click(object sender, RoutedEventArgs e)
@@ -393,7 +563,7 @@ public partial class TopologyCanvasControl : UserControl
     private void ShowHelp_Click(object sender, RoutedEventArgs e)
     {
         HintBanner.Visibility = Visibility.Visible;
-        HintText.Text = "快速操作：① Ctrl + 滾輪縮放。② 框選後按 Del：刪線並將一般元件移回清單，端子台保留。③ 拉線後雙擊線路，可插入「散線→M12母↔M12公→散線」。④ 自動排版可 Undo。⑤ 右鍵元件旋轉。⑥ 匯出 PDF。";
+        HintText.Text = "快速操作：① Ctrl + 滾輪縮放。② 框選後按 Del：刪線並將一般元件移回清單。③ 從左側「公用接頭」按 + 放入 RJ45／M12；RJ45 左側 CABLE 圓點可雙擊展開 Pin 1～8。④ 完成接線後選取接頭，按「自製 Cable / Harness」指定線材。⑤ 公母直接對插是 Direct Mating，不算 Cable。⑥ PDF 忠實輸出完整畫布；先選一條線再匯出，可保留加粗高亮。";
     }
 
     private void DismissHint_Click(object sender, RoutedEventArgs e) => HintBanner.Visibility = Visibility.Collapsed;
@@ -413,9 +583,12 @@ public partial class TopologyCanvasControl : UserControl
 
         try
         {
-            new TopologyPdfExporter().Export(_project, dialog.FileName, _layerFilter);
+            var highlightedConnectionId = _selectedRouteConnectionId ?? _selectedTopologyConnectionIds.FirstOrDefault();
+            ExportCurrentVisualPdf(dialog.FileName);
             HintBanner.Visibility = Visibility.Visible;
-            HintText.Text = $"PDF 已匯出：{dialog.FileName}";
+            HintText.Text = string.IsNullOrWhiteSpace(highlightedConnectionId)
+                ? $"PDF 已依目前完整拓撲畫面匯出：{dialog.FileName}。若要突出某條線，請先在選取模式點選線材，再重新匯出。"
+                : $"PDF 已依目前完整拓撲畫面匯出：{dialog.FileName}；選取線材 {highlightedConnectionId} 的加粗效果已保留。";
             SelectionText.Text = "PDF export complete";
         }
         catch (Exception exception)
@@ -428,6 +601,7 @@ public partial class TopologyCanvasControl : UserControl
     {
         if (_interactionMode != InteractionMode.Select) return;
         if (_project is null || sender is not FrameworkElement element || element.Tag is not string objectId) return;
+        _selectedConnectorPortId = null;
 
         var component = _project.Components.FirstOrDefault(item => string.Equals(item.ComponentInstanceId, objectId, StringComparison.OrdinalIgnoreCase));
         if (e.ClickCount >= 2 && component is not null)
@@ -477,6 +651,7 @@ public partial class TopologyCanvasControl : UserControl
                     ? $"Move {_dragStartSelectionPositions.Count} selected topology nodes"
                     : $"Move topology node {_dragObjectId}"));
             _dragRecorded = true;
+            InvalidateManualRoutesForMovedObjects(_dragStartSelectionPositions.Keys);
         }
         if (!_dragRecorded) return;
 
@@ -488,6 +663,7 @@ public partial class TopologyCanvasControl : UserControl
     {
         if (_interactionMode != InteractionMode.Select) return;
         var moved = _dragRecorded;
+        var movedObjectId = _dragObjectId;
         _dragElement?.ReleaseMouseCapture();
         _dragElement = null;
         _dragObjectId = null;
@@ -496,7 +672,16 @@ public partial class TopologyCanvasControl : UserControl
 
         if (moved)
         {
+            var partnerComponentId = string.Empty;
+            var snapped = movedObjectId is not null &&
+                          TrySnapMatedConnector(movedObjectId, out partnerComponentId);
             Render();
+            if (snapped)
+            {
+                SelectionText.Text = "公／母接頭已吸附";
+                HintBanner.Visibility = Visibility.Visible;
+                HintText.Text = $"對插完成：{movedObjectId} ↔ {partnerComponentId}。工程連接仍保留；公凸／母凹圖形已取代中間連線。";
+            }
             ProjectChanged?.Invoke(this, EventArgs.Empty);
         }
         e.Handled = true;

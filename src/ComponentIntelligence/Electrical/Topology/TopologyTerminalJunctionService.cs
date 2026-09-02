@@ -196,7 +196,8 @@ public sealed class TopologyTerminalJunctionService
 
             var pin = port.Pins.FirstOrDefault(item =>
                 string.Equals(item.PinId, endpointId, StringComparison.OrdinalIgnoreCase));
-            if (pin is not null) return new ComponentEndpoint(pin.PinId, 1);
+            if (pin is not null)
+                return new ComponentEndpoint(pin.PinId, TopologyEndpointBranchPolicy.MaximumConnections(port, pin));
         }
         return null;
     }

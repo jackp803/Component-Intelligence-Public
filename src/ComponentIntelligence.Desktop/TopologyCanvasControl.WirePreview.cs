@@ -14,6 +14,10 @@ public partial class TopologyCanvasControl
 
     private void TopologyCanvas_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        var source = e.OriginalSource as DependencyObject;
+        if (!ReferenceEquals(source, Surface) && !ReferenceEquals(FindAncestor<Canvas>(source), Surface))
+            return;
+
         // Connector expand/collapse must work even when optional image/Notion visual hooks were never
         // configured by the host window.
         Surface_PreviewPinExpansion(sender, e);
@@ -70,7 +74,8 @@ public partial class TopologyCanvasControl
 
     private void Surface_LayoutUpdated(object? sender, EventArgs e)
     {
-        if (_anchoringConnectionLines || _project is null) return;
+        if (_anchoringConnectionLines || _project is null || _dragRecorded || _terminalDragRecorded ||
+            _dragRouteConnectionId is not null || _dragEndpointHandle is not null) return;
 
         try
         {
@@ -82,6 +87,7 @@ public partial class TopologyCanvasControl
             ApplyRotatedPortVisuals();
             ApplyTerminalJunctionVisuals();
             EnsureEndpointModeVisuals();
+            ApplyTerminalComponentGroupingVisuals();
 
             // Legacy Lines are retained as a compatibility/fallback visual but are hidden by the
             // orthogonal router. Keeping their endpoints correct avoids stale geometry in code paths

@@ -437,8 +437,14 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
         if (relative is null || string.IsNullOrWhiteSpace(_workbookRoot)) return null;
         try
         {
-            var fullPath = Path.GetFullPath(Path.Combine(_workbookRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
-            if (!fullPath.StartsWith(Path.GetFullPath(_workbookRoot), StringComparison.OrdinalIgnoreCase)) return null;
+            var root = Path.GetFullPath(_workbookRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var fullPath = Path.GetFullPath(Path.Combine(
+                root,
+                relative
+                    .Replace('/', Path.DirectorySeparatorChar)
+                    .Replace('\\', Path.DirectorySeparatorChar)));
+            var rootPrefix = root + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)) return null;
             return File.Exists(fullPath) ? new Uri(fullPath, UriKind.Absolute) : null;
         }
         catch

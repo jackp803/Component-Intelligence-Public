@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using ComponentIntelligence.Repository;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -18,14 +19,16 @@ public sealed class TopologyImageCache
     private const int MaximumProductPageBytes = 2 * 1024 * 1024;
     private readonly string _root;
     private readonly HttpClient _http;
+    private readonly ComponentImageFileCache _fileCache;
 
     public TopologyImageCache(string? root = null, HttpClient? httpClient = null)
     {
         _root = root ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "ComponentIntelligence",
-            "topology-images");
+            "component-images");
         Directory.CreateDirectory(_root);
+        _fileCache = new ComponentImageFileCache(_root);
         _http = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
     }
 
@@ -55,7 +58,7 @@ public sealed class TopologyImageCache
     {
         if (source is null) return null;
         if (source.IsFile)
-            return File.Exists(source.LocalPath) ? source.LocalPath : null;
+            return (await _fileCache.CacheAsync(source, cancellationToken))?.LocalPath;
         if (source.Scheme is not ("http" or "https")) return null;
 
         var extension = SafeExtension(Path.GetExtension(source.AbsolutePath));

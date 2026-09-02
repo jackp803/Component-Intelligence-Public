@@ -19,6 +19,7 @@ public sealed class ElectricalProject
     public List<UnconnectedEndpointReview> EndpointReviews { get; init; } = new();
     public List<TopologyPlacement> TopologyPlacements { get; init; } = new();
     public List<TopologyRouteGeometry> TopologyRoutes { get; init; } = new();
+    public List<TerminalStripSection> TerminalStripSections { get; init; } = new();
 }
 
 public sealed class ComponentInstance
@@ -365,6 +366,21 @@ public sealed class TopologyPlacement
     public double Width { get; set; } = 140;
     public double Height { get; set; } = 76;
     public int RotationDegrees { get; set; }
+}
+
+/// <summary>
+/// Project-only presentation metadata for a physical terminal-strip section. Members remain
+/// independent engineering objects so BOM quantities, wiring and validation are unchanged.
+/// </summary>
+public sealed class TerminalStripSection
+{
+    public required string SectionId { get; init; }
+    public string Name { get; set; } = "Terminal section";
+    public string? Function { get; set; }
+    public string ColorHex { get; set; } = "#2F4F4F";
+    public string? ParentContainerId { get; set; }
+    public MountingSurface Surface { get; set; } = MountingSurface.Unknown;
+    public List<string> MemberObjectIds { get; init; } = new();
 }
 
 /// <summary>

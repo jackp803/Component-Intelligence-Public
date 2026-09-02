@@ -55,7 +55,8 @@ public partial class ElectricalWorkspaceWindow
             () => _project,
             description => RecordMutation(description),
             () => UpdateHistoryButtons(),
-            status => WorkspaceStatusText.Text = status);
+            status => WorkspaceStatusText.Text = status,
+            ResolveComponentImageAsync);
         layoutTab.Content = _cabinetLayoutWorkspace;
 
         tabs.SelectionChanged += (_, _) =>

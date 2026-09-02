@@ -134,14 +134,18 @@ public partial class MainWindow
         var hasBom = _importedRows.Count > 0;
         ProcessButton.IsEnabled = hasBom;
 
-        ElectricalButton.IsEnabled = hasBom && _bomProcessingCompleted;
-        TopologyButton.IsEnabled = hasBom && _bomProcessingCompleted;
+        ElectricalButton.IsEnabled = true;
+        TopologyButton.IsEnabled = true;
 
         var topologyTip = T(
-            _bomProcessingCompleted
+            !hasBom
+                ? "開啟電氣工作區，從 SQLite 載入已儲存專案。"
+                : _bomProcessingCompleted
                 ? "中央庫已讀取完成；開啟 Topology 查看元件與缺資料 Placeholder。"
                 : "請先匯入 BOM 並按「從中央庫取得」，完成後即可查看 Topology。",
-            _bomProcessingCompleted
+            !hasBom
+                ? "Open the electrical workspace and load a saved project from SQLite."
+                : _bomProcessingCompleted
                 ? "Central-library load is complete; open Topology to review components and missing-data placeholders."
                 : "Import a BOM and run Load Central Library before opening Topology.");
         TopologyButton.ToolTip = topologyTip;

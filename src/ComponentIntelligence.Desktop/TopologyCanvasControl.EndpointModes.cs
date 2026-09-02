@@ -30,17 +30,22 @@ public partial class TopologyCanvasControl
             if (placement is null) continue;
 
             var compactTerminal = IsCompactTerminalComponent(component);
+            var compactConnector = IsCompactInlineConnector(component);
             if (!_baseTopologyPlacementSizes.ContainsKey(component.ComponentInstanceId))
                 _baseTopologyPlacementSizes[component.ComponentInstanceId] = compactTerminal
                     ? (Math.Min(placement.Width, 118d), Math.Min(placement.Height, 64d))
-                    : (placement.Width, placement.Height);
+                    : compactConnector
+                        ? (Math.Min(placement.Width, 88d), Math.Min(placement.Height, 52d))
+                        : (placement.Width, placement.Height);
 
             var endpoints = BuildVisibleEndpoints(component);
-            AutoSizeComponentForEndpoints(component, placement, endpoints, compactTerminal);
+            AutoSizeComponentForEndpoints(component, placement, endpoints, compactTerminal, compactConnector);
             ApplyComponentBorderSize(component.ComponentInstanceId, placement);
+            if (compactConnector) ApplyCompactConnectorBorderStyle(component.ComponentInstanceId);
             HideAggregateMarkersForPinMode(component);
-            LayoutVisibleEndpoints(placement, endpoints, compactTerminal);
+            LayoutVisibleEndpoints(placement, endpoints, compactTerminal, compactConnector);
         }
+        RefreshMatedConnectorVisuals();
     }
 
     private IReadOnlyList<VisualEndpoint> BuildVisibleEndpoints(ComponentInstance component)
@@ -49,6 +54,7 @@ public partial class TopologyCanvasControl
         foreach (var port in component.Ports)
         {
             var side = TopologyPortGeometry.DetermineScreenSide(component, port);
+            var expandedPinSide = TopologyPortGeometry.DetermineExpandedPinSide(component, port, side);
             var mode = TopologyEndpointPolicy.DetermineDisplayMode(port);
 
             if (mode == TopologyEndpointDisplayMode.Connector || port.Pins.Count == 0)
@@ -59,7 +65,7 @@ public partial class TopologyCanvasControl
                 foreach (var pin in port.Pins)
                 {
                     var label = BuildPinLabel(pin);
-                    result.Add(new VisualEndpoint(pin.PinId, label, port, pin, side, IsAggregatePort: false));
+                    result.Add(new VisualEndpoint(pin.PinId, label, port, pin, expandedPinSide, IsAggregatePort: false));
                 }
             }
         }
@@ -70,7 +76,8 @@ public partial class TopologyCanvasControl
         ComponentInstance component,
         TopologyPlacement placement,
         IReadOnlyList<VisualEndpoint> endpoints,
-        bool compactTerminal)
+        bool compactTerminal,
+        bool compactConnector)
     {
         if (!_baseTopologyPlacementSizes.TryGetValue(component.ComponentInstanceId, out var baseline))
             baseline = (140, 76);
@@ -89,15 +96,19 @@ public partial class TopologyCanvasControl
             .DefaultIfEmpty(0d)
             .Max();
 
-        var size = TopologyPortGeometry.CalculateEndpointComponentSize(
-            baseline.Width,
-            baseline.Height,
-            leftCount,
-            rightCount,
-            leftLabelWidth,
-            rightLabelWidth,
-            hasPinLevelEndpoints,
-            compactTerminal);
+        var size = compactConnector
+            ? new TopologyEndpointComponentSize(
+                Math.Max(baseline.Width, Math.Max(88d, leftLabelWidth + rightLabelWidth + 30d)),
+                Math.Max(baseline.Height, 22d + Math.Max(leftCount, rightCount) * 14d))
+            : TopologyPortGeometry.CalculateEndpointComponentSize(
+                baseline.Width,
+                baseline.Height,
+                leftCount,
+                rightCount,
+                leftLabelWidth,
+                rightLabelWidth,
+                hasPinLevelEndpoints,
+                compactTerminal);
 
         placement.Width = size.Width;
         placement.Height = size.Height;
@@ -105,6 +116,25 @@ public partial class TopologyCanvasControl
 
     private static bool IsCompactTerminalComponent(ComponentInstance component) =>
         TopologyPaletteMaterialPolicy.Classify(component.TypeKey) == TopologyPaletteMaterialKind.TerminalBlock;
+
+    private static bool IsCompactInlineConnector(ComponentInstance component) =>
+        string.Equals(component.TypeKey, "INLINE_CONNECTOR", StringComparison.OrdinalIgnoreCase);
+
+    private void ApplyCompactConnectorBorderStyle(string componentInstanceId)
+    {
+        var border = FindTopologyNodeVisual(componentInstanceId);
+        if (border?.Child is not StackPanel panel) return;
+        border.CornerRadius = new CornerRadius(3d);
+        var labels = panel.Children.OfType<TextBlock>().ToArray();
+        if (labels.FirstOrDefault() is { } main)
+        {
+            main.FontSize = 10d;
+            main.Margin = new Thickness(2d, 1d, 2d, 0d);
+            main.TextWrapping = TextWrapping.NoWrap;
+        }
+        if (labels.Skip(1).FirstOrDefault() is { } subtitle)
+            subtitle.Visibility = Visibility.Collapsed;
+    }
 
     private void ApplyComponentBorderSize(string componentInstanceId, TopologyPlacement placement)
     {
@@ -135,7 +165,8 @@ public partial class TopologyCanvasControl
     private void LayoutVisibleEndpoints(
         TopologyPlacement placement,
         IReadOnlyList<VisualEndpoint> endpoints,
-        bool compactTerminal)
+        bool compactTerminal,
+        bool compactConnector)
     {
         foreach (var side in new[] { TopologyScreenSide.Left, TopologyScreenSide.Right })
         {
@@ -154,7 +185,8 @@ public partial class TopologyCanvasControl
                     : FindOrCreatePinMarker(endpoint.Port, endpoint.Pin!);
                 if (marker is null) continue;
 
-                var markerDiameter = compactTerminal ? 12d : 14d;
+                var compact = compactTerminal || compactConnector;
+                var markerDiameter = compact ? 12d : 14d;
                 marker.Width = markerDiameter;
                 marker.Height = markerDiameter;
                 marker.CornerRadius = new CornerRadius(markerDiameter / 2d);
@@ -162,14 +194,20 @@ public partial class TopologyCanvasControl
                 marker.Background = IsPendingEndpoint(endpoint.EndpointId)
                     ? Brushes.DarkOrange
                     : endpoint.Pin is null ? Brushes.RoyalBlue : PinBrush(endpoint.Pin);
+                var selectedConnector = string.Equals(
+                    _selectedConnectorPortId,
+                    endpoint.Port.PortId,
+                    StringComparison.OrdinalIgnoreCase);
+                marker.BorderBrush = selectedConnector ? Brushes.Gold : Brushes.White;
+                marker.BorderThickness = selectedConnector ? new Thickness(3d) : new Thickness(1.5d);
                 Canvas.SetLeft(marker, anchor.X - marker.Width / 2d);
                 Canvas.SetTop(marker, anchor.Y - marker.Height / 2d);
 
                 var label = endpoint.IsAggregatePort
                     ? FindPortLabelFollowing(marker, endpoint.Port.Name) ?? CreateEndpointLabel(endpoint.EndpointId, endpoint.Label)
                     : FindOrCreateEndpointLabel(endpoint.EndpointId, endpoint.Label);
-                label.FontSize = compactTerminal ? 8d : 9d;
-                PositionEndpointLabel(label, endpoint.Label, anchor, compactTerminal);
+                label.FontSize = compactConnector ? 7.5d : compactTerminal ? 8d : 9d;
+                PositionEndpointLabel(label, endpoint.Label, anchor, compact);
             }
         }
     }
@@ -243,16 +281,24 @@ public partial class TopologyCanvasControl
         // already permanently expanded and continue to use normal single-click wiring semantics.
         if (e.ClickCount >= 2 && FindPort(endpointId) is ComponentPort port &&
             TopologyEndpointPolicy.DetermineDisplayMode(port) == TopologyEndpointDisplayMode.Connector)
+        {
+            if (ToggleConnectorPinExpansion(port.PortId)) e.Handled = true;
             return;
+        }
 
         if (!_endpointConnectionService.IsKnownEndpoint(_project, endpointId)) return;
 
         if (_interactionMode == InteractionMode.Select)
         {
+            var connectorPort = ResolveConnectorPortForEndpoint(endpointId);
+            _selectedConnectorPortId = connectorPort?.PortId;
             SelectionText.Text = DescribeEndpoint(endpointId);
-            HintText.Text = FindPin(endpointId) is null
-                ? "已選取 Connector / Port。按「拉線 / Wire」後可連到另一個 Connector 或 Pin。雙擊標準 Connector 可展開 Pins。"
-                : "已選取 Pin / Terminal。按「拉線 / Wire」後可直接連到另一個 Pin、Terminal 或 Connector。";
+            HintText.Text = connectorPort is not null
+                ? "已選取接頭。雙擊圓點可展開 Pin；完成手動接線後，按「自製 Cable / Harness」依實際 Pin 連線設定 Cable。"
+                : FindPin(endpointId) is null
+                    ? "已選取 Port。按「拉線 / Wire」後可連到另一個 Connector 或 Pin。"
+                    : "已選取 Pin / Terminal。按「拉線 / Wire」後可直接連到另一個 Pin、Terminal 或 Connector。";
+            Render();
             e.Handled = true;
             return;
         }
@@ -306,6 +352,15 @@ public partial class TopologyCanvasControl
         return _project.Components.SelectMany(component => component.Ports)
             .SelectMany(port => port.Pins)
             .FirstOrDefault(pin => string.Equals(pin.PinId, endpointId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private ComponentPort? ResolveConnectorPortForEndpoint(string endpointId)
+    {
+        if (_project is null) return null;
+        return _project.Components.SelectMany(component => component.Ports)
+            .FirstOrDefault(port => port.Connector is not null &&
+                                    (string.Equals(port.PortId, endpointId, StringComparison.OrdinalIgnoreCase) ||
+                                     port.Pins.Any(pin => string.Equals(pin.PinId, endpointId, StringComparison.OrdinalIgnoreCase))));
     }
 
     private bool IsPendingEndpoint(string endpointId) =>

@@ -70,9 +70,15 @@ public partial class TopologyCanvasControl
         if (_project is null || _interactionMode != InteractionMode.Select || e.ClickCount < 2) return;
         var border = FindAncestor<Border>(e.OriginalSource as DependencyObject);
         if (border?.Tag is not string portId || !IsEndpointMarkerVisual(border)) return;
+        if (ToggleConnectorPinExpansion(portId)) e.Handled = true;
+    }
+
+    private bool ToggleConnectorPinExpansion(string portId)
+    {
+        if (_project is null || _interactionMode != InteractionMode.Select) return false;
         var port = _project.Components.SelectMany(component => component.Ports)
             .FirstOrDefault(candidate => string.Equals(candidate.PortId, portId, StringComparison.OrdinalIgnoreCase));
-        if (port is null) return;
+        if (port is null) return false;
 
         // Individually wired terminals/flying leads are permanently pin-level. Only a whole-mated
         // connector (M12/RJ45/etc.) can be collapsed/expanded for inspection or special pin wiring.
@@ -80,17 +86,16 @@ public partial class TopologyCanvasControl
         {
             SelectionText.Text = "此接口為 Pin-level（腳位層）";
             HintText.Text = "散線／端子會固定顯示每一個可接線 Pin，不提供收合，避免遺失實際接線端點。";
-            e.Handled = true;
-            return;
+            return true;
         }
 
         if (!_expandedVisualPortIds.Add(portId)) _expandedVisualPortIds.Remove(portId);
-        SelectionText.Text = _expandedVisualPortIds.Contains(portId) ? "Connector Pins 已展開" : "Connector Pins 已收合";
+        SelectionText.Text = _expandedVisualPortIds.Contains(portId) ? "Connector Port 已展開為 Pins" : "Connector Pins 已收合為 Port";
         HintText.Text = _expandedVisualPortIds.Contains(portId)
-            ? "標準 Connector 已展開；現在每個 Pin 都是可拉線的真實 Endpoint。再次雙擊 Connector 可收合。"
-            : "標準 Connector 已收合；一般拓樸可直接把整個 Connector 當一個 Endpoint 使用。";
+            ? "Connector Port 已展開；每一個 Pin 都可以個別拉線。再次雙擊藍色 Connector Port 可收合。"
+            : "Pins 已收合為 Connector Port；雙擊藍色 Port 可再次展開。";
         Render();
-        e.Handled = true;
+        return true;
     }
 
     private void DecorateComponentVisuals()

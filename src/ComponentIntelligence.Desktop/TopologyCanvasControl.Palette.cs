@@ -20,6 +20,7 @@ public partial class TopologyCanvasControl
     private bool _finalTopologyVisualRefreshScheduled;
     private IReadOnlyList<ArchiveMaterialOption> _terminalArchiveOptions = Array.Empty<ArchiveMaterialOption>();
     private IReadOnlyList<ArchiveMaterialOption> _jumperArchiveOptions = Array.Empty<ArchiveMaterialOption>();
+    private readonly IReadOnlyList<CommonConnectorOption> _commonConnectorOptions = CommonConnectorCatalog.Options;
 
     private void TopologyCanvas_Loaded(object sender, RoutedEventArgs e)
     {
@@ -32,6 +33,8 @@ public partial class TopologyCanvasControl
         ProjectChanged += TopologyCanvas_ProjectChangedRefreshVisuals;
 
         RefreshTopologyPaletteIfNeeded(force: true);
+        CommonConnectorCombo.ItemsSource = _commonConnectorOptions;
+        CommonConnectorCombo.SelectedItem = _commonConnectorOptions.FirstOrDefault();
         _ = ReloadArchiveMaterialsAsync();
         ScheduleFinalTopologyVisualRefresh();
     }
@@ -135,6 +138,7 @@ public partial class TopologyCanvasControl
 
         var terminalCount = 0;
         var jumperCount = 0;
+        var commonConnectorCount = 0;
         var items = new List<TopologyPaletteItem>();
         foreach (var component in _project.Components)
         {
@@ -148,6 +152,11 @@ public partial class TopologyCanvasControl
             {
                 jumperCount++;
             }
+            if (CommonConnectorCatalog.Options.Any(option => string.Equals(
+                    component.ComponentDefinitionId,
+                    option.DefinitionId,
+                    StringComparison.OrdinalIgnoreCase)))
+                commonConnectorCount++;
 
             var label = component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId;
             var kind = materialKind switch
@@ -180,6 +189,8 @@ public partial class TopologyCanvasControl
             TerminalProjectCountText.Text = $"專案數量：{terminalCount}";
         if (JumperProjectCountText is not null)
             JumperProjectCountText.Text = $"專案數量：{jumperCount}";
+        if (CommonConnectorProjectCountText is not null)
+            CommonConnectorProjectCountText.Text = $"專案數量：{commonConnectorCount}";
 
         var ordered = items
             .OrderBy(item => item.Label, StringComparer.OrdinalIgnoreCase)
@@ -202,6 +213,35 @@ public partial class TopologyCanvasControl
 
     private void AddArchivedJumper_Click(object sender, RoutedEventArgs e) =>
         AddArchivedMaterial(JumperArchiveCombo.SelectedItem as ArchiveMaterialOption, TopologyPaletteMaterialKind.ShortingJumper);
+
+    private void AddCommonConnector_Click(object sender, RoutedEventArgs e)
+    {
+        if (_project is null || CommonConnectorCombo.SelectedItem is not CommonConnectorOption option) return;
+
+        MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Add common connector {option.DefinitionId}"));
+        var nextNumber = 1;
+        var usedReferences = _project.Components
+            .Select(component => component.ReferenceDesignator)
+            .Where(reference => !string.IsNullOrWhiteSpace(reference))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        while (usedReferences.Contains($"X{nextNumber}")) nextNumber++;
+
+        var instance = CommonConnectorCatalog.Create(option.DefinitionId, $"X{nextNumber}");
+        var existingCount = _project.Components.Count(component =>
+            string.Equals(component.ComponentDefinitionId, option.DefinitionId, StringComparison.OrdinalIgnoreCase));
+        instance.EquipmentTag = $"{option.DisplayName} #{existingCount + 1}";
+        _project.Components.Add(instance);
+        var point = FindAvailablePointInVisibleTopologyViewport();
+        _projection.EnsurePlacement(_project, instance.ComponentInstanceId, point.X, point.Y);
+
+        HintBanner.Visibility = Visibility.Visible;
+        HintText.Text = option.DefinitionId.StartsWith("M12-", StringComparison.OrdinalIgnoreCase)
+            ? $"已新增 {option.DisplayName}。散線 Pin 已直接顯示在 M12 對插面的另一側；公母頭可用拉線模式連接，也可拖近後自動對插。"
+            : $"已新增 {option.DisplayName}，並放在目前可見畫面。雙擊接頭圓點可展開 Pin，再由你自行拉線；不會自動改動既有接線。";
+        SelectionText.Text = instance.EquipmentTag;
+        Render();
+        ProjectChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     private void AddArchivedMaterial(ArchiveMaterialOption? option, TopologyPaletteMaterialKind expectedKind)
     {

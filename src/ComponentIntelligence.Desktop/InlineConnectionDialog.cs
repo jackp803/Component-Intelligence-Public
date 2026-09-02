@@ -16,6 +16,14 @@ public enum InlineConnectionOperation
     DeleteConnection
 }
 
+public enum InlineCableClassification
+{
+    OrdinaryWire,
+    CableUnknown,
+    Purchased,
+    Custom
+}
+
 public sealed class InlineConnectionDialog : Window
 {
     private readonly ComboBox _operation = new();
@@ -33,6 +41,7 @@ public sealed class InlineConnectionDialog : Window
         StaysOpenOnEdit = true
     };
     private readonly ComboBox _cableConstructionType = new();
+    private readonly ComboBox _lineClassification = new();
     private readonly TextBox _engineering = new();
     private readonly string _connectionSummary;
 
@@ -40,7 +49,8 @@ public sealed class InlineConnectionDialog : Window
         string connectionSummary,
         IEnumerable<BomConnectionMaterialOption>? availableCableMaterials = null,
         string? selectedCableDefinitionId = null,
-        CableConstructionType selectedCableConstructionType = CableConstructionType.Unknown)
+        CableConstructionType selectedCableConstructionType = CableConstructionType.Unknown,
+        bool hasExplicitCable = false)
     {
         _connectionSummary = connectionSummary;
         Title = "編輯線路 / Edit Connection";
@@ -69,15 +79,43 @@ public sealed class InlineConnectionDialog : Window
 
         _cableDefinition.GotKeyboardFocus += (_, _) => SelectCableOperation();
         _cableDefinition.SelectionChanged += (_, _) => SelectCableOperation();
-        _cableConstructionType.GotKeyboardFocus += (_, _) => SelectCableOperation();
-        _cableConstructionType.SelectionChanged += (_, _) => SelectCableOperation();
-
         _genderA.ItemsSource = Enum.GetValues<ConnectorGender>();
         _genderB.ItemsSource = Enum.GetValues<ConnectorGender>();
         _genderA.SelectedItem = ConnectorGender.Female;
         _genderB.SelectedItem = ConnectorGender.Male;
         _cableConstructionType.ItemsSource = Enum.GetValues<CableConstructionType>();
         _cableConstructionType.SelectedItem = selectedCableConstructionType;
+
+        _lineClassification.ItemsSource = new[]
+        {
+            new CableClassificationChoice("普通配線", InlineCableClassification.OrdinaryWire),
+            new CableClassificationChoice("線材（尚未設定類型）", InlineCableClassification.CableUnknown),
+            new CableClassificationChoice("外購成品線", InlineCableClassification.Purchased),
+            new CableClassificationChoice("自製 / 加工線", InlineCableClassification.Custom)
+        };
+        _lineClassification.DisplayMemberPath = nameof(CableClassificationChoice.Label);
+        _lineClassification.SelectedValuePath = nameof(CableClassificationChoice.Value);
+        _lineClassification.SelectedValue = hasExplicitCable
+            ? selectedCableConstructionType switch
+            {
+                CableConstructionType.Purchased => InlineCableClassification.Purchased,
+                CableConstructionType.Custom => InlineCableClassification.Custom,
+                _ => InlineCableClassification.CableUnknown
+            }
+            : InlineCableClassification.OrdinaryWire;
+        _lineClassification.SelectionChanged += (_, _) =>
+        {
+            if (_lineClassification.SelectedValue is not InlineCableClassification classification ||
+                classification == InlineCableClassification.OrdinaryWire)
+                return;
+            _cableConstructionType.SelectedItem = classification switch
+            {
+                InlineCableClassification.Purchased => CableConstructionType.Purchased,
+                InlineCableClassification.Custom => CableConstructionType.Custom,
+                _ => CableConstructionType.Unknown
+            };
+            SelectCableOperation();
+        };
 
         var cableMaterials = (availableCableMaterials ?? Array.Empty<BomConnectionMaterialOption>())
             .OrderBy(item => item.Manufacturer, StringComparer.OrdinalIgnoreCase)
@@ -145,8 +183,15 @@ public sealed class InlineConnectionDialog : Window
         fields.Children.Add(SectionTitle("Terminal（端子）設定"));
         fields.Children.Add(Field("Function / 功能，例如 54V+、RS485-A", _function));
         fields.Children.Add(SectionTitle("Cable Segment（線材）設定"));
+        fields.Children.Add(Field("線路類型", _lineClassification));
+        fields.Children.Add(new TextBlock
+        {
+            Text = "普通配線不會建立 CableInstance。只有明確選擇線材類型並套用後，才會建立或更新 Cable Segment。",
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = System.Windows.Media.Brushes.DimGray,
+            Margin = new Thickness(0, -6, 0, 10)
+        });
         fields.Children.Add(Field("BOM 線材 / Cable（可下拉選擇，也可手動輸入）", _cableDefinition));
-        fields.Children.Add(Field("Construction Type / 線材建構類型", _cableConstructionType));
         fields.Children.Add(new TextBlock
         {
             Text = cableMaterials.Length == 0
@@ -199,6 +244,10 @@ public sealed class InlineConnectionDialog : Window
         _cableConstructionType.SelectedItem is CableConstructionType value
             ? value
             : CableConstructionType.Unknown;
+    public InlineCableClassification CableClassification =>
+        _lineClassification.SelectedValue is InlineCableClassification value
+            ? value
+            : InlineCableClassification.OrdinaryWire;
 
     public InlineConnectorOptions ConnectorOptions => new(ConnectorFamily, ConnectorCoding, ConnectorPinCount, SideAGender, SideBGender, ReferenceDesignator);
     public InlineTerminalOptions TerminalOptions => new(ReferenceDesignator, TerminalFunction);
@@ -281,4 +330,5 @@ public sealed class InlineConnectionDialog : Window
 
     private static string? BlankToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private sealed record Choice(string Label, InlineConnectionOperation Operation);
+    private sealed record CableClassificationChoice(string Label, InlineCableClassification Value);
 }

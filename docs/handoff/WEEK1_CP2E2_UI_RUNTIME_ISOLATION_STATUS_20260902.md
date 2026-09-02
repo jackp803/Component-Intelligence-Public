@@ -12,9 +12,10 @@ Worker disposition: `UI_RUNTIME_ISOLATION_VERIFIED`
 | Exact base tree | `3042cdcd7891cf4a3bd27cfc5ae54e2efefa33dc` |
 | Branch | `codex/cp2e2-ui-runtime-isolation-20260902` |
 | Draft PR base | `codex/local-latest-cp2e1-baseline-integration-20260902` |
-| Implementation commit/tree | Recorded after publication |
-| Final branch head/tree | Recorded after publication evidence update |
-| Draft PR | Recorded after publication |
+| Implementation commit | `00f65cab6e3a3f6fb0804ee07a4100064ca0e243` |
+| Implementation tree | `2bee0dff1d1ae23067bd27b6be159d3f5e37f53c` |
+| Draft PR | `https://github.com/jackp803/Component-Intelligence-Public/pull/20` |
+| First remote confirmation | Remote branch equaled `00f65cab6e3a3f6fb0804ee07a4100064ca0e243` immediately after implementation publication |
 
 The branch was created in a new isolated worktree from the exact authorized base. PR #17, #18, and #19 were not modified, rebased, merged, or retargeted.
 

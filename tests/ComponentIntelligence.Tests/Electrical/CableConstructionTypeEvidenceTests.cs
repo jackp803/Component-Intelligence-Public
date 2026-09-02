@@ -63,7 +63,7 @@ public sealed class CableConstructionTypeEvidenceTests
 
             Assert.NotNull(loaded);
             Assert.Equal(constructionType, Assert.Single(loaded!.Cables).CableConstructionType);
-            Assert.Equal("0.3", loaded.SchemaVersion);
+            Assert.Equal(ElectricalProjectMigrator.CurrentSchemaVersion, loaded.SchemaVersion);
         }
         finally
         {

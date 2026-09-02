@@ -29,6 +29,9 @@ Retry2 continued the same branch and Draft PR #16 from exact remote head
 | Structural validation commit | `086175df16301292a34d7a6ce4b0dbe2023c8ecb` |
 | Structural validation tree | `b10672d0ca3803064cb388da67495af84bac8c6d` |
 | All implementation commit remote SHAs confirmed | `YES` |
+| Verified Retry2 status payload commit | `aa78267389975458677ed855e11133e2f0276d0c` |
+| Verified Retry2 status payload tree | `5923524f6cd165fece24b8fa8befe3affaca03be` |
+| Retry2 status payload remote SHA confirmed | `YES` |
 | Draft PR | `jackp803/Component-Intelligence-Public#16` / Draft / open / unmerged |
 | PR base | `codex/week1-cp2d-cable-construction-type-evidence-20260901` |
 | PR head branch | `codex/week1-cp2e1-cable-assembly-segment-role-evidence-20260901` |

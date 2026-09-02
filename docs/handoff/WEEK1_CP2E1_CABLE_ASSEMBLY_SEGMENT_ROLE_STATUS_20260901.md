@@ -3,13 +3,81 @@
 ## Disposition
 
 ```text
-task_id: CODEX-W1-20260901-006
-checkpoint_id: CP2-E1
+task_id: CODEX-W1-20260902-007
+checkpoint_id: CP2-E1-RETRY1
 disposition: BLOCKED
+superseded_blocked_task: CODEX-W1-20260901-006 / CP2-E1
 worker_completion_is_pm_acceptance: false
 ```
 
-CP2-E1 stopped at the first authority boundary that prevents the authorized schema `0.4` migration from passing the existing regression suite.
+Retry1 resumed the existing branch and Draft PR from exact remote head
+`13ecc13fdda8c7bbc3c4416b301eff55d1cd1e23`. Task 1 was not restarted.
+
+The newly authorized `ElectricalMigrationV03Tests.cs` assertion was changed only from a hard-coded
+final schema `0.3` to `ElectricalProjectMigrator.CurrentSchemaVersion`; all existing no-inference and
+data-preservation assertions remain unchanged. The authorized schema `0.3 -> 0.4` migration then passed
+its focused regression suite and was committed and remotely confirmed.
+
+Retry1 stopped at the next authority boundary before persistence Task 3. The existing CP2-D persistence
+regression in `CableConstructionTypeEvidenceTests.cs:66` also hard-codes final schema `0.3`. Its three
+construction-type cases now truthfully load schema `0.4`, but that test file is not in the original or
+Retry1 writable surface.
+
+## Retry1 Authority And Evidence
+
+| Item | Verified value |
+|---|---|
+| Coordination `origin/main` commit | `e067a2154706db1834948d052589cc37ca4bd531` |
+| Coordination `origin/main` tree | `caab700faf3650c1a3bd3b8fc43b0f1351780324` |
+| Retry exact starting head | `13ecc13fdda8c7bbc3c4416b301eff55d1cd1e23` |
+| Retry exact starting tree | `c528302dc328b835fb0345da4888e99847e9debd` |
+| Schema migration commit | `515f6ec373807c02bfa40bd79f0a03bfd156cb96` |
+| Schema migration tree | `5e0feb604e457cef418de9fbb2b57329d38b7663` |
+| Schema migration remote SHA confirmed | `YES` |
+| Existing Draft PR | `jackp803/Component-Intelligence-Public#16` / Draft / open / unmerged |
+| PR base | `codex/week1-cp2d-cable-construction-type-evidence-20260901` |
+| PR head branch | `codex/week1-cp2e1-cable-assembly-segment-role-evidence-20260901` |
+
+## Retry1 Completed Behavior
+
+- Current `ElectricalProject` schema is `0.4`; `0.1`, `0.2`, and `0.3` migrate through the ordered chain to `0.4`.
+- Legacy schema `0.3` assembly `IsCustom=true` maps only to `CableConstructionType.Custom`.
+- Legacy schema `0.3` assembly `IsCustom=false` maps only to `CableConstructionType.Unknown`, never Purchased.
+- Current schema `0.4` explicit `CableConstructionType` remains authoritative.
+- Current schema compatibility projection is `Custom -> true`, `Purchased/Unknown -> false`.
+- Legacy member `Purpose` remains unchanged and does not infer role type, index, or name.
+- All pre-existing project collections remain identity-preserved through the migration chain.
+
+## Retry1 Verification And Blocker
+
+| Verification | Result |
+|---|---|
+| Migration RED | `5 failed, 5 passed`; failures were unsupported/missing schema `0.4` behavior |
+| Migration GREEN including authorized V03 regression | `10 passed, 0 failed, 0 skipped` |
+| Existing CP2-D repository round-trip regression | `3 failed, 0 passed, 0 skipped` |
+| Decisive failure | `CableConstructionTypeEvidenceTests.cs:66`: expected `0.3`, actual `0.4` for Unknown/Purchased/Custom |
+| Task 3 temporary-SQLite persistence proof | `NOT_RUN` after authority blocker |
+| Task 4 structural validation rules 001-007 | `NOT_RUN` after authority blocker |
+| Full test project | `NOT_RUN` after focused decisive blocker |
+| Desktop Release build | `NOT_RUN` after focused decisive blocker |
+
+Required unblock authority:
+
+```text
+Authorize modification of:
+tests/ComponentIntelligence.Tests/Electrical/CableConstructionTypeEvidenceTests.cs
+
+Purpose:
+Update only the obsolete hard-coded final schema assertion at line 66 to the current authoritative
+schema while preserving all three Unknown/Purchased/Custom round-trip assertions.
+```
+
+Retry1 protected-state check remained unchanged: production SQLite size `47,542,272`, SHA-256
+`4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41`; Component Intelligence,
+AutoCAD, and accoreconsole process counts were all `0`. No protected production asset was opened for
+write or mutated. The original protected manifests below remain the checkpoint baseline.
+
+The remainder of this document preserves the original CP2-E1 blocked record for audit continuity.
 
 ## Authority
 

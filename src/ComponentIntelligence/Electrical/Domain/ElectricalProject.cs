@@ -179,6 +179,7 @@ public sealed class CableAssembly
 {
     public required string CableAssemblyId { get; init; }
     public string? ReferenceDesignator { get; set; }
+    public CableConstructionType CableConstructionType { get; set; } = CableConstructionType.Unknown;
     public bool IsCustom { get; set; }
     public List<CableAssemblyMember> Members { get; init; } = new();
     public string? EndAConnectorId { get; set; }
@@ -188,6 +189,9 @@ public sealed class CableAssembly
 public sealed class CableAssemblyMember
 {
     public required string CableInstanceId { get; init; }
+    public CableAssemblySegmentRoleType SegmentRoleType { get; set; } = CableAssemblySegmentRoleType.Unknown;
+    public int? SegmentRoleIndex { get; set; }
+    public string? SegmentRoleName { get; set; }
     public string? Purpose { get; set; }
 }
 

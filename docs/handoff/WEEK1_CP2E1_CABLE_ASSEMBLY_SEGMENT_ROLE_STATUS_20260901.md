@@ -3,12 +3,111 @@
 ## Disposition
 
 ```text
-task_id: CODEX-W1-20260902-007
-checkpoint_id: CP2-E1-RETRY1
-disposition: BLOCKED
-superseded_blocked_task: CODEX-W1-20260901-006 / CP2-E1
+task_id: CODEX-W1-20260902-008
+checkpoint_id: CP2-E1-RETRY2
+disposition: COMPLETE
+superseded_blocked_tasks: CODEX-W1-20260901-006 / CP2-E1; CODEX-W1-20260902-007 / CP2-E1-RETRY1
 worker_completion_is_pm_acceptance: false
+pr_acceptance_is_merge_authorization: false
 ```
+
+Retry2 continued the same branch and Draft PR #16 from exact remote head
+`2f847d25111ea703d33fc4626e53f0872a636fd6`. It did not restart the completed domain or migration work.
+
+## Retry2 Authority And Commits
+
+| Item | Verified value |
+|---|---|
+| Coordination `origin/main` commit | `b63f517edcbe83a7427911020fc936e94458e2f1` |
+| Coordination `origin/main` tree | `ee400b89573c6f936087c12dd8e389e88c8ab5ba` |
+| Exact Retry2 starting head | `2f847d25111ea703d33fc4626e53f0872a636fd6` |
+| Exact Retry2 starting tree | `c0e3d10695dcc72f29992c7fb07150b2ae127b4b` |
+| Schema-regression correction commit | `93c18018cbad98a7a2ab10f1ad28732e1dca4f3a` |
+| Schema-regression correction tree | `b57115853923362efa8552d7f2e73337ae9dbec9` |
+| Persistence evidence commit | `805614b8a79ba3a8f37fd92c403bd6086db4fdb5` |
+| Persistence evidence tree | `52242e476ad671b87a3304da20a2ed0ae3983ca8` |
+| Structural validation commit | `086175df16301292a34d7a6ce4b0dbe2023c8ecb` |
+| Structural validation tree | `b10672d0ca3803064cb388da67495af84bac8c6d` |
+| All implementation commit remote SHAs confirmed | `YES` |
+| Draft PR | `jackp803/Component-Intelligence-Public#16` / Draft / open / unmerged |
+| PR base | `codex/week1-cp2d-cable-construction-type-evidence-20260901` |
+| PR head branch | `codex/week1-cp2e1-cable-assembly-segment-role-evidence-20260901` |
+
+## Retry2 Schema-Regression Compatibility Lane
+
+Exactly one newly authorized file was changed:
+
+| Evidence | Value |
+|---|---|
+| File | `tests/ComponentIntelligence.Tests/Electrical/CableConstructionTypeEvidenceTests.cs` |
+| Failing test | `ExplicitConstructionType_RoundTripsThroughExistingRepository` |
+| Fresh RED | `3 failed, 0 passed, 0 skipped` |
+| Expected before | literal current/final ElectricalProject schema `0.3` |
+| Actual | authoritative current/final schema `0.4` |
+| Exact assertion change | `Assert.Equal("0.3", loaded.SchemaVersion)` -> `Assert.Equal(ElectricalProjectMigrator.CurrentSchemaVersion, loaded.SchemaVersion)` |
+| GREEN | `3 passed, 0 failed, 0 skipped` |
+
+The historical serialized/database input fixture remains schema `0.3`. All Unknown/Purchased/Custom
+round-trip assertions, no-inference assertions, and `lrdu-staging-route.v1` / `.v2` schema strings remain unchanged.
+No additional test file required the bounded compatibility lane.
+
+## Retry2 Completed Persistence And Validation
+
+- Temporary SQLite round-trip preserves assembly `CableConstructionType.Custom`, compatibility `IsCustom=true`,
+  Trunk, Branch 1, and Branch 3 exactly; Branch 3 is not renumbered to Branch 2.
+- Purchased and Unknown assembly construction values round-trip unchanged and both project `IsCustom=false`.
+- `ElectricalProjectRepository.cs` was unchanged because existing JSON/SQLite persistence passed directly.
+- Deterministic structural validation implements blocking rules:
+  - `RULE-CABLE-ASSEMBLY-001`: more than one Trunk;
+  - `RULE-CABLE-ASSEMBLY-002`: duplicate positive Branch index;
+  - `RULE-CABLE-ASSEMBLY-003`: missing/non-positive Branch index;
+  - `RULE-CABLE-ASSEMBLY-004`: Trunk carrying an index;
+  - `RULE-CABLE-ASSEMBLY-005`: Other without a nonblank role name;
+  - `RULE-CABLE-ASSEMBLY-006`: member references a missing CableInstance;
+  - `RULE-CABLE-ASSEMBLY-007`: duplicate CableInstance membership.
+- Diagnostics include stable CableAssembly/CableInstance identities and remain identical when input member order changes.
+- Zero Trunk is valid. Branch 1 + Branch 3 is valid. Unknown remains representable and is never inferred from Purpose.
+
+## Retry2 Verification
+
+| Verification | Result |
+|---|---|
+| Task 4 RED before validator | `10 failed, 14 passed`; failures were exactly missing rules/nonempty deterministic diagnostics |
+| CP2-E1 focused suite | `24 passed, 0 failed, 0 skipped` |
+| Schema regression suite | `14 passed, 0 failed, 0 skipped` |
+| Electrical/AutoCAD focused suite | `464 passed, 0 failed, 0 skipped` |
+| Full `ComponentIntelligence.Tests` Release run | `645 passed, 0 failed, 0 skipped` |
+| Desktop Release build | `PASS`; `0 errors`; `20` pre-existing obsolete API warnings |
+| `git diff --check 99d4815...HEAD` | `PASS` |
+| Protected extension scan in base-to-head diff | empty |
+| `ElectricalProjectRepository.cs` diff | empty |
+
+## Retry2 Protected State
+
+- Production Component Intelligence SQLite: size `47,542,272`; SHA-256
+  `4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41`.
+- AutoCAD automation WDP/DWG/DWT candidates outside `.work`: `1,878` files; read-only manifest SHA-256
+  `FF2C2206A6224AC1479F00B818EEE7A4A7C9D01229B9B6DB0EEBF8D73B1AC338`.
+- Formal ACADE library: `35` DWGs; manifest SHA-256
+  `E02AFFD50A06275DDAD24B7C54280F67DFD49C846DB3821C90A47A1E4784D42A`.
+- Integration repository workbooks: `3`; manifest SHA-256
+  `E50123C62F697CB71C7ED6C2D2DDB3C674662786C1E1E204481BC550753D383F`.
+- Component source workbooks: `0`; empty-manifest SHA-256
+  `E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855`.
+- Component Intelligence process count: `0`; AutoCAD/accoreconsole process count: `0`.
+- No production SQLite, workbook, WDP, DWG, DWT, or formal ACADE library was opened for write or mutated.
+
+## Retry2 Explicit NOT_RUN
+
+- Topology UI, Junction/Splice, conductor splice groups, Cable End, Pin Inventory completeness,
+  derived NC, Spare/Reserved, Shield semantics: `NOT_RUN` - prohibited.
+- v2 contract expansion/version change, Page Planner, rendering, placement, routing, Drawing IR: `NOT_RUN` - prohibited.
+- AutoCAD, accoreconsole, PowerShell, AutoLISP execution: `NOT_RUN` - prohibited.
+- Production cable classification/reconciliation and protected production-asset mutation: `NOT_RUN` - prohibited.
+
+Retry2 blockers: none. This is a Worker `COMPLETE` disposition awaiting PM/Product Owner review; it is not merge authorization.
+
+## Historical Retry1 Record
 
 Retry1 resumed the existing branch and Draft PR from exact remote head
 `13ecc13fdda8c7bbc3c4416b301eff55d1cd1e23`. Task 1 was not restarted.

@@ -145,7 +145,7 @@ This leaves a truthful visual-test gap for the marquee/group UI; it is not repor
 | --- | --- |
 | Focused v1/v2/legacy gate | `PASS`, 8/8 |
 | Broad Electrical/topology/local behavior suite | `PASS`, 261/261 |
-| Debug solution build | `PASS`, 0 errors; 0 warnings in the final no-restore gate |
+| Debug solution build | `PASS`, 0 errors; 22 existing obsolete/nullability warnings in the final forced Desktop compile |
 | Full test project | `PASS`, 671/671; 0 failed; 0 skipped |
 | `git diff --check` | `PASS` after removing one inherited Markdown trailing-space marker |
 

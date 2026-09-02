@@ -350,7 +350,8 @@ public partial class TopologyCanvasControl : UserControl
             BuildConnectionSummary(connection),
             _availableCableMaterials,
             assignedCable?.CableDefinitionId,
-            selectedConnectionIds.Length)
+            assignedCable?.CableConstructionType ?? CableConstructionType.Unknown,
+            selectedConnectionCount: selectedConnectionIds.Length)
         {
             Owner = Window.GetWindow(this)
         };
@@ -423,57 +424,13 @@ public partial class TopologyCanvasControl : UserControl
             return;
         }
 
-        var selected = _project.Connections
-            .Where(connection => _selectedTopologyConnectionIds.Contains(connection.ConnectionId))
-            .Select(connection => connection.ConnectionId)
-            .ToArray();
-        if (selected.Length != 1)
-        {
-            MessageBox.Show(
-                Window.GetWindow(this),
-                "請先新增 M12／RJ45 接頭、雙擊展開 Pin 並自行完成接線，再點選接頭按此按鈕。程式只會依你實際畫好的 Pin 連線建立 Cable。\n\n也可以只選一條普通散線，把它建立成單芯自製 Cable。",
-                "請選接頭或單一線段",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-            return;
-        }
-
-        var trunk = !string.IsNullOrWhiteSpace(_selectedRouteConnectionId) && selected.Contains(
-            _selectedRouteConnectionId,
-            StringComparer.OrdinalIgnoreCase)
-            ? _selectedRouteConnectionId
-            : selected[0];
-        var ordered = new[] { trunk! }.Concat(selected.Where(id =>
-            !string.Equals(id, trunk, StringComparison.OrdinalIgnoreCase))).ToArray();
-        var operation = InlineConnectionOperation.CustomTwoEndCableAssembly;
-        var first = _project.Connections.First(connection =>
-            string.Equals(connection.ConnectionId, ordered[0], StringComparison.OrdinalIgnoreCase));
-        var dialog = new InlineConnectionDialog(
-            BuildConnectionSummary(first),
-            _availableCableMaterials,
-            selectedConnectionCount: ordered.Length,
-            preferredOperation: operation)
-        {
-            Owner = Window.GetWindow(this)
-        };
-        if (dialog.ShowDialog() != true) return;
-        if (dialog.Operation is not (InlineConnectionOperation.CustomTwoEndCableAssembly or InlineConnectionOperation.CustomYCableAssembly))
-        {
-            HintText.Text = "自製線束按鈕只建立一般或 Y 型自製線束；其他線路操作請雙擊線路。";
-            return;
-        }
-
-        try
-        {
-            MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Create custom cable assembly from {ordered.Length} connection(s)"));
-            ApplyCustomCableAssembly(ordered, false, dialog.CustomCableOptions);
-            Render();
-            ProjectChanged?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show(Window.GetWindow(this), exception.Message, "自製線束建立失敗", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        HintText.Text = "LEGACY_CP2E2_REPLACEMENT_PENDING：舊版直接建立自製線束的入口已停用；請等待新版 Cable Assembly Editor。";
+        MessageBox.Show(
+            Window.GetWindow(this),
+            "舊版直接建立自製線束的入口已停用，避免以 MAIN／TRUNK／BRANCH-A／BRANCH-B 舊規則寫入目前專案。新版 Cable Assembly Editor 完成後再由明確選擇建立 Purchased／Custom Cable。",
+            "Cable Assembly Editor 尚未接入",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 
     private void EditSelectedConnectorCable(string connectorPortId)

@@ -19,7 +19,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <Button x:Name="SelectModeButton" Content="選取 / Select" Padding="12,5" Margin="0,0,6,0" Click="SelectMode_Click" />
                     <Button x:Name="WireModeButton" Content="拉線 / Wire" Padding="12,5" Margin="0,0,6,0" Click="WireMode_Click" ToolTip="左鍵點第一個 Port 或端子圓點，再移動到第二個端點左鍵完成；Esc / 右鍵取消" />
-                    <Button Content="自製 Cable / Harness" Padding="12,5" Margin="0,0,6,0" Click="CreateCustomHarness_Click" ToolTip="先新增並展開接頭 Pin、自己完成接線，再點接頭按此按鈕。程式只會依實際 Pin 連線整理 Cable，不會改接或合併其他分支" />
+                    <Button Content="接頭 Cable / Connector Cable" Padding="12,5" Margin="0,0,6,0" Click="CreateCustomHarness_Click" ToolTip="選取已展開並完成 Pin 接線的接頭後整理 Cable；舊版直接建立自製線束的入口已停用，等待新版 Cable Assembly Editor" />
                     <Button Content="自動排版 / Auto Layout" Padding="12,5" Margin="0,0,6,0" Click="AutoRouteConnections_Click" ToolTip="依接線關係重新排列畫布上的元件，再計算全部 90° 配線通道；可使用 Undo 復原" />
                     <Button Content="匯出 PDF" Padding="12,5" Margin="0,0,6,0" Click="ExportPdf_Click" ToolTip="忠實匯出完整拓撲畫布；先選取線材，可在 PDF 保留加粗高亮效果" />
                     <Button Content="? 操作說明" Padding="12,5" Click="ShowHelp_Click" />

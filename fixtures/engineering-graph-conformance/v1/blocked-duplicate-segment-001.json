@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-BLOCKED-DUPLICATE-SEGMENT-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "BLOCKED",
+  "expectedFingerprint": null,
+  "blockerCodes": ["EGC_DUPLICATE_SEGMENT_IDENTITY"],
+  "importantIdentities": ["segment:duplicate"],
+  "purpose": "BLOCKED duplicate segmentId where segment identity must be unique in the conformance graph.",
+  "canonicalIdentity": "N|route:dup-segment|node:seg-a|ComponentPin|cmp-seg-a|def:seg-a|seg-a:pin-1|SYNTH:seg-a|XTERM:seg-a\nN|route:dup-segment|node:seg-b|ComponentPin|cmp-seg-b|def:seg-b|seg-b:pin-1|SYNTH:seg-b|XTERM:seg-b\nPROJECT|egc-blocked-duplicate-segment\nR|route:dup-segment|net-dup-segment|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:dup-segment|segment:duplicate|InternalWire|node:seg-a|node:seg-b|Confirmed\nS|route:dup-segment|segment:duplicate|InternalWire|node:seg-b|node:seg-a|Confirmed"
+}

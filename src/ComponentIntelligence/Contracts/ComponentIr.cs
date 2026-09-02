@@ -9,6 +9,7 @@ public sealed record ComponentIR
     public ComponentConnector Connector { get; init; } = new();
     public IReadOnlyList<ComponentPort> Ports { get; init; } = Array.Empty<ComponentPort>();
     public IReadOnlyList<ComponentPin> Pins { get; init; } = Array.Empty<ComponentPin>();
+    public IReadOnlyList<ComponentPowerConversion> PowerConversions { get; init; } = Array.Empty<ComponentPowerConversion>();
     public IReadOnlyList<ComponentSpecification> Specifications { get; init; } = Array.Empty<ComponentSpecification>();
     public IReadOnlyList<ComponentDocument> Documents { get; init; } = Array.Empty<ComponentDocument>();
     public ComponentAssets Assets { get; init; } = new();

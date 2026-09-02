@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-READY-CROSS-PAGE-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "READY",
+  "expectedFingerprint": "2AF3081230AA113C3A9F365346E00092D2376B2CE869AE398B3DF74358453920",
+  "blockerCodes": [],
+  "importantIdentities": ["pair:cross-001","route:net-cross","net-cross","segment:wire-cross","cross-src:pin-1","cross-dst:pin-1","node:cross-src:pin-1","node:cross-dst:pin-1","P-01","P-02","XTERM:cross-src","XTERM:cross-dst"],
+  "purpose": "READY cross-page continuation with exact pair, route, net, segment, endpoint, page and node identity.",
+  "canonicalIdentity": "C|pair:cross-001|route:net-cross|net-cross|segment:wire-cross|cross-src:pin-1|cross-dst:pin-1|P-01|P-02|node:cross-src:pin-1|node:cross-dst:pin-1|Confirmed|synthetic-test-evidence|\nN|route:net-cross|node:cross-dst:pin-1|ComponentPin|cmp-cross-dst|def:synthetic-cross-dst|cross-dst:pin-1|SYNTH:cross-dst|XTERM:cross-dst\nN|route:net-cross|node:cross-src:pin-1|ComponentPin|cmp-cross-src|def:synthetic-cross-src|cross-src:pin-1|SYNTH:cross-src|XTERM:cross-src\nPROJECT|egc-ready-cross-page\nR|route:net-cross|net-cross|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:net-cross|segment:wire-cross|InternalWire|node:cross-src:pin-1|node:cross-dst:pin-1|Confirmed"
+}

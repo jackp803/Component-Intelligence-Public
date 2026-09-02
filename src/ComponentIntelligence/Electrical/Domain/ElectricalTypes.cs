@@ -112,6 +112,21 @@ public enum CableLengthSource
     Imported
 }
 
+public enum CableConstructionType
+{
+    Unknown,
+    Purchased,
+    Custom
+}
+
+public enum CableAssemblySegmentRoleType
+{
+    Unknown,
+    Trunk,
+    Branch,
+    Other
+}
+
 /// <summary>
 /// Mounting face used by the 2.5D cabinet-fit validator. XY coordinates are local to the selected
 /// face; therefore XY overlap on different faces is not automatically a physical collision.

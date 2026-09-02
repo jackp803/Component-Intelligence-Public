@@ -31,13 +31,8 @@ public partial class ElectricalWorkspaceWindow
             var packageName = SanitizePackageFileName(_project.Name ?? _project.ProjectId);
             var projectName = $"{packageName}-ACADE-REVIEW";
             var jsonPath = Path.Combine(runRoot, "lrdu-staging-route.v1.json");
-            var topologyPdfPath = Path.Combine(runRoot, "topology-review.pdf");
-            var combinedPdfPath = Path.Combine(runRoot, "lrdu-autocad-topology-review.pdf");
             var json = JsonSerializer.Serialize(preparation.Graph, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(jsonPath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
-            // Use the same exact-canvas visual path as the topology tab's PDF button.
-            TopologyCanvas.ExportCurrentVisualPdf(topologyPdfPath);
 
             WorkspaceStatusText.Text = $"AutoCAD Electrical staging 工程圖產生中：{runRoot}";
             var result = await new AutocadStagingReviewRunner().RunAsync(new AutocadStagingReviewRequest
@@ -47,14 +42,13 @@ public partial class ElectricalWorkspaceWindow
                 ProjectName = projectName,
                 SymbolAcceptanceRegistryPath = preflight.SymbolAcceptanceRegistryPath
             });
-            AutocadReviewPdfPackage.Merge(topologyPdfPath, result.PdfPaths, combinedPdfPath);
 
-            WorkspaceStatusText.Text = $"AutoCAD Electrical staging 工程圖完成。WDP: {result.ProjectPath}; PDF: {combinedPdfPath}";
+            WorkspaceStatusText.Text = $"AutoCAD Electrical staging 工程圖完成。WDP: {result.ProjectPath}";
             MessageBox.Show(
                 this,
                 $"AutoCAD Electrical staging 工程圖已完成。{Environment.NewLine}{Environment.NewLine}" +
                 $"Project: {result.ProjectPath}{Environment.NewLine}" +
-                $"Combined review PDF: {combinedPdfPath}{Environment.NewLine}" +
+                $"Drawings: {result.DrawingPaths.Count}{Environment.NewLine}" +
                 $"Formal DWG modified: {result.FormalDwgModified}",
                 "AutoCAD Electrical staging 完成",
                 MessageBoxButton.OK,

@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-BLOCKED-DUPLICATE-ENDPOINT-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "BLOCKED",
+  "expectedFingerprint": null,
+  "blockerCodes": ["EGC_DUPLICATE_PIN_ENDPOINT_IDENTITY"],
+  "importantIdentities": ["dup-pin:pin-1","node:dup-a","node:dup-b"],
+  "purpose": "BLOCKED two distinct nodes claiming the same exact pin endpoint identity.",
+  "canonicalIdentity": "N|route:dup-endpoint|node:dup-a|ComponentPin|cmp-dup-a|def:dup-a|dup-pin:pin-1|SYNTH:dup-a|XTERM:dup-a\nN|route:dup-endpoint|node:dup-b|ComponentPin|cmp-dup-b|def:dup-b|dup-pin:pin-1|SYNTH:dup-b|XTERM:dup-b\nPROJECT|egc-blocked-duplicate-endpoint\nR|route:dup-endpoint|net-dup-endpoint|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:dup-endpoint|segment:dup-endpoint|InternalWire|node:dup-a|node:dup-b|Confirmed"
+}

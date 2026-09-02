@@ -2,7 +2,7 @@ namespace ComponentIntelligence.Electrical.Domain;
 
 public sealed class ElectricalProject
 {
-    public string SchemaVersion { get; init; } = "0.3";
+    public string SchemaVersion { get; init; } = "0.4";
     public required string ProjectId { get; init; }
     public string? Name { get; set; }
     public List<ComponentInstance> Components { get; init; } = new();
@@ -34,6 +34,7 @@ public sealed class ComponentInstance
     public string? DisplayName { get; set; }
     public ResponsibilityScope ResponsibilityScope { get; set; } = ResponsibilityScope.Unknown;
     public List<ComponentPort> Ports { get; init; } = new();
+    public List<PowerConversionEvidence> PowerConversions { get; init; } = new();
     public PhysicalFootprint? Footprint { get; set; }
     public bool FootprintOverride { get; set; }
     public PhysicalPlacement? Placement { get; set; }
@@ -43,6 +44,8 @@ public sealed class ComponentPort
 {
     public required string PortId { get; init; }
     public required string Name { get; set; }
+    public string? SourcePortId { get; set; }
+    public string? PowerDomainId { get; set; }
     public string? Protocol { get; set; }
     public List<string> Capabilities { get; init; } = new();
     public ConnectorDefinition? Connector { get; set; }
@@ -54,6 +57,8 @@ public sealed class ComponentPort
 public sealed class ComponentPin
 {
     public required string PinId { get; init; }
+    public string? SourcePinId { get; set; }
+    public string? PowerDomainId { get; set; }
     public required string PinNumber { get; set; }
     public string? PinName { get; set; }
     public string? Function { get; set; }
@@ -156,6 +161,7 @@ public sealed class CableInstance
     public string? ReferenceDesignator { get; set; }
     public double? ProvidedLengthMm { get; set; }
     public CableLengthSource LengthSource { get; set; } = CableLengthSource.Unknown;
+    public CableConstructionType CableConstructionType { get; set; } = CableConstructionType.Unknown;
     public List<CoreAssignment> CoreAssignments { get; init; } = new();
 }
 
@@ -174,6 +180,7 @@ public sealed class CableAssembly
 {
     public required string CableAssemblyId { get; init; }
     public string? ReferenceDesignator { get; set; }
+    public CableConstructionType CableConstructionType { get; set; } = CableConstructionType.Unknown;
     public bool IsCustom { get; set; }
     public List<CableAssemblyMember> Members { get; init; } = new();
     public string? EndAConnectorId { get; set; }
@@ -183,6 +190,9 @@ public sealed class CableAssembly
 public sealed class CableAssemblyMember
 {
     public required string CableInstanceId { get; init; }
+    public CableAssemblySegmentRoleType SegmentRoleType { get; set; } = CableAssemblySegmentRoleType.Unknown;
+    public int? SegmentRoleIndex { get; set; }
+    public string? SegmentRoleName { get; set; }
     public string? Purpose { get; set; }
 }
 

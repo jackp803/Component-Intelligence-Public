@@ -15,8 +15,11 @@ Reason: the code/test integration is clean, but the required real Topology/Cabin
 
 Branch: `codex/local-latest-cp2e1-baseline-integration-20260902`
 Draft PR base: `codex/local-latest-reconciliation-20260902`
-Integration merge commit/tree: recorded after the ancestry-preserving merge commit is created.
-Draft PR URL and remote confirmation: recorded in the publication evidence update.
+Integration merge commit: `f532f740d9058e12a180835bd1c8a8048f36ed95`
+Integration merge tree: `af52761f355423c81b458ecff1653168fd31a739`
+Integration merge parents: `599b4f679a9b83ce713083e5ed2f4929f3914018 db3ed30f0960d59adf7033a279a085c1e8f2fda0`
+Draft PR: `https://github.com/jackp803/Component-Intelligence-Public/pull/19`
+Remote confirmation: the branch remote SHA equaled `f532f740d9058e12a180835bd1c8a8048f36ed95` immediately after publishing the integration merge commit. A final equality check is recorded after this evidence update is pushed.
 
 The candidate was created from exact `599b4f6` and merged exact `db3ed30f` with an explicit merge commit. Neither accepted input history was rebased or rewritten.
 

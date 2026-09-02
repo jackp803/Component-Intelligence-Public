@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-READY-DIRECT-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "READY",
+  "expectedFingerprint": "89A5F9A6001FFCC7F4D5F43801BA04F0A8737350EB844481B2E32D6566F3102A",
+  "blockerCodes": [],
+  "importantIdentities": ["route:net-control","net-control","node:src:pin-1","node:load:pin-1","src:pin-1","load:pin-1","XTERM:src","XTERM:load","segment:wire-direct"],
+  "purpose": "READY direct single-route identity chain with exact component, node, pin, connection-point, net and segment identity.",
+  "canonicalIdentity": "N|route:net-control|node:load:pin-1|ComponentPin|cmp-load|def:synthetic-load|load:pin-1|SYNTH:load|XTERM:load\nN|route:net-control|node:src:pin-1|ComponentPin|cmp-src|def:synthetic-src|src:pin-1|SYNTH:src|XTERM:src\nPROJECT|egc-ready-direct\nR|route:net-control|net-control|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:net-control|segment:wire-direct|InternalWire|node:src:pin-1|node:load:pin-1|Confirmed"
+}

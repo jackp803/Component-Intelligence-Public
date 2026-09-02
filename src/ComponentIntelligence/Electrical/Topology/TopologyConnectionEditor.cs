@@ -17,7 +17,8 @@ public sealed record InlineTerminalOptions(
 public sealed record CableSegmentOptions(
     string? ReferenceDesignator = null,
     string? CableDefinitionId = null,
-    string? DisplayName = null);
+    string? DisplayName = null,
+    CableConstructionType CableConstructionType = CableConstructionType.Unknown);
 
 public sealed record CustomCableAssemblyOptions(
     string? ReferenceDesignator,
@@ -57,106 +58,8 @@ public sealed class TopologyConnectionEditor
         ArgumentNullException.ThrowIfNull(project);
         ArgumentNullException.ThrowIfNull(connectionIds);
         ArgumentNullException.ThrowIfNull(options);
-
-        var requested = connectionIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        var expectedCount = isYHarness ? 3 : 1;
-        if (requested.Length != expectedCount)
-            throw new InvalidOperationException(isYHarness
-                ? "A custom Y harness requires exactly three selected wire segments."
-                : "A custom two-end harness requires exactly one selected wire segment.");
-
-        var connections = requested.Select(id => FindConnection(project, id)).ToArray();
-        var existingAssemblyCableIds = project.CableAssemblies
-            .SelectMany(assembly => assembly.Members)
-            .Select(member => member.CableInstanceId)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (connections.Any(connection => !string.IsNullOrWhiteSpace(connection.CableInstanceId) &&
-                                          existingAssemblyCableIds.Contains(connection.CableInstanceId!)))
-            throw new InvalidOperationException("At least one selected segment already belongs to another cable assembly.");
-
-        var reference = string.IsNullOrWhiteSpace(options.ReferenceDesignator)
-            ? NextCableReference(project)
-            : options.ReferenceDesignator.Trim();
-        if (project.CableAssemblies.Any(assembly =>
-                string.Equals(assembly.ReferenceDesignator, reference, StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidOperationException($"Cable assembly reference '{reference}' is already in use.");
-
-        var displayName = string.IsNullOrWhiteSpace(options.DisplayName)
-            ? isYHarness ? $"Custom Y harness {reference}" : $"Custom cable {reference}"
-            : options.DisplayName.Trim();
-        var roles = isYHarness ? new[] { "TRUNK", "BRANCH-A", "BRANCH-B" } : new[] { "MAIN" };
-        var lengths = isYHarness
-            ? new[] { options.TrunkLengthMm, options.BranchALengthMm, options.BranchBLengthMm }
-            : new[] { options.TrunkLengthMm };
-        if (lengths.Any(length => length is <= 0))
-            throw new InvalidOperationException("Cable length must be greater than zero when supplied.");
-
-        var cableMembers = new List<CableInstance>(connections.Length);
-        for (var index = 0; index < connections.Length; index++)
-        {
-            var connection = connections[index];
-            var role = roles[index];
-            var cable = string.IsNullOrWhiteSpace(connection.CableInstanceId)
-                ? null
-                : project.Cables.FirstOrDefault(item =>
-                    string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
-            if (cable is null)
-            {
-                cable = new CableInstance
-                {
-                    CableInstanceId = $"cbl-{Guid.NewGuid():N}",
-                    CableDefinitionId = "UNRESOLVED-CABLE"
-                };
-                project.Cables.Add(cable);
-                connection.CableInstanceId = cable.CableInstanceId;
-            }
-
-            cable.ReferenceDesignator = isYHarness ? $"{reference}-{role}" : reference;
-            cable.DisplayName = isYHarness ? $"{displayName} / {role}" : displayName;
-            cable.ProvidedLengthMm = lengths[index];
-            cable.LengthSource = lengths[index] is null ? CableLengthSource.Unknown : CableLengthSource.User;
-            connection.Kind = ConnectionKind.Cable;
-
-            if (cable.CoreAssignments.Count == 0)
-            {
-                var net = string.IsNullOrWhiteSpace(connection.NetId)
-                    ? null
-                    : project.Nets.FirstOrDefault(item =>
-                        string.Equals(item.NetId, connection.NetId, StringComparison.OrdinalIgnoreCase));
-                cable.CoreAssignments.Add(new CoreAssignment
-                {
-                    CoreId = "1",
-                    NetId = connection.NetId,
-                    Signal = net?.Label,
-                    Layer = net?.Layer ?? ElectricalLayer.Unknown,
-                    Status = "ASSIGNED",
-                    FromEndpointId = connection.FromEndpointId,
-                    ToEndpointId = connection.ToEndpointId
-                });
-                connection.CableCoreId ??= "1";
-            }
-            cableMembers.Add(cable);
-        }
-
-        var assembly = new CableAssembly
-        {
-            CableAssemblyId = $"ca-{Guid.NewGuid():N}",
-            ReferenceDesignator = reference,
-            IsCustom = true
-        };
-        for (var index = 0; index < cableMembers.Count; index++)
-        {
-            assembly.Members.Add(new CableAssemblyMember
-            {
-                CableInstanceId = cableMembers[index].CableInstanceId,
-                Purpose = roles[index]
-            });
-        }
-        project.CableAssemblies.Add(assembly);
-        return new CustomCableAssemblyResult(assembly, cableMembers);
+        throw new InvalidOperationException(
+            "LEGACY_CP2E2_REPLACEMENT_PENDING: direct legacy cable-assembly creation is disabled until the approved Cable Assembly Editor replaces it.");
     }
 
     public ElectricalConnection ConnectPorts(
@@ -528,6 +431,7 @@ public sealed class TopologyConnectionEditor
         {
             existing.CableDefinitionId = definitionId;
             existing.DisplayName = displayName;
+            existing.CableConstructionType = options.CableConstructionType;
             if (!string.IsNullOrWhiteSpace(options.ReferenceDesignator))
                 existing.ReferenceDesignator = options.ReferenceDesignator.Trim();
             else if (string.IsNullOrWhiteSpace(existing.ReferenceDesignator))
@@ -541,6 +445,7 @@ public sealed class TopologyConnectionEditor
             CableInstanceId = $"cbl-{Guid.NewGuid():N}",
             CableDefinitionId = definitionId,
             DisplayName = displayName,
+            CableConstructionType = options.CableConstructionType,
             ReferenceDesignator = string.IsNullOrWhiteSpace(options.ReferenceDesignator) ? NextCableReference(project) : options.ReferenceDesignator.Trim()
         };
         project.Cables.Add(cable);

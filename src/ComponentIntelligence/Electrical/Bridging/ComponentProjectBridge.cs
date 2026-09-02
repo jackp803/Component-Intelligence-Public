@@ -70,6 +70,9 @@ public sealed class ComponentProjectBridge
             fallback.Pins.Add(MapPin(sourcePin, source, componentInstanceId, null));
         }
 
+        foreach (var sourceConversion in source.PowerConversions)
+            instance.PowerConversions.Add(MapPowerConversion(sourceConversion, componentInstanceId));
+
         return instance;
     }
 
@@ -78,6 +81,7 @@ public sealed class ComponentProjectBridge
         if (string.IsNullOrWhiteSpace(logicalPortId)) return null;
         var expected = logicalPortId.Trim();
         return instance.Ports.FirstOrDefault(port =>
+            string.Equals(port.SourcePortId, expected, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(port.Name, expected, StringComparison.OrdinalIgnoreCase) ||
             port.Capabilities.Any(capability =>
                 capability.StartsWith("SOURCE_PORT_ID:", StringComparison.OrdinalIgnoreCase) &&
@@ -124,6 +128,8 @@ public sealed class ComponentProjectBridge
         var port = new DomainPort
         {
             PortId = portId,
+            SourcePortId = NullIfBlank(sourcePort.PortId),
+            PowerDomainId = NullIfBlank(sourcePort.PowerDomainId),
             // PortId remains the stable engineering identity while PortName is the human-readable label
             // from the central workbook (INPUT, OUTPUT, X01, FIELD_IO...).
             Name = FirstNonBlank(sourcePort.PortName, sourcePort.PortId, sourcePort.PortType, "PORT")!,
@@ -171,6 +177,8 @@ public sealed class ComponentProjectBridge
         return new DomainPin
         {
             PinId = $"{instanceId}:port:{ownerIdentity}:pin:{EncodeStableIdSegment(stableSourcePinId)}",
+            SourcePinId = NullIfBlank(sourcePin.PinId),
+            PowerDomainId = NullIfBlank(sourcePin.PowerDomainId),
             PinNumber = sourcePin.PinNumber,
             PinName = FirstNonBlank(sourcePin.PinName, sourcePin.Description),
             Function = FirstNonBlank(sourcePin.Function, sourcePin.PinRole),
@@ -183,6 +191,35 @@ public sealed class ComponentProjectBridge
             Power = layer == ElectricalLayer.Power ? BuildPowerCapability(sourcePin, source.Power) : null
         };
     }
+
+    private static PowerConversionEvidence MapPowerConversion(ComponentPowerConversion source, string componentInstanceId) => new()
+    {
+        ConversionId = NullIfBlank(source.ConversionId),
+        ComponentInstanceId = componentInstanceId,
+        InputPowerDomainId = NullIfBlank(source.InputPowerDomainId),
+        OutputPowerDomainId = NullIfBlank(source.OutputPowerDomainId),
+        InputSourcePortIds = CopyIds(source.InputPortIds),
+        InputSourcePinIds = CopyIds(source.InputPinIds),
+        OutputSourcePortIds = CopyIds(source.OutputPortIds),
+        OutputSourcePinIds = CopyIds(source.OutputPinIds),
+        Evidence = source.Evidence.Select(item => new PowerEvidenceProvenance
+        {
+            SourceType = item.SourceType.ToString(),
+            SourceUrl = item.SourceUrl?.ToString(),
+            DocumentUrl = item.DocumentUrl?.ToString(),
+            DocumentHashSha256 = NullIfBlank(item.DocumentHashSha256),
+            PageNumber = item.PageNumber,
+            ExtractionMethod = item.ExtractionMethod.ToString(),
+            RawValue = item.RawValue,
+            RetrievedAt = item.RetrievedAt,
+            VerificationStatus = item.VerificationStatus.ToString()
+        }).ToList()
+    };
+
+    private static List<string> CopyIds(IEnumerable<string> values) => values
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Select(value => value.Trim())
+        .ToList();
 
     private static PowerCapability? BuildPowerCapability(ContractPin pin, ComponentIntelligence.Contracts.ComponentPower sourcePower)
     {

@@ -13,6 +13,11 @@ public sealed record ComponentPort
     public string? SignalType { get; init; }
     public string? Direction { get; init; }
     public string? VoltageDomain { get; init; }
+    /// <summary>
+    /// Opaque stable power-domain identity from explicit upstream engineering authority. This is
+    /// deliberately separate from VoltageDomain, which may contain human voltage text.
+    /// </summary>
+    public string? PowerDomainId { get; init; }
     public string? Protocol { get; init; }
     public string? PhysicalSide { get; init; }
     /// <summary>
@@ -46,6 +51,11 @@ public sealed record ComponentPin
     public string? SignalType { get; init; }
     public string? Direction { get; init; }
     public string? VoltageDomain { get; init; }
+    /// <summary>
+    /// Opaque stable power-domain identity from explicit upstream engineering authority. Never derive
+    /// this value from VoltageDomain, voltage ranges, function text, or drawing/topology position.
+    /// </summary>
+    public string? PowerDomainId { get; init; }
     public string? Description { get; init; }
     public IReadOnlyList<Evidence> Evidence { get; init; } = Array.Empty<Evidence>();
 }

@@ -1,0 +1,12 @@
+{
+  "fixtureSchemaVersion": "engineering-graph-conformance-fixture.v1",
+  "syntheticTestOnly": true,
+  "fixtureId": "EGC-BLOCKED-CONTINUATION-AMBIGUOUS-001",
+  "graphSchemaVersion": "lrdu-staging-route.v2",
+  "expectedStatus": "BLOCKED",
+  "expectedFingerprint": null,
+  "blockerCodes": ["EXACT_CONFIRMED_ROUTE_NET_SEGMENT_AMBIGUOUS"],
+  "importantIdentities": ["pair:ambiguous-001","segment:amb-a","segment:amb-b"],
+  "purpose": "BLOCKED cross-page evidence with more than one exact confirmed route/net/segment candidate.",
+  "canonicalIdentity": "C|pair:ambiguous-001||||amb-src:pin-1|amb-dst:pin-1|P-01|P-02|node:amb-src:pin-1|node:amb-dst:pin-1|Confirmed|synthetic-test-evidence|EXACT_CONFIRMED_ROUTE_NET_SEGMENT_AMBIGUOUS\nN|route:net-ambiguous|node:amb-dst:pin-1|ComponentPin|cmp-amb-dst|def:amb-dst|amb-dst:pin-1|SYNTH:amb-dst|XTERM:amb-dst\nN|route:net-ambiguous|node:amb-src:pin-1|ComponentPin|cmp-amb-src|def:amb-src|amb-src:pin-1|SYNTH:amb-src|XTERM:amb-src\nPROJECT|egc-blocked-continuation-ambiguous\nR|route:net-ambiguous|net-ambiguous|Confirmed\nSCHEMA|lrdu-staging-route.v2\nS|route:net-ambiguous|segment:amb-a|InternalWire|node:amb-src:pin-1|node:amb-dst:pin-1|Confirmed\nS|route:net-ambiguous|segment:amb-b|InternalWire|node:amb-dst:pin-1|node:amb-src:pin-1|Confirmed"
+}

@@ -35,6 +35,7 @@ public sealed class InlineConnectionDialog : Window
         IsTextSearchEnabled = true,
         StaysOpenOnEdit = true
     };
+    private readonly ComboBox _cableConstructionType = new();
     private readonly TextBox _engineering = new();
     private readonly TextBox _trunkLength = new();
     private readonly TextBox _branchALength = new();
@@ -46,6 +47,7 @@ public sealed class InlineConnectionDialog : Window
         string connectionSummary,
         IEnumerable<BomConnectionMaterialOption>? availableCableMaterials = null,
         string? selectedCableDefinitionId = null,
+        CableConstructionType selectedCableConstructionType = CableConstructionType.Unknown,
         int selectedConnectionCount = 1,
         InlineConnectionOperation? preferredOperation = null)
     {
@@ -68,11 +70,6 @@ public sealed class InlineConnectionDialog : Window
             new Choice("設定 Cable Segment（線材）— 指定目前線段的線材實例", InlineConnectionOperation.CableSegment),
             new Choice("刪除目前連線 / Delete connection", InlineConnectionOperation.DeleteConnection)
         };
-        choices.Insert(1, new Choice(
-            _selectedConnectionCount == 1
-                ? "建立／更新自製 Cable（不需要原始 BOM）"
-                : $"建立／更新自製 Cable（將目前接頭側 {_selectedConnectionCount} 條導體歸為同一條 Cable）",
-            InlineConnectionOperation.CustomTwoEndCableAssembly));
         if (_selectedConnectionCount >= 2)
         {
             choices.Insert(0, new Choice(
@@ -87,10 +84,7 @@ public sealed class InlineConnectionDialog : Window
 
         void SelectCableOperation()
         {
-            if ((_operation.SelectedItem as Choice)?.Operation is
-                InlineConnectionOperation.BundleCableAssembly or
-                InlineConnectionOperation.CustomTwoEndCableAssembly or
-                InlineConnectionOperation.CustomYCableAssembly)
+            if ((_operation.SelectedItem as Choice)?.Operation is InlineConnectionOperation.BundleCableAssembly)
                 return;
             _operation.SelectedItem = _operation.Items
                 .Cast<Choice>()
@@ -99,11 +93,15 @@ public sealed class InlineConnectionDialog : Window
 
         _cableDefinition.GotKeyboardFocus += (_, _) => SelectCableOperation();
         _cableDefinition.SelectionChanged += (_, _) => SelectCableOperation();
+        _cableConstructionType.GotKeyboardFocus += (_, _) => SelectCableOperation();
+        _cableConstructionType.SelectionChanged += (_, _) => SelectCableOperation();
 
         _genderA.ItemsSource = Enum.GetValues<ConnectorGender>();
         _genderB.ItemsSource = Enum.GetValues<ConnectorGender>();
         _genderA.SelectedItem = ConnectorGender.Female;
         _genderB.SelectedItem = ConnectorGender.Male;
+        _cableConstructionType.ItemsSource = Enum.GetValues<CableConstructionType>();
+        _cableConstructionType.SelectedItem = selectedCableConstructionType;
 
         var cableMaterials = (availableCableMaterials ?? Array.Empty<BomConnectionMaterialOption>())
             .OrderBy(item => item.Manufacturer, StringComparer.OrdinalIgnoreCase)
@@ -175,6 +173,7 @@ public sealed class InlineConnectionDialog : Window
         fields.Children.Add(Field("Function / 功能，例如 54V+、RS485-A", _function));
         fields.Children.Add(SectionTitle("Cable Segment（線材）設定"));
         fields.Children.Add(Field("BOM 線材 / Cable（可下拉選擇，也可手動輸入）", _cableDefinition));
+        fields.Children.Add(Field("Construction Type / 線材建構類型", _cableConstructionType));
         fields.Children.Add(new TextBlock
         {
             Text = cableMaterials.Length == 0
@@ -184,17 +183,6 @@ public sealed class InlineConnectionDialog : Window
             Foreground = System.Windows.Media.Brushes.DimGray,
             Margin = new Thickness(0, -6, 0, 10)
         });
-        fields.Children.Add(SectionTitle("自製線束 / Fabricated Harness"));
-        fields.Children.Add(new TextBlock
-        {
-            Text = "自製一般線束使用 TRUNK 長度；Y 型線束使用 TRUNK、BRANCH-A、BRANCH-B 三段。可暫時留白表示長度待確認，不會用畫布距離猜測。Y 型時，開啟視窗的那條線固定為 TRUNK。",
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = System.Windows.Media.Brushes.DimGray,
-            Margin = new Thickness(0, 0, 0, 8)
-        });
-        fields.Children.Add(Field("TRUNK / MAIN Length mm（主幹／一般線長）", _trunkLength));
-        fields.Children.Add(Field("BRANCH-A Length mm（Y 分支 A）", _branchALength));
-        fields.Children.Add(Field("BRANCH-B Length mm（Y 分支 B）", _branchBLength));
         scroll.Content = fields;
         Grid.SetRow(scroll, 2);
         root.Children.Add(scroll);
@@ -234,10 +222,18 @@ public sealed class InlineConnectionDialog : Window
                 : enteredText;
         }
     }
+    public CableConstructionType CableConstructionType =>
+        _cableConstructionType.SelectedItem is CableConstructionType value
+            ? value
+            : CableConstructionType.Unknown;
 
     public InlineConnectorOptions ConnectorOptions => new(ConnectorFamily, ConnectorCoding, ConnectorPinCount, SideAGender, SideBGender, ReferenceDesignator);
     public InlineTerminalOptions TerminalOptions => new(ReferenceDesignator, TerminalFunction);
-    public CableSegmentOptions CableOptions => new(ReferenceDesignator, CableDefinitionId, CableDisplayName);
+    public CableSegmentOptions CableOptions => new(
+        ReferenceDesignator,
+        CableDefinitionId,
+        CableDisplayName,
+        CableConstructionType);
     public CustomCableAssemblyOptions CustomCableOptions => new(
         ReferenceDesignator,
         CableDisplayName,

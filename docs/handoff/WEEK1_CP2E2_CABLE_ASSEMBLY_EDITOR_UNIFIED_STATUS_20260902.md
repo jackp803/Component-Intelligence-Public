@@ -1,198 +1,155 @@
-# Week 1 CP2-E2 Cable Assembly Editor — Unified Baseline Status
+# Week 1 CP2-E2 Cable Assembly Editor - Unified Baseline Status
 
 Date: 2026-09-02
 
 Task: `CODEX-W1-20260902-014`
 Checkpoint: `CP2-E2-UNIFIED-BASELINE-IMPLEMENTATION-RESUME`
-Worker disposition: `PARTIAL`
+Worker disposition: `COMPLETE`
 PM acceptance: `NOT REQUESTED / NOT IMPLIED`
 
-## 1. Why this Worker stops PARTIAL
-
-The implementation and automated verification work had already reached the mandatory real Windows UI smoke. The remaining acceptance requires repeated physical WPF canvas selection, multi-select, dialog editing, save/reload and visual validation.
-
-The Chat-host UI-control path proved fragile and previously hit a host safety-layer block. During continuation, the Product Owner explicitly directed this Worker to stop spending time on Chat-based computer/UI control and return the remaining real Windows UI acceptance to PM.
-
-Recommended next executor, in priority order:
-
-1. **Codex on the approved local Windows host** — preferred for deterministic local UI/computer execution and evidence capture.
-2. **Product Owner manual execution** — follow the remaining checklist below and capture screenshots/state evidence.
-
-Do not bypass or weaken host safety controls. Unexecuted UI items remain `NOT_RUN / NOT_PROVEN`, not PASS.
-
-## 2. Authoritative lineage re-verified during continuation
+## 1. Authoritative lineage
 
 Repository: `jackp803/Component-Intelligence-Public`
 
-Required branch:
-`codex/cp2e2-cable-assembly-editor-unified-20260902`
+Branch: `codex/cp2e2-cable-assembly-editor-unified-20260902`
 
-Authorized base:
-`e7ee6c3a45c6757f00e9421c241bc0176743c4c1`
+Authorized base: `e7ee6c3a45c6757f00e9421c241bc0176743c4c1`
 
-Authorized base tree:
-`0d53314f56914b01de875e097574fb5b17913b91`
+Published implementation commit: `12465c4ca45787cede3a97aad3dafecf0d99e128`
 
-Implementation commit re-verified locally:
-`12465c4ca45787cede3a97aad3dafecf0d99e128`
+Continuation input head: `25193030fbe51ab4efad585c0178e52e43cbcf6c`
 
-Implementation tree:
-`8f4f13e9aba179559357880217b9cd33ca344a43`
+The authorized base and implementation commit remain ancestors of the continuation branch. The existing worktree, branch, and Draft PR #21 were reused; no replacement branch or PR was created.
 
-Continuation verification:
+## 2. Runtime isolation and protected state
 
-- `e7ee6c3...` is an ancestor of `12465c4...`.
-- existing worktree is the required branch; no replacement worktree/branch was created.
-- worktree was clean before this handoff-only evidence update.
-- reported `12465c4` exists as a real Git commit.
+Candidate executable:
 
-Existing worktree:
-`C:\Users\jackp\Documents\_codex_worktrees\Component-Intelligence-Public\cp2e2-cable-assembly-editor-unified-20260902`
+```text
+C:\Users\jackp\Documents\_codex_worktrees\Component-Intelligence-Public\cp2e2-cable-assembly-editor-unified-20260902\src\ComponentIntelligence.Desktop\bin\Release\net8.0-windows\ComponentIntelligence.Desktop.exe
+SHA-256: 9C20EC89E4BC0C21971D5668E7CC76841C78C9785382BE03442D4423209F77D1
+```
 
-## 3. Implementation state already reached before handback
+Disposable database:
 
-The implementation commit contains the frozen CP2-E2 Cable Assembly Editor work, including:
+```text
+C:\Users\jackp\Documents\Component-Intelligence-CP2E2-UI-Smoke-CODEX-W1-20260902-014\component-intelligence-disposable.db
+```
 
-- ordinary topology connection defaults to `ConnectionKind.Wire` with `CableInstanceId = null`;
-- explicit Cable classification path for Unknown / Purchased / Custom;
-- existing CableInstance reuse rather than duplicate identity on edit;
-- detached Cable Assembly edit draft;
-- Save / Cancel and unsaved-close protection;
-- Construction: Unknown / Purchased / Custom;
-- roles: Unknown / Trunk / Branch / Other;
-- Branch suggestion uses maximum existing positive branch index + 1;
-- CableInstance length/provenance editing;
-- member add/remove with membership-only removal semantics;
-- `RULE-CABLE-ASSEMBLY-001..007` projection with Chinese-first actionable messages;
-- no generated member sub-tags;
-- dedicated `建立複合線` entry and existing-member editor hooks;
-- legacy direct `CreateCustomCableAssembly()` remains fail-closed under `LEGACY_CP2E2_REPLACEMENT_PENDING`;
-- accepted `COMPONENT_INTELLIGENCE_DB_PATH` runtime isolation remains intact.
+Before entering Topology/Layout, the application visibly displayed that exact disposable path. All UI mutations were confined to the disposable database. AutoCAD and `accoreconsole` remained stopped throughout.
 
-Previously recorded automated evidence in the authoritative continuation checkpoint:
-
-- baseline before implementation: `676/676 PASS`;
-- focused CP2-E2 gate: `46/46 PASS`;
-- Electrical-focused regression: `517/517 PASS`;
-- full Release tests: `706/706 PASS`;
-- Desktop Release build: PASS, `0 errors / 22 existing warnings`;
-- `git diff --check`: PASS;
-- service TDD RED -> GREEN: `27/27 PASS`;
-- topology ordinary-Wire TDD RED -> GREEN: focused `13/13 PASS`.
-
-These are preserved continuation evidence. A future executor must still run the task-required **fresh final** test/build/diff gate after completing UI smoke.
-
-## 4. Real Windows UI smoke evidence already proven
-
-Production SQLite authoritative identity:
+Production SQLite before and after the complete UI smoke:
 
 ```text
 path: C:\Users\jackp\AppData\Local\ComponentIntelligence\component-intelligence.db
 size: 47,542,272 bytes
 sha256: 4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41
+pre/post size match: true
+pre/post SHA-256 match: true
 ```
 
-Disposable smoke DB:
-`C:\Users\jackp\Documents\Component-Intelligence-CP2E2-UI-Smoke-CODEX-W1-20260902-014\component-intelligence-disposable.db`
+Final process state: Component Intelligence `0`; AutoCAD/accoreconsole `0`.
 
-Already proven before handback:
+## 3. Real Windows UI smoke
 
-- disposable DB was initially a byte-for-byte production copy;
-- candidate WPF app visibly showed the disposable DB path before entering Topology/Layout;
-- no AutoCAD/accoreconsole process was running;
-- disposable smoke project loaded through the real Electrical Workspace UI;
-- one ordinary Wire plus three explicit CableInstances were present;
-- ordinary connection `smoke-wire-ordinary` opened in the real Inline Connection Editor as `OrdinaryWire`;
-- Cancel left disposable SQLite as `kind=Wire`, `cableInstanceId=null`, cable count `3`, assembly count `0`;
-- a real explicit Cable route (`smoke-cmp-3:P1 <-> smoke-cmp-4:P1`) was selected/calibrated;
-- non-assembly Inline Connection Editor remained available for `smoke-conn-cable-1` and displayed existing Cable/Imported length evidence;
-- DPI-aware WPF/UI Automation calibration was investigated, but the remaining repeated canvas-control work is being reassigned rather than forced through Chat.
+The mandatory continuation was completed against project `cp2e2-ui-smoke-014` in the disposable database.
 
-Local screenshot evidence retained under:
-`C:\Users\jackp\Documents\Component-Intelligence-CP2E2-UI-Smoke-CODEX-W1-20260902-014`
+PASS evidence:
 
-Representative files include:
+- selected the second explicit Cable route and opened the real `建立複合線 / Cable Assembly` flow with two routes;
+- changed construction explicitly through Unknown, Purchased, and Custom; final saved authority is Custom;
+- assigned Branch 1 and Branch 3, added a third Cable, and observed the next suggestion as Branch 4 rather than reusing gap 2;
+- saved, reloaded, double-clicked a member route, and reopened the same persisted assembly;
+- non-contiguous Branch 1/3/4 persisted through SQLite Save/reload;
+- changed `SMK-CBL-3` length to `1.75 m`; reload preserved `User` provenance;
+- untouched `SMK-CBL-1` remained `1.25 m / Imported` and `SMK-CBL-2` remained `0.9 m / Mechanical`;
+- Cancel after temporary construction and length edits left persisted Custom / 1.75 m User data unchanged;
+- removing `SMK-CBL-1` and saving changed only membership: all 3 CableInstances, 4 connections, and 4 topology routes remained;
+- adding the same CableInstance back restored Branch 4 and retained its stable identity, connection, geometry, length, and Imported provenance;
+- the structural-error Save control was disabled; an attempted click kept the editor open and SQLite still had zero assemblies before the valid Save;
+- Layout/Cabinet opened in the real candidate UI and rendered the expected empty-cabinet review state without mutating production data;
+- final saved project contained no generated member sub-tags;
+- candidate Electrical Workspace and root application closed normally.
 
-- `01-db-path-gate.png`
-- `02-topology-loaded.png`
-- `04-foreground-resume-state.png`
-- `05-lower-canvas.png`
-- `06-current-frame.png`
+Previously published continuation evidence remains valid and was not repeated blindly:
 
-## 5. Safe stop state
+- ordinary `smoke-wire-ordinary` opened in the Inline Connection Editor as `OrdinaryWire`;
+- Cancel preserved `kind=Wire`, `cableInstanceId=null`, and no Cable authority;
+- a non-assembly explicit Cable still opened the Inline Connection Editor.
 
-Immediately before handoff, disposable smoke state was re-read from SQLite:
+## 4. Chinese-first fail-closed rule evidence
+
+Normal editor actions exercised:
+
+- `RULE-CABLE-ASSEMBLY-001`: two Trunk members -> `錯誤：只能有一條主幹，請重新指定。`
+- `RULE-CABLE-ASSEMBLY-002`: duplicate Branch 3 -> `錯誤：分支編號重複，請使用其他分支編號。`
+- `RULE-CABLE-ASSEMBLY-003`: Branch 0 -> `錯誤：分支編號必須是大於 0 的整數。`
+- `RULE-CABLE-ASSEMBLY-005`: Other with blank name -> `錯誤：「其他」角色需要填寫名稱。`
+
+The remaining structurally unreachable states were exercised with isolated rows added only to the disposable database after first copying it to `component-intelligence-disposable-before-rule-fixtures.db`:
+
+- `RULE-CABLE-ASSEMBLY-004`: Trunk carrying an index -> editor blocked Save with `錯誤：主幹不能帶有分支編號。`
+- `RULE-CABLE-ASSEMBLY-007`: the same CableInstance listed twice -> editor blocked Save with `錯誤：同一線段不能在同一複合線中重複加入。`
+- `RULE-CABLE-ASSEMBLY-006`: an assembly member referenced missing stable ID `missing-cable-fixture`; member double-click failed closed in the UI with `無法開啟複合線` and `找不到 CableInstance 'missing-cable-fixture'。`
+
+No invalid fixture was saved through the product UI, and no invalid data reached production SQLite.
+
+## 5. Persisted valid state
+
+Readback of `cp2e2-ui-smoke-014` after the final valid Save:
 
 ```text
-connections: 4
+CableAssembly construction: Custom
+members:
+  smoke-cable-2: Branch 1
+  smoke-cable-3: Branch 3
+  smoke-cable-1: Branch 4
 cables: 3
-assemblies: 0
-ordinary smoke-wire-ordinary:
-  kind: Wire
-  cableInstanceId: null
+connections: 4
+topologyRoutes: 4
+lengths/provenance:
+  smoke-cable-1: 1250 mm / Imported
+  smoke-cable-2: 900 mm / Mechanical
+  smoke-cable-3: 1750 mm / User
+generated member sub-tags: 0
 ```
 
-No composite Cable Assembly had been saved by the incomplete UI smoke.
+## 6. Fresh final verification
 
-The candidate `ComponentIntelligence.Desktop.exe` process was closed normally using its main-window close path and reached terminal state.
-
-Production SQLite was re-hashed **after candidate close** and remained exactly:
+Focused CP2-E2 gate:
 
 ```text
-size: 47,542,272 bytes
-sha256: 4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41
-size match: true
-sha256 match: true
+dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~CableAssembly|FullyQualifiedName~TopologyInteraction"
+PASS: 65 passed, 0 failed, 0 skipped
 ```
 
-AutoCAD/accoreconsole process count at safe stop: `0`.
+Relevant Electrical regression:
 
-Therefore the protected production SQLite identity is unchanged across this partial smoke session.
+```text
+dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj -c Release --no-build --filter "FullyQualifiedName~Electrical"
+PASS: 517 passed, 0 failed, 0 skipped
+```
 
-## 6. Remaining mandatory UI acceptance — transfer to Codex / Product Owner
+Full runnable tests:
 
-Resume from the earliest unproven item; do not repeat completed steps blindly.
+```text
+dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj -c Release --no-build
+PASS: 706 passed, 0 failed, 0 skipped
+```
 
-Still required:
+Desktop Release build:
 
-- select the second explicit Cable route;
-- select 2+ explicit Cable Segments and invoke `建立複合線` through the real UI;
-- exercise explicit construction editing, including Unknown and Purchased/Custom behavior required by the handoff;
-- verify Branch 1 + Branch 3 -> next Branch suggestion = 4;
-- verify non-contiguous Branch numbering persists through Save/reload;
-- edit segment length in metres and reopen with `User` provenance while untouched Imported/Mechanical provenance remains unchanged;
-- add/remove member and prove CableInstance, connection and topology geometry remain;
-- Cancel isolation;
-- structural-error failed-Save isolation;
-- real UI blocking and Chinese-first messages for required `RULE-CABLE-ASSEMBLY-001..007` cases (minimum safe fixture/actions, no fabricated PASS);
-- Save -> reload -> double-click a member -> reopen the same assembly;
-- verify non-assembly double-click still opens Inline Connection Editor;
-- Layout/Cabinet real UI smoke;
-- verify no generated member sub-tags;
-- close candidate normally;
-- production SQLite post-run size/SHA-256 must still equal the authoritative identity above.
+```text
+dotnet build src/ComponentIntelligence.Desktop/ComponentIntelligence.Desktop.csproj -c Release --no-restore
+PASS: 0 errors, 22 existing warnings
+```
 
-No AutoCAD execution is authorized.
+`git diff --check`: PASS.
 
-## 7. Work remaining after UI acceptance
+## 7. Scope and disposition
 
-After the transferred UI smoke is completed, the next executor must run fresh final verification required by the authoritative task:
+No AutoCAD execution, WDP/DWG/DWT/library mutation, production SQLite mutation, workbook mutation, or cloud write occurred. No Product Owner drawing policy was inferred.
 
-- focused CP2-E2 tests;
-- relevant Electrical regressions;
-- full runnable test project;
-- Desktop Release/required build;
-- `git diff --check`;
-- protected production asset checks.
+Disposition: `COMPLETE`
 
-Then update this handoff with exact fresh commands/counts, commit evidence, push this same required branch, and create/maintain the single Draft PR targeting:
-
-`codex/cp2e2-ui-runtime-isolation-20260902`
-
-Worker completion remains distinct from PM acceptance. PR creation is not merge authorization.
-
-## 8. Current disposition
-
-`PARTIAL`
-
-Reason: implementation exists and substantial automated/real-UI evidence is preserved, but the mandatory real Windows UI smoke remains incomplete and is intentionally returned to PM for execution by Codex or the Product Owner.
+Worker completion is not PM acceptance. Draft PR #21 remains `OPEN / DRAFT / UNMERGED` for PM/Product Owner review.

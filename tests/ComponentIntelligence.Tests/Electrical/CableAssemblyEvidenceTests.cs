@@ -1,5 +1,6 @@
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Persistence;
+using ComponentIntelligence.Repository;
 
 namespace ComponentIntelligence.Tests.Electrical;
 
@@ -110,9 +111,118 @@ public sealed class CableAssemblyEvidenceTests
         Assert.Equal(expectedLegacy, assembly.IsCustom);
     }
 
+    [Fact]
+    public async Task AssemblyEvidence_RoundTripsThroughTemporarySqlite_WithoutRenumberingBranches()
+    {
+        var path = TemporaryDatabasePath();
+        try
+        {
+            var repository = new ElectricalProjectRepository(new SqliteConnectionFactory(), path);
+            var project = Project("0.4");
+            project.Cables.AddRange(
+            [
+                Cable("cable-trunk"),
+                Cable("cable-branch-1"),
+                Cable("cable-branch-3")
+            ]);
+            project.CableAssemblies.Add(new CableAssembly
+            {
+                CableAssemblyId = "assembly-208",
+                ReferenceDesignator = "208CBL",
+                CableConstructionType = CableConstructionType.Custom,
+                Members =
+                {
+                    new CableAssemblyMember
+                    {
+                        CableInstanceId = "cable-trunk",
+                        SegmentRoleType = CableAssemblySegmentRoleType.Trunk
+                    },
+                    new CableAssemblyMember
+                    {
+                        CableInstanceId = "cable-branch-1",
+                        SegmentRoleType = CableAssemblySegmentRoleType.Branch,
+                        SegmentRoleIndex = 1
+                    },
+                    new CableAssemblyMember
+                    {
+                        CableInstanceId = "cable-branch-3",
+                        SegmentRoleType = CableAssemblySegmentRoleType.Branch,
+                        SegmentRoleIndex = 3
+                    }
+                }
+            });
+
+            await repository.SaveAsync(project);
+            var loaded = await repository.GetAsync(project.ProjectId);
+
+            Assert.NotNull(loaded);
+            Assert.Equal("0.4", loaded!.SchemaVersion);
+            var assembly = Assert.Single(loaded.CableAssemblies);
+            Assert.Equal(CableConstructionType.Custom, assembly.CableConstructionType);
+            Assert.True(assembly.IsCustom);
+            Assert.Equal(CableAssemblySegmentRoleType.Trunk, assembly.Members.Single(member => member.CableInstanceId == "cable-trunk").SegmentRoleType);
+            Assert.Equal(
+                [1, 3],
+                assembly.Members
+                    .Where(member => member.SegmentRoleType == CableAssemblySegmentRoleType.Branch)
+                    .OrderBy(member => member.SegmentRoleIndex)
+                    .Select(member => member.SegmentRoleIndex));
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(CableConstructionType.Purchased)]
+    [InlineData(CableConstructionType.Unknown)]
+    public async Task AssemblyConstruction_RoundTripsWithoutInferringCustom(CableConstructionType constructionType)
+    {
+        var path = TemporaryDatabasePath();
+        try
+        {
+            var repository = new ElectricalProjectRepository(new SqliteConnectionFactory(), path);
+            var project = Project("0.4");
+            project.CableAssemblies.Add(new CableAssembly
+            {
+                CableAssemblyId = "assembly-1",
+                CableConstructionType = constructionType,
+                IsCustom = true
+            });
+
+            await repository.SaveAsync(project);
+            var loaded = await repository.GetAsync(project.ProjectId);
+
+            Assert.NotNull(loaded);
+            var assembly = Assert.Single(loaded!.CableAssemblies);
+            Assert.Equal(constructionType, assembly.CableConstructionType);
+            Assert.False(assembly.IsCustom);
+        }
+        finally
+        {
+            DeleteDatabase(path);
+        }
+    }
+
     private static ElectricalProject Project(string schemaVersion) => new()
     {
         SchemaVersion = schemaVersion,
         ProjectId = $"project-{schemaVersion}"
     };
+
+    private static CableInstance Cable(string cableInstanceId) => new()
+    {
+        CableInstanceId = cableInstanceId,
+        CableDefinitionId = $"definition:{cableInstanceId}"
+    };
+
+    private static string TemporaryDatabasePath() =>
+        Path.Combine(Path.GetTempPath(), $"component-intelligence-cp2e1-{Guid.NewGuid():N}.db");
+
+    private static void DeleteDatabase(string path)
+    {
+        foreach (var candidate in new[] { path, path + "-wal", path + "-shm" })
+            if (File.Exists(candidate)) File.Delete(candidate);
+    }
 }

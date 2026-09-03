@@ -19,7 +19,7 @@ public sealed class DrawingPlanPersistenceAndRevisionTests
     }
 
     [Fact]
-    public void PresentationEdit_PreservesRouteEngineeringIdentity()
+    public void PresentationEdit_PreservesRouteEngineeringAndPageIdentity()
     {
         var plan = DrawingPlanJson.Rehash(new DrawingPlanDocument
         {
@@ -27,11 +27,11 @@ public sealed class DrawingPlanPersistenceAndRevisionTests
             Pages = [new DrawingPlanPage { PageId="PAGE-1", Archetype="FieldDevices", Order=0, OrderState=DrawingPlanControlState.Auto, Bounds=new DrawingBounds(0,0,1000,700), GroupIds=["G1"] }],
             Groups = [new DrawingPlanGroup { GroupId="G1", PageId="PAGE-1", State=DrawingPlanControlState.Auto, Bounds=new DrawingBounds(0,0,900,600), RepresentationIds=["REP-A","REP-B"] }],
             Placements = [new DrawingPlacement { RepresentationId="REP-A",PageId="PAGE-1",GroupId="G1",State=DrawingPlanControlState.Auto,X=10,Y=10,Width=100,Height=50,RotationDegrees=0,AllowedRotations=[0,90] }],
-            Routes = [new DrawingRoute { RouteId="R1",ConnectionId="CONN-1",EndpointAId="EA",EndpointBId="EB",State=DrawingPlanControlState.Auto,Points=[new DrawingPoint(0,0),new DrawingPoint(100,0)] }]
+            Routes = [new DrawingRoute { RouteId="R1",PageId="PAGE-1",ConnectionId="CONN-1",EndpointAId="EA",EndpointBId="EB",State=DrawingPlanControlState.Auto,Points=[new DrawingPoint(0,0),new DrawingPoint(100,0)] }]
         });
         var changed = new DrawingPlanEditService().MoveRouteSegment(plan, "R1", 0, 10);
         var route = Assert.Single(changed.Routes);
-        Assert.Equal(("CONN-1","EA","EB"), (route.ConnectionId, route.EndpointAId, route.EndpointBId));
+        Assert.Equal(("CONN-1","EA","EB","PAGE-1"), (route.ConnectionId, route.EndpointAId, route.EndpointBId, route.PageId));
         Assert.Equal(DrawingPlanControlState.Manual, route.State);
     }
 

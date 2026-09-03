@@ -1,0 +1,9 @@
+  正在判斷要還原的專案...
+  所有專案都在最新狀態，可進行還原。
+  Cp3cHarness -> <TASK_TEMP>\harness\bin\Release\net8.0\Cp3cHarness.dll
+
+建置成功。
+    0 個警告
+    0 個錯誤
+
+經過時間 00:00:00.89

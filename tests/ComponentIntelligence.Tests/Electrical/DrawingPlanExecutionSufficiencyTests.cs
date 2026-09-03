@@ -42,7 +42,8 @@ public sealed class DrawingPlanExecutionSufficiencyTests
 
         var json = DrawingPlanJson.Serialize(plan);
         var roundTrip = DrawingPlanJson.Deserialize(json);
-        Assert.Equal("PAGE-A", roundTrip.Routes[0].PageId);
+        Assert.Equal("PAGE-A", Assert.Single(roundTrip.Routes, route => route.RouteId == "ROUTE:C1:SOURCE").PageId);
+        Assert.Equal("PAGE-B", Assert.Single(roundTrip.Routes, route => route.RouteId == "ROUTE:C1:DESTINATION").PageId);
         var relation = Assert.Single(roundTrip.CrossPageRelations);
         Assert.Equal("PAGE-A", relation.SourcePageId);
         Assert.Equal("PAGE-B", relation.DestinationPageId);
@@ -50,7 +51,9 @@ public sealed class DrawingPlanExecutionSufficiencyTests
         Assert.Equal("ROUTE:C1:DESTINATION", relation.DestinationRouteId);
 
         using var document = JsonDocument.Parse(json);
-        Assert.Equal("PAGE-A", document.RootElement.GetProperty("routes")[0].GetProperty("pageId").GetString());
+        var sourceRoute = Assert.Single(document.RootElement.GetProperty("routes").EnumerateArray(),
+            route => route.GetProperty("routeId").GetString() == "ROUTE:C1:SOURCE");
+        Assert.Equal("PAGE-A", sourceRoute.GetProperty("pageId").GetString());
     }
 
     [Fact]

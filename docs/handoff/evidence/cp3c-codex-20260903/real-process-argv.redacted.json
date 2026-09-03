@@ -1,0 +1,14 @@
+{
+  "executable": "<PYTHON_ENV>\\Scripts\\python.exe",
+  "workingDirectory": "<LOCAL_USER>\\Documents\\Autocad\u81EA\u52D5\u756B\u5716\\.work\\worktrees\\cp3c-autocad-technical-verification-20260903",
+  "arguments": [
+    "<LOCAL_USER>\\Documents\\Autocad\u81EA\u52D5\u756B\u5716\\.work\\worktrees\\cp3c-autocad-technical-verification-20260903\\tools\\electrical_cp3c_executor.py",
+    "execute",
+    "--drawing-ir",
+    "<LOCAL_USER>\\AppData\\Local\\Temp\\cp3c-component-exec-b26374a218984228a2449486fe98cbac\\drawing-ir.json",
+    "--runtime-config",
+    "<LOCAL_USER>\\AppData\\Local\\Temp\\cp3c-component-exec-b26374a218984228a2449486fe98cbac\\runtime.json",
+    "--output-result",
+    "<LOCAL_USER>\\AppData\\Local\\Temp\\cp3c-component-exec-b26374a218984228a2449486fe98cbac\\execution-result.json"
+  ]
+}

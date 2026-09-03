@@ -1,0 +1,1913 @@
+[
+  {
+    "localRelativePath": "logs/auto-diff-final.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "logs/auto-diff-final.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/backend-bytes-red.txt",
+    "rawSize": 1102,
+    "rawSha256": "B82B01BDBE0DADC2F3F589A57DCE6B0BD54DB9151F526EB1069096A2B94EB1A4",
+    "publishedFile": "logs/backend-bytes-red.txt",
+    "publishedSha256": "BFA0F05F5884DCB88C92206BAD6FB86F4D65048C86D22B0092295BCD931EB26F",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/backend-runtime.txt",
+    "rawSize": 19062,
+    "rawSha256": "F754D03FA43C03BCEFA2AFD4BBBC91345D477EDA9200288B09896D5A3CC3B61A",
+    "publishedFile": "logs/backend-runtime.txt",
+    "publishedSha256": "CFD58D7BFA451C143A1B162CD83C52A75522818F4C8EFFA2F18EBFED7430D40C",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/component-diff-final.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "logs/component-diff-final.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/component-diff-initial.txt",
+    "rawSize": 345,
+    "rawSha256": "1CE68ABE6783FEFD9C55040E8BD8BA7490C027F12A225DBDBD4572F93C96AEAD",
+    "publishedFile": "logs/component-diff-initial.txt",
+    "publishedSha256": "DEB69E61CD74190CCE0E52806106072C52640D3E57727F8C243A079315C7C988",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/desktop-final.txt",
+    "rawSize": 26350,
+    "rawSha256": "F07419F700E982969C30A8947644A3B83215B58921FFC3419A8798F88EE57D8A",
+    "publishedFile": "logs/desktop-final.txt",
+    "publishedSha256": "1A23892346B038B2FECE4E7CE4B955246CA143B83347AD13D69420FB149CC395",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/desktop-initial.txt",
+    "rawSize": 17187,
+    "rawSha256": "45027252BF00AD1033574D5A8E0DAEA1DB78919999C32134196C54AFD4F4779E",
+    "publishedFile": "logs/desktop-initial.txt",
+    "publishedSha256": "F4D39A2AD6F031F03D94955C1AD71ECE50D3293ABA561BCAC277855A5BAEAF9D",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/desktop-repair1.txt",
+    "rawSize": 25482,
+    "rawSha256": "14CFF20DD1C5938410879B4FACF9DFE964C75B66AFADA1E0CAFDE01BBB4B0E3F",
+    "publishedFile": "logs/desktop-repair1.txt",
+    "publishedSha256": "9E21F3DC258076C0A617453676701C696A95B47630FEFCFB7EA32E6AEC810DF2",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/dotnet-drawing-final.txt",
+    "rawSize": 1071,
+    "rawSha256": "968B7684EE4E1186F066F46A76D06687DF251A16F7A2ABE118CDCE5B82A1B16F",
+    "publishedFile": "logs/dotnet-drawing-final.txt",
+    "publishedSha256": "417FB05733B356180AD0A16087EF7EA4C6F96648A07D59EFAE4CB193540161CC",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/dotnet-focused-final.txt",
+    "rawSize": 7460,
+    "rawSha256": "FCE55F40458871B4EA790D201810BA3E972F7D8A400221982B5B4FB6E7F68712",
+    "publishedFile": "logs/dotnet-focused-final.txt",
+    "publishedSha256": "AEADA9720A15EBA808FB5A7DC316C1461597EC2B2B53BABD2ED0AD295611350A",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/dotnet-focused-initial.txt",
+    "rawSize": 9361,
+    "rawSha256": "4E5DD63CF010EA63D7011BCB941171FCC90E2D9B67EDE612C6F771473F6D5334",
+    "publishedFile": "logs/dotnet-focused-initial.txt",
+    "publishedSha256": "04ECFE22A70106CF3F74E1856D6E3F06C315584D6650027C6C3EC0F9A2CA51CD",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/dotnet-full-final.txt",
+    "rawSize": 1068,
+    "rawSha256": "004AAE6494D4ABE43A1F4DDEB13DA87C3102DBF3A16C31D8436C7ABF9E224E7D",
+    "publishedFile": "logs/dotnet-full-final.txt",
+    "publishedSha256": "2A01F96C661A3FD211296F532E4B3EBA22ECC55DB53EADD8AC35025A836A3904",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/dotnet-full-initial.txt",
+    "rawSize": 1068,
+    "rawSha256": "004AAE6494D4ABE43A1F4DDEB13DA87C3102DBF3A16C31D8436C7ABF9E224E7D",
+    "publishedFile": "logs/dotnet-full-initial.txt",
+    "publishedSha256": "2A01F96C661A3FD211296F532E4B3EBA22ECC55DB53EADD8AC35025A836A3904",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/dotnet-repair1.txt",
+    "rawSize": 7459,
+    "rawSha256": "626652E4E0EBD49348220D0A29EC8253D3FB6B339E3DE44746980CD6D37421C7",
+    "publishedFile": "logs/dotnet-repair1.txt",
+    "publishedSha256": "2F866466378FEAD9144CB699F94D04A8E78AE7ACB0B59EF60AE3936B4E4379F5",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/event-null-green.txt",
+    "rawSize": 1844,
+    "rawSha256": "0947FA11060EC4077430B0A06C90B9889F9C3CF5FF3C44563795C9849ADEAD53",
+    "publishedFile": "logs/event-null-green.txt",
+    "publishedSha256": "E363D076390F1B1E00B329AC83B88E2F39AB359777FA1A59F927112C180B1E6D",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/event-null-red.txt",
+    "rawSize": 802,
+    "rawSha256": "33E74E84DACC12214E2CCADF775EED5AD2BCF543E7775E7045507F4E6AA28712",
+    "publishedFile": "logs/event-null-red.txt",
+    "publishedSha256": "F79F53BA1CD75B2E821ECD3D0FF25D6CE06B72CD332EF4B6EC685EDBA822FCF2",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/harness-build-final.txt",
+    "rawSize": 290,
+    "rawSha256": "7380B4A61DA335B0E181FC59D0E3E3AE1AA83F8F4D972A81D99341925135F6FA",
+    "publishedFile": "logs/harness-build-final.txt",
+    "publishedSha256": "EE6D03A5A0EA83B32911D204368DC9EF3AC7BD862F5FB1798FABEBA9DEAA097D",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/harness-build.txt",
+    "rawSize": 350,
+    "rawSha256": "712DC79FABC8AC491BA8A3A1BF2FAAED60EADD081B6D6CCF303F0F112BF13196",
+    "publishedFile": "logs/harness-build.txt",
+    "publishedSha256": "818AE069FB1C55DBF887CB09057D1FADFE1667E0B003CC68DEBBB1841C17A9C9",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/host-policy-red.txt",
+    "rawSize": 1321,
+    "rawSha256": "2CE247C84483C39861B5C692DC63157359DCB1B3B77F9CDAA107856507191609",
+    "publishedFile": "logs/host-policy-red.txt",
+    "publishedSha256": "D74F39F18371920240A0D322AEEC0E36555E0D25830AB182E4F54C9BE70A3E23",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/physical-verification.txt",
+    "rawSize": 1331,
+    "rawSha256": "61271A7FA2A16944312A44CB92927BE78BB12EA8802114F11C181998CAAB52F7",
+    "publishedFile": "logs/physical-verification.txt",
+    "publishedSha256": "B0CB6443C1C5EAFBD4B33AB2DCE3B180BA12A33F598FCBEB0FA699A3D0D15309",
+    "publishedRepositories": [
+      "Component",
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-list-repro.txt",
+    "rawSize": 992,
+    "rawSha256": "4825C5DFCAFE0E82E9F9D01D7D1CD2FF3E89D2CEEED25CBC2AE69F6EAE9D07DF",
+    "publishedFile": "logs/powershell-list-repro.txt",
+    "publishedSha256": "8FC5CA173C9D516179789E69D647F860D2B28778E7F5A31B6DA288159EC47631",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-parse-initial.txt",
+    "rawSize": 796,
+    "rawSha256": "5835FAF71D09752906CCAE8912B7D66DFD5A4EB521FF89908F8EDEDFFAAA2058",
+    "publishedFile": "logs/powershell-parse-initial.txt",
+    "publishedSha256": "B0EB1276704CC611FEFC55FBF88B385D430FBF64C2C4EC11D9F9ACBF99AF9171",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-parse-repair1.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "logs/powershell-parse-repair1.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-safety-arrayfix.txt",
+    "rawSize": 11725,
+    "rawSha256": "D5A5E43E0235F325955DA30DB4BAC4D9446EB0BD4701A0E4B1234245E93B64AF",
+    "publishedFile": "logs/powershell-safety-arrayfix.txt",
+    "publishedSha256": "684F2727A62AD44CECD50B2840BAB6BD376292605C1421D2F80080343FF7D368",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-safety-final1.txt",
+    "rawSize": 417,
+    "rawSha256": "23B3840D890117FA1D2D982BE918DB30212B0E5F71B3477A88203EB2CA09ED96",
+    "publishedFile": "logs/powershell-safety-final1.txt",
+    "publishedSha256": "5854B67B19E516001E333C1F2FA029D3867ECEFE30D4B6E395F7F61F155DF857",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-safety-final2.txt",
+    "rawSize": 1209,
+    "rawSha256": "3408E96BB982407EB94C8C2453211072EE93570734680E55C869D099ACF00DFD",
+    "publishedFile": "logs/powershell-safety-final2.txt",
+    "publishedSha256": "41DF48B1D95C7AFFF1CC2668E5751EAD7A51A923E174B063C3E017EE82F5E9B0",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-safety-hashfix.txt",
+    "rawSize": 3721,
+    "rawSha256": "73D886BDEB384A010F4F600CC1558E10873624433B7418DC49BBB5AB4729F9A2",
+    "publishedFile": "logs/powershell-safety-hashfix.txt",
+    "publishedSha256": "AF28E4D7557CCEF70CA91551D5C035795A72138F3FDC07DCFBEFFB40FD26F5A0",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-safety-initial.txt",
+    "rawSize": 13556,
+    "rawSha256": "5A75F587A35185B028A40F55205CBE2F13CC2FEC65250BF5D0047036F3DFAA55",
+    "publishedFile": "logs/powershell-safety-initial.txt",
+    "publishedSha256": "902526A0D4A9A9704BB9318961CB5B4259B884B87FD3F15E3034424BB410B5F1",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/powershell-safety-initial2.txt",
+    "rawSize": 12084,
+    "rawSha256": "6656DF2733F048404D15BC860500A79B98A293B9A6089C79F27A680D73941BA5",
+    "publishedFile": "logs/powershell-safety-initial2.txt",
+    "publishedSha256": "B571C4902E1B3AE1BDB2B3988564EA31F5EC3D4ABB46708F78F08BDBD74C500B",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/prephysical-repair-tests.txt",
+    "rawSize": 2265,
+    "rawSha256": "07435209DEC309D550A1CAF40C534203F52BA37DD1393ACE71D8618D84F8AB69",
+    "publishedFile": "logs/prephysical-repair-tests.txt",
+    "publishedSha256": "E00013419DCD7BC3EBE693169CD036757052DB521AF43F9E6402AACD0B0F0E2B",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/process-handle-green.txt",
+    "rawSize": 1089,
+    "rawSha256": "8F84512AA909274BB086876E726E85FD9C22391684F0353FF7194833575E8C28",
+    "publishedFile": "logs/process-handle-green.txt",
+    "publishedSha256": "EBA14D309284570C67509050615831C9C788D2080F0301D2B493799AD31D8B9F",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/process-handle-proof.txt",
+    "rawSize": 8,
+    "rawSha256": "38FCD4D19A1EFA0D47DDBC7FCC91CD94C75E7BF8BAE149D8B0E254A8C92F5D6C",
+    "publishedFile": "logs/process-handle-proof.txt",
+    "publishedSha256": "F712BA5E980E8A87D0E4C0829690501ADDD2BF7F2E45D8DA9860F4C4C3946354",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/process-wait-green.txt",
+    "rawSize": 1403,
+    "rawSha256": "DB95362B0F4DB7866B5C362357146560D783F77CE8098C3E92083DA2C4A1E013",
+    "publishedFile": "logs/process-wait-green.txt",
+    "publishedSha256": "2C843FC87CD47BF505F8A07E0A492EFB8255B973DA0406AB2E2E775E93C2327E",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/process-wait-red.txt",
+    "rawSize": 22421,
+    "rawSha256": "763A9C4D6561D443F037AC0D82D84E9E470DF84D2E6938D8D1FE2C06E7E20E18",
+    "publishedFile": "logs/process-wait-red.txt",
+    "publishedSha256": "C4635DAFEBF20496B875F2E8245122D89F3F6871484A2317F71B45EC6805CDA6",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-cp3c_executor_fixtures.txt",
+    "rawSize": 481,
+    "rawSha256": "F51730E3E5070FE284316AD13E5FA56CBCAD0889CC4F3287C0F283085FBE9CD0",
+    "publishedFile": "logs/python-final-cp3c_executor_fixtures.txt",
+    "publishedSha256": "84329FF904B31FBA81DE07D2B9C65277A3B8247B7AEA18977BB471425462660A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-cp3c_powershell_contract.txt",
+    "rawSize": 1089,
+    "rawSha256": "8F84512AA909274BB086876E726E85FD9C22391684F0353FF7194833575E8C28",
+    "publishedFile": "logs/python-final-cp3c_powershell_contract.txt",
+    "publishedSha256": "EBA14D309284570C67509050615831C9C788D2080F0301D2B493799AD31D8B9F",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-cp3c_powershell_runtime.txt",
+    "rawSize": 577,
+    "rawSha256": "4A6D00D76C893B4868AB1ABF42E3354ED464EF38FC5ABB1D680EAA8E6E7E55B0",
+    "publishedFile": "logs/python-final-cp3c_powershell_runtime.txt",
+    "publishedSha256": "280F2374A0A332AE8591A7F3C8A6E78456E3EEB46F85E53FEAC25A0C087FD881",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_cp3c_execution_package.txt",
+    "rawSize": 642,
+    "rawSha256": "35D9507D2AB5E01837E8E3C7E0E50C40DD1CAE0D5D4F03BFBA20AA773122088C",
+    "publishedFile": "logs/python-final-electrical_cp3c_execution_package.txt",
+    "publishedSha256": "9EA8154207AEEA6394405D76C847990707296146BAA722D8DC84E13C95F56ADB",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_cp3c_execution_result.txt",
+    "rawSize": 765,
+    "rawSha256": "30DF9E72EBEB32E3B7A31AC45106B2FEF2863D21D52BEEF3CB6D616D78BD6B04",
+    "publishedFile": "logs/python-final-electrical_cp3c_execution_result.txt",
+    "publishedSha256": "698AF8EF5BA0C7180030DE01AB4C0D4DF59FB434B1F29DD512061ED322F92E64",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_cp3c_executor.txt",
+    "rawSize": 1369,
+    "rawSha256": "26843B6D02DD4F84C42570CC6B510ED6F65569E8F01F6333AF46BE368AC6F5BC",
+    "publishedFile": "logs/python-final-electrical_cp3c_executor.txt",
+    "publishedSha256": "043AC2957C30E894A3E0445338CF34E027F5E0CCE86A18C5DF0EBA8CE7621BBA",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_drawing_ir_v2.txt",
+    "rawSize": 2084,
+    "rawSha256": "A26C25A740B89E54A5EE7901EBCF80F706AF1E03644AC3373A82A101596DEF93",
+    "publishedFile": "logs/python-final-electrical_drawing_ir_v2.txt",
+    "publishedSha256": "EBFC1CBD04DBCF4934D6D43286FB4210FDF3BE6554A4F073D3968CBF316E0B21",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_drawing_pipeline.txt",
+    "rawSize": 1275,
+    "rawSha256": "23E011585287F01A3B60B6DE08CDCACD6F02DF14B3F8E5ADBE79940B5A57FAA7",
+    "publishedFile": "logs/python-final-electrical_drawing_pipeline.txt",
+    "publishedSha256": "8D0B1DE908B1E692EB427AE69F61CE6E2C12054B3C20D1550CFB4021FA6F32BB",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_drawing_plan.txt",
+    "rawSize": 2422,
+    "rawSha256": "16519625AB333DCEC7C0F394EED9B5E06F31E9DCF27BC64733D7E0B3123829E7",
+    "publishedFile": "logs/python-final-electrical_drawing_plan.txt",
+    "publishedSha256": "15C07553863F2BD633A70EB16EF7EAA181F715D94CB7C45FF13A6FBDDC48CC23",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_drawing_planning_input.txt",
+    "rawSize": 1346,
+    "rawSha256": "26AFB6200CAEC22A405250EBEE57078726F1E5C3CED41EF8118623C0646D94F9",
+    "publishedFile": "logs/python-final-electrical_drawing_planning_input.txt",
+    "publishedSha256": "497E72E98BF9792997B4CD017CD3B8E2F7687C437D3434D4131958B01C4E7F00",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_executor_command_plan_v2.txt",
+    "rawSize": 891,
+    "rawSha256": "9C69B9F45D91337DC093F68ED79AF53D16649CDE19C5AB97B39BD25ABA01CF89",
+    "publishedFile": "logs/python-final-electrical_executor_command_plan_v2.txt",
+    "publishedSha256": "64D66FF86943390A935631C4452477055330A2452256EB7B538CFCF179E01A1F",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-final-electrical_page_planner.txt",
+    "rawSize": 1486,
+    "rawSha256": "C6BA8B2CCED3C65E79E8D8AD921BFC1E56D7CA97C918D1932B153CE6D23BF5FC",
+    "publishedFile": "logs/python-final-electrical_page_planner.txt",
+    "publishedSha256": "CFF9BFB96C36C4C03749F712F7020AE503A4EB52760D668BAAD947EFD79C22FA",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-full-final.txt",
+    "rawSize": 2347,
+    "rawSha256": "0966875BABFA3132BD7E5A4DBA5609FFD04D82CFC266668CD0CBEF1E493DA939",
+    "publishedFile": "logs/python-full-final.txt",
+    "publishedSha256": "EFA3D5993BEDF9EC02F9EB661C8FA5A58410602EA7C246D9539EDCBD81FD41B0",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-full-initial.txt",
+    "rawSize": 2340,
+    "rawSha256": "66F94D504B84AC10285E1B8D940B280346927EDFD4CC9708A62C6C196B4583DB",
+    "publishedFile": "logs/python-full-initial.txt",
+    "publishedSha256": "77DB035D5E781EDF7E2909EA1C1806914217CCD573385E761987F2B905440171",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-cp3c_executor_fixtures.txt",
+    "rawSize": 481,
+    "rawSha256": "AD7EB0ED22391463185D45B48C69E3723DA85ABB8C0D692E0C8A38A7F7400092",
+    "publishedFile": "logs/python-initial-cp3c_executor_fixtures.txt",
+    "publishedSha256": "FAA10F2C6789C65FA30C9A5A4FCDD6B01345FFF177284DD43D40A128A3F78F1A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-cp3c_powershell_contract.txt",
+    "rawSize": 6451,
+    "rawSha256": "86A3901E9C721B43389EEED557BE9B73E729DAC900585FA02FF4F292A61930C8",
+    "publishedFile": "logs/python-initial-cp3c_powershell_contract.txt",
+    "publishedSha256": "67B6DE0ACAB620D53609CB9DF6281DAE7AE10A7DBD6BCC738FF567509064DC68",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_cp3c_execution_package.txt",
+    "rawSize": 1807,
+    "rawSha256": "4B1E2A302C7B9AA61425D9D67D561D55F84905856D4325B2DABE89906243330D",
+    "publishedFile": "logs/python-initial-electrical_cp3c_execution_package.txt",
+    "publishedSha256": "8345A3E229C9DD23619891583134B41D273890910842B7A4D426287AC16C582F",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_cp3c_execution_result.txt",
+    "rawSize": 6682,
+    "rawSha256": "924AB7430E55E349F06AB366C4578E9B361F40E0D368B287584EF61292B100EF",
+    "publishedFile": "logs/python-initial-electrical_cp3c_execution_result.txt",
+    "publishedSha256": "94ECDEF775F2298DB31E090EDE605CC5AF73DA030A9EBEA9DC1D93AE7DAEAB26",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_cp3c_executor.txt",
+    "rawSize": 6603,
+    "rawSha256": "3BFC0C3794389933A5ADD050CCCF7EDB6F9AEF199DE9F2ACE76D29C6E79FBFA4",
+    "publishedFile": "logs/python-initial-electrical_cp3c_executor.txt",
+    "publishedSha256": "AFABCCF67A2A52A8F7BDE5CBD21F274C0FD6997D13C89AC62C3120F87B076D18",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_drawing_ir_v2.txt",
+    "rawSize": 2084,
+    "rawSha256": "A26C25A740B89E54A5EE7901EBCF80F706AF1E03644AC3373A82A101596DEF93",
+    "publishedFile": "logs/python-initial-electrical_drawing_ir_v2.txt",
+    "publishedSha256": "EBFC1CBD04DBCF4934D6D43286FB4210FDF3BE6554A4F073D3968CBF316E0B21",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_drawing_pipeline.txt",
+    "rawSize": 1275,
+    "rawSha256": "FEAF7FAFE2F3A3DCAE4E7932F96C8531BA75EF747E5A9054E7164C6FFC89F7C3",
+    "publishedFile": "logs/python-initial-electrical_drawing_pipeline.txt",
+    "publishedSha256": "48388737E752E5BDB8894404A8CC833C3D72C5C3ABE7EC7C1CAE243558D8B9C0",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_drawing_plan.txt",
+    "rawSize": 2422,
+    "rawSha256": "16519625AB333DCEC7C0F394EED9B5E06F31E9DCF27BC64733D7E0B3123829E7",
+    "publishedFile": "logs/python-initial-electrical_drawing_plan.txt",
+    "publishedSha256": "15C07553863F2BD633A70EB16EF7EAA181F715D94CB7C45FF13A6FBDDC48CC23",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_drawing_planning_input.txt",
+    "rawSize": 1346,
+    "rawSha256": "26AFB6200CAEC22A405250EBEE57078726F1E5C3CED41EF8118623C0646D94F9",
+    "publishedFile": "logs/python-initial-electrical_drawing_planning_input.txt",
+    "publishedSha256": "497E72E98BF9792997B4CD017CD3B8E2F7687C437D3434D4131958B01C4E7F00",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_executor_command_plan_v2.txt",
+    "rawSize": 891,
+    "rawSha256": "CCAA48A12F448007D6B3F13780CF97260B2FFEA85A1689E92F0ECAE1380068A0",
+    "publishedFile": "logs/python-initial-electrical_executor_command_plan_v2.txt",
+    "publishedSha256": "3E7625AD16E9319B3368BB3E6FEAD0A92F21387B6457CC3A6201FE8D74EE9527",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-initial-electrical_page_planner.txt",
+    "rawSize": 1486,
+    "rawSha256": "C6BA8B2CCED3C65E79E8D8AD921BFC1E56D7CA97C918D1932B153CE6D23BF5FC",
+    "publishedFile": "logs/python-initial-electrical_page_planner.txt",
+    "publishedSha256": "CFF9BFB96C36C4C03749F712F7020AE503A4EB52760D668BAAD947EFD79C22FA",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-repair1.txt",
+    "rawSize": 5041,
+    "rawSha256": "6569AD9D6B36E38E571FF1B133AD55D406C7C2CBE8878B2391C1627B9214D72A",
+    "publishedFile": "logs/python-repair1.txt",
+    "publishedSha256": "8A6B49BB4472D83689E3F9F74B265D8F3420B85171B8932D8B953DF4A9DA0FA4",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/python-repair2.txt",
+    "rawSize": 2944,
+    "rawSha256": "CD073C96E8FF68AF679D5606B382EBE2F236774318AAA30FBD5FA4E2746DB29A",
+    "publishedFile": "logs/python-repair2.txt",
+    "publishedSha256": "F9595D16BCF86E6A4FAE7CC508AFD1055C1663C8B4810818E115E0E2D76C17CE",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/runtime-evidence-lifetime-red.txt",
+    "rawSize": 22535,
+    "rawSha256": "7A3D7ED9C089C2F577BA2B8B3FBA569E4E4360D52AF0DF6C96C7C628686BA414",
+    "publishedFile": "logs/runtime-evidence-lifetime-red.txt",
+    "publishedSha256": "558CB5DA359001AD89B095B204CD1B6C1EE51C360F69FA7C4F26AB161EBC1DD6",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/synthetic-final.txt",
+    "rawSize": 461,
+    "rawSha256": "89BA515F1047E06129143424C469429800ABA20BB8CAF7800362D094E0ECF32A",
+    "publishedFile": "logs/synthetic-final.txt",
+    "publishedSha256": "0C45345170F1E4DECF71BC5C5BCC1D2D15BACA409689FC91663B64F9D6E39B89",
+    "publishedRepositories": [
+      "Component",
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/synthetic.txt",
+    "rawSize": 1103,
+    "rawSha256": "8632DBFB8EBB3218FC0BFFEB43F669D48463247AF3DF16DAB72EA1BA92643457",
+    "publishedFile": "logs/synthetic.txt",
+    "publishedSha256": "9E3D0EE9F797E08E2A04EE4BE7064B92D5FAC7B54BB4C6A8857160566747D451",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/unicode-backend-green.txt",
+    "rawSize": 1683,
+    "rawSha256": "20BB5B710ED004FB884EB7379E5063830185BEF7F28C61AAE203A31E4C9164C6",
+    "publishedFile": "logs/unicode-backend-green.txt",
+    "publishedSha256": "9E47772A72A3FEBC162BE61448A7D978512BC6B4B5C8F1487D9B9449863E9BD4",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "logs/unicode-preflight-red.txt",
+    "rawSize": 2343,
+    "rawSha256": "04749D016018EF266948C7EB3DE520D9EF9AC739EBBDCF754DC2EE3D2F3C3E94",
+    "publishedFile": "logs/unicode-preflight-red.txt",
+    "publishedSha256": "3C04C61044BE6E24E26354C2BB651C6C3C980038987B553257729D6BDC0F6941",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/drawing-ir.json",
+    "rawSize": 1968,
+    "rawSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedFile": "attempt1/drawing-ir.json",
+    "publishedSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/electrical-execution-result.v1.json",
+    "rawSize": 766,
+    "rawSha256": "EB8C1838F442363AC72B3E5BC6643BD5A2DB3FB9B2C43D4493ECFA1A2352C5E3",
+    "publishedFile": "attempt1/electrical-execution-result.v1.json",
+    "publishedSha256": "740AA87BDE17B24FB50B2BBA0BE81F91923A92D54A2040B997A1E9295A85B3C6",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/harness.stderr.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt1/harness.stderr.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/harness.stdout.txt",
+    "rawSize": 635,
+    "rawSha256": "5E3EB4B70AA9A838FF7C4F29CC012A2196461AAA3465428E49F4FEACEC59402B",
+    "publishedFile": "attempt1/harness.stdout.txt",
+    "publishedSha256": "32508EC1F693FDBBDFE6FC4FC373AF4319733961AA508FF919CC63D45E0AF3FA",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/loaded-assembly.json",
+    "rawSize": 216,
+    "rawSha256": "E43BB599224A29F5A59327FE1651C9AAA5C93978F4E3D865796C18345651AA6B",
+    "publishedFile": "attempt1/loaded-assembly.json",
+    "publishedSha256": "E0320A279EBA1E545750F02C9787627B0884912CFC70C440226C6E65389D8202",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/process-observations.json",
+    "rawSize": 4132,
+    "rawSha256": "A73452966F6948C094A1FA9F46E2E5307371FA43565985A838BFF6A151B3BF7F",
+    "publishedFile": "attempt1/process-observations.json",
+    "publishedSha256": "24CFB4F3D0C2A1629C7326A6CC9E2B64B48B64C47D0258305FD7130FBB2DC653",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/process-result.json",
+    "rawSize": 954,
+    "rawSha256": "32F8423DC22AC19E973B5A0017102990258C15613E2BCD6DA2C21255444BBCB9",
+    "publishedFile": "attempt1/process-result.json",
+    "publishedSha256": "F67EDE5038494B339A413A31EF1B9A4D5D34546AE202270B179AECCAC772D558",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/python-stderr.txt",
+    "rawSize": 769,
+    "rawSha256": "752C1AEF3F81D25A884904AC71FA6E89C18E6E3DDE74B2B5EB37A7B72410C614",
+    "publishedFile": "attempt1/python-stderr.txt",
+    "publishedSha256": "1FF39FEA8FC7A850A6533EE5519024D97737234F3DF8328DA4CBD684C2249FF8",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/python-stdout.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt1/python-stdout.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/real-process-argv.json",
+    "rawSize": 899,
+    "rawSha256": "2E62658ABC216DD75C27578E2A6420A93AC0E3486C39F2F3344D78F4268692B2",
+    "publishedFile": "attempt1/real-process-argv.json",
+    "publishedSha256": "4F39022EF20C67081C7123BB716F0AE1B048D6EED1E1B44C186DC37934AC52D9",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/runtime.json",
+    "rawSize": 903,
+    "rawSha256": "2192CA46393EA5B4983DC309FE2423A0945F68F60E228CAFA0CD8C99EC3B9F1C",
+    "publishedFile": "attempt1/runtime.json",
+    "publishedSha256": "E259F042238DAA4C0A0575C7DD1126D8ED6DD5F4A188922B18EA73272C17291A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt1/typed-result.json",
+    "rawSize": 1679,
+    "rawSha256": "99B5807CC7FFF34AD96AFB68438D91ED77AAFF8229A6DABB8E11033572911A18",
+    "publishedFile": "attempt1/typed-result.json",
+    "publishedSha256": "89BB872AE6661034CD7D26163192F2FC41DED3683AA6B8F74CD7E86978E503DA",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/drawing-ir.json",
+    "rawSize": 1968,
+    "rawSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedFile": "attempt2/drawing-ir.json",
+    "publishedSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/electrical-execution-result.v1.json",
+    "rawSize": 804,
+    "rawSha256": "7E71011F0CE1E15B919704748FA7320DB0B7B30D995D4DB7004ECEC873C1D463",
+    "publishedFile": "attempt2/electrical-execution-result.v1.json",
+    "publishedSha256": "187A2A1960EF88AD0E9C0A629889117A1EE299910AAD50F8E0B0FD7553ED9522",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/execution-result.powershell.stderr.bin",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedForm": "LOCAL_RAW_BINARY_DIAGNOSTIC_ONLY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/execution-result.powershell.stdout.bin",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedForm": "LOCAL_RAW_BINARY_DIAGNOSTIC_ONLY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/harness.stderr.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt2/harness.stderr.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/harness.stdout.txt",
+    "rawSize": 673,
+    "rawSha256": "7F803EEA6714623B0E49E3940EB37450CF654E8C8543F7854E83113D8B5343E3",
+    "publishedFile": "attempt2/harness.stdout.txt",
+    "publishedSha256": "DAC30E41EEA2E93899E4C3089B19F02FCD5CCE313FEF45B727B33C7F988C47FB",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/loaded-assembly.json",
+    "rawSize": 216,
+    "rawSha256": "C1136232A88F113E950500D279D0BAD827F51A98C957E0A46FAC17C87D612F17",
+    "publishedFile": "attempt2/loaded-assembly.json",
+    "publishedSha256": "3F7F2D9D04370DDEAC6DE67DFE4F5FC3B044C3DF6862D0AE76B7B82AE83ACC00",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/process-observations.json",
+    "rawSize": 582942,
+    "rawSha256": "F860BD3878D69424A721DD136DE8C195E20F17D82FCD881D48C7F30BE66CAFD1",
+    "publishedFile": "attempt2/process-observations.json",
+    "publishedSha256": "08990636793BBC148A8A4A8133C8A7A809F9DD6AD14DCC31FD7312722608D300",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/process-result.json",
+    "rawSize": 70,
+    "rawSha256": "AB93735F20DD63C68B7E8C488127B876842CE949379E99AEBFEAA782711AC0AA",
+    "publishedFile": "attempt2/process-result.json",
+    "publishedSha256": "72D2B527A24E35A20694E603ECAC0AB6B01BCF446100FB5DB00BB8D76E319865",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/python-stderr.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt2/python-stderr.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/python-stdout.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt2/python-stdout.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/real-process-argv.json",
+    "rawSize": 899,
+    "rawSha256": "DAC8823990833592C93F671C1A0EE8B0887D6D4CA5B6FB4940FB408E7782CF9A",
+    "publishedFile": "attempt2/real-process-argv.json",
+    "publishedSha256": "A5AF6FF0596482D5CEC70FD6AA15A4776CDA29B1F41F96331089E4E111003A77",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/runtime.json",
+    "rawSize": 903,
+    "rawSha256": "2192CA46393EA5B4983DC309FE2423A0945F68F60E228CAFA0CD8C99EC3B9F1C",
+    "publishedFile": "attempt2/runtime.json",
+    "publishedSha256": "E259F042238DAA4C0A0575C7DD1126D8ED6DD5F4A188922B18EA73272C17291A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/typed-result.json",
+    "rawSize": 1755,
+    "rawSha256": "2E531C3BF3D80B0879C126C68206D97D783320210349D84CF5C11683C3BB4562",
+    "publishedFile": "attempt2/typed-result.json",
+    "publishedSha256": "140155839298FAD08FF8B0C3B427DA9848AFC4D24973F1EB0EB5F8E0FC08A949",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt2/wait-stall.json",
+    "rawSize": 760,
+    "rawSha256": "3571A3D454D1B5F2FCDD240FD43FC9D5B095D253A43BADD7084F4663E655097F",
+    "publishedFile": "attempt2/wait-stall.json",
+    "publishedSha256": "15819774800D717CC8D79A6EEDF88EE679062A7D9F0DFE68EFC560333FB749D0",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/drawing-ir.json",
+    "rawSize": 1968,
+    "rawSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedFile": "attempt3/drawing-ir.json",
+    "publishedSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/electrical-execution-result.v1.json",
+    "rawSize": 795,
+    "rawSha256": "49FA1FBA86A21E624386C429D78A656B1286533203AE66CFB1A4E4E99FE889A0",
+    "publishedFile": "attempt3/electrical-execution-result.v1.json",
+    "publishedSha256": "5F29F80250D6D94C3ED89C57C01E16727AF7E24159F1466107DCBC4019C88675",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/execution-result.powershell.stderr.bin",
+    "rawSize": 575,
+    "rawSha256": "3D2576A70E9234A9A9D91DCF5037B5475D075B711787D8527E610ECB99F48603",
+    "publishedForm": "LOCAL_RAW_BINARY_DIAGNOSTIC_ONLY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/execution-result.powershell.stdout.bin",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedForm": "LOCAL_RAW_BINARY_DIAGNOSTIC_ONLY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/harness.stderr.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt3/harness.stderr.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/harness.stdout.txt",
+    "rawSize": 664,
+    "rawSha256": "482C5B121F6E4B3617F743C7ECEADE0E6111FFB07C9FFE038A347EFEC762CFE3",
+    "publishedFile": "attempt3/harness.stdout.txt",
+    "publishedSha256": "2AE31CB0FBF32472D85F26AEDA93B0654E3E61C03A25DBD8FE06EAA562A78CFC",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/loaded-assembly.json",
+    "rawSize": 216,
+    "rawSha256": "C1136232A88F113E950500D279D0BAD827F51A98C957E0A46FAC17C87D612F17",
+    "publishedFile": "attempt3/loaded-assembly.json",
+    "publishedSha256": "3F7F2D9D04370DDEAC6DE67DFE4F5FC3B044C3DF6862D0AE76B7B82AE83ACC00",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/process-observations.json",
+    "rawSize": 29605,
+    "rawSha256": "08BBFC3E74DE1A578F199E912216A211337C7FB2B26A20F517D3418084481D61",
+    "publishedFile": "attempt3/process-observations.json",
+    "publishedSha256": "266F8F18298C4E02E898D1D0E9B188647A534E3701C239FE9D38ED03F851A702",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/process-result.json",
+    "rawSize": 70,
+    "rawSha256": "AB93735F20DD63C68B7E8C488127B876842CE949379E99AEBFEAA782711AC0AA",
+    "publishedFile": "attempt3/process-result.json",
+    "publishedSha256": "72D2B527A24E35A20694E603ECAC0AB6B01BCF446100FB5DB00BB8D76E319865",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/python-stderr.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt3/python-stderr.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/python-stdout.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt3/python-stdout.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/real-process-argv.json",
+    "rawSize": 899,
+    "rawSha256": "720C2BAC8CC7C823C203751CF79CB046B08AF820867D1D188ADD58B4B314F11D",
+    "publishedFile": "attempt3/real-process-argv.json",
+    "publishedSha256": "39F62B1E412EC4AAA1420303F61C1A6B5D85BE703D84D2EE16B58D9D15EEF707",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/runtime.json",
+    "rawSize": 903,
+    "rawSha256": "2192CA46393EA5B4983DC309FE2423A0945F68F60E228CAFA0CD8C99EC3B9F1C",
+    "publishedFile": "attempt3/runtime.json",
+    "publishedSha256": "E259F042238DAA4C0A0575C7DD1126D8ED6DD5F4A188922B18EA73272C17291A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt3/typed-result.json",
+    "rawSize": 1737,
+    "rawSha256": "DB0C85F3B5D2D4AF62E1345D381A16ADF4B72CCF61E7FE039138C30012332D92",
+    "publishedFile": "attempt3/typed-result.json",
+    "publishedSha256": "538B668AEBD63C368344600CEA5ACD3CF81FDB49A0CB1B958E222EEEB776DB03",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/drawing-ir.json",
+    "rawSize": 1968,
+    "rawSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedFile": "attempt4/drawing-ir.json",
+    "publishedSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/electrical-execution-result.v1.json",
+    "rawSize": 2,
+    "rawSha256": "44136FA355B3678A1146AD16F7E8649E94FB4FC21FE77E8310C060F61CAAFF8A",
+    "publishedFile": "attempt4/electrical-execution-result.v1.json",
+    "publishedSha256": "CA3D163BAB055381827226140568F3BEF7EAAC187CEBD76878E0B63E9E442356",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/execution-result.powershell.stderr.bin",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedForm": "LOCAL_RAW_BINARY_DIAGNOSTIC_ONLY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/execution-result.powershell.stdout.bin",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedForm": "LOCAL_RAW_BINARY_DIAGNOSTIC_ONLY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/harness.stderr.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt4/harness.stderr.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/harness.stdout.txt",
+    "rawSize": 511,
+    "rawSha256": "E2DB3C18BF81CBC0F18F48DDAEADAE4F8FB6EA9A3F5830934ADF5852FE72EB2B",
+    "publishedFile": "attempt4/harness.stdout.txt",
+    "publishedSha256": "1002247B911B811DADE56920BF7171A1342D58357C54BF5BC77F0A22A9CABAB6",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/loaded-assembly.json",
+    "rawSize": 216,
+    "rawSha256": "C1136232A88F113E950500D279D0BAD827F51A98C957E0A46FAC17C87D612F17",
+    "publishedFile": "attempt4/loaded-assembly.json",
+    "publishedSha256": "3F7F2D9D04370DDEAC6DE67DFE4F5FC3B044C3DF6862D0AE76B7B82AE83ACC00",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/process-observations.json",
+    "rawSize": 49773,
+    "rawSha256": "3882A527C6927BF43BE4D92732D10C0F05C58F7F3098CB0DB679BE18C56CB276",
+    "publishedFile": "attempt4/process-observations.json",
+    "publishedSha256": "3BA25BF6AFF6F37AE233B8FC78B6821B4F4373FE26A9231469FD758FDD9506FE",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/process-result.json",
+    "rawSize": 137,
+    "rawSha256": "225663FE1A27FD5EED7B8DCDBAF5C3233B288F9256701EF3928B100D9C356C88",
+    "publishedFile": "attempt4/process-result.json",
+    "publishedSha256": "054D27612D223C84383A3F808409196C0BBF9A74735DF85076817424658137D7",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/python-stderr.txt",
+    "rawSize": 65,
+    "rawSha256": "7F3224964DE3E78E1E13F2BD961BE0F15CEC8B48E176967869BB93154FF27250",
+    "publishedFile": "attempt4/python-stderr.txt",
+    "publishedSha256": "FD1D95DAD80309DC2EA877984944A4492EAE50A43C8FAC7BFCEEBD1622BF3EDA",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/python-stdout.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt4/python-stdout.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/real-process-argv.json",
+    "rawSize": 899,
+    "rawSha256": "BE3047C756EE78F0C5CFF59AB7C7F7F790BD39499ABDDF1DA0446430DE2E1661",
+    "publishedFile": "attempt4/real-process-argv.json",
+    "publishedSha256": "3688E8DBD60F97A14141843973512DD48986C8D934FCC94C0FE19FB4A2F6B0F1",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/runtime.json",
+    "rawSize": 903,
+    "rawSha256": "2192CA46393EA5B4983DC309FE2423A0945F68F60E228CAFA0CD8C99EC3B9F1C",
+    "publishedFile": "attempt4/runtime.json",
+    "publishedSha256": "E259F042238DAA4C0A0575C7DD1126D8ED6DD5F4A188922B18EA73272C17291A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt4/typed-result.json",
+    "rawSize": 522,
+    "rawSha256": "9F5E97C589E05F5A414CB8133A8DE7B46183496A3F879C1098A266A65B40F39D",
+    "publishedFile": "attempt4/typed-result.json",
+    "publishedSha256": "AD2259CB7FD868C1F391C1397DD53FB722C14247DC1536210277C9C1FDB31CD1",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/001_FieldDevices_PAGE-MANUAL-B.console-decoded.txt",
+    "rawSize": 1605,
+    "rawSha256": "E037B0E4E9DF51112EADE9DF17DD1067FABA607B7AD8044D1D98EFBE63B42D87",
+    "publishedFile": "attempt5/001_FieldDevices_PAGE-MANUAL-B.console-decoded.txt",
+    "publishedSha256": "3BF147D61C05BF8148706CA28401AE6544047BC0DA2AAD479A07FBC526DF50CC",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/002_Power_PAGE-MANUAL-A.console-decoded.txt",
+    "rawSize": 1421,
+    "rawSha256": "E6534132E39A4322D0EAAE0E77676A656C5A3AEC1BF6ADA8E2DF8B5C184B0551",
+    "publishedFile": "attempt5/002_Power_PAGE-MANUAL-A.console-decoded.txt",
+    "publishedSha256": "05E8603AB09C89725C16DD296268A30C3E229B333F9E2B5253A5EBD5FD63838B",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/drawing-ir.json",
+    "rawSize": 1968,
+    "rawSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedFile": "attempt5/drawing-ir.json",
+    "publishedSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/electrical-execution-result.v1.json",
+    "rawSize": 3709,
+    "rawSha256": "D9D94DFF3DE3332237AE560FAD8C99E67988DC9EA9870F0EE0FAA897132D006F",
+    "publishedFile": "attempt5/electrical-execution-result.v1.json",
+    "publishedSha256": "9C5EC850A595D18A8877BA654BC5B35D6D34BEE30A687AA6D9D1F21E46EC132B",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/execution-result.powershell.result.json",
+    "rawSize": 3709,
+    "rawSha256": "17659BA58D7920163FD08C51EFF1E669ECDA5DDEB04A052A1E3353401B6D9A87",
+    "publishedFile": "attempt5/execution-result.powershell.result.json",
+    "publishedSha256": "B408CFEDBBF92C84F3C201D0321EC9997B6CFF575019244A2AC011A6D0656737",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/execution-result.powershell.stderr.bin",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedForm": "LOCAL_RAW_BINARY_DIAGNOSTIC_ONLY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/execution-result.powershell.stdout.bin",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedForm": "LOCAL_RAW_BINARY_DIAGNOSTIC_ONLY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/harness.stderr.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt5/harness.stderr.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/harness.stdout.txt",
+    "rawSize": 795,
+    "rawSha256": "7865246BAEB8AF1A6A7F006FCB7075588750E06F571CBC13A12AB14523F1B206",
+    "publishedFile": "attempt5/harness.stdout.txt",
+    "publishedSha256": "45C30953B842EAC42403032C6DE366A2FC568B447479FACA50808BDC46A544BB",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/loaded-assembly.json",
+    "rawSize": 216,
+    "rawSha256": "C1136232A88F113E950500D279D0BAD827F51A98C957E0A46FAC17C87D612F17",
+    "publishedFile": "attempt5/loaded-assembly.json",
+    "publishedSha256": "3F7F2D9D04370DDEAC6DE67DFE4F5FC3B044C3DF6862D0AE76B7B82AE83ACC00",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/process-observations.json",
+    "rawSize": 51521,
+    "rawSha256": "5277A6E43A5AF7AA688D6D2805E90FD5AC0FD0B110B714AC29415EAF8677820D",
+    "publishedFile": "attempt5/process-observations.json",
+    "publishedSha256": "7C1615CEFF7D51F587503ABB85487F6E869AE8BBC6DF4357436B67A683031631",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/process-result.json",
+    "rawSize": 70,
+    "rawSha256": "7F6DF7CFBD11F7E5E7825F2701D3CECAD69848AF9625734E4A95C912E3D55E54",
+    "publishedFile": "attempt5/process-result.json",
+    "publishedSha256": "E18C00F2B08CE75D97F0E891047BF38236F1DFF7CC3EA87C0A2245AF65472359",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/python-stderr.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt5/python-stderr.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/python-stdout.txt",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt5/python-stdout.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/real-process-argv.json",
+    "rawSize": 899,
+    "rawSha256": "B7D287F3864B15EDD748497505A797CB044E9D212AEA5DDD93833D19FFABFCA8",
+    "publishedFile": "attempt5/real-process-argv.json",
+    "publishedSha256": "9AA7625FB5F95D263A3A6B922215D64EB6AFA138F663D9396A03A4FFD1A03C8D",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/runtime.json",
+    "rawSize": 903,
+    "rawSha256": "2192CA46393EA5B4983DC309FE2423A0945F68F60E228CAFA0CD8C99EC3B9F1C",
+    "publishedFile": "attempt5/runtime.json",
+    "publishedSha256": "E259F042238DAA4C0A0575C7DD1126D8ED6DD5F4A188922B18EA73272C17291A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/typed-result.json",
+    "rawSize": 6271,
+    "rawSha256": "A53B5ECD286CC0703536D3B03BA2F8A2FD5C209B01B5CC265EAC3D8CC9189A1A",
+    "publishedFile": "attempt5/typed-result.json",
+    "publishedSha256": "D2F2B10B1E2B24CAED9480EA9D9B7FA8561704B583C5217607A99C1ADE7F7041",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/execution-package.json",
+    "rawSize": 5877,
+    "rawSha256": "468F6D625ABDF445C085AA3BACF0EE748193FD33F5E9E4CDDAC7CBAFC4A647AB",
+    "publishedFile": "attempt5/execution-package.redacted.json",
+    "publishedSha256": "64420F11E6A9CC27C4CAE8D9504363B043BF817D5A19B39D82397CDF0614CC0C",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/001_FieldDevices_PAGE-MANUAL-B/accore.stderr.log",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt5/runtime/001_FieldDevices_PAGE-MANUAL-B/accore.stderr.log.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/001_FieldDevices_PAGE-MANUAL-B/accore.stdout.log",
+    "rawSize": 2808,
+    "rawSha256": "C0069F7E3E6694A5EA86B0E47B27CA6531C5D8344C61A7490F3E432EC93228C3",
+    "publishedFile": "attempt5/runtime/001_FieldDevices_PAGE-MANUAL-B/accore.stdout.log.txt",
+    "publishedSha256": "A4D2D39AC7E5823653176B2229B398398015F114C56220754F9AFFDD53FD5C6A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/001_FieldDevices_PAGE-MANUAL-B/apply.scr",
+    "rawSize": 667,
+    "rawSha256": "A831F3C2647DA8A405E7F16BEE04729A6143B9BEA26C1A242910D3051141AA2E",
+    "publishedFile": "attempt5/runtime/001_FieldDevices_PAGE-MANUAL-B/apply.scr",
+    "publishedSha256": "5E351FEE9317F95D9B5924FA31FB954A30438048977C3530D283013BD5A9F2A5",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/001_FieldDevices_PAGE-MANUAL-B/process-exit-code.txt",
+    "rawSize": 1,
+    "rawSha256": "5FECEB66FFC86F38D952786C6D696C79C2DBC239DD4E91B46729D73A27FB57E9",
+    "publishedFile": "attempt5/runtime/001_FieldDevices_PAGE-MANUAL-B/process-exit-code.txt",
+    "publishedSha256": "9A271F2A916B0B6EE6CECB2426F0B3206EF074578BE55D9BC94F6F3FE3AB86AA",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/001_FieldDevices_PAGE-MANUAL-B/result.txt",
+    "rawSize": 4,
+    "rawSha256": "19D8C9921B99C82D78C985136A5E28F6382011641FB6160C0C1A7573A402EA66",
+    "publishedFile": "attempt5/runtime/001_FieldDevices_PAGE-MANUAL-B/result.txt",
+    "publishedSha256": "A12B7CB43C9D9134B5BB1B35E9096B66775D9E92E7611D1CC92B02EDD6782A87",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/002_Power_PAGE-MANUAL-A/accore.stderr.log",
+    "rawSize": 0,
+    "rawSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedFile": "attempt5/runtime/002_Power_PAGE-MANUAL-A/accore.stderr.log.txt",
+    "publishedSha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/002_Power_PAGE-MANUAL-A/accore.stdout.log",
+    "rawSize": 2464,
+    "rawSha256": "9EC5AC94CFD3F5B7F69649BC3D90F50B10A6FFE87D5B63EA1E3BA233F2E9D444",
+    "publishedFile": "attempt5/runtime/002_Power_PAGE-MANUAL-A/accore.stdout.log.txt",
+    "publishedSha256": "B57C17C2F16F66FD77A7C68809AA496DC2FE65E5AC27C3CE30C398ABA8B5E489",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/002_Power_PAGE-MANUAL-A/apply.scr",
+    "rawSize": 507,
+    "rawSha256": "5D46B95E67282A00A4136CF96BCFC3F9E9666293764F8D2791F6F4409ADA8610",
+    "publishedFile": "attempt5/runtime/002_Power_PAGE-MANUAL-A/apply.scr",
+    "publishedSha256": "5A86642726BDC48CBE8BD38E41FC505A7C8C5AE0508470E68217E5C92D83368A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/002_Power_PAGE-MANUAL-A/process-exit-code.txt",
+    "rawSize": 1,
+    "rawSha256": "5FECEB66FFC86F38D952786C6D696C79C2DBC239DD4E91B46729D73A27FB57E9",
+    "publishedFile": "attempt5/runtime/002_Power_PAGE-MANUAL-A/process-exit-code.txt",
+    "publishedSha256": "9A271F2A916B0B6EE6CECB2426F0B3206EF074578BE55D9BC94F6F3FE3AB86AA",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/staging/CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2/automation-runtime/002_Power_PAGE-MANUAL-A/result.txt",
+    "rawSize": 4,
+    "rawSha256": "19D8C9921B99C82D78C985136A5E28F6382011641FB6160C0C1A7573A402EA66",
+    "publishedFile": "attempt5/runtime/002_Power_PAGE-MANUAL-A/result.txt",
+    "publishedSha256": "A12B7CB43C9D9134B5BB1B35E9096B66775D9E92E7611D1CC92B02EDD6782A87",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/planning-input.json",
+    "rawSize": 3770,
+    "rawSha256": "3D433050F64E661AB8B8209119285B891F32886D2C1E18AA4B992FFB329D4705",
+    "publishedFile": "synthetic/planning-input.json",
+    "publishedSha256": "3D433050F64E661AB8B8209119285B891F32886D2C1E18AA4B992FFB329D4705",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/page-plan.json",
+    "rawSize": 1858,
+    "rawSha256": "AA2E0B679837D8682A65EA905349CBC4B23C5AA5E1932A3F89FEBA59F0D6461A",
+    "publishedFile": "synthetic/page-plan.json",
+    "publishedSha256": "AA2E0B679837D8682A65EA905349CBC4B23C5AA5E1932A3F89FEBA59F0D6461A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/drawing-plan.json",
+    "rawSize": 2948,
+    "rawSha256": "EB02DF7AB3F913D256B74D38927732864675B8E12DDB1C5E4B771C756B0F46BB",
+    "publishedFile": "synthetic/drawing-plan.json",
+    "publishedSha256": "EB02DF7AB3F913D256B74D38927732864675B8E12DDB1C5E4B771C756B0F46BB",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/compiled-ir.json",
+    "rawSize": 4004,
+    "rawSha256": "A6C0D87018125175C3B54F9D8A1E60376EF4CB3ACF6529E416AB1DED81021023",
+    "publishedFile": "synthetic/compiled-ir.json",
+    "publishedSha256": "A6C0D87018125175C3B54F9D8A1E60376EF4CB3ACF6529E416AB1DED81021023",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/cross-page-plan.json",
+    "rawSize": 3512,
+    "rawSha256": "A1ADA5FF5E0D798E64D29BDADA2B5042ADD35FA674385D5120BDA6998C9D8165",
+    "publishedFile": "synthetic/cross-page-plan.json",
+    "publishedSha256": "A1ADA5FF5E0D798E64D29BDADA2B5042ADD35FA674385D5120BDA6998C9D8165",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/cross-page-ir.json",
+    "rawSize": 4783,
+    "rawSha256": "8750CA4DF5F11095320AD15C08361FB644565A93CC9A68B0766615E7CFF5E214",
+    "publishedFile": "synthetic/cross-page-ir.json",
+    "publishedSha256": "8750CA4DF5F11095320AD15C08361FB644565A93CC9A68B0766615E7CFF5E214",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/manual-plan.json",
+    "rawSize": 3514,
+    "rawSha256": "2BF069AFE00619645AAEA0DEA3541B8B4AAB7F20B34D4A06545A0352F4578C10",
+    "publishedFile": "synthetic/manual-plan.json",
+    "publishedSha256": "2BF069AFE00619645AAEA0DEA3541B8B4AAB7F20B34D4A06545A0352F4578C10",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/manual-ir.json",
+    "rawSize": 4783,
+    "rawSha256": "795693FEA774A3789AB9D6896FCD4798DF46A1408F4576387131DD3501B50584",
+    "publishedFile": "synthetic/manual-ir.json",
+    "publishedSha256": "795693FEA774A3789AB9D6896FCD4798DF46A1408F4576387131DD3501B50584",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/lower-1.json",
+    "rawSize": 1291,
+    "rawSha256": "B34B8B26FA77D693BE0181B095C2D749F58B1F4C278214811858AC711869CC79",
+    "publishedFile": "synthetic/lower-1.json",
+    "publishedSha256": "B34B8B26FA77D693BE0181B095C2D749F58B1F4C278214811858AC711869CC79",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/lower-2.json",
+    "rawSize": 1291,
+    "rawSha256": "B34B8B26FA77D693BE0181B095C2D749F58B1F4C278214811858AC711869CC79",
+    "publishedFile": "synthetic/lower-2.json",
+    "publishedSha256": "B34B8B26FA77D693BE0181B095C2D749F58B1F4C278214811858AC711869CC79",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/dry-package-1.json",
+    "rawSize": 4847,
+    "rawSha256": "3B197473E09C4023C12C42A2844C86261A34D782E42178479AF191DA8876B1E6",
+    "publishedFile": "synthetic/dry-package-1.json",
+    "publishedSha256": "444A2F4CA9E9F83157766C7D48EA2C2765D2FB873E505691C57D02F3F9D8924A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/dry-package-2.json",
+    "rawSize": 4847,
+    "rawSha256": "3B197473E09C4023C12C42A2844C86261A34D782E42178479AF191DA8876B1E6",
+    "publishedFile": "synthetic/dry-package-2.json",
+    "publishedSha256": "444A2F4CA9E9F83157766C7D48EA2C2765D2FB873E505691C57D02F3F9D8924A",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/dry-result-1.json",
+    "rawSize": 803,
+    "rawSha256": "964D87DB1C57B7A8B548F8AAE53601DC3FD6E5DE0DB8447EBA213C7305F0BB5E",
+    "publishedFile": "synthetic/dry-result-1.json",
+    "publishedSha256": "0BE4E62758FD32B1A695A9B7173F6B7550055DB5D9DF3C032CDDB91DD24651B6",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/dry-result-2.json",
+    "rawSize": 803,
+    "rawSha256": "964D87DB1C57B7A8B548F8AAE53601DC3FD6E5DE0DB8447EBA213C7305F0BB5E",
+    "publishedFile": "synthetic/dry-result-2.json",
+    "publishedSha256": "0BE4E62758FD32B1A695A9B7173F6B7550055DB5D9DF3C032CDDB91DD24651B6",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/physical-ir.json",
+    "rawSize": 1968,
+    "rawSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedFile": "synthetic/physical-ir.json",
+    "publishedSha256": "9DACEE04B9993AE066BA1BC5A287479C10A74D0EB5C3D028CC0E1882FFB13AA3",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/physical-plan.json",
+    "rawSize": 2258,
+    "rawSha256": "9B37E9445E7D1F2FC29D0F3D592509DF84EF661A2B419B26D0444BA95A443BA9",
+    "publishedFile": "synthetic/physical-plan.json",
+    "publishedSha256": "9B37E9445E7D1F2FC29D0F3D592509DF84EF661A2B419B26D0444BA95A443BA9",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/synthetic-summary.json",
+    "rawSize": 423,
+    "rawSha256": "D36F1C0C6A3685EA29412F0C026907E7E9044823A6BE63C50FEC423819E27CD1",
+    "publishedFile": "synthetic/synthetic-summary.json",
+    "publishedSha256": "D36F1C0C6A3685EA29412F0C026907E7E9044823A6BE63C50FEC423819E27CD1",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "synthetic/immutable-before.json",
+    "rawSize": 751,
+    "rawSha256": "5764F09E904A3B9D0FE3E366E3B435A30A985893BF0B9A7030A5C09A36372A94",
+    "publishedFile": "synthetic/immutable-before.json",
+    "publishedSha256": "93B819FEA1648063BA66A9651513087DDEED161352F945EB08942FB4CD58B39F",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "prepare-verification.py",
+    "rawSize": 6828,
+    "rawSha256": "6D6E143ACF0329C6589B63F872B39CCE0BE830D8528C0B9A1C1B6039A6A319F2",
+    "publishedFile": "procedures/prepare-verification.py.txt",
+    "publishedSha256": "3003CFF5AAF141EDB55A7165367A57BE6E797B995EBD9DA914689073BED87624",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "verify-physical.py",
+    "rawSize": 3889,
+    "rawSha256": "F44C2E488EAC043DAFB0CE54AA6978838052652F7C9BA21F46B578DA9E50E493",
+    "publishedFile": "procedures/verify-physical.py.txt",
+    "publishedSha256": "F44C2E488EAC043DAFB0CE54AA6978838052652F7C9BA21F46B578DA9E50E493",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "record-final-gates.py",
+    "rawSize": 2340,
+    "rawSha256": "CBD67B41E44CC8C263846C4FACBC4F3587A38C1B6028B0FEB5D20B8F31ECF41B",
+    "publishedFile": "procedures/record-final-gates.py.txt",
+    "publishedSha256": "CBD67B41E44CC8C263846C4FACBC4F3587A38C1B6028B0FEB5D20B8F31ECF41B",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "run-physical.ps1",
+    "rawSize": 1763,
+    "rawSha256": "A4039921BF4413A5E5F954C9D45D5111305966686EDCC91D3603A06FD025939D",
+    "publishedFile": "procedures/run-physical.ps1.txt",
+    "publishedSha256": "B44036C6612CA7FCAEF1329E86D3CDF03EBBBDBA3F9E71BFE09BF22354DF538C",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "snapshot-protected.ps1",
+    "rawSize": 1776,
+    "rawSha256": "952196CC478BF55E73645528511DD171C9636585C56774ACA16186ACA23A7ED2",
+    "publishedFile": "procedures/snapshot-protected.ps1.txt",
+    "publishedSha256": "B1EF679EB71A75FF0F33AFE2E5110488D5D1BBF296D633C267400E6EC6DAC7F7",
+    "publishedRepositories": [
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "harness/Program.cs",
+    "rawSize": 3072,
+    "rawSha256": "DA089E5AB8B8833D0F4D125F20C0426D842E9A0B8B3A841B8B3E5872B543DE6A",
+    "publishedFile": "procedures/Program.cs.txt",
+    "publishedSha256": "DA089E5AB8B8833D0F4D125F20C0426D842E9A0B8B3A841B8B3E5872B543DE6A",
+    "publishedRepositories": [
+      "Component",
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "harness/Cp3cHarness.csproj",
+    "rawSize": 506,
+    "rawSha256": "FF9CBCE5081D14E34C9E8C60483F3C8BA1B48595F7EF31982827B69D74462002",
+    "publishedFile": "procedures/Cp3cHarness.csproj.txt",
+    "publishedSha256": "DB85E60D5DC11535EDAE2F1421E1F03C645C1121C6D01B74BC2C9E897B3CC738",
+    "publishedRepositories": [
+      "Component",
+      "Auto"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/loaded-assembly.json",
+    "rawSize": 216,
+    "rawSha256": "C1136232A88F113E950500D279D0BAD827F51A98C957E0A46FAC17C87D612F17",
+    "publishedFile": "loaded-assembly.redacted.json",
+    "publishedSha256": "3F7F2D9D04370DDEAC6DE67DFE4F5FC3B044C3DF6862D0AE76B7B82AE83ACC00",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/real-process-argv.json",
+    "rawSize": 899,
+    "rawSha256": "B7D287F3864B15EDD748497505A797CB044E9D212AEA5DDD93833D19FFABFCA8",
+    "publishedFile": "real-process-argv.redacted.json",
+    "publishedSha256": "9AA7625FB5F95D263A3A6B922215D64EB6AFA138F663D9396A03A4FFD1A03C8D",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  },
+  {
+    "localRelativePath": "physical-attempt5/typed-result.json",
+    "rawSize": 6271,
+    "rawSha256": "A53B5ECD286CC0703536D3B03BA2F8A2FD5C209B01B5CC265EAC3D8CC9189A1A",
+    "publishedFile": "typed-result.redacted.json",
+    "publishedSha256": "D2F2B10B1E2B24CAED9480EA9D9B7FA8561704B583C5217607A99C1ADE7F7041",
+    "publishedRepositories": [
+      "Component"
+    ],
+    "publishedForm": "PATH_REDACTED_WHITESPACE_NORMALIZED_UTF8_NOT_RAW_HASH_AUTHORITY"
+  }
+]

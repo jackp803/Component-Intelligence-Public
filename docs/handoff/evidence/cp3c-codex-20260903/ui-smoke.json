@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "evidenceKind": "Observed real Windows UI; screenshots retained in task tool history, not fabricated as files",
+  "componentExecutableHead": "2dd4981d38eae163e2c55299bfdce9221f1b130d",
+  "processId": 55680,
+  "database": "<TASK_TEMP>/ui-smoke.db",
+  "byteForByteProductionCopyAtLaunch": true,
+  "databasePathVisiblyCheckedBeforeOurWorkspaceEntry": true,
+  "mainWindowResponsive": true,
+  "electricalWorkspaceOpened": true,
+  "drawingPlanningTabLoaded": true,
+  "generateAutoCadElectricalActionVisible": true,
+  "cp3cRuntimeSettingsLoaded": true,
+  "emptySettingsValidation": "Invalid drawing runtime: Configured Python executable does not exist.; Configured AutoCAD automation root does not exist.",
+  "invalidSettingsSaved": false,
+  "outputClaimed": false,
+  "normalWorkspaceAndMainClose": true,
+  "userInterruption": "Paused when user interacted with candidate; resumed only after user explicitly allowed operation",
+  "productionSqliteUnchanged": true,
+  "functionalExploration": "NOT_RUN / DEFERRED_TO_MVP_PRODUCT_OWNER_EXPLORATION"
+}

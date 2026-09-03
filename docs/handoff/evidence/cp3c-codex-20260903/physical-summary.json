@@ -1,0 +1,40 @@
+{
+  "physical": "PASS",
+  "typedComponentStatus": "Applied",
+  "resultStatus": "APPLIED",
+  "runId": "CP3C-B30EA96C4DB943FCA6B5DCA4FF5C82D2",
+  "sourceDrawingIrHash": "6D7245A3AA9E5648E7DFF14C9B8B8A7BF8D0A497F36CADC14A3395640D5C320E",
+  "sourceExecutorPlanHash": "8DF489769C4130D0064D6EF298383B89D4B309DB231B2089EDE0D34662F7C5B1",
+  "sourcePackageHash": "F12CE7A983B3BD1913100A54D18C49EDDA5AC97B9A03E5459602202B79423824",
+  "executionEvidenceHash": "ED87DF8A62A5F19196DFFF2195BD6B4CE51863E4B29A22FF5BD86AC8374AE45D",
+  "commandCount": 5,
+  "startedEvents": 5,
+  "appliedEvents": 5,
+  "coreConsolePids": [
+    36208,
+    46520
+  ],
+  "pages": [
+    "PAGE-MANUAL-B",
+    "PAGE-MANUAL-A"
+  ],
+  "outputInventory": [
+    {
+      "file": "CP3C-SYNTHETIC.wdp",
+      "size": 114,
+      "sha256": "6B51C40E4A6FCA7BB705C83CE60BDA36673089A11AFBBD73B30674E2407C1ADC"
+    },
+    {
+      "file": "001_FieldDevices_PAGE-MANUAL-B.dwg",
+      "size": 55031,
+      "sha256": "CEE6FC1CCFF615C8E61101B4A1F7430AFF872353269FCF1F34CBC233B87D8212"
+    },
+    {
+      "file": "002_Power_PAGE-MANUAL-A.dwg",
+      "size": 54938,
+      "sha256": "BEDBFA362E63D992E5E01E65E30F10CF37251BBE49123F66145F02790BAA0A70"
+    }
+  ],
+  "immutableInputsUnchanged": true,
+  "semanticVerification": "NOT_RUN_CP3D_OUT_OF_SCOPE"
+}

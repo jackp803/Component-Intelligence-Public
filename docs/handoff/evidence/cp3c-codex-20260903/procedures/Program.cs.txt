@@ -1,0 +1,43 @@
+using System.Text.Json;
+using ComponentIntelligence.Electrical.Drawing;
+var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented=true };
+var raw = File.ReadAllText(args[0]);
+var doc = JsonDocument.Parse(raw).RootElement;
+var ir = new DrawingIrDocument(doc.GetProperty("status").GetString()!, doc.GetProperty("drawingIrHash").GetString(),
+doc.GetProperty("sourcePlanningInputHash").GetString()!,doc.GetProperty("sourcePagePlanHash").GetString()!,
+doc.GetProperty("sourceDrawingPlanHash").GetString()!,[],raw);
+var settings = JsonSerializer.Deserialize<DrawingExecutorRuntimeSettings>(File.ReadAllText(args[1]),options)!;
+var evidence = Path.GetFullPath(args[2]);
+Directory.CreateDirectory(evidence);
+File.WriteAllText(Path.Combine(evidence,"loaded-assembly.json"),JsonSerializer.Serialize(new{
+Path=typeof(LocalDrawingExecutorClient).Assembly.Location,
+Hash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(typeof(LocalDrawingExecutorClient).Assembly.Location)))
+},options));
+var runner = new EvidenceRunner(evidence);
+var client = new LocalDrawingExecutorClient(settings,runner,[args[3]]);
+var result = await client.ExecuteAsync(ir,CancellationToken.None);
+File.WriteAllText(Path.Combine(evidence,"typed-result.json"),JsonSerializer.Serialize(result,options));
+File.WriteAllText(Path.Combine(evidence,"electrical-execution-result.v1.json"),result.RawJson);
+Console.WriteLine(JsonSerializer.Serialize(new{status=result.Status.ToString(),result.StagingRoot,result.ProjectFile,
+result.PageDrawings,result.ExecutionEvidenceHash,result.Issues},options));
+return result.Status == DrawingExecutorStatus.Applied ? 0 : 2;
+
+sealed class EvidenceRunner(string output) : IDrawingProcessRunner {
+ public async Task<DrawingProcessResult> RunAsync(string executable,string workingDirectory,IReadOnlyList<string> arguments,CancellationToken ct) {
+  var opts = new JsonSerializerOptions(JsonSerializerDefaults.Web){WriteIndented=true};
+  File.WriteAllText(Path.Combine(output,"real-process-argv.json"),JsonSerializer.Serialize(new{executable,workingDirectory,arguments},opts));
+  foreach(var flag in new[]{"--drawing-ir","--runtime-config"}) {
+   var path=arguments[Array.IndexOf(arguments.ToArray(),flag)+1];
+   File.Copy(path,Path.Combine(output,Path.GetFileName(path)),false);
+  }
+  // Observe only; delegate all execution to the candidate's real production runner.
+  var result=await new DrawingProcessRunner().RunAsync(executable,workingDirectory,arguments,ct);
+  var resultPath=arguments[Array.IndexOf(arguments.ToArray(),"--output-result")+1];
+  foreach(var diagnostic in Directory.GetFiles(Path.GetDirectoryName(resultPath)!,"*.powershell.*"))
+   File.Copy(diagnostic,Path.Combine(output,Path.GetFileName(diagnostic)),false);
+  File.WriteAllText(Path.Combine(output,"python-stdout.txt"),result.StandardOutput);
+  File.WriteAllText(Path.Combine(output,"python-stderr.txt"),result.StandardError);
+  File.WriteAllText(Path.Combine(output,"process-result.json"),JsonSerializer.Serialize(result,opts));
+  return result;
+ }
+}

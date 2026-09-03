@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "preCount": 3681,
+  "postCount": 3681,
+  "added": 0,
+  "removed": 0,
+  "changedSizeOrSha256": 0,
+  "preManifestRawSha256": "483D69A50E2676967B8E87C31BECD5402D2B39815046ECFFE75828D7EFDF9B33",
+  "postManifestRawSha256": "483D69A50E2676967B8E87C31BECD5402D2B39815046ECFFE75828D7EFDF9B33",
+  "privatePathInventory": "LOCAL_ONLY",
+  "scope": [
+    "Automation main outputs WDP/DWG/DWT",
+    "Desktop semiauto_electrical WDP/DWG/DWT",
+    "Desktop Coolermaster WDP/DWG/DWT",
+    "ACADE_Library all files",
+    "ACADE Symbol Archive all files",
+    "production SQLite",
+    "central workbook",
+    "stock IEC DWT",
+    "accoreconsole.exe"
+  ],
+  "notCovered": "Unrelated Desktop folders, including access-denied GXwork3 test-temp tree; permissions unchanged",
+  "productionSqlite": {
+    "size": 47542272,
+    "sha256": "4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41"
+  }
+}

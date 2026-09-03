@@ -4,7 +4,7 @@ namespace ComponentIntelligence.Electrical.Persistence;
 
 public static class ElectricalProjectMigrator
 {
-    public const string CurrentSchemaVersion = "0.4";
+    public const string CurrentSchemaVersion = "0.5";
 
     public static ElectricalProject Migrate(ElectricalProject project)
     {
@@ -17,102 +17,53 @@ public static class ElectricalProjectMigrator
 
         return project.SchemaVersion switch
         {
-            "0.1" => UpgradeFrom03(UpgradeFrom02(UpgradeFrom01(project))),
-            "0.2" => UpgradeFrom03(UpgradeFrom02(project)),
-            "0.3" => UpgradeFrom03(project),
-            _ => throw new NotSupportedException(
-                $"Electrical project schema '{project.SchemaVersion}' is not supported. Current schema is '{CurrentSchemaVersion}'.")
+            "0.1" => UpgradeFrom04(UpgradeFrom03(UpgradeFrom02(UpgradeFrom01(project)))),
+            "0.2" => UpgradeFrom04(UpgradeFrom03(UpgradeFrom02(project))),
+            "0.3" => UpgradeFrom04(UpgradeFrom03(project)),
+            "0.4" => UpgradeFrom04(project),
+            _ => throw new NotSupportedException($"Electrical project schema '{project.SchemaVersion}' is not supported. Current schema is '{CurrentSchemaVersion}'.")
         };
     }
 
-    private static ElectricalProject UpgradeFrom01(ElectricalProject source)
-    {
-        // v0.2 introduced TopologyPlacements. Existing engineering objects are retained by identity;
-        // an empty placement list simply means the UI can create deterministic visual defaults later.
-        return new ElectricalProject
-        {
-            SchemaVersion = "0.2",
-            ProjectId = source.ProjectId,
-            Name = source.Name,
-            Components = source.Components,
-            Nets = source.Nets,
-            Connections = source.Connections,
-            Buses = source.Buses,
-            Cables = source.Cables,
-            CableAssemblies = source.CableAssemblies,
-            TerminalBlocks = source.TerminalBlocks,
-            LayoutContainers = source.LayoutContainers,
-            DinRails = source.DinRails,
-            CableDucts = source.CableDucts,
-            CableRoutes = source.CableRoutes,
-            EndpointReviews = source.EndpointReviews,
-            TopologyPlacements = source.TopologyPlacements,
-            TopologyRoutes = source.TopologyRoutes,
-            TerminalStripSections = source.TerminalStripSections
-        };
-    }
-
-    private static ElectricalProject UpgradeFrom02(ElectricalProject source)
-    {
-        // v0.3 adds explicit 2.5D mounting-surface/depth facts and authoritative external cable-length
-        // fields. New fields intentionally remain Unknown/null when loading older projects; migration
-        // must not infer mounting faces, component depth or cable length from old 2D geometry/routes.
-        return new ElectricalProject
-        {
-            SchemaVersion = "0.3",
-            ProjectId = source.ProjectId,
-            Name = source.Name,
-            Components = source.Components,
-            Nets = source.Nets,
-            Connections = source.Connections,
-            Buses = source.Buses,
-            Cables = source.Cables,
-            CableAssemblies = source.CableAssemblies,
-            TerminalBlocks = source.TerminalBlocks,
-            LayoutContainers = source.LayoutContainers,
-            DinRails = source.DinRails,
-            CableDucts = source.CableDucts,
-            CableRoutes = source.CableRoutes,
-            EndpointReviews = source.EndpointReviews,
-            TopologyPlacements = source.TopologyPlacements,
-            TopologyRoutes = source.TopologyRoutes,
-            TerminalStripSections = source.TerminalStripSections
-        };
-    }
+    private static ElectricalProject UpgradeFrom01(ElectricalProject source) => Copy(source, "0.2");
+    private static ElectricalProject UpgradeFrom02(ElectricalProject source) => Copy(source, "0.3");
 
     private static ElectricalProject UpgradeFrom03(ElectricalProject source)
     {
         foreach (var assembly in source.CableAssemblies)
-        {
-            assembly.CableConstructionType = assembly.IsCustom
-                ? CableConstructionType.Custom
-                : CableConstructionType.Unknown;
-        }
-
-        var upgraded = new ElectricalProject
-        {
-            SchemaVersion = CurrentSchemaVersion,
-            ProjectId = source.ProjectId,
-            Name = source.Name,
-            Components = source.Components,
-            Nets = source.Nets,
-            Connections = source.Connections,
-            Buses = source.Buses,
-            Cables = source.Cables,
-            CableAssemblies = source.CableAssemblies,
-            TerminalBlocks = source.TerminalBlocks,
-            LayoutContainers = source.LayoutContainers,
-            DinRails = source.DinRails,
-            CableDucts = source.CableDucts,
-            CableRoutes = source.CableRoutes,
-            EndpointReviews = source.EndpointReviews,
-            TopologyPlacements = source.TopologyPlacements,
-            TopologyRoutes = source.TopologyRoutes
-        };
-
-        ProjectLegacyAssemblyCompatibility(upgraded);
-        return upgraded;
+            assembly.CableConstructionType = assembly.IsCustom ? CableConstructionType.Custom : CableConstructionType.Unknown;
+        var upgraded = Copy(source, "0.4"); ProjectLegacyAssemblyCompatibility(upgraded); return upgraded;
     }
+
+    private static ElectricalProject UpgradeFrom04(ElectricalProject source)
+    {
+        // v0.5 adds presentation-only DrawingPlan project state. Older projects receive null;
+        // migration must not infer page ownership, placement, routing, or representation from engineering/display data.
+        var upgraded = Copy(source, CurrentSchemaVersion, drawingPlan: null); ProjectLegacyAssemblyCompatibility(upgraded); return upgraded;
+    }
+
+    private static ElectricalProject Copy(ElectricalProject source, string schemaVersion, ComponentIntelligence.Electrical.Drawing.DrawingPlanDocument? drawingPlan = null) => new()
+    {
+        SchemaVersion = schemaVersion,
+        ProjectId = source.ProjectId,
+        Name = source.Name,
+        DrawingPlan = drawingPlan,
+        Components = source.Components,
+        Nets = source.Nets,
+        Connections = source.Connections,
+        Buses = source.Buses,
+        Cables = source.Cables,
+        CableAssemblies = source.CableAssemblies,
+        TerminalBlocks = source.TerminalBlocks,
+        LayoutContainers = source.LayoutContainers,
+        DinRails = source.DinRails,
+        CableDucts = source.CableDucts,
+        CableRoutes = source.CableRoutes,
+        EndpointReviews = source.EndpointReviews,
+        TopologyPlacements = source.TopologyPlacements,
+        TopologyRoutes = source.TopologyRoutes,
+        TerminalStripSections = source.TerminalStripSections
+    };
 
     private static void ProjectLegacyAssemblyCompatibility(ElectricalProject project)
     {

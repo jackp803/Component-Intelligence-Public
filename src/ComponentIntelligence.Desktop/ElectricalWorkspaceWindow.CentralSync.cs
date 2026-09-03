@@ -53,7 +53,11 @@ public partial class ElectricalWorkspaceWindow
         var result = preview;
         if (preview.UpdatedInstances > 0)
         {
-            if (recordMutation) RecordMutation("Synchronize project components from central archive");
+            if (recordMutation)
+            {
+                await CheckpointMajorImportAsync("Before central archive project synchronization");
+                RecordMutation("Synchronize project components from central archive");
+            }
             result = new CentralArchiveProjectSynchronizer().Synchronize(_project, archive);
         }
 

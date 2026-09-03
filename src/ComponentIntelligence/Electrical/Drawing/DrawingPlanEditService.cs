@@ -114,7 +114,7 @@ public sealed class DrawingPlanEditService
     private static DrawingRoute EnsureEditable(DrawingRoute r) { if (r.State == DrawingPlanControlState.Locked) throw new InvalidOperationException("Locked route cannot be edited."); return r; }
     private static void ValidateOrthogonal(IReadOnlyList<DrawingPoint> points) { for (var i = 1; i < points.Count; i++) if (points[i - 1].X != points[i].X && points[i - 1].Y != points[i].Y) throw new InvalidOperationException("Route geometry must remain orthogonal."); }
 
-    private static DrawingPlacement UpdatePlacement(DrawingPlanDocument plan, string id, Func<DrawingPlacement, DrawingPlacement> update)
+    private static DrawingPlanDocument UpdatePlacement(DrawingPlanDocument plan, string id, Func<DrawingPlacement, DrawingPlacement> update)
     {
         var items = plan.Placements.ToArray(); var index = Array.FindIndex(items, p => p.RepresentationId == id); if (index < 0) throw new InvalidOperationException("Placement not found."); items[index] = update(items[index]); return DrawingPlanJson.Rehash(plan with { Placements = items });
     }

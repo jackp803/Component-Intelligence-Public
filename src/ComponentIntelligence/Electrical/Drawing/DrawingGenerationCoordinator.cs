@@ -48,9 +48,23 @@ public sealed class DrawingGenerationCoordinator
         var ir = await _ir.CompileAsync(input, plan, cancellationToken);
         if (!string.Equals(ir.Status, "READY", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ir.DrawingIrHash))
             return new DrawingGenerationResult { Status = DrawingGenerationStatus.Blocked, DrawingPlan = plan, DrawingIr = ir, Preflight = preflight with { CanProceed = false, Issues = preflight.Issues.Concat(ir.Issues).ToArray() } };
-        // CP3-B intentionally stops here. The interface exists for CP3-C injection, but this checkpoint does not call an executor.
-        _ = _executor;
-        return new DrawingGenerationResult { Status = DrawingGenerationStatus.ReadyForCp3C, DrawingPlan = plan, DrawingIr = ir, Preflight = preflight };
+        if (_executor is null)
+            return new DrawingGenerationResult { Status = DrawingGenerationStatus.ReadyForCp3C, DrawingPlan = plan, DrawingIr = ir, Preflight = preflight };
+
+        DrawingExecutorResult execution;
+        try { execution = await _executor.ExecuteAsync(ir, cancellationToken); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            execution = new DrawingExecutorResult(
+                DrawingExecutorStatus.Failed, null, null, [], null,
+                [DrawingActionableIssue.Runtime("CP3C-EXECUTOR-THREW", "DRAWING_EXECUTOR_UNHANDLED_FAILURE", ex.Message, "ExecutorRuntimeSettings")], "{}");
+        }
+
+        if (execution.Status == DrawingExecutorStatus.Applied && !string.IsNullOrWhiteSpace(execution.ProjectFile) && execution.PageDrawings.Count > 0)
+            return new DrawingGenerationResult { Status = DrawingGenerationStatus.Applied, DrawingPlan = plan, DrawingIr = ir, ExecutorResult = execution, Preflight = preflight };
+
+        var failedPreflight = preflight with { CanProceed = false, Issues = preflight.Issues.Concat(execution.Issues).ToArray() };
+        return new DrawingGenerationResult { Status = DrawingGenerationStatus.ExecutionFailed, DrawingPlan = plan, DrawingIr = ir, ExecutorResult = execution, Preflight = failedPreflight };
     }
 
     private static DrawingPlanDocument EmptyPlan(DrawingPlanningInput input) => DrawingPlanJson.Rehash(new DrawingPlanDocument { ProjectId = input.ProjectId, SourcePlanningInputHash = input.PlanningInputHash ?? new string('0', 64), SourcePagePlanHash = new string('0', 64) });

@@ -9,22 +9,25 @@ public partial class ElectricalWorkspaceWindow
 {
     private ProjectRevisionService? _drawingRevisionService;
 
+    private ProjectRevisionService EnsureDrawingRevisionService() =>
+        _drawingRevisionService ??= new ProjectRevisionService(
+            new ProjectRevisionRepository(new SqliteConnectionFactory(), _databasePath));
+
     private void ConfigureDrawingPlanningWorkspace(DrawingPlanningWorkspaceControl control)
     {
-        var revisionRepository = new ProjectRevisionRepository(new SqliteConnectionFactory(), _databasePath);
-        _drawingRevisionService = new ProjectRevisionService(revisionRepository);
-        var checkpointSink = new ProjectRevisionCheckpointSink(_drawingRevisionService);
+        var revisionService = EnsureDrawingRevisionService();
+        var checkpointSink = new ProjectRevisionCheckpointSink(revisionService);
         var builder = new DrawingPlanningInputBuilder(new RepresentationPolicy(new SafeNoAssetResolver()));
 
         control.ProjectProvider = () => _project;
         control.ProjectReplaced = project => { _project = project; UpdateHistoryButtons(); };
         control.PlanningInputProvider = () => builder.Build(_project);
-        control.CheckpointAsync = async (trigger, label) => _ = await _drawingRevisionService.CreateCheckpointAsync(_project, trigger, label);
+        control.CheckpointAsync = async (trigger, label) => _ = await revisionService.CreateCheckpointAsync(_project, trigger, label);
         control.SaveProjectAsync = async () => await _repository.SaveAsync(_project);
-        control.HistoryItemsAsync = async () => (await _drawingRevisionService.ListAsync(_project.ProjectId)).Select(x => x.RevisionId).ToArray();
+        control.HistoryItemsAsync = async () => (await revisionService.ListAsync(_project.ProjectId)).Select(x => x.RevisionId).ToArray();
         control.RestoreRevisionAsync = async revisionId =>
         {
-            var restored = await _drawingRevisionService.RestoreAsync(_project, revisionId); _project = restored; RefreshAll(); return restored;
+            var restored = await revisionService.RestoreAsync(_project, revisionId); _project = restored; RefreshAll(); return restored;
         };
         control.GenerationCoordinatorFactory = settings => new DrawingGenerationCoordinator(
             project => builder.Build(project),
@@ -38,15 +41,17 @@ public partial class ElectricalWorkspaceWindow
         // TopologyCanvas raises MutationStarting before topology presentation/engineering edits are committed.
         // Persist the durable TopologyChange checkpoint synchronously so the snapshot is truly pre-mutation.
         TopologyCanvas.MutationStarting += (_, _) =>
-            _drawingRevisionService.CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, "Topology mutation").GetAwaiter().GetResult();
+            revisionService.CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, "Topology mutation").GetAwaiter().GetResult();
     }
 
-    // Major import entry points can call this before replacing large project regions. It is deliberately
-    // separate from transient Undo/Redo and uses the same durable whole-project revision repository.
-    internal Task CheckpointMajorImportAsync(string? label = null) =>
-        _drawingRevisionService is null
-            ? Task.CompletedTask
-            : _drawingRevisionService.CreateCheckpointAsync(_project, ProjectRevisionTrigger.MajorImport, label ?? "Major import");
+    // Called by real project-wide import/synchronization entry points before they mutate ElectricalProject.
+    // This lazy initialization prevents a major import from silently skipping revision evidence merely
+    // because the user has not opened the Drawing Planning tab yet.
+    internal async Task CheckpointMajorImportAsync(string? label = null) =>
+        _ = await EnsureDrawingRevisionService().CreateCheckpointAsync(
+            _project,
+            ProjectRevisionTrigger.MajorImport,
+            label ?? "Major import");
 
     private sealed class SafeNoAssetResolver : IDrawingAssetResolver
     {

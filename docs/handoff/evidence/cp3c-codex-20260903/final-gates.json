@@ -1,0 +1,305 @@
+[
+  {
+    "name": "python-final-electrical_drawing_planning_input",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_drawing_planning_input",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_drawing_planning_input.txt",
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-electrical_page_planner",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_page_planner",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_page_planner.txt",
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-electrical_drawing_plan",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_drawing_plan",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_drawing_plan.txt",
+    "passed": 12,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-electrical_drawing_pipeline",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_drawing_pipeline",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_drawing_pipeline.txt",
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-electrical_drawing_ir_v2",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_drawing_ir_v2",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_drawing_ir_v2.txt",
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-electrical_executor_command_plan_v2",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_executor_command_plan_v2",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_executor_command_plan_v2.txt",
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-electrical_cp3c_execution_package",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_cp3c_execution_package",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_cp3c_execution_package.txt",
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-electrical_cp3c_execution_result",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_cp3c_execution_result",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_cp3c_execution_result.txt",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-electrical_cp3c_executor",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_electrical_cp3c_executor",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-electrical_cp3c_executor.txt",
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-cp3c_powershell_contract",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_cp3c_powershell_contract",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-cp3c_powershell_contract.txt",
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-cp3c_executor_fixtures",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_cp3c_executor_fixtures",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-cp3c_executor_fixtures.txt",
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-final-cp3c_powershell_runtime",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "tests.test_cp3c_powershell_runtime",
+      "-v"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-final-cp3c_powershell_runtime.txt",
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "python-full-final",
+    "repository": "Auto",
+    "argv": [
+      "<PYTHON>",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_*.py"
+    ],
+    "exitCode": 0,
+    "log": "logs/python-full-final.txt",
+    "passed": 472,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "name": "dotnet-focused-final",
+    "repository": "Component",
+    "argv": [
+      "dotnet",
+      "test",
+      "tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj",
+      "-c",
+      "Release",
+      "--filter",
+      "FullyQualifiedName~DrawingPlanExecutionSufficiencyTests|FullyQualifiedName~DrawingExecutorClientTests|FullyQualifiedName~DrawingGenerationGateTests|FullyQualifiedName~DrawingPlanPersistenceAndRevisionTests|FullyQualifiedName~DrawingRuntimeSettingsTests|FullyQualifiedName~DrawingPipelineProcessClientTests"
+    ],
+    "exitCode": 0,
+    "log": "logs/dotnet-focused-final.txt",
+    "failed": 0,
+    "passed": 20,
+    "skipped": 0
+  },
+  {
+    "name": "dotnet-drawing-final",
+    "repository": "Component",
+    "argv": [
+      "dotnet",
+      "test",
+      "tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj",
+      "-c",
+      "Release",
+      "--filter",
+      "FullyQualifiedName~Drawing"
+    ],
+    "exitCode": 0,
+    "log": "logs/dotnet-drawing-final.txt",
+    "failed": 0,
+    "passed": 55,
+    "skipped": 0
+  },
+  {
+    "name": "dotnet-full-final",
+    "repository": "Component",
+    "argv": [
+      "dotnet",
+      "test",
+      "tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj",
+      "-c",
+      "Release"
+    ],
+    "exitCode": 0,
+    "log": "logs/dotnet-full-final.txt",
+    "failed": 0,
+    "passed": 771,
+    "skipped": 0
+  },
+  {
+    "name": "desktop-final",
+    "repository": "Component",
+    "argv": [
+      "dotnet",
+      "build",
+      "src/ComponentIntelligence.Desktop/ComponentIntelligence.Desktop.csproj",
+      "-c",
+      "Release",
+      "-t:Rebuild"
+    ],
+    "exitCode": 0,
+    "log": "logs/desktop-final.txt",
+    "warnings": 23,
+    "errors": 0
+  },
+  {
+    "name": "component-diff-final",
+    "repository": "Component",
+    "argv": [
+      "git",
+      "diff",
+      "--check",
+      "56345a248d1b0c44df17aa85cb034353a2cb2f5c..HEAD"
+    ],
+    "exitCode": 0,
+    "log": "logs/component-diff-final.txt"
+  },
+  {
+    "name": "auto-diff-final",
+    "repository": "Auto",
+    "argv": [
+      "git",
+      "diff",
+      "--check",
+      "ad3bab270562ceb23eb126a54554b2410891a180..HEAD"
+    ],
+    "exitCode": 0,
+    "log": "logs/auto-diff-final.txt"
+  }
+]

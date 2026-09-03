@@ -7,6 +7,7 @@ public partial class ElectricalWorkspaceWindow
 {
     private bool _primaryTabsConfigured;
     private CabinetLayoutWorkspaceControl? _cabinetLayoutWorkspace;
+    private DrawingPlanningWorkspaceControl? _drawingPlanningWorkspace;
 
     protected override void OnContentRendered(EventArgs e)
     {
@@ -39,6 +40,11 @@ public partial class ElectricalWorkspaceWindow
 
         topologyTab.Header = "Topology｜電路拓樸";
         layoutTab.Header = "Layout｜實體佈局";
+        var drawingTab = new TabItem { Header = "Drawing Planning｜圖面規劃", Visibility = Visibility.Visible };
+        _drawingPlanningWorkspace = new DrawingPlanningWorkspaceControl();
+        ConfigureDrawingPlanningWorkspace(_drawingPlanningWorkspace);
+        drawingTab.Content = _drawingPlanningWorkspace;
+        tabs.Items.Add(drawingTab);
 
         // The old single-select Layer Combo is superseded by the canvas-level checkbox view filters.
         TopologyLayerCombo.Visibility = Visibility.Collapsed;
@@ -63,9 +69,11 @@ public partial class ElectricalWorkspaceWindow
         {
             if (ReferenceEquals(tabs.SelectedItem, layoutTab))
                 _cabinetLayoutWorkspace.RefreshWorkspace();
+            else if (ReferenceEquals(tabs.SelectedItem, drawingTab))
+                _drawingPlanningWorkspace.LoadPlan(_project.DrawingPlan);
         };
 
         tabs.SelectedItem = topologyTab;
-        WorkspaceStatusText.Text = "Electrical Workspace 已收斂為 Topology（拓樸）與 Layout（實體佈局）；Net / Wiring / Terminal / Validation 等保留在底層 Engine 或操作按鈕。";
+        WorkspaceStatusText.Text = "Electrical Workspace primary flow: Topology（工程拓樸）→ Layout（實體佈局）→ Drawing Planning（圖面規劃）。";
     }
 }

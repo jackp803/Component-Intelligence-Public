@@ -38,8 +38,6 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                 PortBindings = explicitBindings,
                 RequiresExplicitEndpointEvidence = false,
                 PhysicalInterfaceMeaning = false,
-                // No accepted CP3-B authority exists for these project-context fields in v0.4.
-                // They stay null rather than being inferred from TypeKey/display names/geometry.
                 ControllerId = null,
                 PhysicalModuleId = null,
                 FunctionKind = null,
@@ -81,8 +79,6 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
             var first = cableConnections?.FirstOrDefault();
             var endAId = first?.FromEndpointId ?? $"UNRESOLVED:{cable.CableInstanceId}:A";
             var endBId = first?.ToEndpointId ?? $"UNRESOLVED:{cable.CableInstanceId}:B";
-            var endA = BuildEndpoint(project, endAId);
-            var endB = BuildEndpoint(project, endBId);
             var mappings = cable.CoreAssignments
                 .Where(x => !string.IsNullOrWhiteSpace(x.FromEndpointId) || !string.IsNullOrWhiteSpace(x.ToEndpointId))
                 .OrderBy(x => x.CoreId, StringComparer.Ordinal)
@@ -98,8 +94,8 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
             {
                 CableInstanceId = cable.CableInstanceId,
                 ConstructionType = cable.CableConstructionType.ToString(),
-                EndA = endA,
-                EndB = endB,
+                EndA = BuildEndpoint(project, endAId),
+                EndB = BuildEndpoint(project, endBId),
                 PinCoreMappings = mappings,
                 Shield = null,
                 Length = cable.ProvidedLengthMm,
@@ -107,6 +103,49 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                 SourcePhysicalModuleId = null
             };
         }).ToList();
+
+        foreach (var cable in cables)
+        {
+            representations.Add(new DrawingRepresentationDecision
+            {
+                RepresentationId = $"REP:{cable.CableInstanceId}:CableFunctional",
+                OwnerKind = DrawingRepresentationOwnerKind.CableInstance,
+                OwnerId = cable.CableInstanceId,
+                Role = DrawingRepresentationRole.CableFunctional,
+                Family = DrawingRepresentationFamily.CableFunctional,
+                ControlState = DrawingRepresentationControlState.Auto,
+                AllowedRotations = [0],
+                PortBindings = [],
+                PhysicalInterfaceMeaning = false
+            });
+            if (string.Equals(cable.ConstructionType, "Custom", StringComparison.Ordinal))
+            {
+                representations.Add(new DrawingRepresentationDecision
+                {
+                    RepresentationId = $"REP:{cable.CableInstanceId}:CableDetail",
+                    OwnerKind = DrawingRepresentationOwnerKind.CableInstance,
+                    OwnerId = cable.CableInstanceId,
+                    Role = DrawingRepresentationRole.CableDetail,
+                    Family = DrawingRepresentationFamily.CableDetail,
+                    ControlState = DrawingRepresentationControlState.Auto,
+                    AllowedRotations = [0],
+                    PortBindings = [],
+                    PhysicalInterfaceMeaning = false
+                });
+                if (cable.PinCoreMappings.Count == 0)
+                {
+                    issues.Add(new DrawingPlanningIssue
+                    {
+                        IssueId = $"ISSUE:{cable.CableInstanceId}:mapping",
+                        Severity = DrawingPlanningIssueSeverity.Blocker,
+                        Code = "DRAWING_REQUIRED_ENGINEERING_EVIDENCE_MISSING",
+                        Message = "Custom cable detail requires explicit Pin/Core mapping evidence.",
+                        TargetKind = "Cable",
+                        TargetId = cable.CableInstanceId
+                    });
+                }
+            }
+        }
 
         var networks = project.Buses.OrderBy(x => x.BusId, StringComparer.Ordinal).Select(bus => new DrawingNetworkItem
         {
@@ -127,7 +166,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         var input = new DrawingPlanningInput
         {
             ProjectId = project.ProjectId,
-            Representations = representations,
+            Representations = representations.OrderBy(x => x.RepresentationId, StringComparer.Ordinal).ToList(),
             Connections = connections,
             Cables = cables,
             ControllerModules = [],
@@ -146,11 +185,8 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         foreach (var component in project.Components)
         foreach (var port in component.Ports)
         {
-            if (string.Equals(port.PortId, endpointId, StringComparison.Ordinal))
-                return FromPort(endpointId, port);
-            var pin = port.Pins.FirstOrDefault(p => string.Equals(p.PinId, endpointId, StringComparison.Ordinal));
-            if (pin is not null)
-                return FromPort(endpointId, port);
+            if (string.Equals(port.PortId, endpointId, StringComparison.Ordinal)) return FromPort(endpointId, port);
+            if (port.Pins.Any(p => string.Equals(p.PinId, endpointId, StringComparison.Ordinal))) return FromPort(endpointId, port);
         }
         return new DrawingCableEndpoint { EndpointId = endpointId, InterfaceLayoutFamily = DrawingInterfaceLayoutFamily.Other };
     }

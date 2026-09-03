@@ -10,6 +10,7 @@ public sealed class SymbolArchiveRepository
     public const string FileName = "SymbolArchive.json";
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex WindowsDriveRootPattern = new("^[A-Za-z]:/", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private readonly string _archiveRoot;
     private readonly string _path;
     private readonly JsonSerializerOptions _json;
@@ -160,7 +161,8 @@ public sealed class SymbolArchiveRepository
     {
         if (string.IsNullOrWhiteSpace(path)) throw new InvalidDataException("AssetPath is required.");
         var trimmed = path.Trim().Replace('\\', '/');
-        if (Path.IsPathRooted(trimmed) || trimmed.StartsWith("//", StringComparison.Ordinal) ||
+        if (WindowsDriveRootPattern.IsMatch(trimmed) || Path.IsPathRooted(trimmed) || trimmed.StartsWith("/", StringComparison.Ordinal) ||
+            trimmed.StartsWith("//", StringComparison.Ordinal) ||
             trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
             throw new InvalidDataException("AssetPath must be archive-relative and may not escape the archive root.");
         var full = Path.GetFullPath(Path.Combine(_archiveRoot, trimmed.Replace('/', Path.DirectorySeparatorChar)));

@@ -22,6 +22,7 @@ public sealed class BlockArchiveBatchCoordinatorTests : IDisposable
         Assert.Null(row.SelectedRole);
         Assert.Null(row.SelectedSourceType);
         Assert.False(row.UserConfirmed);
+        Assert.DoesNotContain(SymbolSourceType.GeneratedGeneric, row.ImportSourceTypes);
         Assert.Equal("ReviewRequired", row.ReviewStatus);
     }
 
@@ -61,6 +62,24 @@ public sealed class BlockArchiveBatchCoordinatorTests : IDisposable
     }
 
     [Fact]
+    public async Task InvalidEndpointMappingFailsPreflightBeforeAnyWrite()
+    {
+        var sourceRoot = SourceRoot(("MODEL.dwg", "one"));
+        var coordinator = Coordinator([Component("C1", "MFR", "MODEL")]);
+        var row = Assert.Single(await coordinator.ScanAsync(sourceRoot));
+        Configure(row);
+        row.PortBindings =
+        [
+            new SymbolPortBinding { EngineeringEndpointId = "INVENTED", ConnectionPointId = "TERM01" }
+        ];
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => coordinator.ApproveSelectedAsync([row]));
+
+        Assert.False(File.Exists(Path.Combine(_root, SymbolArchiveRepository.FileName)));
+        Assert.False(Directory.Exists(Path.Combine(_root, "Documents")));
+    }
+
+    [Fact]
     public async Task DeepInspectionFailurePreservesBasicCandidateAndDoesNotAssignAuthority()
     {
         var sourceRoot = SourceRoot(("MODEL.dwg", "one"));
@@ -78,6 +97,8 @@ public sealed class BlockArchiveBatchCoordinatorTests : IDisposable
         Assert.Equal(DeepInspectionStatus.Failed, row.Candidate.DeepInspectionStatus);
         Assert.Equal("MODEL.dwg", row.Candidate.FileName);
         Assert.Null(row.SelectedComponentId);
+        Assert.Null(row.SelectedRole);
+        Assert.Null(row.SelectedSourceType);
         Assert.False(row.UserConfirmed);
     }
 

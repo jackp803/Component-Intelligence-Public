@@ -1,5 +1,6 @@
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Drawing;
+using ComponentIntelligence.Electrical.Editing;
 
 namespace ComponentIntelligence.Tests.Electrical;
 

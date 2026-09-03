@@ -17,6 +17,7 @@ public sealed record DrawingPlanDocument
     public IReadOnlyList<DrawingPlacement> Placements { get; init; } = [];
     public IReadOnlyList<DrawingRoute> Routes { get; init; } = [];
     public IReadOnlyList<DrawingCrossPageRelation> CrossPageRelations { get; init; } = [];
+    public IReadOnlyList<DrawingCableDetailTemplate> CableDetailTemplates { get; init; } = [];
     public IReadOnlyList<DrawingPlanIssue> Issues { get; init; } = [];
 }
 
@@ -54,6 +55,7 @@ public sealed record DrawingPlacement
     public long Height { get; init; }
     public int RotationDegrees { get; init; }
     public IReadOnlyList<int> AllowedRotations { get; init; } = [0];
+    public string? CableTemplateId { get; init; }
 }
 
 public sealed record DrawingRoute
@@ -73,6 +75,13 @@ public sealed record DrawingCrossPageRelation
     public required string DestinationRepresentationId { get; init; }
     public required string RelationKind { get; init; }
     public required string EngineeringId { get; init; }
+}
+
+public sealed record DrawingCableDetailTemplate
+{
+    public required string TemplateId { get; init; }
+    public required string EndAInterfaceLayoutFamily { get; init; }
+    public required string EndBInterfaceLayoutFamily { get; init; }
 }
 
 public sealed record DrawingPlanIssue

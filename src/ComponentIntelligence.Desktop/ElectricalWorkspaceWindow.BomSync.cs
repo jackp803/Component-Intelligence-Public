@@ -51,13 +51,14 @@ public partial class ElectricalWorkspaceWindow
                 return local;
             }
 
+            await CheckpointMajorImportAsync("Before working BOM → Topology synchronization");
             var result = await new BomTopologySynchronizer().SynchronizeAsync(
                 targetProject,
                 workingBom,
                 ResolveProcessedKnowledgeAsync);
 
             // Loading a saved project can replace _project while an earlier initial sync is still
-            // resolving Component IR.  Never repaint that newer project with stale sync results;
+            // resolving Component IR. Never repaint that newer project with stale sync results;
             // LoadProject_Click immediately performs a fresh sync against the loaded snapshot.
             if (!ReferenceEquals(targetProject, _project)) return;
 

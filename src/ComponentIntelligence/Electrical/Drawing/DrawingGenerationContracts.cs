@@ -7,7 +7,8 @@ public enum DrawingGenerationTarget { Preview, FullGeneration }
 public enum DrawingActionableSeverity { Info, Warning, Blocker }
 public enum DrawingActionableScope { Global, Page, Object }
 public enum DrawingBlockerClass { Engineering, Drawing, Runtime }
-public enum DrawingGenerationStatus { Blocked, PreviewReady, ReadyForCp3C }
+public enum DrawingGenerationStatus { Blocked, PreviewReady, ReadyForCp3C, Applied, ExecutionFailed }
+public enum DrawingExecutorStatus { Blocked, Failed, Applied }
 
 public sealed record DrawingActionableIssue
 {
@@ -39,6 +40,15 @@ public sealed record DrawingIrDocument(
     IReadOnlyList<DrawingActionableIssue> Issues,
     string RawJson);
 
+public sealed record DrawingExecutorResult(
+    DrawingExecutorStatus Status,
+    string? StagingRoot,
+    string? ProjectFile,
+    IReadOnlyList<string> PageDrawings,
+    string? ExecutionEvidenceHash,
+    IReadOnlyList<DrawingActionableIssue> Issues,
+    string RawJson);
+
 public interface IDrawingIrClient
 {
     Task<DrawingIrDocument> CompileAsync(DrawingPlanningInput input, DrawingPlanDocument plan, CancellationToken cancellationToken);
@@ -46,7 +56,7 @@ public interface IDrawingIrClient
 
 public interface IDrawingExecutorClient
 {
-    Task ExecuteAsync(DrawingIrDocument drawingIr, CancellationToken cancellationToken);
+    Task<DrawingExecutorResult> ExecuteAsync(DrawingIrDocument drawingIr, CancellationToken cancellationToken);
 }
 
 public interface IProjectRevisionCheckpointSink
@@ -66,6 +76,10 @@ public sealed record DrawingGenerationResult
     public DrawingGenerationStatus Status { get; init; }
     public DrawingPlanDocument? DrawingPlan { get; init; }
     public DrawingIrDocument? DrawingIr { get; init; }
+    public DrawingExecutorResult? ExecutorResult { get; init; }
     public required DrawingPreflightResult Preflight { get; init; }
-    public bool DwgOrWdpGenerated => false;
+    public bool DwgOrWdpGenerated => Status == DrawingGenerationStatus.Applied
+        && ExecutorResult?.Status == DrawingExecutorStatus.Applied
+        && !string.IsNullOrWhiteSpace(ExecutorResult.ProjectFile)
+        && ExecutorResult.PageDrawings.Count > 0;
 }

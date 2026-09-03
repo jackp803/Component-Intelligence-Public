@@ -1,4 +1,5 @@
 using ComponentIntelligence.Contracts;
+using ComponentIntelligence.Desktop;
 using ComponentIntelligence.SymbolArchive;
 
 namespace ComponentIntelligence.Tests.SymbolArchive;

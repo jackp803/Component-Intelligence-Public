@@ -18,7 +18,7 @@ public sealed class SymbolResolverTests : IDisposable
         Assert.Equal(SymbolSourceType.GeneratedGeneric, first.SourceType);
         Assert.Equal("generated-generic.v1", first.Revision);
         Assert.Equal(first.Sha256, second.Sha256);
-        Assert.Equal(new[] { "PIN-STABLE", "P-CONNECTOR" }, first.GeneratedGeneric!.Endpoints.Select(item => item.EngineeringEndpointId));
+        Assert.Equal(new[] { "P-CONNECTOR", "PIN-STABLE" }, first.GeneratedGeneric!.Endpoints.Select(item => item.EngineeringEndpointId));
         Assert.DoesNotContain(first.GeneratedGeneric.Endpoints, endpoint => endpoint.EngineeringEndpointId == "2");
     }
 

@@ -5,7 +5,9 @@
   <Grid Margin="8">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <WrapPanel Grid.Row="0" Margin="0,0,0,8">
-      <Button Content="Generate Preview" Margin="0,0,6,0" Padding="10,5" Click="GeneratePreview_Click"/>
+      <Button Content="Generate Preview" Margin="0,0,6,0" Padding="10,5" Click="GeneratePreviewGate_Click"/>
+      <Button Content="Generate AutoCAD" Margin="0,0,6,0" Padding="10,5" Click="GenerateAutoCadGate_Click" ToolTip="CP3-B compiles READY Drawing IR only. DWG/WDP generation belongs to CP3-C."/>
+      <Button Content="Runtime Settings" Margin="0,0,6,0" Padding="10,5" Click="ConfigureRuntime_Click"/>
       <Button Content="Save Plan" Margin="0,0,6,0" Padding="10,5" Click="Save_Click"/>
       <Button Content="Undo" Margin="0,0,6,0" Padding="10,5" Click="Undo_Click"/>
       <Button Content="Redo" Margin="0,0,6,0" Padding="10,5" Click="Redo_Click"/>
@@ -15,7 +17,7 @@
       <Button Content="History" Padding="10,5" Click="History_Click"/>
     </WrapPanel>
     <Grid Grid.Row="1">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
       <DockPanel Grid.Column="0" Margin="0,0,8,0">
         <TextBlock DockPanel.Dock="Top" Text="Pages" FontWeight="SemiBold" Margin="0,0,0,6"/>
         <ListBox x:Name="PageList" DisplayMemberPath="PageId" SelectionChanged="PageList_SelectionChanged"/>
@@ -25,16 +27,16 @@
           <Canvas x:Name="DrawingCanvas" Width="1100" Height="760" Background="White" MouseLeftButtonDown="DrawingCanvas_MouseLeftButtonDown"/>
         </ScrollViewer>
       </Border>
-      <StackPanel Grid.Column="2" Margin="8,0,0,0">
+      <Grid Grid.Column="2" Margin="8,0,0,0">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <TextBlock Text="Selection" FontWeight="SemiBold"/>
-        <ListBox x:Name="SelectionList" Height="140" SelectionMode="Extended" SelectionChanged="SelectionList_SelectionChanged"/>
-        <TextBlock Text="Grid snap" Margin="0,10,0,2"/><TextBox x:Name="GridSnapText" Text="10"/>
-        <TextBlock Text="Route / Placement state" Margin="0,10,0,2"/>
-        <ComboBox x:Name="StateCombo" SelectedIndex="0"><ComboBoxItem Content="Auto"/><ComboBoxItem Content="Manual"/><ComboBoxItem Content="Locked"/></ComboBox>
-        <Button Content="Apply Placement State" Margin="0,6,0,0" Click="ApplyPlacementState_Click"/>
-        <Button Content="Rotate +90° legal" Margin="0,6,0,0" Click="Rotate_Click"/>
-        <TextBlock Text="Zoom / Pan use ScrollViewer; Ctrl+Wheel zoom." TextWrapping="Wrap" Foreground="#666" Margin="0,12,0,0"/>
-      </StackPanel>
+        <ListBox x:Name="SelectionList" Grid.Row="1" Height="120" SelectionMode="Extended" SelectionChanged="SelectionList_SelectionChanged"/>
+        <StackPanel Grid.Row="2"><TextBlock Text="Grid snap" Margin="0,8,0,2"/><TextBox x:Name="GridSnapText" Text="10"/></StackPanel>
+        <StackPanel Grid.Row="3"><TextBlock Text="Route / Placement state" Margin="0,8,0,2"/><ComboBox x:Name="StateCombo" SelectedIndex="0"><ComboBoxItem Content="Auto"/><ComboBoxItem Content="Manual"/><ComboBoxItem Content="Locked"/></ComboBox></StackPanel>
+        <WrapPanel Grid.Row="4" Margin="0,6,0,0"><Button Content="Apply State" Margin="0,0,6,0" Click="ApplyPlacementState_Click"/><Button Content="Rotate legal" Click="Rotate_Click"/></WrapPanel>
+        <TextBlock Grid.Row="5" Text="Issues / Preflight" FontWeight="SemiBold" Margin="0,10,0,4"/>
+        <ListBox x:Name="IssueList" Grid.Row="6" MouseDoubleClick="IssueList_MouseDoubleClick"/>
+      </Grid>
     </Grid>
     <TextBlock x:Name="StatusText" Grid.Row="2" Margin="0,8,0,0" Text="Drawing Plan not loaded." TextWrapping="Wrap"/>
   </Grid>

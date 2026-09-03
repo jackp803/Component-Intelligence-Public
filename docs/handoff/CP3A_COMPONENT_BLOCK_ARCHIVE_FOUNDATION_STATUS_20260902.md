@@ -1,8 +1,8 @@
 # CP3-A Component / Block Archive Foundation — Source-First Status
 
-Date: 2026-09-03  
-Task: `E5-20260902-020`  
-Worker: `E5`  
+Date: 2026-09-03
+Task: `E5-20260902-020`
+Worker: `E5`
 Disposition: `SOURCE_IMPLEMENTATION_DONE_PENDING_CODEX_VERIFICATION`
 
 ## 1. Authority and exact lineage

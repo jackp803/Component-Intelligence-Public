@@ -39,7 +39,7 @@ public sealed class CableAssemblyEvidenceTests
         var migrated = ElectricalProjectMigrator.Migrate(legacy);
         var assembly = Assert.Single(migrated.CableAssemblies);
 
-        Assert.Equal("0.4", migrated.SchemaVersion);
+        Assert.Equal("0.5", migrated.SchemaVersion);
         Assert.Equal(CableConstructionType.Custom, assembly.CableConstructionType);
         Assert.True(assembly.IsCustom);
     }
@@ -57,7 +57,7 @@ public sealed class CableAssemblyEvidenceTests
         var migrated = ElectricalProjectMigrator.Migrate(legacy);
         var assembly = Assert.Single(migrated.CableAssemblies);
 
-        Assert.Equal("0.4", migrated.SchemaVersion);
+        Assert.Equal("0.5", migrated.SchemaVersion);
         Assert.Equal(CableConstructionType.Unknown, assembly.CableConstructionType);
         Assert.NotEqual(CableConstructionType.Purchased, assembly.CableConstructionType);
         Assert.False(assembly.IsCustom);
@@ -157,7 +157,7 @@ public sealed class CableAssemblyEvidenceTests
             var loaded = await repository.GetAsync(project.ProjectId);
 
             Assert.NotNull(loaded);
-            Assert.Equal("0.4", loaded!.SchemaVersion);
+            Assert.Equal("0.5", loaded!.SchemaVersion);
             var assembly = Assert.Single(loaded.CableAssemblies);
             Assert.Equal(CableConstructionType.Custom, assembly.CableConstructionType);
             Assert.True(assembly.IsCustom);

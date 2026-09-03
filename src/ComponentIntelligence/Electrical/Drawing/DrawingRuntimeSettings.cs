@@ -58,15 +58,11 @@ public sealed class DrawingRuntimeSettingsStore
 
     public void Save(DrawingRuntimeSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
         var validation = DrawingRuntimeSettingsValidator.Validate(settings);
         if (!validation.IsValid) throw new InvalidOperationException(string.Join("; ", validation.Issues.Select(x => x.Message)));
-        SaveUnchecked(settings);
-    }
-
-    public void SaveUnchecked(DrawingRuntimeSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(settings);
-        var directory = Path.GetDirectoryName(_path); if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+        var directory = Path.GetDirectoryName(_path);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
         File.WriteAllText(_path, JsonSerializer.Serialize(settings, Json));
     }
 }

@@ -58,7 +58,7 @@ public sealed class ProjectRevisionCheckpointSink(ProjectRevisionService service
 {
     private readonly ProjectRevisionService _service = service ?? throw new ArgumentNullException(nameof(service));
     public async Task CheckpointAsync(ElectricalProject project, ProjectRevisionTrigger trigger, CancellationToken cancellationToken) =>
-        _ = await _service.CreateCheckpointAsync(project, trigger, cancellationToken: cancellationToken);
+        _ = await _service.CreateCheckpointAsync(project, trigger, ct: cancellationToken);
 }
 
 public sealed record DrawingGenerationResult

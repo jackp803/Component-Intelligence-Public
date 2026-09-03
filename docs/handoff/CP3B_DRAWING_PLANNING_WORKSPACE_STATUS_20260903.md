@@ -1,7 +1,7 @@
 # CP3-B Drawing Planning Workspace Status — 2026-09-03
 
-Task: `E5-20260903-022`  
-Worker: `E5`  
+Task: `E5-20260903-022`
+Worker: `E5`
 Disposition: `SOURCE_COMPLETE_PENDING_PM_AND_BOUNDED_LOCAL_TECHNICAL_VERIFICATION`
 
 ## Exact lineage

@@ -61,6 +61,7 @@ public sealed record DrawingPlacement
 public sealed record DrawingRoute
 {
     public required string RouteId { get; init; }
+    public required string PageId { get; init; }
     public required string ConnectionId { get; init; }
     public required string EndpointAId { get; init; }
     public required string EndpointBId { get; init; }
@@ -75,6 +76,10 @@ public sealed record DrawingCrossPageRelation
     public required string DestinationRepresentationId { get; init; }
     public required string RelationKind { get; init; }
     public required string EngineeringId { get; init; }
+    public string? SourcePageId { get; init; }
+    public string? DestinationPageId { get; init; }
+    public string? SourceRouteId { get; init; }
+    public string? DestinationRouteId { get; init; }
 }
 
 public sealed record DrawingCableDetailTemplate

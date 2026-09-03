@@ -44,8 +44,10 @@ public static class DrawingPlanJson
         if (!string.Equals(plan.SchemaVersion, DrawingPlanDocument.V1, StringComparison.Ordinal)) throw new InvalidDataException("Unsupported Drawing Plan schema.");
         if (string.IsNullOrWhiteSpace(plan.ProjectId)) throw new InvalidDataException("ProjectId is required.");
         RequireHash(plan.SourcePlanningInputHash, nameof(plan.SourcePlanningInputHash)); RequireHash(plan.SourcePagePlanHash, nameof(plan.SourcePagePlanHash)); if (requireHash) RequireHash(plan.DrawingPlanHash, nameof(plan.DrawingPlanHash));
-        EnsureUnique(plan.Pages, x => x.PageId, "pageId"); EnsureUnique(plan.Groups, x => x.GroupId, "groupId"); EnsureUnique(plan.Placements, x => x.RepresentationId, "representationId"); EnsureUnique(plan.Routes, x => x.RouteId, "routeId"); EnsureUnique(plan.CableDetailTemplates, x => x.TemplateId, "templateId");
+        EnsureUnique(plan.Pages, x => x.PageId, "pageId"); EnsureUnique(plan.Groups, x => x.GroupId, "groupId"); EnsureUnique(plan.Placements, x => x.RepresentationId, "representationId"); EnsureUnique(plan.Routes, x => x.RouteId, "routeId"); EnsureUnique(plan.CrossPageRelations, x => x.RelationId, "relationId"); EnsureUnique(plan.CableDetailTemplates, x => x.TemplateId, "templateId");
         var pageIds = plan.Pages.Select(x => x.PageId).ToHashSet(StringComparer.Ordinal); var groupIds = plan.Groups.Select(x => x.GroupId).ToHashSet(StringComparer.Ordinal); var templateIds = plan.CableDetailTemplates.Select(x => x.TemplateId).ToHashSet(StringComparer.Ordinal);
+        if (plan.Pages.Select(x => x.Order).Distinct().Count() != plan.Pages.Count) throw new InvalidDataException("Drawing Plan page order must be unique.");
+        var placementPages = plan.Placements.ToDictionary(x => x.RepresentationId, x => x.PageId, StringComparer.Ordinal);
         foreach (var template in plan.CableDetailTemplates)
         {
             if (string.IsNullOrWhiteSpace(template.EndAInterfaceLayoutFamily) || string.IsNullOrWhiteSpace(template.EndBInterfaceLayoutFamily)) throw new InvalidDataException("Cable template interface families are required.");
@@ -58,11 +60,34 @@ public static class DrawingPlanJson
             if (placement.AllowedRotations.Count == 0 || placement.AllowedRotations.Any(x => x is not (0 or 90 or 180 or 270)) || !placement.AllowedRotations.Contains(placement.RotationDegrees)) throw new InvalidDataException("Placement rotation is not allowed.");
             if (placement.CableTemplateId is not null && !templateIds.Contains(placement.CableTemplateId)) throw new InvalidDataException("Placement CableTemplateId is unknown.");
         }
+        var routes = new Dictionary<string, DrawingRoute>(StringComparer.Ordinal);
         foreach (var route in plan.Routes)
         {
+            if (string.IsNullOrWhiteSpace(route.PageId) || !pageIds.Contains(route.PageId)) throw new InvalidDataException("Route pageId is unknown.");
             if (string.IsNullOrWhiteSpace(route.ConnectionId) || string.IsNullOrWhiteSpace(route.EndpointAId) || string.IsNullOrWhiteSpace(route.EndpointBId)) throw new InvalidDataException("Route engineering identity is required.");
             if (route.Points.Count < 2) throw new InvalidDataException("Route requires at least two points.");
             for (var i = 1; i < route.Points.Count; i++) if (route.Points[i - 1].X != route.Points[i].X && route.Points[i - 1].Y != route.Points[i].Y) throw new InvalidDataException("Route geometry must be orthogonal.");
+            routes[route.RouteId] = route;
+        }
+        foreach (var relation in plan.CrossPageRelations)
+        {
+            if (string.IsNullOrWhiteSpace(relation.SourceRepresentationId) || string.IsNullOrWhiteSpace(relation.DestinationRepresentationId) || string.IsNullOrWhiteSpace(relation.RelationKind) || string.IsNullOrWhiteSpace(relation.EngineeringId)) throw new InvalidDataException("Cross-page relation identity is required.");
+            if (relation.SourcePageId is not null && !pageIds.Contains(relation.SourcePageId)) throw new InvalidDataException("Cross-page relation sourcePageId is unknown.");
+            if (relation.DestinationPageId is not null && !pageIds.Contains(relation.DestinationPageId)) throw new InvalidDataException("Cross-page relation destinationPageId is unknown.");
+            if (string.Equals(relation.RelationKind, "ElectricalConnectionContinuation", StringComparison.Ordinal))
+            {
+                if (string.IsNullOrWhiteSpace(relation.SourcePageId) || string.IsNullOrWhiteSpace(relation.DestinationPageId) || string.IsNullOrWhiteSpace(relation.SourceRouteId) || string.IsNullOrWhiteSpace(relation.DestinationRouteId)) throw new InvalidDataException("ElectricalConnectionContinuation requires page and route references.");
+                if (string.Equals(relation.SourcePageId, relation.DestinationPageId, StringComparison.Ordinal)) throw new InvalidDataException("ElectricalConnectionContinuation must cross pages.");
+                if (!routes.TryGetValue(relation.SourceRouteId, out var sourceRoute) || !routes.TryGetValue(relation.DestinationRouteId, out var destinationRoute)) throw new InvalidDataException("ElectricalConnectionContinuation route reference is unknown.");
+                if (!string.Equals(sourceRoute.PageId, relation.SourcePageId, StringComparison.Ordinal) || !string.Equals(destinationRoute.PageId, relation.DestinationPageId, StringComparison.Ordinal)) throw new InvalidDataException("ElectricalConnectionContinuation route/page mismatch.");
+                if (!string.Equals(sourceRoute.ConnectionId, relation.EngineeringId, StringComparison.Ordinal) || !string.Equals(destinationRoute.ConnectionId, relation.EngineeringId, StringComparison.Ordinal)) throw new InvalidDataException("ElectricalConnectionContinuation engineering identity mismatch.");
+            }
+            else
+            {
+                if (relation.SourceRouteId is not null || relation.DestinationRouteId is not null) throw new InvalidDataException("Non-connection cross-page relation cannot claim route references.");
+                if (relation.SourcePageId is not null && placementPages.TryGetValue(relation.SourceRepresentationId, out var sourcePage) && !string.Equals(sourcePage, relation.SourcePageId, StringComparison.Ordinal)) throw new InvalidDataException("Cross-page relation sourcePageId mismatch.");
+                if (relation.DestinationPageId is not null && placementPages.TryGetValue(relation.DestinationRepresentationId, out var destinationPage) && !string.Equals(destinationPage, relation.DestinationPageId, StringComparison.Ordinal)) throw new InvalidDataException("Cross-page relation destinationPageId mismatch.");
+            }
         }
     }
 

@@ -29,13 +29,24 @@ public partial class ElectricalWorkspaceWindow
         {
             var restored = await revisionService.RestoreAsync(_project, revisionId); _project = restored; RefreshAll(); return restored;
         };
-        control.GenerationCoordinatorFactory = settings => new DrawingGenerationCoordinator(
-            project => builder.Build(project),
-            new PythonDrawingPlannerClient(settings),
-            new PythonDrawingIrClient(settings),
-            new DrawingPreflightService(),
-            checkpointSink,
-            executor: null);
+        control.GenerationCoordinatorFactory = settings =>
+        {
+            IDrawingExecutorClient? executor = null;
+            var executorSettings = control.ExecutorRuntimeSettingsStore.Load();
+            if (executorSettings is not null)
+            {
+                var validation = DrawingExecutorRuntimeSettingsValidator.Validate(executorSettings);
+                if (!validation.IsValid) throw new InvalidOperationException(string.Join("; ", validation.Issues.Select(x => x.Message)));
+                executor = new LocalDrawingExecutorClient(executorSettings, productionSqlitePaths: [_databasePath]);
+            }
+            return new DrawingGenerationCoordinator(
+                project => builder.Build(project),
+                new PythonDrawingPlannerClient(settings),
+                new PythonDrawingIrClient(settings),
+                new DrawingPreflightService(),
+                checkpointSink,
+                executor);
+        };
         control.LoadPlan(_project.DrawingPlan);
 
         // TopologyCanvas raises MutationStarting before topology presentation/engineering edits are committed.

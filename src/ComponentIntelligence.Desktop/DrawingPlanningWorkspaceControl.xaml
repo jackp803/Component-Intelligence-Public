@@ -6,8 +6,10 @@
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <WrapPanel Grid.Row="0" Margin="0,0,0,8">
       <Button Content="Generate Preview" Margin="0,0,6,0" Padding="10,5" Click="GeneratePreviewGate_Click"/>
-      <Button Content="Generate AutoCAD" Margin="0,0,6,0" Padding="10,5" Click="GenerateAutoCadGate_Click" ToolTip="CP3-B compiles READY Drawing IR only. DWG/WDP generation belongs to CP3-C."/>
+      <Button Content="Generate AutoCAD Electrical" Margin="0,0,6,0" Padding="10,5" Click="GenerateAutoCadGate_Click" ToolTip="CP3-C writes only to ISOLATED_STAGING. APPLIED is not VERIFIED."/>
       <Button Content="Runtime Settings" Margin="0,0,6,0" Padding="10,5" Click="ConfigureRuntime_Click"/>
+      <Button x:Name="OpenOutputFolderButton" Content="Open Output Folder" IsEnabled="False" Margin="0,0,6,0" Padding="10,5" Click="OpenOutputFolder_Click"/>
+      <Button x:Name="OpenOutputProjectButton" Content="Open Project" IsEnabled="False" Margin="0,0,6,0" Padding="10,5" Click="OpenOutputProject_Click"/>
       <Button Content="Save Plan" Margin="0,0,6,0" Padding="10,5" Click="Save_Click"/>
       <Button Content="Undo" Margin="0,0,6,0" Padding="10,5" Click="Undo_Click"/>
       <Button Content="Redo" Margin="0,0,6,0" Padding="10,5" Click="Redo_Click"/>

@@ -33,6 +33,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Button x:Name="ImportBomButton" Content="匯入 BOM" Padding="18,9" Margin="0,0,8,0" Click="ImportBom_Click" />
@@ -40,8 +41,9 @@
             <Button x:Name="ProcessButton" Grid.Column="2" Content="從中央庫取得" Padding="18,9" Margin="0,0,8,0" Click="ProcessCentralLibrary_Click" />
             <Button x:Name="ElectricalButton" Grid.Column="3" Content="電氣設計" Padding="18,9" Margin="0,0,8,0" Click="OpenElectricalWorkspace_Click" />
             <Button x:Name="TopologyButton" Grid.Column="4" Content="電路拓樸" Padding="18,9" Margin="0,0,8,0" Click="OpenTopology_Click" ToolTip="直接開啟 Electrical Topology（電氣拓樸）頁面" />
-            <Button x:Name="CentralLibraryButton" Grid.Column="5" Content="中央資料庫" Padding="18,9" Click="ConfigureCentralLibrary_Click" ToolTip="選擇 Google Drive for Desktop 同步的 Component_Intelligence_Database.xlsx" />
-            <TextBlock Grid.Column="6" x:Name="StatusText" Text="尚未匯入 BOM" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="#555" Margin="12,0,0,0" />
+            <Button x:Name="CentralLibraryButton" Grid.Column="5" Content="中央資料庫" Padding="18,9" Margin="0,0,8,0" Click="ConfigureCentralLibrary_Click" ToolTip="選擇 Google Drive for Desktop 同步的 Component_Intelligence_Database.xlsx" />
+            <Button x:Name="BlockArchiveButton" Grid.Column="6" Content="圖塊歸檔" Padding="18,9" Click="OpenBlockArchive_Click" ToolTip="Block Archive：掃描 DWG/DXF、人工確認並寫入 SymbolArchive sidecar；中央工作簿維持唯讀" />
+            <TextBlock Grid.Column="7" x:Name="StatusText" Text="尚未匯入 BOM" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="#555" Margin="12,0,0,0" />
         </Grid>
 
         <Border Grid.Row="2" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,14" Background="#FAFAFA">

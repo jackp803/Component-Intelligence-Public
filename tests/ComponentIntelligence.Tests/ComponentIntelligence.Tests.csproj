@@ -13,15 +13,13 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/ComponentIntelligence/ComponentIntelligence.csproj" />
-    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadConnectionPointBindingLoader.cs"
-             Link="Electrical/AutocadConnectionPointBindingLoader.cs" />
-    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadEngineeringDrawingEvidenceLoader.cs"
-             Link="Electrical/AutocadEngineeringDrawingEvidenceLoader.cs" />
-    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadReviewPreflightCoordinator.cs"
-             Link="Electrical/AutocadReviewPreflightCoordinator.cs" />
-    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadStagingGraphV2ExportCoordinator.cs"
-             Link="Electrical/AutocadStagingGraphV2ExportCoordinator.cs" />
-    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadStagingReviewRunner.cs"
-             Link="Electrical/AutocadStagingReviewRunner.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadConnectionPointBindingLoader.cs" Link="Electrical/AutocadConnectionPointBindingLoader.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadEngineeringDrawingEvidenceLoader.cs" Link="Electrical/AutocadEngineeringDrawingEvidenceLoader.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadReviewPreflightCoordinator.cs" Link="Electrical/AutocadReviewPreflightCoordinator.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadStagingGraphV2ExportCoordinator.cs" Link="Electrical/AutocadStagingGraphV2ExportCoordinator.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadStagingReviewRunner.cs" Link="Electrical/AutocadStagingReviewRunner.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadCoreConsoleLocator.cs" Link="SymbolArchive/AutocadCoreConsoleLocator.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadBlockDeepInspector.cs" Link="SymbolArchive/AutocadBlockDeepInspector.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/BlockArchiveBatchCoordinator.cs" Link="SymbolArchive/BlockArchiveBatchCoordinator.cs" />
   </ItemGroup>
 </Project>

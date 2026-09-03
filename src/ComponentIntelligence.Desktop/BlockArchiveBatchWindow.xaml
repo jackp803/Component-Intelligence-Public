@@ -1,0 +1,109 @@
+<Window x:Class="ComponentIntelligence.Desktop.BlockArchiveBatchWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="圖塊歸檔 / Block Archive" Height="820" Width="1320"
+        MinHeight="700" MinWidth="1120" WindowStartupLocation="CenterOwner">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="210" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="12" Background="#FAFAFA" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="圖塊歸檔 / Block Archive" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock x:Name="ProtectionText" Margin="0,5,0,0" TextWrapping="Wrap" Foreground="#555"
+                           Text="中央工作簿 Components / Ports / Pins 維持唯讀。只有在明確確認歸檔後，才會寫入 SymbolArchive.json 與 Documents/.../autocad/...；來源 DWG/DXF 不會被修改。" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="SourcePathText" IsReadOnly="True" Height="32" VerticalContentAlignment="Center" Margin="0,0,8,0" />
+            <Button Grid.Column="1" x:Name="ScanButton" Content="選擇資料夾並掃描 / Scan Folder" Padding="14,7" Margin="0,0,8,0" Click="Scan_Click" />
+            <Button Grid.Column="2" x:Name="DeepInspectButton" Content="AutoCAD 深度掃描 / Deep Inspect" Padding="14,7" Click="DeepInspectSelected_Click" />
+        </Grid>
+
+        <DataGrid Grid.Row="2" x:Name="RowsGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                  SelectionMode="Extended" SelectionUnit="FullRow" HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal" SelectionChanged="RowsGrid_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="File" Binding="{Binding Candidate.RelativePath}" IsReadOnly="True" Width="1.45*" />
+                <DataGridTemplateColumn Header="Candidate Component" Width="2.1*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding ComponentChoices}"
+                                      DisplayMemberPath="DisplayName" SelectedValuePath="ComponentId"
+                                      SelectedValue="{Binding SelectedComponentId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{Binding SuggestedComponentDisplay}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Symbol Role" Width="1.25*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding AvailableRoles}"
+                                      SelectedItem="{Binding SelectedRole, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Source Type" Width="1.2*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding ImportSourceTypes}"
+                                      SelectedItem="{Binding SelectedSourceType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Deep Scan" Binding="{Binding Candidate.DeepInspectionStatus}" IsReadOnly="True" Width="0.9*" />
+                <DataGridTextColumn Header="Duplicate" Binding="{Binding DuplicateDisplay}" IsReadOnly="True" Width="1.15*" />
+                <DataGridTextColumn Header="Review Status" Binding="{Binding ReviewStatus}" IsReadOnly="True" Width="1.1*" />
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="3" Margin="0,10,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10">
+                <TextBox x:Name="DetailsText" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" BorderThickness="0" Background="Transparent" />
+            </Border>
+            <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Port/Pin Mapping（stable ID = connection point）" FontWeight="SemiBold" Margin="0,0,0,6" />
+                    <TextBox Grid.Row="1" x:Name="PortBindingsText" AcceptsReturn="True" TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto" FontFamily="Consolas"
+                             ToolTip="每行一筆，例如 P1=TERM01 或 PIN-A=TERM02。只接受中央工作簿已有的 PortID / PinID。" />
+                    <Button Grid.Row="2" Content="套用 Mapping / Apply Mapping" Padding="12,6" Margin="0,8,0,0"
+                            HorizontalAlignment="Right" Click="ApplyMappings_Click" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#555" Text="尚未掃描 / Not scanned" />
+            <Button Grid.Column="1" x:Name="ArchiveButton" Content="歸檔選取項目 / Archive Selected" Padding="16,8" Margin="8,0" Click="ArchiveSelected_Click" />
+            <Button Grid.Column="2" Content="關閉 / Close" Padding="16,8" Click="Close_Click" />
+        </Grid>
+    </Grid>
+</Window>

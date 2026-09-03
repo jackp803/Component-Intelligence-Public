@@ -9,4 +9,9 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
     <PackageReference Include="PDFsharp-WPF" Version="6.2.4" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources/cp3a-inspect.lsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

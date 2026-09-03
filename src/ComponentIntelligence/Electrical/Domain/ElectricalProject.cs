@@ -4,7 +4,7 @@ namespace ComponentIntelligence.Electrical.Domain;
 
 public sealed class ElectricalProject
 {
-    public string SchemaVersion { get; init; } = "0.4";
+    public string SchemaVersion { get; init; } = "0.5";
     public required string ProjectId { get; init; }
     public string? Name { get; set; }
     public DrawingPlanDocument? DrawingPlan { get; set; }

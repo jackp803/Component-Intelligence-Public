@@ -12,6 +12,9 @@ public sealed class DrawingPlanEditService
         if (sourceIndex < 0) throw new InvalidOperationException("Page not found.");
         if (pages[sourceIndex].OrderState == DrawingPlanControlState.Locked) throw new InvalidOperationException("Locked page order cannot be moved.");
         if (targetIndex < 0 || targetIndex >= pages.Count) throw new InvalidOperationException("Page target index is invalid.");
+        var lower = Math.Min(sourceIndex, targetIndex); var upper = Math.Max(sourceIndex, targetIndex);
+        if (pages.Select((page, index) => (page, index)).Any(x => x.index != sourceIndex && x.index >= lower && x.index <= upper && x.page.OrderState == DrawingPlanControlState.Locked))
+            throw new InvalidOperationException("Page move cannot cross a locked page order boundary.");
         var item = pages[sourceIndex]; pages.RemoveAt(sourceIndex); pages.Insert(targetIndex, item with { OrderState = DrawingPlanControlState.Manual });
         for (var i = 0; i < pages.Count; i++) pages[i] = pages[i] with { Order = i };
         return DrawingPlanJson.Rehash(plan with { Pages = pages });
@@ -111,7 +114,7 @@ public sealed class DrawingPlanEditService
     private static DrawingRoute EnsureEditable(DrawingRoute r) { if (r.State == DrawingPlanControlState.Locked) throw new InvalidOperationException("Locked route cannot be edited."); return r; }
     private static void ValidateOrthogonal(IReadOnlyList<DrawingPoint> points) { for (var i = 1; i < points.Count; i++) if (points[i - 1].X != points[i].X && points[i - 1].Y != points[i].Y) throw new InvalidOperationException("Route geometry must remain orthogonal."); }
 
-    private static DrawingPlanDocument UpdatePlacement(DrawingPlanDocument plan, string id, Func<DrawingPlacement, DrawingPlacement> update)
+    private static DrawingPlacement UpdatePlacement(DrawingPlanDocument plan, string id, Func<DrawingPlacement, DrawingPlacement> update)
     {
         var items = plan.Placements.ToArray(); var index = Array.FindIndex(items, p => p.RepresentationId == id); if (index < 0) throw new InvalidOperationException("Placement not found."); items[index] = update(items[index]); return DrawingPlanJson.Rehash(plan with { Placements = items });
     }

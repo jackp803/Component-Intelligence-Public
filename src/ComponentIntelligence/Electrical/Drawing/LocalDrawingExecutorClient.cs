@@ -72,6 +72,8 @@ public sealed class LocalDrawingExecutorClient : IDrawingExecutorClient
             stagingRoot = _settings.StagingRoot,
             projectBaselineWdp = _settings.ProjectBaselineWdp,
             drawingTemplatePath = _settings.DrawingTemplatePath,
+            projectTitleBlockMappingPath = _settings.ProjectTitleBlockMappingPath,
+            projectDescriptionLabelsPath = _settings.ProjectDescriptionLabelsPath,
             protectedPaths = _productionSqlitePaths.Select(path => new { kind = "COMPONENT_INTELLIGENCE_RUNTIME_SQLITE", path }).ToArray(),
         };
         return JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = false });

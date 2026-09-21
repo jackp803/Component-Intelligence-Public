@@ -21,7 +21,7 @@ public partial class ElectricalWorkspaceWindow
 
         control.ProjectProvider = () => _project;
         control.ProjectReplaced = project => { _project = project; UpdateHistoryButtons(); };
-        control.PlanningInputProvider = () => builder.Build(_project);
+        control.PlanningInputProvider = () => builder.Build(_project, control.ProjectMetadataStore.Load(_project.ProjectId));
         control.CheckpointAsync = async (trigger, label) => _ = await revisionService.CreateCheckpointAsync(_project, trigger, label);
         control.SaveProjectAsync = async () => await _repository.SaveAsync(_project);
         control.HistoryItemsAsync = async () => (await revisionService.ListAsync(_project.ProjectId)).Select(x => x.RevisionId).ToArray();
@@ -40,7 +40,7 @@ public partial class ElectricalWorkspaceWindow
                 executor = new LocalDrawingExecutorClient(executorSettings, productionSqlitePaths: [_databasePath]);
             }
             return new DrawingGenerationCoordinator(
-                project => builder.Build(project),
+                project => builder.Build(project, control.ProjectMetadataStore.Load(project.ProjectId)),
                 new PythonDrawingPlannerClient(settings),
                 new PythonDrawingIrClient(settings),
                 new DrawingPreflightService(),

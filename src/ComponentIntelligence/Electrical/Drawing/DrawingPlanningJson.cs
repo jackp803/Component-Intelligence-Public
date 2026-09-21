@@ -64,6 +64,7 @@ public static class DrawingPlanningJson
         EnsureUnique(input.Representations, x => x.RepresentationId, "representationId");
         EnsureUnique(input.Connections, x => x.ConnectionId, "connectionId");
         EnsureUnique(input.Cables, x => x.CableInstanceId, "cableInstanceId");
+        EnsureUnique(input.ProjectMetadata.Pages, x => x.PageId, "project metadata pageId");
         foreach (var rep in input.Representations)
         {
             if (string.IsNullOrWhiteSpace(rep.RepresentationId) || string.IsNullOrWhiteSpace(rep.OwnerId))

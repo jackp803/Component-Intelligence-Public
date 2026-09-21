@@ -6,7 +6,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
 {
     private readonly RepresentationPolicy _representationPolicy = representationPolicy ?? throw new ArgumentNullException(nameof(representationPolicy));
 
-    public DrawingPlanningInput Build(ElectricalProject project)
+    public DrawingPlanningInput Build(ElectricalProject project, DrawingProjectMetadata? projectMetadata = null)
     {
         ArgumentNullException.ThrowIfNull(project);
         var representations = new List<DrawingRepresentationDecision>();
@@ -166,6 +166,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         var input = new DrawingPlanningInput
         {
             ProjectId = project.ProjectId,
+            ProjectMetadata = projectMetadata ?? DrawingProjectMetadata.Empty,
             Representations = representations.OrderBy(x => x.RepresentationId, StringComparer.Ordinal).ToList(),
             Connections = connections,
             Cables = cables,

@@ -10,6 +10,8 @@ public sealed record DrawingExecutorRuntimeSettings
     public required string StagingRoot { get; init; }
     public required string ProjectBaselineWdp { get; init; }
     public required string DrawingTemplatePath { get; init; }
+    public string ProjectTitleBlockMappingPath { get; init; } = string.Empty;
+    public string ProjectDescriptionLabelsPath { get; init; } = string.Empty;
 }
 
 public sealed record DrawingExecutorRuntimeValidation(bool IsValid, IReadOnlyList<DrawingActionableIssue> Issues);
@@ -33,6 +35,8 @@ public static class DrawingExecutorRuntimeSettingsValidator
         ValidateDirectory(settings.StagingRoot, "EXECUTOR-STAGING-MISSING", "DRAWING_EXECUTOR_STAGING_ROOT_MISSING", "Configured isolated staging parent directory does not exist.", issues);
         ValidateFile(settings.ProjectBaselineWdp, "EXECUTOR-BASELINE-MISSING", "DRAWING_EXECUTOR_BASELINE_MISSING", "Configured project baseline WDP does not exist.", issues, ".wdp");
         ValidateFile(settings.DrawingTemplatePath, "EXECUTOR-TEMPLATE-MISSING", "DRAWING_EXECUTOR_TEMPLATE_MISSING", "Configured drawing template DWT does not exist.", issues, ".dwt");
+        ValidateFile(settings.ProjectTitleBlockMappingPath, "EXECUTOR-WDT-MISSING", "DRAWING_EXECUTOR_WDT_MISSING", "Configured company title-block mapping WDT does not exist.", issues, ".wdt");
+        ValidateFile(settings.ProjectDescriptionLabelsPath, "EXECUTOR-WDL-MISSING", "DRAWING_EXECUTOR_WDL_MISSING", "Configured company project labels WDL does not exist.", issues, ".wdl");
 
         if (TryFullPath(settings.StagingRoot, out var staging) && TryFullPath(settings.AutomationRoot, out automationRoot) && PathsOverlap(staging, automationRoot))
             issues.Add(DrawingActionableIssue.Runtime("EXECUTOR-STAGING-IMPLEMENTATION-OVERLAP", "DRAWING_EXECUTOR_STAGING_OVERLAPS_IMPLEMENTATION", "Isolated staging root must not overlap the automation implementation root.", "ExecutorRuntimeSettings"));

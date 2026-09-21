@@ -536,7 +536,10 @@
     }
   ],
   "componentClassificationCounts": {
-    "": 31
+    "SAFE_GENERATED_GENERIC": 20,
+    "UNSAFE_UNRESOLVED": 8,
+    "CANDIDATE_NOT_APPROVED_BUT_GENERIC_SAFE": 2,
+    "APPROVED_EXACT": 1
   },
   "unsafeComponentRoles": 8,
   "unsafeCableRoles": 22,

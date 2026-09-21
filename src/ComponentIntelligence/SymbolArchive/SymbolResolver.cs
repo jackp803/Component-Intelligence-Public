@@ -36,7 +36,8 @@ public sealed class SymbolResolver
         string componentId,
         SymbolRole role,
         bool allowGeneratedGeneric = true,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyCollection<string>? requiredEndpointIds = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
         if (!_components.TryGetValue(componentId.Trim(), out var component))
@@ -73,7 +74,7 @@ public sealed class SymbolResolver
 
         if (!allowGeneratedGeneric)
             throw new InvalidOperationException($"No Approved symbol exists for {componentId} / {role} and GeneratedGeneric is disabled.");
-        var generic = _genericFactory.Create(component, role);
+        var generic = _genericFactory.Create(component, role, requiredEndpointIds);
         return new SymbolResolution
         {
             ComponentId = componentId.Trim(),

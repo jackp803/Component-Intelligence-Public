@@ -1,8 +1,12 @@
 using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Bridging;
+using ComponentIntelligence.Contracts;
+using System.Text.Json;
+using ComponentIntelligence.Electrical.Editing;
 
 namespace ComponentIntelligence.Electrical.Drawing;
 
-public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representationPolicy)
+public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representationPolicy, IReadOnlyList<ComponentIR>? catalog = null, EngineeringReviewService? engineeringReview = null)
 {
     private readonly RepresentationPolicy _representationPolicy = representationPolicy ?? throw new ArgumentNullException(nameof(representationPolicy));
 
@@ -11,6 +15,32 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         ArgumentNullException.ThrowIfNull(project);
         var representations = new List<DrawingRepresentationDecision>();
         var issues = new List<DrawingPlanningIssue>();
+        if (engineeringReview is not null)
+        {
+            // This synchronous planning boundary must not await file hashing on the UI context.
+            var coverage = Task.Run(() => engineeringReview.InspectAsync(project)).GetAwaiter().GetResult();
+            foreach (var component in coverage.Components.Where(c => c.Classification == "UNSAFE_UNRESOLVED"))
+                issues.Add(new DrawingPlanningIssue { IssueId = $"ISSUE:{component.InstanceId}:engineering-review",
+                    Code = "ENGINEERING_COMPONENT_REVIEW_REQUIRED", Severity = DrawingPlanningIssueSeverity.Blocker,
+                    Message = $"{component.Label}：{component.Reason} 請開啟工程確認。", TargetKind = "Component", TargetId = component.InstanceId });
+            foreach (var cable in coverage.Cables.Where(c => c.Classification == "UNSAFE_UNRESOLVED"))
+                issues.Add(new DrawingPlanningIssue { IssueId = $"ISSUE:{cable.CableId}:engineering-review",
+                    Code = "ENGINEERING_CABLE_REVIEW_REQUIRED", Severity = DrawingPlanningIssueSeverity.Blocker,
+                    Message = $"{cable.Label}：請在工程確認中明選 Purchased / Custom。", TargetKind = "CableInstance", TargetId = cable.CableId });
+        }
+        if (catalog is not null)
+        {
+            // Planning remains pure; explicit lineage restoration is confined to this projection copy.
+            project = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(project))!;
+            foreach (var instance in project.Components)
+            {
+                var result = new ComponentSourceIdentityRestorer().Restore(instance,
+                    catalog.SingleOrDefault(c => string.Equals(c.Identity.ComponentId, instance.ComponentDefinitionId, StringComparison.Ordinal)));
+                if (result.Status == SourceIdentityStatus.CONFLICT)
+                    issues.Add(new DrawingPlanningIssue { IssueId = $"ISSUE:{instance.ComponentInstanceId}:source-identity", Severity = DrawingPlanningIssueSeverity.Blocker,
+                        Code = "DRAWING_SOURCE_IDENTITY_CONFLICT", Message = "Component source identity conflicts with authoritative catalog; reconcile explicit source IDs.", TargetKind = "Component", TargetId = instance.ComponentInstanceId });
+            }
+        }
 
         foreach (var component in project.Components.OrderBy(x => x.ComponentInstanceId, StringComparer.Ordinal))
         {
@@ -25,6 +55,24 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                 .Select(x => x.First())
                 .OrderBy(x => x.EngineeringEndpointId, StringComparer.Ordinal)
                 .ToArray();
+            if (InlineInterfaceRepresentation.IsRecognized(component.ComponentDefinitionId))
+            {
+                var blocking = InlineInterfaceRepresentation.BlockingReason(project, component);
+                if (blocking is not null)
+                    issues.Add(new DrawingPlanningIssue { IssueId = $"ISSUE:{component.ComponentInstanceId}:inline-interface",
+                        Code = "INLINE_INTERFACE_EVIDENCE_REQUIRED", Severity = DrawingPlanningIssueSeverity.Blocker,
+                        Message = blocking, TargetKind = "Component", TargetId = component.ComponentInstanceId });
+                else
+                    representations.Add(new DrawingRepresentationDecision
+                    {
+                        RepresentationId = $"REP:{component.ComponentInstanceId}:Schematic",
+                        OwnerKind = DrawingRepresentationOwnerKind.Component, OwnerId = component.ComponentInstanceId,
+                        Role = DrawingRepresentationRole.Schematic, Family = DrawingRepresentationFamily.FunctionalGeneric,
+                        SourceType = "ProjectInlineInterface", ControlState = DrawingRepresentationControlState.Auto,
+                        AllowedRotations = [0, 90], PortBindings = explicitBindings, PhysicalInterfaceMeaning = true
+                    });
+                continue;
+            }
             var result = _representationPolicy.Decide(new RepresentationRequest
             {
                 RepresentationId = $"REP:{component.ComponentInstanceId}:Schematic",
@@ -36,6 +84,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                 ControlState = DrawingRepresentationControlState.Auto,
                 AllowedRotations = [0, 90],
                 PortBindings = explicitBindings,
+                SourceInstance = component,
                 RequiresExplicitEndpointEvidence = false,
                 PhysicalInterfaceMeaning = false,
                 ControllerId = null,
@@ -192,7 +241,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         return new DrawingCableEndpoint { EndpointId = endpointId, InterfaceLayoutFamily = DrawingInterfaceLayoutFamily.Other };
     }
 
-    private static DrawingCableEndpoint FromPort(string endpointId, ComponentPort port)
+    private static DrawingCableEndpoint FromPort(string endpointId, ComponentIntelligence.Electrical.Domain.ComponentPort port)
     {
         var connector = port.Connector;
         return new DrawingCableEndpoint

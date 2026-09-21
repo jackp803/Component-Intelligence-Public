@@ -21,7 +21,7 @@ public sealed record GeneratedGenericSymbol(GeneratedGenericDescriptor Descripto
 
 public sealed class GeneratedGenericSymbolFactory
 {
-    public GeneratedGenericSymbol Create(ComponentIR component, SymbolRole role)
+    public GeneratedGenericSymbol Create(ComponentIR component, SymbolRole role, IReadOnlyCollection<string>? requiredEndpointIds = null)
     {
         ArgumentNullException.ThrowIfNull(component);
         var endpoints = new List<GeneratedGenericEndpoint>();
@@ -38,6 +38,18 @@ public sealed class GeneratedGenericSymbolFactory
             {
                 endpoints.Add(new GeneratedGenericEndpoint(port.PortId.Trim(), "PortId"));
             }
+        }
+
+        // TopologyEndpointMode controls the default interaction, not the existence of explicit
+        // catalog pins. A project may require an already-known pin behind a connector face.
+        foreach (var id in requiredEndpointIds ?? [])
+        {
+            var ports = component.Ports.Where(p => p.PortId == id).ToArray();
+            var pins = component.Pins.Where(p => p.PinId == id).ToArray();
+            if (role != SymbolRole.Schematic || ports.Length + pins.Length != 1 ||
+                pins.Length == 1 && component.Ports.Count(p => p.PortId == pins[0].PortId) != 1)
+                throw new InvalidOperationException("Required endpoint has no unique explicit catalog authority.");
+            endpoints.Add(new GeneratedGenericEndpoint(id, ports.Length == 1 ? "PortId" : "PinId"));
         }
 
         var descriptor = new GeneratedGenericDescriptor

@@ -8,6 +8,7 @@
       <Button Content="Generate Preview" Margin="0,0,6,0" Padding="10,5" Click="GeneratePreviewGate_Click"/>
       <Button Content="Generate AutoCAD Electrical" Margin="0,0,6,0" Padding="10,5" Click="GenerateAutoCadGate_Click" ToolTip="CP3-C writes only to ISOLATED_STAGING. APPLIED is not VERIFIED."/>
       <Button Content="Runtime Settings" Margin="0,0,6,0" Padding="10,5" Click="ConfigureRuntime_Click"/>
+      <Button Content="Project Metadata" Margin="0,0,6,0" Padding="10,5" Click="ConfigureProjectMetadata_Click" ToolTip="Company title-block metadata stored in the user-local profile."/>
       <Button x:Name="OpenOutputFolderButton" Content="Open Output Folder" IsEnabled="False" Margin="0,0,6,0" Padding="10,5" Click="OpenOutputFolder_Click"/>
       <Button x:Name="OpenOutputProjectButton" Content="Open Project" IsEnabled="False" Margin="0,0,6,0" Padding="10,5" Click="OpenOutputProject_Click"/>
       <Button Content="Save Plan" Margin="0,0,6,0" Padding="10,5" Click="Save_Click"/>

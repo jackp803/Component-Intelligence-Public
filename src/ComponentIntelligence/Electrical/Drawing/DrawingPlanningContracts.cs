@@ -13,6 +13,7 @@ public sealed record DrawingPlanningInput
     public string SchemaVersion { get; init; } = V1;
     public required string ProjectId { get; init; }
     public string? PlanningInputHash { get; init; }
+    public DrawingProjectMetadata ProjectMetadata { get; init; } = DrawingProjectMetadata.Empty;
     public List<DrawingRepresentationDecision> Representations { get; init; } = [];
     public List<DrawingConnectionPlanningItem> Connections { get; init; } = [];
     public List<DrawingCablePlanningItem> Cables { get; init; } = [];

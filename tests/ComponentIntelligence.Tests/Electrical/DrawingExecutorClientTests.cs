@@ -6,12 +6,12 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class DrawingExecutorClientTests
 {
     [Fact]
-    public void SettingsValidation_RequiresAllSixRealLocalPaths()
+    public void SettingsValidation_RequiresCompanyProjectSupportFiles()
     {
         using var fixture = new RuntimeFixture();
         var validation = DrawingExecutorRuntimeSettingsValidator.Validate(fixture.Settings);
         Assert.True(validation.IsValid, string.Join("; ", validation.Issues.Select(x => x.Message)));
-        Assert.Equal(6, typeof(DrawingExecutorRuntimeSettings).GetProperties().Length);
+        Assert.Equal(8, typeof(DrawingExecutorRuntimeSettings).GetProperties().Length);
     }
 
     [Fact]
@@ -65,6 +65,8 @@ public sealed class DrawingExecutorClientTests
             ObservedTemporaryInputs.Add(irPath); ObservedTemporaryInputs.Add(runtimePath);
             using var runtime = JsonDocument.Parse(File.ReadAllText(runtimePath));
             Assert.Equal("component-drawing-executor-runtime.v1", runtime.RootElement.GetProperty("schemaVersion").GetString());
+            Assert.EndsWith("baseline.wdt", runtime.RootElement.GetProperty("projectTitleBlockMappingPath").GetString(), StringComparison.OrdinalIgnoreCase);
+            Assert.EndsWith("baseline_wdtitle.wdl", runtime.RootElement.GetProperty("projectDescriptionLabelsPath").GetString(), StringComparison.OrdinalIgnoreCase);
             Assert.Contains(runtime.RootElement.GetProperty("protectedPaths").EnumerateArray(), x => x.GetProperty("path").GetString()!.EndsWith("prod.db", StringComparison.Ordinal));
             var raw = JsonSerializer.Serialize(new
             {
@@ -90,8 +92,9 @@ public sealed class DrawingExecutorClientTests
             Directory.CreateDirectory(Path.Combine(Root,"staging"));
             Directory.CreateDirectory(Path.Combine(Root,"formal"));
             var python=Path.Combine(Root,"python.exe"); var accore=Path.Combine(Root,"accoreconsole.exe"); var baseline=Path.Combine(Root,"formal","baseline.wdp"); var template=Path.Combine(Root,"template.dwt");
-            File.WriteAllText(python,"x"); File.WriteAllText(accore,"x"); File.WriteAllText(baseline,"x"); File.WriteAllText(template,"x"); File.WriteAllText(Path.Combine(Root,"automation","tools","electrical_cp3c_executor.py"),"# test"); File.WriteAllText(ProductionSqlite,"db");
-            Settings = new DrawingExecutorRuntimeSettings { PythonExecutable=python, AutomationRoot=Path.Combine(Root,"automation"), AccoreConsolePath=accore, StagingRoot=Path.Combine(Root,"staging"), ProjectBaselineWdp=baseline, DrawingTemplatePath=template };
+            var wdt=Path.Combine(Root,"formal","baseline.wdt"); var wdl=Path.Combine(Root,"formal","baseline_wdtitle.wdl");
+            File.WriteAllText(python,"x"); File.WriteAllText(accore,"x"); File.WriteAllText(baseline,"x"); File.WriteAllText(template,"x"); File.WriteAllText(wdt,"BLOCK = TB"); File.WriteAllText(wdl,"LINE1=Project"); File.WriteAllText(Path.Combine(Root,"automation","tools","electrical_cp3c_executor.py"),"# test"); File.WriteAllText(ProductionSqlite,"db");
+            Settings = new DrawingExecutorRuntimeSettings { PythonExecutable=python, AutomationRoot=Path.Combine(Root,"automation"), AccoreConsolePath=accore, StagingRoot=Path.Combine(Root,"staging"), ProjectBaselineWdp=baseline, DrawingTemplatePath=template, ProjectTitleBlockMappingPath=wdt, ProjectDescriptionLabelsPath=wdl };
         }
         public void Dispose() { if (Directory.Exists(Root)) Directory.Delete(Root,true); }
     }

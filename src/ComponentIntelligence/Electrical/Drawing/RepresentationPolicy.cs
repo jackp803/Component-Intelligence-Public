@@ -27,8 +27,8 @@ public sealed class Cp3aDrawingAssetResolver(SymbolResolver resolver, SymbolArch
         var document = repository.Load();
         if (!document.Bindings.Any(b => string.Equals(b.ComponentId, ownerId, StringComparison.Ordinal) && b.Role == assetRole
             && b.Revisions.Any(r => r.Status == SymbolRevisionStatus.Approved))) return null;
-        var resolved = _resolver.ResolveAsync(ownerId, assetRole, allowGeneratedGeneric: false)
-            .ConfigureAwait(false).GetAwaiter().GetResult();
+        var resolved = Task.Run(() => _resolver.ResolveAsync(ownerId, assetRole, allowGeneratedGeneric: false))
+            .GetAwaiter().GetResult();
         var path = repository.ResolveArchivePath(resolved.AssetPath);
         // Reject linked descendants so lexical containment cannot redirect execution outside the root.
         for (var current = new FileInfo(path) as FileSystemInfo; current is not null && !string.Equals(current.FullName, repository.ArchiveRoot, StringComparison.OrdinalIgnoreCase);

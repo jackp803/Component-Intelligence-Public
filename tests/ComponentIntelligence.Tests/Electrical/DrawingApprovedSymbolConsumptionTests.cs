@@ -10,10 +10,10 @@ public sealed class DrawingApprovedSymbolConsumptionTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "approved-drawing-" + Guid.NewGuid().ToString("N"));
     public DrawingApprovedSymbolConsumptionTests() => Directory.CreateDirectory(_root);
-    private async Task<SymbolArchiveRepository> Archive()
+    private async Task<SymbolArchiveRepository> Archive(bool large = false)
     {
         var repository = new SymbolArchiveRepository(_root);
-        var source = Path.Combine(_root, "input.dwg"); await File.WriteAllTextAsync(source, "test symbol");
+        var source = Path.Combine(_root, "input.dwg"); await File.WriteAllTextAsync(source, large ? new string('x', 2_000_000) : "test symbol");
         await new SymbolArchiveApprovalService(repository, [ComponentSourceIdentityRestorerTests.Catalog()]).ApproveAsync(new ApproveSymbolRequest
         {
             SourcePath = source, ComponentId = "DEF", Role = SymbolRole.Schematic, SourceType = SymbolSourceType.ApprovedCustom, UserConfirmed = true,
@@ -23,6 +23,36 @@ public sealed class DrawingApprovedSymbolConsumptionTests : IDisposable
     }
     private static ElectricalProject Project()
         => new() { ProjectId = "P", Components = [new ComponentProjectBridge().CreateInstance(ComponentSourceIdentityRestorerTests.Catalog(), "I")] };
+
+    [Fact]
+    public async Task SynchronousPlanning_DoesNotRequireCallingUiContextToPump()
+    {
+        await Archive(large: true);
+        var completed = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new Thread(() =>
+        {
+            var context = new RecordingContext();
+            SynchronizationContext.SetSynchronizationContext(context);
+            try
+            {
+                DrawingPlanningRuntimeFactory.Create(_root, [ComponentSourceIdentityRestorerTests.Catalog()]).Build(Project());
+                completed.SetResult(context.Posts);
+            }
+            catch (Exception ex) { completed.SetException(ex); }
+        }) { IsBackground = true };
+        thread.Start();
+        Assert.Equal(0, await completed.Task.WaitAsync(TimeSpan.FromSeconds(20)));
+    }
+
+    private sealed class RecordingContext : SynchronizationContext
+    {
+        public int Posts;
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            Interlocked.Increment(ref Posts);
+            ThreadPool.QueueUserWorkItem(_ => callback(state));
+        }
+    }
 
     [Fact]
     public async Task ConfiguredFactory_SelectsExact_ConfinedAbsolutePath_AndBridgesPortAndPin()

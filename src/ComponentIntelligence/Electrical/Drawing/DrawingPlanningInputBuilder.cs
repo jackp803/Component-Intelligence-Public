@@ -2,10 +2,11 @@ using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Bridging;
 using ComponentIntelligence.Contracts;
 using System.Text.Json;
+using ComponentIntelligence.Electrical.Editing;
 
 namespace ComponentIntelligence.Electrical.Drawing;
 
-public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representationPolicy, IReadOnlyList<ComponentIR>? catalog = null)
+public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representationPolicy, IReadOnlyList<ComponentIR>? catalog = null, EngineeringReviewService? engineeringReview = null)
 {
     private readonly RepresentationPolicy _representationPolicy = representationPolicy ?? throw new ArgumentNullException(nameof(representationPolicy));
 
@@ -14,6 +15,19 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         ArgumentNullException.ThrowIfNull(project);
         var representations = new List<DrawingRepresentationDecision>();
         var issues = new List<DrawingPlanningIssue>();
+        if (engineeringReview is not null)
+        {
+            // This synchronous planning boundary must not await file hashing on the UI context.
+            var coverage = Task.Run(() => engineeringReview.InspectAsync(project)).GetAwaiter().GetResult();
+            foreach (var component in coverage.Components.Where(c => c.Classification == "UNSAFE_UNRESOLVED"))
+                issues.Add(new DrawingPlanningIssue { IssueId = $"ISSUE:{component.InstanceId}:engineering-review",
+                    Code = "ENGINEERING_COMPONENT_REVIEW_REQUIRED", Severity = DrawingPlanningIssueSeverity.Blocker,
+                    Message = $"{component.Label}：{component.Reason} 請開啟工程確認。", TargetKind = "Component", TargetId = component.InstanceId });
+            foreach (var cable in coverage.Cables.Where(c => c.Classification == "UNSAFE_UNRESOLVED"))
+                issues.Add(new DrawingPlanningIssue { IssueId = $"ISSUE:{cable.CableId}:engineering-review",
+                    Code = "ENGINEERING_CABLE_REVIEW_REQUIRED", Severity = DrawingPlanningIssueSeverity.Blocker,
+                    Message = $"{cable.Label}：請在工程確認中明選 Purchased / Custom。", TargetKind = "CableInstance", TargetId = cable.CableId });
+        }
         if (catalog is not null)
         {
             // Planning remains pure; explicit lineage restoration is confined to this projection copy.

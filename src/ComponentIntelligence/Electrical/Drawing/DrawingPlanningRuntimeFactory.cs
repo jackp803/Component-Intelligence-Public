@@ -12,7 +12,8 @@ public static class DrawingPlanningRuntimeFactory
         var repository = new SymbolArchiveRepository(archiveRootOrWorkbook);
         _ = repository.Load();
         return new DrawingPlanningInputBuilder(new RepresentationPolicy(
-            new Cp3aDrawingAssetResolver(new SymbolResolver(repository, catalog), repository)), catalog);
+            new Cp3aDrawingAssetResolver(new SymbolResolver(repository, catalog), repository)), catalog,
+            new ComponentIntelligence.Electrical.Editing.EngineeringReviewService(catalog, repository, "Configured central catalog"));
     }
 
     private sealed class UnconfiguredAssets : IDrawingAssetResolver

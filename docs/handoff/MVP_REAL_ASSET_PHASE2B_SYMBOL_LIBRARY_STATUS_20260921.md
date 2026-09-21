@@ -206,3 +206,85 @@ company-block insertion proof remain outstanding. PM can scope the four
 integration boundaries above; engineering and visual UAT remain separate.
 
 `APPLIED != VERIFIED`. No merge, release, CP3-D or production generation.
+
+## Corrective continuation: task-008 (2026-09-21)
+
+Parent: `CODEX-W1-20260921-007`.
+Corrective: `CODEX-W1-20260921-008`.
+Terminal disposition: **BLOCKED** (supersedes task-007 PARTIAL as current stop state).
+Authority: coordination main `37d2651`, corrective handoff and PM-approved design.
+
+Starting evidence heads:
+- Component: `1c9bb3fbe3b42fa8153205d15454acce874fdad0`
+- Auto: `aebdc26f478dda4e6a6b912ef19a6d181a2284f3`
+
+Both existing local branches were clean and matched remote before inspection.
+No product source was changed; executable heads/trees remain the Phase 2A
+identities listed above. No repair commit or new K7L revision was created.
+
+### First decisive fresh evidence
+
+A local .NET probe used Microsoft.Data.Sqlite with Mode=ReadOnly, Pooling=false
+and PRAGMA query_only=ON to read the actual current production snapshot.
+It deserialized the domain and called the existing ElectricalProjectMigrator
+in memory only. It did not use ElectricalProjectRepository.GetAsync because
+that method initializes tables; no database write was permitted.
+
+Observed:
+- Actual project: `2fe3fb260c7d4c0eb3f5661e4b112a01`.
+- Actual instance: `bom:7:omron:k7l-at50dp:1`.
+- Exact ComponentDefinitionId: `OMRON_K7L-AT50DP`.
+- Snapshot schema 0.3; current in-memory migration produces 0.5.
+- Three instance ports and eight instance pins exist.
+- Typed SourcePortId / SourcePinId: **all null** after migration.
+- Approved binding count: 8; explicitly bridgeable bindings: **0**.
+- Missing required source endpoint bindings: **8**.
+- K7L rev-001 / ApprovedCustom / approved SHA remain unchanged.
+
+Blocker code: `ACTUAL_K7L_EXPLICIT_SOURCE_ENDPOINT_IDS_MISSING`.
+
+There are legacy SOURCE_PORT_ID capability strings, but they are not the
+authorized typed SourcePortId/SourcePinId bridge, and they do not supply the
+eight missing typed pin source identities. We did not parse instance PinId
+suffixes, compare PinNumber/PinName/PortName, use index/geometry/filename, or
+populate missing source IDs. The current migrator preserves these missing
+values rather than reconstructing them.
+
+The domain's availability of source-ID properties does not establish that
+this legacy actual project populated those properties. Thus a complete
+real-instance exact bridge cannot be proved under the current authority.
+Changing import/migration or restoring engineering source lineage is outside
+the four authorized consumption repairs and requires a separately bounded
+PM decision. A synthetic fixture with invented SourcePinIds would not satisfy
+the required actual-project proof.
+
+### Stop and continuation requirements
+
+Implementation stopped before source edits. Resolver injection, approved-first
+selection, execution-path adaptation and bridge implementation remain
+NOT_IMPLEMENTED by task-008. Existing task-007 behavior remains unchanged.
+Do not treat this evidence-only stop as a tested corrective implementation.
+
+PM must authorize an evidence-backed source-lineage restoration procedure or
+provide an authoritative actual-project snapshot with explicit typed source
+IDs. It must preserve instance IDs and engineering connections and must not
+silently infer identities or mutate production. Then resume the same branches,
+reuse rev-001, implement the four corrections with TDD and run every required
+fresh gate and real company-format execution.
+
+Fresh probe: PASS as blocker reproduction, not product acceptance.
+Focused/full product tests, Desktop Release build and real AutoCAD execution:
+NOT_RUN in task-008 because the prerequisite actual bridge authority is absent.
+The probe's referenced core project compiled with one existing nullable warning.
+Both evidence-only diff checks: PASS.
+No planning/IR/package/APPLIED proof, runId or generated WDP/DWG exists for task-008.
+No new candidate onboarding, no approval recreation, no new archive revision.
+
+Protected pre/post checks: 154 identities, 0 changed, including source library,
+production SQLite/workbook, company WDP/DWT/WDT/WDL, approved rev-001 and
+SymbolArchive.json. Sanitized full hashes and endpoint evidence:
+`evidence/phase2b-20260921/task008-source-endpoint-blocker.json`.
+
+Task-007 evidence and approval are preserved. PR #31 and #34 remain
+Draft/Open/Unmerged. Final evidence commit identity is the Git commit containing
+this appended record, not a new executable source revision.

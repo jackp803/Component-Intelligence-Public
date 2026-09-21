@@ -602,3 +602,109 @@ unsafe rows. Do not ask the Product Owner to make arbitrary catalog matches.
 
 PR #31 and #34 remain Draft/Open/Unmerged. No merge/release or CP3-D.
 NOT_RUN != PASS. APPLIED != VERIFIED. Worker completion != PM acceptance.
+
+## Task-011: Inline Interface + Normal-App Human Gate
+
+Task CODEX-W1-20260921-011: DONE (Human Gate terminal path).
+Authority: coordination main bcea54811e3dfcef23d4697979f266682474b801,
+CODEX_INLINE_INTERFACE_HUMAN_GATE_COMPLETION_20260921.md and task-010 PM review.
+Earlier evidence remains historical, not replaced or repeated.
+
+### Exact executable identity
+
+Component: 88f5aae9ca75bd278c7e6cbafc7baaa43b4e2892
+Tree: d7fafbe4a1d8318233faf8927bc817a580ad47b1
+Remote commit/tree confirmed through GitHub Git API.
+Auto executable remains c61d1cc3cc66b392aa9a559468d995a0e9fb053b,
+tree ea1bb9bce25ef4ca41c9922b29f6f58a68646437. No Auto product source edits.
+Existing Phase 2B branches / Draft PR #31 and #34 only.
+
+### Bounded authority and coverage
+
+Six PM-authorized exact ordinal identities require explicit project ports,
+pins, connector family/contact count and uniquely resolvable referenced endpoints.
+Missing/duplicate endpoints, missing interface evidence and lookalike IDs block.
+Unowned broken endpoints are not attributed by parsing IDs. No face-to-face
+continuity, pin correspondence, direction, protocol or manufacturer is inferred.
+No fake ComponentIR or Symbol Archive approval is created.
+
+Safe decisions use FunctionalGeneric / sourceType ProjectInlineInterface,
+bindings to existing project PortId/PinId, and no fabricated asset revision/path/SHA.
+Coverage is SAFE_INLINE_INTERFACE, distinct from approved/catalog generic.
+Unsafe inline objects show an evidence gap, not a fake catalog identity question.
+
+Actual representative project, read-only:
+- 6 inline types / 28 instances / 0 unsafe inline roles.
+- 2 ambiguous physical Component types / 3 instances remain unresolved.
+- 22 Unknown cables remain for explicit Purchased/Custom decisions.
+- K7L and the four task-010 automatic closures are reused unchanged.
+
+### Normal application smoke
+
+The initial normal-app run exposed the task-010 button in a hidden Components
+tab. A regression failed as expected; the same handler was moved to the visible
+Topology toolbar. No replacement editor/save subsystem was added.
+
+Actual Release Desktop EXE, NOT a harness:
+1. Fresh byte-for-byte disposable production DB copy through
+   COMPONENT_INTELLIGENCE_DB_PATH; SQLite path visibly verified in MainWindow.
+2. Electrical Design -> load representative project -> Topology -> Engineering
+   Review. Three physical identity questions and 22 cables; safe inline types
+   absent from catalog identity questions.
+3. Readable model/context, From/To interfaces and candidate evidence observed.
+   Candidate, endpoint mappings and construction initially blank. Inspecting a
+   candidate leaves all endpoint mappings blank; no Component identity applied.
+4. Custom consequence visible. Skip/Cancel preserved DB/WAL/SHM sizes and hashes
+   exactly across review. Reopening retained all original decisions.
+5. Explicit TEST-ONLY Purchased for CBL-006 in disposable state created normal
+   before/after Human confirmation revisions. Their only semantic difference:
+   /cables/6/cableConstructionType: Unknown -> Purchased.
+   Saved snapshot equals after-revision snapshot.
+6. Same coverage reran: 21 Unknown cables; normal project reload/reopen retained
+   21. Production remains at 22. Test choice is NOT Product Owner approval.
+7. Review, workspace and application closed normally; no candidate or AutoCAD
+   process remained.
+
+Existing normal project load synchronizes central catalog data on disposable
+state (61 records / 25 models) and records a pre-sync revision. This was captured
+separately from the two Human Gate revisions, not misreported as a Gate delta
+or a production mutation. No central workbook/source archive write occurred.
+
+### Fresh verification
+
+- Inline RED: 7 expected failures / 6 passes; initial GREEN: 13 passes.
+- Expanded inline: 16 cases in final regression.
+- Navigation regression: expected RED, then PASS after bounded repair.
+- Affected review/inline/drawing/representation/source-identity/bridge: 132 PASS.
+- Full .NET Release: 829 PASS, zero failed/skipped.
+- Desktop Release: PASS, 0 errors / 22 existing warnings.
+- Auto planning/IR/command-plan/package/executor/PowerShell focused: 43 PASS.
+- Actual C# planning JSON with 28 neutral decisions validated by unchanged Python.
+- Both git diff --check: PASS.
+- 172 protected immutable files: identical pre/post SHA-256 and size.
+- Production SQLite: 47,542,272 bytes,
+  4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41.
+- Native AutoCAD / Auto full regression: NOT_RUN. Human decisions remain;
+  no Auto product source changes, new APPLIED or VERIFIED claim.
+
+Sanitized 31-type coverage, private raw-evidence hashes, test results, binary
+manifest and protected hashes: evidence/phase2b-20260921/task011-inline-human-gate.json.
+Raw evidence stays in the local task-011 evidence root; no private absolute
+company path is committed.
+
+### Product Owner handoff
+
+Candidate navigation: Electrical Design -> load project -> Topology ->
+Engineering Review. Remaining physical questions: two GRUNDFOS instances and
+one FUJI instance. Candidates are options, not automatic identity authority.
+Confirm identity and explicit endpoint evidence together, or leave unresolved.
+Review cables individually. Model/name/assembly membership is not construction
+authority. Custom may still require Cable Detail / Pin-Core evidence.
+Explicit Save uses normal Project Save/Revision; coverage reruns afterward.
+
+HUMAN_ENGINEERING_GATE = READY_FOR_PRODUCT_OWNER
+UAT_READINESS = WAITING_FOR_PRODUCT_OWNER_ENGINEERING_GATE
+
+No release, merge, production update, K7L revision or new archive approval.
+PR #31 / #34 remain Draft/Open/Unmerged. Stop for PM / Product Owner review.
+NOT_RUN != PASS. APPLIED != VERIFIED. DONE != Product Owner UAT acceptance.

@@ -55,6 +55,24 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                 .Select(x => x.First())
                 .OrderBy(x => x.EngineeringEndpointId, StringComparer.Ordinal)
                 .ToArray();
+            if (InlineInterfaceRepresentation.IsRecognized(component.ComponentDefinitionId))
+            {
+                var blocking = InlineInterfaceRepresentation.BlockingReason(project, component);
+                if (blocking is not null)
+                    issues.Add(new DrawingPlanningIssue { IssueId = $"ISSUE:{component.ComponentInstanceId}:inline-interface",
+                        Code = "INLINE_INTERFACE_EVIDENCE_REQUIRED", Severity = DrawingPlanningIssueSeverity.Blocker,
+                        Message = blocking, TargetKind = "Component", TargetId = component.ComponentInstanceId });
+                else
+                    representations.Add(new DrawingRepresentationDecision
+                    {
+                        RepresentationId = $"REP:{component.ComponentInstanceId}:Schematic",
+                        OwnerKind = DrawingRepresentationOwnerKind.Component, OwnerId = component.ComponentInstanceId,
+                        Role = DrawingRepresentationRole.Schematic, Family = DrawingRepresentationFamily.FunctionalGeneric,
+                        SourceType = "ProjectInlineInterface", ControlState = DrawingRepresentationControlState.Auto,
+                        AllowedRotations = [0, 90], PortBindings = explicitBindings, PhysicalInterfaceMeaning = true
+                    });
+                continue;
+            }
             var result = _representationPolicy.Decide(new RepresentationRequest
             {
                 RepresentationId = $"REP:{component.ComponentInstanceId}:Schematic",

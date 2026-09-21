@@ -61,7 +61,6 @@
                         <TextBlock Text="Equipment Tag" VerticalAlignment="Center" Margin="0,0,6,0" />
                         <TextBox x:Name="ComponentTagText" Width="180" Height="28" Margin="0,0,10,0" />
                         <Button Content="新增元件實例" Padding="14,5" Click="AddComponent_Click" />
-                        <Button Content="工程確認" Padding="14,5" Margin="12,0,0,0" Click="EngineeringReview_Click" />
                     </WrapPanel>
                     <DataGrid x:Name="ComponentsGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True">
                         <DataGrid.Columns>
@@ -79,6 +78,7 @@
                 <Grid Margin="12">
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                     <WrapPanel Margin="0,0,0,10">
+                        <Button x:Name="EngineeringReviewButton" Content="工程確認" Padding="14,5" Margin="0,0,10,0" Click="EngineeringReview_Click" />
                         <TextBlock Text="Layer Filter（圖層篩選）" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <ComboBox x:Name="TopologyLayerCombo" Width="190" Height="28" DisplayMemberPath="Label" SelectionChanged="TopologyLayerCombo_SelectionChanged" Margin="0,0,10,0" />
                         <Button Content="自動排列 Auto Arrange" Padding="14,5" Click="AutoArrangeTopology_Click" Margin="0,0,12,0" />

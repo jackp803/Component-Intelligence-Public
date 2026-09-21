@@ -89,6 +89,12 @@ public sealed class EngineeringReviewDialog : Window
         _componentDetail.Children.Add(Text(row.Label, 18));
         _componentDetail.Children.Add(Text($"既有型錄／exact cache Manufacturer / Model（未等於身分核准）：{row.Manufacturer} / {row.Model}\n{row.Reason}"));
         _componentDetail.Children.Add(Text("實際連接上下文\n" + (row.Context.Length == 0 ? "目前沒有 connection" : row.Context)));
+        if (InlineInterfaceRepresentation.IsRecognized(row.DefinitionId))
+        {
+            _componentDetail.Children.Add(Text("此為專案中性介面，請補足明確的介面／接點證據；不可用型錄身分替代。"));
+            _componentDetail.Children.Add(Button("略過，不變更", () => { _components.SelectedIndex = -1; return Task.CompletedTask; }));
+            return;
+        }
         _componentDetail.Children.Add(Text("權威型錄候選（未自動配對）"));
         var candidates = new ComboBox { ItemsSource = _service.Candidates, DisplayMemberPath = "Label", SelectedIndex = -1, MinHeight = 32 };
         _componentDetail.Children.Add(candidates);

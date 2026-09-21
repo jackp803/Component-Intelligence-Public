@@ -73,7 +73,13 @@ public sealed class EngineeringReviewService
             var status = "UNSAFE_UNRESOLVED";
             var reason = "無 exact 型錄身分／端點權威；不可依名稱自動配對。";
             var endpoints = InstanceEndpoints(instance, used);
-            if (source is not null)
+            if (InlineInterfaceRepresentation.IsRecognized(instance.ComponentDefinitionId))
+            {
+                var blocking = InlineInterfaceRepresentation.BlockingReason(project, instance);
+                status = blocking is null ? "SAFE_INLINE_INTERFACE" : "UNSAFE_UNRESOLVED";
+                reason = blocking ?? "專案明確 interface/contact 與使用端點完整；僅中性介面表示，不代表型錄或圖塊核准。";
+            }
+            else if (source is not null)
             {
                 var lineage = new ComponentSourceIdentityRestorer().Restore(instance, source);
                 if (lineage.Status == SourceIdentityStatus.CONFLICT) reason = "型錄來源端點有衝突，需核對工程證據。";
@@ -194,7 +200,9 @@ public sealed class EngineeringReviewService
     {
         foreach (var c in project.Components)
         {
-            var endpoint = InstanceEndpoints(c, new HashSet<string?>()).SingleOrDefault(e => e.Id == id);
+            var matches = InstanceEndpoints(c, new HashSet<string?>()).Where(e => e.Id == id).ToArray();
+            if (matches.Length > 1) return $"端點身分不唯一 ({id})";
+            var endpoint = matches.SingleOrDefault();
             if (endpoint is not null) return $"{ComponentLabel(c)} / {endpoint.Label}";
         }
         return $"未解析端點 ({id})";

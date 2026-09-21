@@ -1,8 +1,11 @@
 using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Bridging;
+using ComponentIntelligence.Contracts;
+using System.Text.Json;
 
 namespace ComponentIntelligence.Electrical.Drawing;
 
-public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representationPolicy)
+public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representationPolicy, IReadOnlyList<ComponentIR>? catalog = null)
 {
     private readonly RepresentationPolicy _representationPolicy = representationPolicy ?? throw new ArgumentNullException(nameof(representationPolicy));
 
@@ -11,6 +14,19 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         ArgumentNullException.ThrowIfNull(project);
         var representations = new List<DrawingRepresentationDecision>();
         var issues = new List<DrawingPlanningIssue>();
+        if (catalog is not null)
+        {
+            // Planning remains pure; explicit lineage restoration is confined to this projection copy.
+            project = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(project))!;
+            foreach (var instance in project.Components)
+            {
+                var result = new ComponentSourceIdentityRestorer().Restore(instance,
+                    catalog.SingleOrDefault(c => string.Equals(c.Identity.ComponentId, instance.ComponentDefinitionId, StringComparison.Ordinal)));
+                if (result.Status == SourceIdentityStatus.CONFLICT)
+                    issues.Add(new DrawingPlanningIssue { IssueId = $"ISSUE:{instance.ComponentInstanceId}:source-identity", Severity = DrawingPlanningIssueSeverity.Blocker,
+                        Code = "DRAWING_SOURCE_IDENTITY_CONFLICT", Message = "Component source identity conflicts with authoritative catalog; reconcile explicit source IDs.", TargetKind = "Component", TargetId = instance.ComponentInstanceId });
+            }
+        }
 
         foreach (var component in project.Components.OrderBy(x => x.ComponentInstanceId, StringComparer.Ordinal))
         {
@@ -36,6 +52,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                 ControlState = DrawingRepresentationControlState.Auto,
                 AllowedRotations = [0, 90],
                 PortBindings = explicitBindings,
+                SourceInstance = component,
                 RequiresExplicitEndpointEvidence = false,
                 PhysicalInterfaceMeaning = false,
                 ControllerId = null,
@@ -192,7 +209,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         return new DrawingCableEndpoint { EndpointId = endpointId, InterfaceLayoutFamily = DrawingInterfaceLayoutFamily.Other };
     }
 
-    private static DrawingCableEndpoint FromPort(string endpointId, ComponentPort port)
+    private static DrawingCableEndpoint FromPort(string endpointId, ComponentIntelligence.Electrical.Domain.ComponentPort port)
     {
         var connector = port.Connector;
         return new DrawingCableEndpoint

@@ -17,11 +17,13 @@ public partial class ElectricalWorkspaceWindow
     {
         var revisionService = EnsureDrawingRevisionService();
         var checkpointSink = new ProjectRevisionCheckpointSink(revisionService);
-        var builder = new DrawingPlanningInputBuilder(new RepresentationPolicy(new SafeNoAssetResolver()));
+        DrawingPlanningInputBuilder CreateBuilder() => DrawingPlanningRuntimeFactory.Create(_centralWorkbookPath,
+            string.IsNullOrWhiteSpace(_centralWorkbookPath) ? [] :
+                new WorkbookComponentKnowledgeStore(_centralWorkbookPath).ListAsync().ConfigureAwait(false).GetAwaiter().GetResult());
 
         control.ProjectProvider = () => _project;
         control.ProjectReplaced = project => { _project = project; UpdateHistoryButtons(); };
-        control.PlanningInputProvider = () => builder.Build(_project, control.ProjectMetadataStore.Load(_project.ProjectId));
+        control.PlanningInputProvider = () => CreateBuilder().Build(_project, control.ProjectMetadataStore.Load(_project.ProjectId));
         control.CheckpointAsync = async (trigger, label) => _ = await revisionService.CreateCheckpointAsync(_project, trigger, label);
         control.SaveProjectAsync = async () => await _repository.SaveAsync(_project);
         control.HistoryItemsAsync = async () => (await revisionService.ListAsync(_project.ProjectId)).Select(x => x.RevisionId).ToArray();
@@ -40,7 +42,7 @@ public partial class ElectricalWorkspaceWindow
                 executor = new LocalDrawingExecutorClient(executorSettings, productionSqlitePaths: [_databasePath]);
             }
             return new DrawingGenerationCoordinator(
-                project => builder.Build(project, control.ProjectMetadataStore.Load(project.ProjectId)),
+                project => CreateBuilder().Build(project, control.ProjectMetadataStore.Load(project.ProjectId)),
                 new PythonDrawingPlannerClient(settings),
                 new PythonDrawingIrClient(settings),
                 new DrawingPreflightService(),
@@ -64,8 +66,4 @@ public partial class ElectricalWorkspaceWindow
             ProjectRevisionTrigger.MajorImport,
             label ?? "Major import");
 
-    private sealed class SafeNoAssetResolver : IDrawingAssetResolver
-    {
-        public DrawingAssetResolution? Resolve(string ownerId, DrawingRepresentationRole role) => null;
-    }
 }

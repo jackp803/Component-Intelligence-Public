@@ -1,4 +1,5 @@
 using ComponentIntelligence.SymbolArchive;
+using ComponentIntelligence.Electrical.Domain;
 
 namespace ComponentIntelligence.Electrical.Drawing;
 
@@ -16,33 +17,36 @@ public sealed record DrawingAssetResolution
     public IReadOnlyList<DrawingPortBinding> PortBindings { get; init; } = [];
 }
 
-public sealed class Cp3aDrawingAssetResolver(SymbolResolver resolver) : IDrawingAssetResolver
+public sealed class Cp3aDrawingAssetResolver(SymbolResolver resolver, SymbolArchiveRepository repository) : IDrawingAssetResolver
 {
     private readonly SymbolResolver _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
 
     public DrawingAssetResolution? Resolve(string ownerId, DrawingRepresentationRole role)
     {
         if (!TryMapRole(role, out var assetRole)) return null;
-        try
+        var document = repository.Load();
+        if (!document.Bindings.Any(b => string.Equals(b.ComponentId, ownerId, StringComparison.Ordinal) && b.Role == assetRole
+            && b.Revisions.Any(r => r.Status == SymbolRevisionStatus.Approved))) return null;
+        var resolved = _resolver.ResolveAsync(ownerId, assetRole, allowGeneratedGeneric: false)
+            .ConfigureAwait(false).GetAwaiter().GetResult();
+        var path = repository.ResolveArchivePath(resolved.AssetPath);
+        // Reject linked descendants so lexical containment cannot redirect execution outside the root.
+        for (var current = new FileInfo(path) as FileSystemInfo; current is not null && !string.Equals(current.FullName, repository.ArchiveRoot, StringComparison.OrdinalIgnoreCase);
+             current = current is FileInfo file ? file.Directory : ((DirectoryInfo)current).Parent)
+            if ((current.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("Approved symbol path contains a linked descendant.");
+        return new DrawingAssetResolution
         {
-            var resolved = _resolver.ResolveAsync(ownerId, assetRole, allowGeneratedGeneric: true)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-            return new DrawingAssetResolution
+            SourceType = resolved.SourceType.ToString(),
+            Revision = resolved.Revision,
+            AssetPath = path,
+            AssetHashSha256 = resolved.Sha256.ToUpperInvariant(),
+            PortBindings = resolved.PortBindings.Select(x => new DrawingPortBinding
             {
-                SourceType = resolved.SourceType.ToString(),
-                Revision = resolved.Revision,
-                AssetPath = resolved.AssetPath,
-                AssetHashSha256 = resolved.Sha256.ToUpperInvariant(),
-                PortBindings = resolved.PortBindings.Select(x => new DrawingPortBinding
-                {
-                    EngineeringEndpointId = x.EngineeringEndpointId,
-                    ConnectionPointId = x.ConnectionPointId
-                }).OrderBy(x => x.EngineeringEndpointId, StringComparer.Ordinal).ToArray()
-            };
-        }
-        catch (FileNotFoundException) { return null; }
-        catch (InvalidOperationException) { return null; }
-        catch (InvalidDataException) { return null; }
+                EngineeringEndpointId = x.EngineeringEndpointId,
+                ConnectionPointId = x.ConnectionPointId
+            }).OrderBy(x => x.EngineeringEndpointId, StringComparer.Ordinal).ToArray()
+        };
     }
 
     private static bool TryMapRole(DrawingRepresentationRole role, out SymbolRole mapped)
@@ -69,6 +73,7 @@ public sealed record RepresentationRequest
     public DrawingRepresentationControlState ControlState { get; init; }
     public IReadOnlyList<int> AllowedRotations { get; init; } = [0];
     public IReadOnlyList<DrawingPortBinding> PortBindings { get; init; } = [];
+    public ComponentInstance? SourceInstance { get; init; }
     public bool RequiresExplicitEndpointEvidence { get; init; }
     public string? FieldDeviceClass { get; init; }
     public string? ControllerId { get; init; }
@@ -97,8 +102,33 @@ public sealed class RepresentationPolicy(IDrawingAssetResolver assetResolver)
         var issues = new List<DrawingPlanningIssue>();
         var assetEligibleFamily = request.PreferredFamily is DrawingRepresentationFamily.ArchivedExact
             or DrawingRepresentationFamily.StandardSymbol
-            or DrawingRepresentationFamily.ConnectorDetail;
+            or DrawingRepresentationFamily.ConnectorDetail
+            || request.OwnerKind == DrawingRepresentationOwnerKind.Component && request.Role == DrawingRepresentationRole.Schematic
+                && request.ControlState == DrawingRepresentationControlState.Auto && request.PreferredFamily == DrawingRepresentationFamily.FunctionalGeneric;
         var asset = assetEligibleFamily ? _assetResolver.Resolve(request.AssetComponentId, request.Role) : null;
+        IReadOnlyList<DrawingPortBinding>? exactBindings = null;
+        if (asset is not null && request.OwnerKind == DrawingRepresentationOwnerKind.Component)
+        {
+            var instance = request.SourceInstance;
+            var bridge = instance?.Ports.Select(p => (Source: p.SourcePortId, Instance: p.PortId))
+                .Concat(instance.Ports.SelectMany(p => p.Pins.Select(pin => (Source: pin.SourcePinId, Instance: pin.PinId))))
+                .Where(p => !string.IsNullOrWhiteSpace(p.Source)).ToArray() ?? [];
+            if (instance is null || bridge.GroupBy(p => p.Source, StringComparer.Ordinal).Any(g => g.Count() > 1)
+                || asset.PortBindings.Any(b => !bridge.Any(p => string.Equals(p.Source, b.EngineeringEndpointId, StringComparison.Ordinal))))
+            {
+                issues.Add(new DrawingPlanningIssue
+                {
+                    IssueId = $"ISSUE:{request.RepresentationId}:source-bridge",
+                    Severity = DrawingPlanningIssueSeverity.Blocker,
+                    Code = "DRAWING_APPROVED_SOURCE_BRIDGE_INVALID",
+                    Message = "Approved asset requires unique typed SourcePortId/SourcePinId for every binding.",
+                    TargetKind = "Representation",
+                    TargetId = request.RepresentationId
+                });
+                asset = null;
+            }
+            else exactBindings = asset.PortBindings.Select(b => b with { EngineeringEndpointId = bridge.Single(p => string.Equals(p.Source, b.EngineeringEndpointId, StringComparison.Ordinal)).Instance }).ToArray();
+        }
 
         if (request.RequiresExplicitEndpointEvidence && request.PortBindings.Count == 0)
         {
@@ -126,10 +156,12 @@ public sealed class RepresentationPolicy(IDrawingAssetResolver assetResolver)
             });
         }
 
-        var family = asset is null && request.PreferredFamily == DrawingRepresentationFamily.ArchivedExact
+        var family = asset is not null && request.OwnerKind == DrawingRepresentationOwnerKind.Component && request.Role == DrawingRepresentationRole.Schematic
+            ? DrawingRepresentationFamily.ArchivedExact
+            : asset is null && request.PreferredFamily == DrawingRepresentationFamily.ArchivedExact
             ? DrawingRepresentationFamily.FunctionalGeneric
             : request.PreferredFamily;
-        var bindings = request.PortBindings.Count > 0 ? request.PortBindings : asset?.PortBindings ?? [];
+        var bindings = exactBindings ?? (request.PortBindings.Count > 0 ? request.PortBindings : asset?.PortBindings ?? []);
         var decision = new DrawingRepresentationDecision
         {
             RepresentationId = request.RepresentationId,

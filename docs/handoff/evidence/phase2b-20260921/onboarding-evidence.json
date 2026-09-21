@@ -1,0 +1,2113 @@
+{
+  "taskId": "CODEX-W1-20260921-007",
+  "disposition": "PARTIAL",
+  "counts": {
+    "scanned": 35,
+    "exactDuplicatesWithinScan": 0,
+    "candidateOnlyUnapproved": 34,
+    "approvedNewRevisions": 1,
+    "reusedApprovedRevisions": 0,
+    "selectedRepresentativeComponents": 1,
+    "generatedGenericUsed": 0
+  },
+  "sourceManifest": [
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_2PinToM12.dwg",
+      "size": 77279,
+      "sha256": "EE98526B51622F7D994DEE03A2F2B20F93C2DF396C3BAFBD708F7D89A4FBB17C",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_2PinToM12F_Cable.dwg",
+      "size": 72896,
+      "sha256": "F4596C7E05BB1CA716D1C7CEB5D88DE827E80457AC0B07ABB15DCE6DAC4B8E1F",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_2PinToM12_Cable.dwg",
+      "size": 78273,
+      "sha256": "2DA32CD875FC1C9CB2368BE362F2EF26D937E8770DBCB48D6E3A5B770A4FAE23",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_3PinToEth.dwg",
+      "size": 63197,
+      "sha256": "1AC0F5244105801407C8392C9E8563971F4409F54539DC22D4D2AAA6464CCEA2",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_3PinToEth_Cable.dwg",
+      "size": 58737,
+      "sha256": "E11405B2CAB654D7B07F43D2D0E5748664DE9F9218D4D3B51C8BC1033384C3B5",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_CRPS_1.dwg",
+      "size": 33906,
+      "sha256": "1CC542492615D8E46E5A259328BD0844F76E520D875E1CDFB8EF5D60961777F0",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToEthCable.dwg",
+      "size": 43283,
+      "sha256": "EECB6C4E8EF422C37079B3F798951DA4C09EBEE38B5E6982B0416173BEA16728",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToEthList.dwg",
+      "size": 45424,
+      "sha256": "8CE319CCB8306DE641C9FC49979D4BC163B3FA8C449031BF4B2ACC66FE290292",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToM12_A_4.dwg",
+      "size": 85088,
+      "sha256": "89561C6C025B44393FC104CF1D85830DD1E13949A498551C156E949EA8C8B206",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToM12_A_4_Cable.dwg",
+      "size": 73860,
+      "sha256": "EC674AFF1015890D233F720E614F0B366AB88FA4EF8D21EC5F120AD341F350E0",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_HD_2.dwg",
+      "size": 46354,
+      "sha256": "73A94E1A2AB4355EF6D0793503A992665F9CA67552B8D8B73A6F9F6DA1991520",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_HMI.dwg",
+      "size": 375736,
+      "sha256": "02C7BC08FFD4A99F83C81AAC8F14670688FFB1F67FE92186F854CBFB25CB0512",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_IOLink.dwg",
+      "size": 35282,
+      "sha256": "BD77BAF5CEEC2EBDB15867A2513E274E6306BD86CA3B700009D0814C6E5A5360",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_LiquidLeakAmp8.dwg",
+      "size": 39153,
+      "sha256": "217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828",
+      "status": "APPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_MTE_1.dwg",
+      "size": 35121,
+      "sha256": "C14334F81ECD42FD34ED09E2C8C23C6D5F91A456C83DB2E039EEDDD8B06CCAE6",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_RemoteIO16.dwg",
+      "size": 72315,
+      "sha256": "4649DAF52276C780B07F2D9415879D3075953D8E86938371872BB684C9FDE5F5",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_Senser通用模組.dwg",
+      "size": 30922,
+      "sha256": "33F0D76B96A7CCC62A109596BEF4AAF7A1D7E6382F7F4663CA40223DE0D0F5C3",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_006.dwg",
+      "size": 41423,
+      "sha256": "77381AD5FF3BCE52D936C99799726A958FD6A6E9B7C391558DADF8074E362091",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_2W_2W.dwg",
+      "size": 38192,
+      "sha256": "4EB6A0286558602F83B51A1E61F35782BE211F335604B2FA0FAAAF09D06ECA97",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_2W_M12F_5PA.dwg",
+      "size": 51956,
+      "sha256": "843FE0F475B5D1F56221B9F9AB66B831A38FE94F0FC017257181EFC7E9D544FE",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_3W_3W.dwg",
+      "size": 38418,
+      "sha256": "29268F34897483B192DFEA2CD645986CDE3F2C315373796411E0981BEFB0F4FE",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_3W_M12F_5PA.dwg",
+      "size": 51575,
+      "sha256": "85A4B0A8988F0B61BAD55D8E97275C52F77503665CBF0482FB143D68CC6234A3",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_M12F_M12M_5PA.dwg",
+      "size": 62618,
+      "sha256": "643E641F7DE8A232167E70BB8CD107617CB340665BD2F4D671B02AA6C94DDC39",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_M12M_2W_5PA.dwg",
+      "size": 48175,
+      "sha256": "566AB39BF05678B5D81AAF64434BB15C214CF9D8FEFCAECD8DF54B0D63AEDCA7",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_M12M_3W_5PA.dwg",
+      "size": 47218,
+      "sha256": "65F66F0003D0AD64F376A2BF7351B3EF811500C9E8D2366BF61E4DF20800E654",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_M12M_M12F_5PA.dwg",
+      "size": 62424,
+      "sha256": "99AF0D1821CBAFE9601ED15ADFEAEB6EA671EDFEE665704498A4C147D2E7B914",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_RJ45_M12F_5PA.dwg",
+      "size": 57019,
+      "sha256": "32315761B4C9C56ED55402EF30EDBF629C06B43E078C00B53B6BAA5B510E0E68",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_2W_2W.dwg",
+      "size": 34097,
+      "sha256": "D19B82714F1D99F3773E2917C7691B83FD8AB32F33251AA541DD033069465A82",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_2W_M12F_5PA.dwg",
+      "size": 51383,
+      "sha256": "36C11FB3A6C3F251FF07B6F5B4A65FBCDC8ABFF58EAD68E5DF6581EB3190251F",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_3W_3W.dwg",
+      "size": 34577,
+      "sha256": "22959093878D7799D389767B35856241B64B83C3790E8FCC9714926E1E8AC5A2",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_3W_M12F_5PA.dwg",
+      "size": 51863,
+      "sha256": "EEC6DF1548091CFE45D6E582342A2B0E32709F404EEC040ECCF6FEE454AB21A2",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_M12F_M12M_5PA.dwg",
+      "size": 64855,
+      "sha256": "45BB3F4A7B225A26C916A4A7555D868916CCFF926E1AC4D01C0532C80B0A76D0",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_M12M_2W_5PA.dwg",
+      "size": 48529,
+      "sha256": "0B472CC7664252F12B8C9B7338C9D3EFA1E426EFD2EC4950B43927FBB21445EF",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_M12M_3W_5PA.dwg",
+      "size": 49583,
+      "sha256": "BAAFCF62E7BC4976B085446AE1F482DA81BF917DA2952BCE12C4970998FDEE23",
+      "status": "CANDIDATE_UNAPPROVED"
+    },
+    {
+      "sourceAlias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_RJ45_M12F_5PA.dwg",
+      "size": 61401,
+      "sha256": "8C9A6B78F9C76412B0AAF941BCA726FB0C9296EAEBDB53D67F07B30A909439E5",
+      "status": "CANDIDATE_UNAPPROVED"
+    }
+  ],
+  "approval": {
+    "approval": {
+      "disposition": "CreatedRevision",
+      "componentId": "OMRON_K7L-AT50DP",
+      "role": "Schematic",
+      "revision": "rev-001",
+      "assetPath": "Documents/OMRON/K7L-AT50DP/autocad/schematic/rev-001/symbol.dwg",
+      "sha256": "217a2ac8bda3418d4e77d1a4d51015aad7fc93fe819420ef0279eeffffbf3828"
+    },
+    "resolved": {
+      "componentId": "OMRON_K7L-AT50DP",
+      "role": "Schematic",
+      "sourceType": "ApprovedCustom",
+      "revision": "rev-001",
+      "assetPath": "Documents/OMRON/K7L-AT50DP/autocad/schematic/rev-001/symbol.dwg",
+      "sha256": "217a2ac8bda3418d4e77d1a4d51015aad7fc93fe819420ef0279eeffffbf3828",
+      "portBindings": [
+        {
+          "engineeringEndpointId": "OMRON_K7L-AT50DP_OUTPUT_5",
+          "connectionPointId": "X4TERM05"
+        },
+        {
+          "engineeringEndpointId": "OMRON_K7L-AT50DP_OUTPUT_6",
+          "connectionPointId": "X4TERM06"
+        },
+        {
+          "engineeringEndpointId": "OMRON_K7L-AT50DP_OUTPUT_7",
+          "connectionPointId": "X8TERM07"
+        },
+        {
+          "engineeringEndpointId": "OMRON_K7L-AT50DP_POWER_1",
+          "connectionPointId": "X8TERM01"
+        },
+        {
+          "engineeringEndpointId": "OMRON_K7L-AT50DP_POWER_8",
+          "connectionPointId": "X8TERM08"
+        },
+        {
+          "engineeringEndpointId": "OMRON_K7L-AT50DP_SENSING_2",
+          "connectionPointId": "X1TERM02"
+        },
+        {
+          "engineeringEndpointId": "OMRON_K7L-AT50DP_SENSING_3",
+          "connectionPointId": "X1TERM03"
+        },
+        {
+          "engineeringEndpointId": "OMRON_K7L-AT50DP_SENSING_4",
+          "connectionPointId": "X1TERM04"
+        }
+      ],
+      "generatedGeneric": null
+    }
+  },
+  "archiveManifestSha256": "3E8E9D80DA4B6EB1C94AA2A3B6C8C1558DEC0643CE1C36900126128941E58E29",
+  "planningProbe": {
+    "authoritativeComponentId": "OMRON_K7L-AT50DP",
+    "instanceId": "bom:7:omron:k7l-at50dp:1",
+    "archiveSourceType": "ApprovedCustom",
+    "archiveRevision": "rev-001",
+    "archiveSha": "217a2ac8bda3418d4e77d1a4d51015aad7fc93fe819420ef0279eeffffbf3828",
+    "planningFamily": "FunctionalGeneric",
+    "sourceType": null,
+    "assetPath": null,
+    "assetRevision": null,
+    "approvedAssetSelected": false,
+    "adapterPathIsFullyQualified": false,
+    "definitionBindingCount": 8,
+    "exactDefinitionIdsPresentInInstance": 0,
+    "physicalExecution": "NOT_RUN / APPROVED_ASSET_NOT_SELECTED_BY_EXISTING_PROJECT_BUILDER"
+  },
+  "protected": [
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/automation-managed-symbols.json",
+      "before": {
+        "size": 976,
+        "sha256": "1236BB1F9391AD5E3895835F998A91B1A3A00310463F91992525855372708C35"
+      },
+      "after": {
+        "size": 976,
+        "sha256": "1236BB1F9391AD5E3895835F998A91B1A3A00310463F91992525855372708C35"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_004.png",
+      "before": {
+        "size": 164,
+        "sha256": "9D2C7D0DBED145F0993DE34A9E032DF21EDD7ABD1D9CAE1B87FD879F01B2EF33"
+      },
+      "after": {
+        "size": 164,
+        "sha256": "9D2C7D0DBED145F0993DE34A9E032DF21EDD7ABD1D9CAE1B87FD879F01B2EF33"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_2PinToM12.png",
+      "before": {
+        "size": 185,
+        "sha256": "C7C89DB56F7851298C28EB6247044B71526BFBDBC2BEA2FC38D4995C1E59FC15"
+      },
+      "after": {
+        "size": 185,
+        "sha256": "C7C89DB56F7851298C28EB6247044B71526BFBDBC2BEA2FC38D4995C1E59FC15"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_2PinToM12F_Cable.png",
+      "before": {
+        "size": 139,
+        "sha256": "4E361EC0339AD78C0AA60224028347AAE4D5F33F0FCCADA6FB3096832BAF2888"
+      },
+      "after": {
+        "size": 139,
+        "sha256": "4E361EC0339AD78C0AA60224028347AAE4D5F33F0FCCADA6FB3096832BAF2888"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_2PinToM12_Cable.png",
+      "before": {
+        "size": 7467,
+        "sha256": "147A2E634B352522A78114302857A8B7DF53637A0FED97C79D3099C224414F6A"
+      },
+      "after": {
+        "size": 7467,
+        "sha256": "147A2E634B352522A78114302857A8B7DF53637A0FED97C79D3099C224414F6A"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_3PinToEth.png",
+      "before": {
+        "size": 180,
+        "sha256": "DA9B8C3CBEAD6AD6B265D134F5D34D23E56896C787019EA29A860D6697112321"
+      },
+      "after": {
+        "size": 180,
+        "sha256": "DA9B8C3CBEAD6AD6B265D134F5D34D23E56896C787019EA29A860D6697112321"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_3PinToEth_Cable.png",
+      "before": {
+        "size": 141,
+        "sha256": "0435A87172D0904C086F2C1C91E335AA8320DB7D315B21C5DA51FDEF7A70B901"
+      },
+      "after": {
+        "size": 141,
+        "sha256": "0435A87172D0904C086F2C1C91E335AA8320DB7D315B21C5DA51FDEF7A70B901"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_CRPS_1.png",
+      "before": {
+        "size": 297,
+        "sha256": "12D40005D650A1A58CAD69602F9471EDF0D84BE8032AC7E5D5AAD75B63A8011A"
+      },
+      "after": {
+        "size": 297,
+        "sha256": "12D40005D650A1A58CAD69602F9471EDF0D84BE8032AC7E5D5AAD75B63A8011A"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_EthToEth.png",
+      "before": {
+        "size": 164,
+        "sha256": "9D2C7D0DBED145F0993DE34A9E032DF21EDD7ABD1D9CAE1B87FD879F01B2EF33"
+      },
+      "after": {
+        "size": 164,
+        "sha256": "9D2C7D0DBED145F0993DE34A9E032DF21EDD7ABD1D9CAE1B87FD879F01B2EF33"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_EthToEthCable.png",
+      "before": {
+        "size": 133,
+        "sha256": "584CBE5D8AA53165CFADA322ECF12CACA3EAAE32983FC68F7A40DFCBD7E51405"
+      },
+      "after": {
+        "size": 133,
+        "sha256": "584CBE5D8AA53165CFADA322ECF12CACA3EAAE32983FC68F7A40DFCBD7E51405"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_EthToM12_A_4.png",
+      "before": {
+        "size": 175,
+        "sha256": "521D181464672999D9E894AE70ACCCCF15BFECBEBC2F8EFB2E43BDD6B8D8CB5B"
+      },
+      "after": {
+        "size": 175,
+        "sha256": "521D181464672999D9E894AE70ACCCCF15BFECBEBC2F8EFB2E43BDD6B8D8CB5B"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_EthToM12_A_4_Cable.png",
+      "before": {
+        "size": 146,
+        "sha256": "B21BD3787F63D41468E95BBA84A2D905BEB2DA302E1460AAD3B662317CEE7BAD"
+      },
+      "after": {
+        "size": 146,
+        "sha256": "B21BD3787F63D41468E95BBA84A2D905BEB2DA302E1460AAD3B662317CEE7BAD"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_HD_2.png",
+      "before": {
+        "size": 228,
+        "sha256": "81CD34B0D86BE6E3F793ADED9CC7B190FD3A3CAD4567672BDE32529EDA4FEB01"
+      },
+      "after": {
+        "size": 228,
+        "sha256": "81CD34B0D86BE6E3F793ADED9CC7B190FD3A3CAD4567672BDE32529EDA4FEB01"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_HMI.png",
+      "before": {
+        "size": 375,
+        "sha256": "58642415CD6E929C7D0BFD737162BAFE921534A570C5F07C5417285E08ED0EE1"
+      },
+      "after": {
+        "size": 375,
+        "sha256": "58642415CD6E929C7D0BFD737162BAFE921534A570C5F07C5417285E08ED0EE1"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_IOLink.png",
+      "before": {
+        "size": 170,
+        "sha256": "759DF4AF3A91A2C9988A6928E418E07CEA5252EBFCB97A1EE8EE0D829890D278"
+      },
+      "after": {
+        "size": 170,
+        "sha256": "759DF4AF3A91A2C9988A6928E418E07CEA5252EBFCB97A1EE8EE0D829890D278"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_MTE1.png",
+      "before": {
+        "size": 179,
+        "sha256": "97FD71CD0A2D137C46F9BEC17BB3CB4482B14D6EA34E090620639FB34F995E96"
+      },
+      "after": {
+        "size": 179,
+        "sha256": "97FD71CD0A2D137C46F9BEC17BB3CB4482B14D6EA34E090620639FB34F995E96"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_RemoteIO16.png",
+      "before": {
+        "size": 316,
+        "sha256": "117D28EF2630B6EB7B221DCB1271703461A7A4DBE69C5E9607179DCBB938CCA8"
+      },
+      "after": {
+        "size": 316,
+        "sha256": "117D28EF2630B6EB7B221DCB1271703461A7A4DBE69C5E9607179DCBB938CCA8"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/HDV1_Senser通用模組.png",
+      "before": {
+        "size": 138,
+        "sha256": "203FAB9445926755B725FC8535746738179F995B829A9432E206E18286A63943"
+      },
+      "after": {
+        "size": 138,
+        "sha256": "203FAB9445926755B725FC8535746738179F995B829A9432E206E18286A63943"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_006.png",
+      "before": {
+        "size": 293,
+        "sha256": "F883B4D09ABE2A336B79C09BFD3860691A2C60B1048B3576602255675EAC145B"
+      },
+      "after": {
+        "size": 293,
+        "sha256": "F883B4D09ABE2A336B79C09BFD3860691A2C60B1048B3576602255675EAC145B"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_2W_2W.png",
+      "before": {
+        "size": 9873,
+        "sha256": "7FA0C6E126013A24901F560037E8B2EE1CA5B399845EF8B164AD8C6F5313B2B9"
+      },
+      "after": {
+        "size": 9873,
+        "sha256": "7FA0C6E126013A24901F560037E8B2EE1CA5B399845EF8B164AD8C6F5313B2B9"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_2W_M12F_5PA.png",
+      "before": {
+        "size": 13585,
+        "sha256": "F54529696EEC1BECB573FD3F53C9C4C3627EF28F25C3BEE385EBB86ECD302CC7"
+      },
+      "after": {
+        "size": 13585,
+        "sha256": "F54529696EEC1BECB573FD3F53C9C4C3627EF28F25C3BEE385EBB86ECD302CC7"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_3W_3W.png",
+      "before": {
+        "size": 10277,
+        "sha256": "E0D4383A6EC37E8BDCC4AFA5EA8A8D2471E5F349C15FEA9B60654DBD9AFE8E73"
+      },
+      "after": {
+        "size": 10277,
+        "sha256": "E0D4383A6EC37E8BDCC4AFA5EA8A8D2471E5F349C15FEA9B60654DBD9AFE8E73"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_3W_M12F_5PA.png",
+      "before": {
+        "size": 13095,
+        "sha256": "02A453A64C4394A9B64C6697AF4EEC0194B276BD9B21BE0FE9F5BBF127360688"
+      },
+      "after": {
+        "size": 13095,
+        "sha256": "02A453A64C4394A9B64C6697AF4EEC0194B276BD9B21BE0FE9F5BBF127360688"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_M12F_M12M_5PA.png",
+      "before": {
+        "size": 11786,
+        "sha256": "EC866DBCE4CD8222E914035A266048AD16C584848F8545B5311B1F1E9A65A450"
+      },
+      "after": {
+        "size": 11786,
+        "sha256": "EC866DBCE4CD8222E914035A266048AD16C584848F8545B5311B1F1E9A65A450"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_M12M_2W_5PA.png",
+      "before": {
+        "size": 12643,
+        "sha256": "5CBB8A6C3232E992D7E47C41C9DE28C3848BD4AF09178DA6B9B71B9102545AE1"
+      },
+      "after": {
+        "size": 12643,
+        "sha256": "5CBB8A6C3232E992D7E47C41C9DE28C3848BD4AF09178DA6B9B71B9102545AE1"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_M12M_3W_5PA.png",
+      "before": {
+        "size": 10894,
+        "sha256": "A46566C75BC2A87A22A8B1B2A5FF62D0748B8BD29BB83D080F6403302FC11B9F"
+      },
+      "after": {
+        "size": 10894,
+        "sha256": "A46566C75BC2A87A22A8B1B2A5FF62D0748B8BD29BB83D080F6403302FC11B9F"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_M12M_M12F_5PA.png",
+      "before": {
+        "size": 12889,
+        "sha256": "BE14E1884EA976536AAF2B86414B69D05A0CDD28848FF65BC7417CEBFE653567"
+      },
+      "after": {
+        "size": 12889,
+        "sha256": "BE14E1884EA976536AAF2B86414B69D05A0CDD28848FF65BC7417CEBFE653567"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBLINST_RJ45_M12F_5PA.png",
+      "before": {
+        "size": 12422,
+        "sha256": "9281D2BEA978BE8165EE53CC2D382B84288269E7FCBE70B213432123F8351BDF"
+      },
+      "after": {
+        "size": 12422,
+        "sha256": "9281D2BEA978BE8165EE53CC2D382B84288269E7FCBE70B213432123F8351BDF"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBL_2W_2W.png",
+      "before": {
+        "size": 15805,
+        "sha256": "4DB94B8C0500CEB15E7EC3E7FEB2AC26445168707638409A2F54C7DDA4876E74"
+      },
+      "after": {
+        "size": 15805,
+        "sha256": "4DB94B8C0500CEB15E7EC3E7FEB2AC26445168707638409A2F54C7DDA4876E74"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBL_2W_M12F_5PA.png",
+      "before": {
+        "size": 21130,
+        "sha256": "D56B7C9FE1881903D4F9EDAAFCC082D4600EAB11202A692235A9BA60E3261BF1"
+      },
+      "after": {
+        "size": 21130,
+        "sha256": "D56B7C9FE1881903D4F9EDAAFCC082D4600EAB11202A692235A9BA60E3261BF1"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBL_3W_3W.png",
+      "before": {
+        "size": 16486,
+        "sha256": "707D1C5E6C269528883BC9CABED5A609A978327305435C1C8FE2C76DD8AFD017"
+      },
+      "after": {
+        "size": 16486,
+        "sha256": "707D1C5E6C269528883BC9CABED5A609A978327305435C1C8FE2C76DD8AFD017"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBL_3W_M12F_5PA.png",
+      "before": {
+        "size": 21890,
+        "sha256": "901CE93FB6DD176CC4AE48DB0B6A6F59943054FF45DCA81E9861449B9192FB05"
+      },
+      "after": {
+        "size": 21890,
+        "sha256": "901CE93FB6DD176CC4AE48DB0B6A6F59943054FF45DCA81E9861449B9192FB05"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBL_M12F_M12M_5PA.png",
+      "before": {
+        "size": 23700,
+        "sha256": "DC161C5FF75D1048B6E595B994A601142AE38F1DC4524790513543222696A126"
+      },
+      "after": {
+        "size": 23700,
+        "sha256": "DC161C5FF75D1048B6E595B994A601142AE38F1DC4524790513543222696A126"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBL_M12M_2W_5PA.png",
+      "before": {
+        "size": 20520,
+        "sha256": "3911A0315FC736F645F78D335006D6FA5C223D118CC525A483E0D05F268BE4FF"
+      },
+      "after": {
+        "size": 20520,
+        "sha256": "3911A0315FC736F645F78D335006D6FA5C223D118CC525A483E0D05F268BE4FF"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBL_M12M_3W_5PA.png",
+      "before": {
+        "size": 20818,
+        "sha256": "CAE8DF906833E39150DC8FD332A1BC2592B49419F14E683504BE9E26363333BF"
+      },
+      "after": {
+        "size": 20818,
+        "sha256": "CAE8DF906833E39150DC8FD332A1BC2592B49419F14E683504BE9E26363333BF"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/PNG/VDV1_CBL_RJ45_M12F_5PA.png",
+      "before": {
+        "size": 23838,
+        "sha256": "FF243E0CBA6FB06B7FF4883CB21BDB2F60671720274629F6F0EA35DD9E30AB16"
+      },
+      "after": {
+        "size": 23838,
+        "sha256": "FF243E0CBA6FB06B7FF4883CB21BDB2F60671720274629F6F0EA35DD9E30AB16"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_2PinToM12.dwg",
+      "before": {
+        "size": 77279,
+        "sha256": "EE98526B51622F7D994DEE03A2F2B20F93C2DF396C3BAFBD708F7D89A4FBB17C"
+      },
+      "after": {
+        "size": 77279,
+        "sha256": "EE98526B51622F7D994DEE03A2F2B20F93C2DF396C3BAFBD708F7D89A4FBB17C"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_2PinToM12F_Cable.dwg",
+      "before": {
+        "size": 72896,
+        "sha256": "F4596C7E05BB1CA716D1C7CEB5D88DE827E80457AC0B07ABB15DCE6DAC4B8E1F"
+      },
+      "after": {
+        "size": 72896,
+        "sha256": "F4596C7E05BB1CA716D1C7CEB5D88DE827E80457AC0B07ABB15DCE6DAC4B8E1F"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_2PinToM12_Cable.dwg",
+      "before": {
+        "size": 78273,
+        "sha256": "2DA32CD875FC1C9CB2368BE362F2EF26D937E8770DBCB48D6E3A5B770A4FAE23"
+      },
+      "after": {
+        "size": 78273,
+        "sha256": "2DA32CD875FC1C9CB2368BE362F2EF26D937E8770DBCB48D6E3A5B770A4FAE23"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_3PinToEth.dwg",
+      "before": {
+        "size": 63197,
+        "sha256": "1AC0F5244105801407C8392C9E8563971F4409F54539DC22D4D2AAA6464CCEA2"
+      },
+      "after": {
+        "size": 63197,
+        "sha256": "1AC0F5244105801407C8392C9E8563971F4409F54539DC22D4D2AAA6464CCEA2"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_3PinToEth_Cable.dwg",
+      "before": {
+        "size": 58737,
+        "sha256": "E11405B2CAB654D7B07F43D2D0E5748664DE9F9218D4D3B51C8BC1033384C3B5"
+      },
+      "after": {
+        "size": 58737,
+        "sha256": "E11405B2CAB654D7B07F43D2D0E5748664DE9F9218D4D3B51C8BC1033384C3B5"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_CRPS_1.dwg",
+      "before": {
+        "size": 33906,
+        "sha256": "1CC542492615D8E46E5A259328BD0844F76E520D875E1CDFB8EF5D60961777F0"
+      },
+      "after": {
+        "size": 33906,
+        "sha256": "1CC542492615D8E46E5A259328BD0844F76E520D875E1CDFB8EF5D60961777F0"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToEthCable.dwg",
+      "before": {
+        "size": 43283,
+        "sha256": "EECB6C4E8EF422C37079B3F798951DA4C09EBEE38B5E6982B0416173BEA16728"
+      },
+      "after": {
+        "size": 43283,
+        "sha256": "EECB6C4E8EF422C37079B3F798951DA4C09EBEE38B5E6982B0416173BEA16728"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToEthList.bak",
+      "before": {
+        "size": 41585,
+        "sha256": "04B075D6C3FE01CAFCD2EC6C96ABF84A8657AC8D6AF44C9D896B26ADA3D93750"
+      },
+      "after": {
+        "size": 41585,
+        "sha256": "04B075D6C3FE01CAFCD2EC6C96ABF84A8657AC8D6AF44C9D896B26ADA3D93750"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToEthList.dwg",
+      "before": {
+        "size": 45424,
+        "sha256": "8CE319CCB8306DE641C9FC49979D4BC163B3FA8C449031BF4B2ACC66FE290292"
+      },
+      "after": {
+        "size": 45424,
+        "sha256": "8CE319CCB8306DE641C9FC49979D4BC163B3FA8C449031BF4B2ACC66FE290292"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToM12_A_4.dwg",
+      "before": {
+        "size": 85088,
+        "sha256": "89561C6C025B44393FC104CF1D85830DD1E13949A498551C156E949EA8C8B206"
+      },
+      "after": {
+        "size": 85088,
+        "sha256": "89561C6C025B44393FC104CF1D85830DD1E13949A498551C156E949EA8C8B206"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_EthToM12_A_4_Cable.dwg",
+      "before": {
+        "size": 73860,
+        "sha256": "EC674AFF1015890D233F720E614F0B366AB88FA4EF8D21EC5F120AD341F350E0"
+      },
+      "after": {
+        "size": 73860,
+        "sha256": "EC674AFF1015890D233F720E614F0B366AB88FA4EF8D21EC5F120AD341F350E0"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_HD_2.dwg",
+      "before": {
+        "size": 46354,
+        "sha256": "73A94E1A2AB4355EF6D0793503A992665F9CA67552B8D8B73A6F9F6DA1991520"
+      },
+      "after": {
+        "size": 46354,
+        "sha256": "73A94E1A2AB4355EF6D0793503A992665F9CA67552B8D8B73A6F9F6DA1991520"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_HMI.dwg",
+      "before": {
+        "size": 375736,
+        "sha256": "02C7BC08FFD4A99F83C81AAC8F14670688FFB1F67FE92186F854CBFB25CB0512"
+      },
+      "after": {
+        "size": 375736,
+        "sha256": "02C7BC08FFD4A99F83C81AAC8F14670688FFB1F67FE92186F854CBFB25CB0512"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_IOLink.dwg",
+      "before": {
+        "size": 35282,
+        "sha256": "BD77BAF5CEEC2EBDB15867A2513E274E6306BD86CA3B700009D0814C6E5A5360"
+      },
+      "after": {
+        "size": 35282,
+        "sha256": "BD77BAF5CEEC2EBDB15867A2513E274E6306BD86CA3B700009D0814C6E5A5360"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_LiquidLeakAmp8.dwg",
+      "before": {
+        "size": 39153,
+        "sha256": "217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828"
+      },
+      "after": {
+        "size": 39153,
+        "sha256": "217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_MTE_1.dwg",
+      "before": {
+        "size": 35121,
+        "sha256": "C14334F81ECD42FD34ED09E2C8C23C6D5F91A456C83DB2E039EEDDD8B06CCAE6"
+      },
+      "after": {
+        "size": 35121,
+        "sha256": "C14334F81ECD42FD34ED09E2C8C23C6D5F91A456C83DB2E039EEDDD8B06CCAE6"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_RemoteIO16.dwg",
+      "before": {
+        "size": 72315,
+        "sha256": "4649DAF52276C780B07F2D9415879D3075953D8E86938371872BB684C9FDE5F5"
+      },
+      "after": {
+        "size": 72315,
+        "sha256": "4649DAF52276C780B07F2D9415879D3075953D8E86938371872BB684C9FDE5F5"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/HDV1_Senser通用模組.dwg",
+      "before": {
+        "size": 30922,
+        "sha256": "33F0D76B96A7CCC62A109596BEF4AAF7A1D7E6382F7F4663CA40223DE0D0F5C3"
+      },
+      "after": {
+        "size": 30922,
+        "sha256": "33F0D76B96A7CCC62A109596BEF4AAF7A1D7E6382F7F4663CA40223DE0D0F5C3"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_006.bak",
+      "before": {
+        "size": 32298,
+        "sha256": "57378F895C3AE92590699D4EF41F893487F8B84BDFD23721AA80EF192EB75E4D"
+      },
+      "after": {
+        "size": 32298,
+        "sha256": "57378F895C3AE92590699D4EF41F893487F8B84BDFD23721AA80EF192EB75E4D"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_006.dwg",
+      "before": {
+        "size": 41423,
+        "sha256": "77381AD5FF3BCE52D936C99799726A958FD6A6E9B7C391558DADF8074E362091"
+      },
+      "after": {
+        "size": 41423,
+        "sha256": "77381AD5FF3BCE52D936C99799726A958FD6A6E9B7C391558DADF8074E362091"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_2W_2W.dwg",
+      "before": {
+        "size": 38192,
+        "sha256": "4EB6A0286558602F83B51A1E61F35782BE211F335604B2FA0FAAAF09D06ECA97"
+      },
+      "after": {
+        "size": 38192,
+        "sha256": "4EB6A0286558602F83B51A1E61F35782BE211F335604B2FA0FAAAF09D06ECA97"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_2W_M12F_5PA.dwg",
+      "before": {
+        "size": 51956,
+        "sha256": "843FE0F475B5D1F56221B9F9AB66B831A38FE94F0FC017257181EFC7E9D544FE"
+      },
+      "after": {
+        "size": 51956,
+        "sha256": "843FE0F475B5D1F56221B9F9AB66B831A38FE94F0FC017257181EFC7E9D544FE"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_3W_3W.dwg",
+      "before": {
+        "size": 38418,
+        "sha256": "29268F34897483B192DFEA2CD645986CDE3F2C315373796411E0981BEFB0F4FE"
+      },
+      "after": {
+        "size": 38418,
+        "sha256": "29268F34897483B192DFEA2CD645986CDE3F2C315373796411E0981BEFB0F4FE"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_3W_M12F_5PA.dwg",
+      "before": {
+        "size": 51575,
+        "sha256": "85A4B0A8988F0B61BAD55D8E97275C52F77503665CBF0482FB143D68CC6234A3"
+      },
+      "after": {
+        "size": 51575,
+        "sha256": "85A4B0A8988F0B61BAD55D8E97275C52F77503665CBF0482FB143D68CC6234A3"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_M12F_M12M_5PA.dwg",
+      "before": {
+        "size": 62618,
+        "sha256": "643E641F7DE8A232167E70BB8CD107617CB340665BD2F4D671B02AA6C94DDC39"
+      },
+      "after": {
+        "size": 62618,
+        "sha256": "643E641F7DE8A232167E70BB8CD107617CB340665BD2F4D671B02AA6C94DDC39"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_M12M_2W_5PA.dwg",
+      "before": {
+        "size": 48175,
+        "sha256": "566AB39BF05678B5D81AAF64434BB15C214CF9D8FEFCAECD8DF54B0D63AEDCA7"
+      },
+      "after": {
+        "size": 48175,
+        "sha256": "566AB39BF05678B5D81AAF64434BB15C214CF9D8FEFCAECD8DF54B0D63AEDCA7"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_M12M_3W_5PA.dwg",
+      "before": {
+        "size": 47218,
+        "sha256": "65F66F0003D0AD64F376A2BF7351B3EF811500C9E8D2366BF61E4DF20800E654"
+      },
+      "after": {
+        "size": 47218,
+        "sha256": "65F66F0003D0AD64F376A2BF7351B3EF811500C9E8D2366BF61E4DF20800E654"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_M12M_M12F_5PA.dwg",
+      "before": {
+        "size": 62424,
+        "sha256": "99AF0D1821CBAFE9601ED15ADFEAEB6EA671EDFEE665704498A4C147D2E7B914"
+      },
+      "after": {
+        "size": 62424,
+        "sha256": "99AF0D1821CBAFE9601ED15ADFEAEB6EA671EDFEE665704498A4C147D2E7B914"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBLINST_RJ45_M12F_5PA.dwg",
+      "before": {
+        "size": 57019,
+        "sha256": "32315761B4C9C56ED55402EF30EDBF629C06B43E078C00B53B6BAA5B510E0E68"
+      },
+      "after": {
+        "size": 57019,
+        "sha256": "32315761B4C9C56ED55402EF30EDBF629C06B43E078C00B53B6BAA5B510E0E68"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_2W_2W.dwg",
+      "before": {
+        "size": 34097,
+        "sha256": "D19B82714F1D99F3773E2917C7691B83FD8AB32F33251AA541DD033069465A82"
+      },
+      "after": {
+        "size": 34097,
+        "sha256": "D19B82714F1D99F3773E2917C7691B83FD8AB32F33251AA541DD033069465A82"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_2W_M12F_5PA.dwg",
+      "before": {
+        "size": 51383,
+        "sha256": "36C11FB3A6C3F251FF07B6F5B4A65FBCDC8ABFF58EAD68E5DF6581EB3190251F"
+      },
+      "after": {
+        "size": 51383,
+        "sha256": "36C11FB3A6C3F251FF07B6F5B4A65FBCDC8ABFF58EAD68E5DF6581EB3190251F"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_3W_3W.dwg",
+      "before": {
+        "size": 34577,
+        "sha256": "22959093878D7799D389767B35856241B64B83C3790E8FCC9714926E1E8AC5A2"
+      },
+      "after": {
+        "size": 34577,
+        "sha256": "22959093878D7799D389767B35856241B64B83C3790E8FCC9714926E1E8AC5A2"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_3W_M12F_5PA.dwg",
+      "before": {
+        "size": 51863,
+        "sha256": "EEC6DF1548091CFE45D6E582342A2B0E32709F404EEC040ECCF6FEE454AB21A2"
+      },
+      "after": {
+        "size": 51863,
+        "sha256": "EEC6DF1548091CFE45D6E582342A2B0E32709F404EEC040ECCF6FEE454AB21A2"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_M12F_M12M_5PA.dwg",
+      "before": {
+        "size": 64855,
+        "sha256": "45BB3F4A7B225A26C916A4A7555D868916CCFF926E1AC4D01C0532C80B0A76D0"
+      },
+      "after": {
+        "size": 64855,
+        "sha256": "45BB3F4A7B225A26C916A4A7555D868916CCFF926E1AC4D01C0532C80B0A76D0"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_M12M_2W_5PA.dwg",
+      "before": {
+        "size": 48529,
+        "sha256": "0B472CC7664252F12B8C9B7338C9D3EFA1E426EFD2EC4950B43927FBB21445EF"
+      },
+      "after": {
+        "size": 48529,
+        "sha256": "0B472CC7664252F12B8C9B7338C9D3EFA1E426EFD2EC4950B43927FBB21445EF"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_M12M_3W_5PA.dwg",
+      "before": {
+        "size": 49583,
+        "sha256": "BAAFCF62E7BC4976B085446AE1F482DA81BF917DA2952BCE12C4970998FDEE23"
+      },
+      "after": {
+        "size": 49583,
+        "sha256": "BAAFCF62E7BC4976B085446AE1F482DA81BF917DA2952BCE12C4970998FDEE23"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/VDV1_CBL_RJ45_M12F_5PA.dwg",
+      "before": {
+        "size": 61401,
+        "sha256": "8C9A6B78F9C76412B0AAF941BCA726FB0C9296EAEBDB53D67F07B30A909439E5"
+      },
+      "after": {
+        "size": 61401,
+        "sha256": "8C9A6B78F9C76412B0AAF941BCA726FB0C9296EAEBDB53D67F07B30A909439E5"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_2PinToM12.dwg.json",
+      "before": {
+        "size": 338,
+        "sha256": "764BAC796A4FC5E8A24E189B81AD2532D9E548FEAEFF32E8F01CFAD52EFC7103"
+      },
+      "after": {
+        "size": 338,
+        "sha256": "764BAC796A4FC5E8A24E189B81AD2532D9E548FEAEFF32E8F01CFAD52EFC7103"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_2PinToM12.dwg.png",
+      "before": {
+        "size": 191,
+        "sha256": "BBEC2CE0210425EE437902B85DA39EC5D3AE65537B63A7E5DB52BCAE14903F47"
+      },
+      "after": {
+        "size": 191,
+        "sha256": "BBEC2CE0210425EE437902B85DA39EC5D3AE65537B63A7E5DB52BCAE14903F47"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_2PinToM12F_Cable.dwg.json",
+      "before": {
+        "size": 345,
+        "sha256": "C9DB6425E49E5F9D3ABC06885F9F39E22766A7BD2C80D12F0F24A26E2A9E14A9"
+      },
+      "after": {
+        "size": 345,
+        "sha256": "C9DB6425E49E5F9D3ABC06885F9F39E22766A7BD2C80D12F0F24A26E2A9E14A9"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_2PinToM12F_Cable.dwg.png",
+      "before": {
+        "size": 152,
+        "sha256": "CCAD9BB7D460349E9587F0361D4E1B97808C5AB282C265F9894C9586792B9D58"
+      },
+      "after": {
+        "size": 152,
+        "sha256": "CCAD9BB7D460349E9587F0361D4E1B97808C5AB282C265F9894C9586792B9D58"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_2PinToM12_Cable.dwg.json",
+      "before": {
+        "size": 344,
+        "sha256": "9010D857C4AE81BF0B523B6184D69706FFFA6504209327496D38AC38CB51CA39"
+      },
+      "after": {
+        "size": 344,
+        "sha256": "9010D857C4AE81BF0B523B6184D69706FFFA6504209327496D38AC38CB51CA39"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_2PinToM12_Cable.dwg.png",
+      "before": {
+        "size": 1302,
+        "sha256": "945FF5181FC2333E8FDCE3406A22C6F4F12E542BFFF51748E53ADFF0FE0E15B8"
+      },
+      "after": {
+        "size": 1302,
+        "sha256": "945FF5181FC2333E8FDCE3406A22C6F4F12E542BFFF51748E53ADFF0FE0E15B8"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_3PinToEth.dwg.json",
+      "before": {
+        "size": 338,
+        "sha256": "C02015C45377D74B51BFAC6673BB71863291F91C6C48A5229BD5F0E676BB32D8"
+      },
+      "after": {
+        "size": 338,
+        "sha256": "C02015C45377D74B51BFAC6673BB71863291F91C6C48A5229BD5F0E676BB32D8"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_3PinToEth.dwg.png",
+      "before": {
+        "size": 199,
+        "sha256": "21C0126DA09DBB0712AFF6666730B8838BBEC58FC62F571334D217E2ABEE14D8"
+      },
+      "after": {
+        "size": 199,
+        "sha256": "21C0126DA09DBB0712AFF6666730B8838BBEC58FC62F571334D217E2ABEE14D8"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_3PinToEth_Cable.dwg.json",
+      "before": {
+        "size": 344,
+        "sha256": "BD9CFA5C5C6E309EF10F7F3EA29303E305DF1DFE33CE26F02110AAC4C417A13E"
+      },
+      "after": {
+        "size": 344,
+        "sha256": "BD9CFA5C5C6E309EF10F7F3EA29303E305DF1DFE33CE26F02110AAC4C417A13E"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_3PinToEth_Cable.dwg.png",
+      "before": {
+        "size": 147,
+        "sha256": "B120FB1C13162BC85C58AEDA0756D790AA5002857B15B8424A6A518773279894"
+      },
+      "after": {
+        "size": 147,
+        "sha256": "B120FB1C13162BC85C58AEDA0756D790AA5002857B15B8424A6A518773279894"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_CRPS_1.dwg.json",
+      "before": {
+        "size": 335,
+        "sha256": "91380F04AF663D62E6B816D27427A312456C0E833E417407E24B39E4533AD654"
+      },
+      "after": {
+        "size": 335,
+        "sha256": "91380F04AF663D62E6B816D27427A312456C0E833E417407E24B39E4533AD654"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_CRPS_1.dwg.png",
+      "before": {
+        "size": 421,
+        "sha256": "19148F8525FEB9AA68C24BA5CFC61F6A2CB76AEE8BF1776A86D5A3D46B6D6671"
+      },
+      "after": {
+        "size": 421,
+        "sha256": "19148F8525FEB9AA68C24BA5CFC61F6A2CB76AEE8BF1776A86D5A3D46B6D6671"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_EthToEthCable.dwg.json",
+      "before": {
+        "size": 342,
+        "sha256": "FAD8C4E2C29E819C225B37F9019EEBDB4E6814C331995B7314ECCFCB4093284E"
+      },
+      "after": {
+        "size": 342,
+        "sha256": "FAD8C4E2C29E819C225B37F9019EEBDB4E6814C331995B7314ECCFCB4093284E"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_EthToEthCable.dwg.png",
+      "before": {
+        "size": 159,
+        "sha256": "8B1DF8F3296518464D94C59B591E9A30368513E9E9D711451B50EB9430ECD839"
+      },
+      "after": {
+        "size": 159,
+        "sha256": "8B1DF8F3296518464D94C59B591E9A30368513E9E9D711451B50EB9430ECD839"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_EthToEthList.dwg.json",
+      "before": {
+        "size": 341,
+        "sha256": "A5D824BB5C568F9DEAE42AB34D0F3DDA3929B01543E77288E8943F8F87AA24B6"
+      },
+      "after": {
+        "size": 341,
+        "sha256": "A5D824BB5C568F9DEAE42AB34D0F3DDA3929B01543E77288E8943F8F87AA24B6"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_EthToEthList.dwg.png",
+      "before": {
+        "size": 172,
+        "sha256": "8D7F3ABC0A6C02137AD0E93B97E40F3EDFC7B023637DBCCD4A95D445D9C3E455"
+      },
+      "after": {
+        "size": 172,
+        "sha256": "8D7F3ABC0A6C02137AD0E93B97E40F3EDFC7B023637DBCCD4A95D445D9C3E455"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_EthToM12_A_4.dwg.json",
+      "before": {
+        "size": 341,
+        "sha256": "0F79B8E02BD61A2C819144FC3113A8856D43D8211A32A808BF9EC2E928FA612B"
+      },
+      "after": {
+        "size": 341,
+        "sha256": "0F79B8E02BD61A2C819144FC3113A8856D43D8211A32A808BF9EC2E928FA612B"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_EthToM12_A_4.dwg.png",
+      "before": {
+        "size": 172,
+        "sha256": "D1E5ADB871AA157A904BF0F05BD42C557D2A86723AB31FAC1BE578AE1CAC6374"
+      },
+      "after": {
+        "size": 172,
+        "sha256": "D1E5ADB871AA157A904BF0F05BD42C557D2A86723AB31FAC1BE578AE1CAC6374"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_EthToM12_A_4_Cable.dwg.json",
+      "before": {
+        "size": 347,
+        "sha256": "41E01E9D3F90EB3B72AFD93C6633B9970766BD25E62FE2FDA16C392011EB58DA"
+      },
+      "after": {
+        "size": 347,
+        "sha256": "41E01E9D3F90EB3B72AFD93C6633B9970766BD25E62FE2FDA16C392011EB58DA"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_EthToM12_A_4_Cable.dwg.png",
+      "before": {
+        "size": 149,
+        "sha256": "B7EDC4FFF05C609ECC691EB3B79FF5D06338CEAB817A5B68C52A39B477524C7D"
+      },
+      "after": {
+        "size": 149,
+        "sha256": "B7EDC4FFF05C609ECC691EB3B79FF5D06338CEAB817A5B68C52A39B477524C7D"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_HD_2.dwg.json",
+      "before": {
+        "size": 333,
+        "sha256": "5C9DF3762D323C94CD498FF8AA67FE31143C145CF0ED117D685ED1D974DC09A1"
+      },
+      "after": {
+        "size": 333,
+        "sha256": "5C9DF3762D323C94CD498FF8AA67FE31143C145CF0ED117D685ED1D974DC09A1"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_HD_2.dwg.png",
+      "before": {
+        "size": 281,
+        "sha256": "E43C95FE459C7CF68ECA162C08FAB7846F71ED004352BEABF51D654C42B640AE"
+      },
+      "after": {
+        "size": 281,
+        "sha256": "E43C95FE459C7CF68ECA162C08FAB7846F71ED004352BEABF51D654C42B640AE"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_HMI.dwg.json",
+      "before": {
+        "size": 332,
+        "sha256": "61B2BE611CE8EC3708BE89BEBCCB8DA7B54E480AADACFDB7B1D4F865E53234F0"
+      },
+      "after": {
+        "size": 332,
+        "sha256": "61B2BE611CE8EC3708BE89BEBCCB8DA7B54E480AADACFDB7B1D4F865E53234F0"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_HMI.dwg.png",
+      "before": {
+        "size": 429,
+        "sha256": "FB4AF7A27CBB5EA88346A02E79D3101DF2F30406A309AB7A5DD2F13D03496AE0"
+      },
+      "after": {
+        "size": 429,
+        "sha256": "FB4AF7A27CBB5EA88346A02E79D3101DF2F30406A309AB7A5DD2F13D03496AE0"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_IOLink.dwg.json",
+      "before": {
+        "size": 335,
+        "sha256": "81CAB94E6876F1580E27766F480DF4A49F575C8AD5A557C6CB352A999EAF7F6C"
+      },
+      "after": {
+        "size": 335,
+        "sha256": "81CAB94E6876F1580E27766F480DF4A49F575C8AD5A557C6CB352A999EAF7F6C"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_IOLink.dwg.png",
+      "before": {
+        "size": 185,
+        "sha256": "A895A0F41CB0612CED8D5BF3C2C8B549B32D81735CE9C2D96CD608A8550BCA16"
+      },
+      "after": {
+        "size": 185,
+        "sha256": "A895A0F41CB0612CED8D5BF3C2C8B549B32D81735CE9C2D96CD608A8550BCA16"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_LiquidLeakAmp8.dwg.json",
+      "before": {
+        "size": 343,
+        "sha256": "8E5402B60E42CF6CB293990059307FB1B937A8C0A1B4347E377F8A9BA6019372"
+      },
+      "after": {
+        "size": 343,
+        "sha256": "8E5402B60E42CF6CB293990059307FB1B937A8C0A1B4347E377F8A9BA6019372"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_LiquidLeakAmp8.dwg.png",
+      "before": {
+        "size": 2306,
+        "sha256": "2828C30DE67161D068505B79EFC53989C9D7DC0C18F5D0E7B9C9742B5A47174D"
+      },
+      "after": {
+        "size": 2306,
+        "sha256": "2828C30DE67161D068505B79EFC53989C9D7DC0C18F5D0E7B9C9742B5A47174D"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_MTE_1.dwg.json",
+      "before": {
+        "size": 334,
+        "sha256": "8202462AE4CB8391546AFA0D94B5150360DA6283E3CB7F1433DC3CAFCA2B7478"
+      },
+      "after": {
+        "size": 334,
+        "sha256": "8202462AE4CB8391546AFA0D94B5150360DA6283E3CB7F1433DC3CAFCA2B7478"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_MTE_1.dwg.png",
+      "before": {
+        "size": 224,
+        "sha256": "069323EAB0714F098ACB73BDCE8DCD4F4399FCAC8361357A531C92B9D65BCF62"
+      },
+      "after": {
+        "size": 224,
+        "sha256": "069323EAB0714F098ACB73BDCE8DCD4F4399FCAC8361357A531C92B9D65BCF62"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_RemoteIO16.dwg.json",
+      "before": {
+        "size": 339,
+        "sha256": "B9E38D29348E8C06CD035FE17AABCB9B0E769E74B6A6C3007DABB3B9E3382C93"
+      },
+      "after": {
+        "size": 339,
+        "sha256": "B9E38D29348E8C06CD035FE17AABCB9B0E769E74B6A6C3007DABB3B9E3382C93"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_RemoteIO16.dwg.png",
+      "before": {
+        "size": 1907,
+        "sha256": "52C3C0675704B44BD334E8D06FE236E4D8CDA91FB2C2F76728EEDC832C013C3F"
+      },
+      "after": {
+        "size": 1907,
+        "sha256": "52C3C0675704B44BD334E8D06FE236E4D8CDA91FB2C2F76728EEDC832C013C3F"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_Senser通用模組.dwg.json",
+      "before": {
+        "size": 359,
+        "sha256": "F233DB9D79B4402EF650AE2756570B1EB7C2BDFFAF2EB047BD2D2CB8E94ECABC"
+      },
+      "after": {
+        "size": 359,
+        "sha256": "F233DB9D79B4402EF650AE2756570B1EB7C2BDFFAF2EB047BD2D2CB8E94ECABC"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/HDV1_Senser通用模組.dwg.png",
+      "before": {
+        "size": 259,
+        "sha256": "DA98FB866404B5532832C9257FFD9F060F9EA409078187B40F8B3E1D83AF5C06"
+      },
+      "after": {
+        "size": 259,
+        "sha256": "DA98FB866404B5532832C9257FFD9F060F9EA409078187B40F8B3E1D83AF5C06"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_006.dwg.json",
+      "before": {
+        "size": 578,
+        "sha256": "C66424E282AF2C05A0F22A03CC8559B5883AB9DAFE3F0E55CB2B221FF4EA63BD"
+      },
+      "after": {
+        "size": 578,
+        "sha256": "C66424E282AF2C05A0F22A03CC8559B5883AB9DAFE3F0E55CB2B221FF4EA63BD"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_006.dwg.png",
+      "before": {
+        "size": 2495,
+        "sha256": "68EE4A9F7280ADBBB05C00CAF4FD4A4FE56E736216D92FA22C2D1CDD5AE775FE"
+      },
+      "after": {
+        "size": 2495,
+        "sha256": "68EE4A9F7280ADBBB05C00CAF4FD4A4FE56E736216D92FA22C2D1CDD5AE775FE"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_006.dwg.VDV1_001.144_64_64_0.png",
+      "before": {
+        "size": 716,
+        "sha256": "D0EDDC3DC47DB65BB2FA4341F6BB7FE52AFB2874DBD3569D46EF35DFA39B9968"
+      },
+      "after": {
+        "size": 716,
+        "sha256": "D0EDDC3DC47DB65BB2FA4341F6BB7FE52AFB2874DBD3569D46EF35DFA39B9968"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_2W_2W.dwg.json",
+      "before": {
+        "size": 342,
+        "sha256": "574F840B8E33D9439B1ECDF70055B19E3E6F9FDDB46627B309607BE1B602268E"
+      },
+      "after": {
+        "size": 342,
+        "sha256": "574F840B8E33D9439B1ECDF70055B19E3E6F9FDDB46627B309607BE1B602268E"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_2W_2W.dwg.png",
+      "before": {
+        "size": 1239,
+        "sha256": "FCA4DBB6FF4DB45CAF9F6E1EFBE1C8A93281E71D0F2B3131566B7E655CA8311D"
+      },
+      "after": {
+        "size": 1239,
+        "sha256": "FCA4DBB6FF4DB45CAF9F6E1EFBE1C8A93281E71D0F2B3131566B7E655CA8311D"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_2W_M12F_5PA.dwg.json",
+      "before": {
+        "size": 348,
+        "sha256": "48D6AFCF1E18DEB3888CD9935CB6564586EC73493D0A97075EC3D1C085B0EEB2"
+      },
+      "after": {
+        "size": 348,
+        "sha256": "48D6AFCF1E18DEB3888CD9935CB6564586EC73493D0A97075EC3D1C085B0EEB2"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_2W_M12F_5PA.dwg.png",
+      "before": {
+        "size": 1313,
+        "sha256": "2AE2E7192752B9FEED6E8D4B463B5BD62C1A4B9157E8303117D01F670654112B"
+      },
+      "after": {
+        "size": 1313,
+        "sha256": "2AE2E7192752B9FEED6E8D4B463B5BD62C1A4B9157E8303117D01F670654112B"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_3W_3W.dwg.json",
+      "before": {
+        "size": 342,
+        "sha256": "15E5774B4BB1B477444134E7C8BC936FA0D109DD7810D87085639A5B94EC3866"
+      },
+      "after": {
+        "size": 342,
+        "sha256": "15E5774B4BB1B477444134E7C8BC936FA0D109DD7810D87085639A5B94EC3866"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_3W_3W.dwg.png",
+      "before": {
+        "size": 1255,
+        "sha256": "A25C2C058746BD948BEA26330F6615D15C5AA1B7EF8AFF06A80FD1E1F7236FB3"
+      },
+      "after": {
+        "size": 1255,
+        "sha256": "A25C2C058746BD948BEA26330F6615D15C5AA1B7EF8AFF06A80FD1E1F7236FB3"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_3W_M12F_5PA.dwg.json",
+      "before": {
+        "size": 348,
+        "sha256": "222AAB02374B63AC1D641A17C79E7A906C9D7EDE0567A6AE86CB1BFB9F579903"
+      },
+      "after": {
+        "size": 348,
+        "sha256": "222AAB02374B63AC1D641A17C79E7A906C9D7EDE0567A6AE86CB1BFB9F579903"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_3W_M12F_5PA.dwg.png",
+      "before": {
+        "size": 1348,
+        "sha256": "A743228E05BDFA8024FDEE5CE3E5616967226DC8A781ED0C7F8EFB8AC118315A"
+      },
+      "after": {
+        "size": 1348,
+        "sha256": "A743228E05BDFA8024FDEE5CE3E5616967226DC8A781ED0C7F8EFB8AC118315A"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_M12F_M12M_5PA.dwg.json",
+      "before": {
+        "size": 350,
+        "sha256": "A000E28759F802176825E955C0CF55771528BE1A6D89E0E83A2D9622732D4000"
+      },
+      "after": {
+        "size": 350,
+        "sha256": "A000E28759F802176825E955C0CF55771528BE1A6D89E0E83A2D9622732D4000"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_M12F_M12M_5PA.dwg.png",
+      "before": {
+        "size": 1356,
+        "sha256": "2F73B7A4B639179F0849561C7901217B78BFC486DAE3E7652E64487ED3D4D294"
+      },
+      "after": {
+        "size": 1356,
+        "sha256": "2F73B7A4B639179F0849561C7901217B78BFC486DAE3E7652E64487ED3D4D294"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_M12M_2W_5PA.dwg.json",
+      "before": {
+        "size": 348,
+        "sha256": "69029A6E280EEB4D70957D5C980CB22CF1665DD76ED062D1B5210CAF9036606B"
+      },
+      "after": {
+        "size": 348,
+        "sha256": "69029A6E280EEB4D70957D5C980CB22CF1665DD76ED062D1B5210CAF9036606B"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_M12M_2W_5PA.dwg.png",
+      "before": {
+        "size": 1297,
+        "sha256": "A6DFD5E00C99EBC311A2302ED7A0739DEB2F146569929C7EC665BBC18C6B0254"
+      },
+      "after": {
+        "size": 1297,
+        "sha256": "A6DFD5E00C99EBC311A2302ED7A0739DEB2F146569929C7EC665BBC18C6B0254"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_M12M_3W_5PA.dwg.json",
+      "before": {
+        "size": 348,
+        "sha256": "E644FCE5F1F177C315A7C708082CB7D4E11F4122FBBD6C624317AA9F3F7F311A"
+      },
+      "after": {
+        "size": 348,
+        "sha256": "E644FCE5F1F177C315A7C708082CB7D4E11F4122FBBD6C624317AA9F3F7F311A"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_M12M_3W_5PA.dwg.png",
+      "before": {
+        "size": 1304,
+        "sha256": "670C7EF326DF93F3A101850CB58CFEAFEEE60D1EFDC892EDB4C49D31C636F6F6"
+      },
+      "after": {
+        "size": 1304,
+        "sha256": "670C7EF326DF93F3A101850CB58CFEAFEEE60D1EFDC892EDB4C49D31C636F6F6"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_M12M_M12F_5PA.dwg.json",
+      "before": {
+        "size": 350,
+        "sha256": "DFA1B121D8B8E52523FB2D35E8CC5358BB90058E0B85674EDCF047A31F958048"
+      },
+      "after": {
+        "size": 350,
+        "sha256": "DFA1B121D8B8E52523FB2D35E8CC5358BB90058E0B85674EDCF047A31F958048"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_M12M_M12F_5PA.dwg.png",
+      "before": {
+        "size": 1344,
+        "sha256": "8482EB022FA4FC3B3A478F8809EECFBB7C6A1CB57B3D66DE5F34DFF1688BC086"
+      },
+      "after": {
+        "size": 1344,
+        "sha256": "8482EB022FA4FC3B3A478F8809EECFBB7C6A1CB57B3D66DE5F34DFF1688BC086"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_RJ45_M12F_5PA.dwg.json",
+      "before": {
+        "size": 350,
+        "sha256": "B961A629E3A6207925CB404AE8024B43C23436690669F4DB91569CE3FA923589"
+      },
+      "after": {
+        "size": 350,
+        "sha256": "B961A629E3A6207925CB404AE8024B43C23436690669F4DB91569CE3FA923589"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBLINST_RJ45_M12F_5PA.dwg.png",
+      "before": {
+        "size": 1412,
+        "sha256": "E389F6F96F7E4901576FD7F010CB73AB4216F8684F9ED36B60AF95CBF4F1BCBF"
+      },
+      "after": {
+        "size": 1412,
+        "sha256": "E389F6F96F7E4901576FD7F010CB73AB4216F8684F9ED36B60AF95CBF4F1BCBF"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_2W_2W.dwg.json",
+      "before": {
+        "size": 338,
+        "sha256": "F1A15B4C4C7E0C1E629329B20C4F1CE1D21273FC2C969F3C1FA3F962DC36EF21"
+      },
+      "after": {
+        "size": 338,
+        "sha256": "F1A15B4C4C7E0C1E629329B20C4F1CE1D21273FC2C969F3C1FA3F962DC36EF21"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_2W_2W.dwg.png",
+      "before": {
+        "size": 1057,
+        "sha256": "6E8A91BBB3689FC8D2FD6A087A5E716C282D34F023201D407A55EB37D0512534"
+      },
+      "after": {
+        "size": 1057,
+        "sha256": "6E8A91BBB3689FC8D2FD6A087A5E716C282D34F023201D407A55EB37D0512534"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_2W_M12F_5PA.dwg.json",
+      "before": {
+        "size": 344,
+        "sha256": "7C325727D09685619E8EFB176D585628127D99D34C4A078DC0E9456ECC03D789"
+      },
+      "after": {
+        "size": 344,
+        "sha256": "7C325727D09685619E8EFB176D585628127D99D34C4A078DC0E9456ECC03D789"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_2W_M12F_5PA.dwg.png",
+      "before": {
+        "size": 1105,
+        "sha256": "7EB60436D8FF15A19134308F0592B06D563727958CF15AC16A7A5C47A24AEBDA"
+      },
+      "after": {
+        "size": 1105,
+        "sha256": "7EB60436D8FF15A19134308F0592B06D563727958CF15AC16A7A5C47A24AEBDA"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_3W_3W.dwg.json",
+      "before": {
+        "size": 338,
+        "sha256": "AEFC8625EFCE583799BA5A67F509E9D9CC3C120B78B93558ECF0B23FE522E6BD"
+      },
+      "after": {
+        "size": 338,
+        "sha256": "AEFC8625EFCE583799BA5A67F509E9D9CC3C120B78B93558ECF0B23FE522E6BD"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_3W_3W.dwg.png",
+      "before": {
+        "size": 1071,
+        "sha256": "50817BF736700930380E5F3741A05BB3E7D4CBEFFF73DCA0F06DF4E9AD20F088"
+      },
+      "after": {
+        "size": 1071,
+        "sha256": "50817BF736700930380E5F3741A05BB3E7D4CBEFFF73DCA0F06DF4E9AD20F088"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_3W_M12F_5PA.dwg.json",
+      "before": {
+        "size": 344,
+        "sha256": "E5D235D86BFAAA0AD24CE8FA50CA89DE5366B9C1FFF074E52E896892FC809B35"
+      },
+      "after": {
+        "size": 344,
+        "sha256": "E5D235D86BFAAA0AD24CE8FA50CA89DE5366B9C1FFF074E52E896892FC809B35"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_3W_M12F_5PA.dwg.png",
+      "before": {
+        "size": 1101,
+        "sha256": "B4CCD9673DA45D4DF35198C44798C660FA1903B735AF1649626E68F5EFEBEE8C"
+      },
+      "after": {
+        "size": 1101,
+        "sha256": "B4CCD9673DA45D4DF35198C44798C660FA1903B735AF1649626E68F5EFEBEE8C"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_M12F_M12M_5PA.dwg.json",
+      "before": {
+        "size": 346,
+        "sha256": "24E9D1D89B67537C623B66973A7E9241A23073A84792810A1625C27E5B4871B7"
+      },
+      "after": {
+        "size": 346,
+        "sha256": "24E9D1D89B67537C623B66973A7E9241A23073A84792810A1625C27E5B4871B7"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_M12F_M12M_5PA.dwg.png",
+      "before": {
+        "size": 1109,
+        "sha256": "D9220E025B69A38F8F9402F425458FA596431DE42EECE6F3320FBA4EEC50DD0C"
+      },
+      "after": {
+        "size": 1109,
+        "sha256": "D9220E025B69A38F8F9402F425458FA596431DE42EECE6F3320FBA4EEC50DD0C"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_M12M_2W_5PA.dwg.json",
+      "before": {
+        "size": 344,
+        "sha256": "FFF75411C6C776A3B8D285643013071C9C6D7F6D4343455533073C780576D690"
+      },
+      "after": {
+        "size": 344,
+        "sha256": "FFF75411C6C776A3B8D285643013071C9C6D7F6D4343455533073C780576D690"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_M12M_2W_5PA.dwg.png",
+      "before": {
+        "size": 1074,
+        "sha256": "75FFFC3B8853E8B2EFD5A4A79B3AD763A52C4696E17A422B90E435108877853D"
+      },
+      "after": {
+        "size": 1074,
+        "sha256": "75FFFC3B8853E8B2EFD5A4A79B3AD763A52C4696E17A422B90E435108877853D"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_M12M_3W_5PA.dwg.json",
+      "before": {
+        "size": 344,
+        "sha256": "98FCBC5808BE661455044C14459A9A66432BC40229E6C1C04C37A2A6DD02F37D"
+      },
+      "after": {
+        "size": 344,
+        "sha256": "98FCBC5808BE661455044C14459A9A66432BC40229E6C1C04C37A2A6DD02F37D"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_M12M_3W_5PA.dwg.png",
+      "before": {
+        "size": 1063,
+        "sha256": "5E43F309D577B367E5AAF9A2FA4303C3BC63AF3941F76F14E12AD43F4EFAC17E"
+      },
+      "after": {
+        "size": 1063,
+        "sha256": "5E43F309D577B367E5AAF9A2FA4303C3BC63AF3941F76F14E12AD43F4EFAC17E"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_RJ45_M12F_5PA.dwg.json",
+      "before": {
+        "size": 346,
+        "sha256": "122DAB8CB7DACCAA4ABCB2245C927E09DBEB8B98CCB377317B0D5DCF344A67EF"
+      },
+      "after": {
+        "size": 346,
+        "sha256": "122DAB8CB7DACCAA4ABCB2245C927E09DBEB8B98CCB377317B0D5DCF344A67EF"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "FORMAL_ACADE_LIBRARY/Schematic/.blocksMetadata/VDV1_CBL_RJ45_M12F_5PA.dwg.png",
+      "before": {
+        "size": 1140,
+        "sha256": "912E62FFA55AE9668F2B52CEE996AC98C7907B3A68EC39BA19005D841ECD7261"
+      },
+      "after": {
+        "size": 1140,
+        "sha256": "912E62FFA55AE9668F2B52CEE996AC98C7907B3A68EC39BA19005D841ECD7261"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "PRODUCTION_SQLITE/component-intelligence.db",
+      "before": {
+        "size": 47542272,
+        "sha256": "4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41"
+      },
+      "after": {
+        "size": 47542272,
+        "sha256": "4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "PRODUCTION_SQLITE/component-intelligence.db-shm",
+      "before": {
+        "size": 32768,
+        "sha256": "FD4C9FDA9CD3F9AE7C962B0DDF37232294D55580E1AA165AA06129B8549389EB"
+      },
+      "after": {
+        "size": 32768,
+        "sha256": "FD4C9FDA9CD3F9AE7C962B0DDF37232294D55580E1AA165AA06129B8549389EB"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "PRODUCTION_SQLITE/component-intelligence.db-wal",
+      "before": {
+        "size": 0,
+        "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+      },
+      "after": {
+        "size": 0,
+        "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "CENTRAL_WORKBOOK",
+      "before": {
+        "size": 68130,
+        "sha256": "7CD84A26F78F6FA6DF03A4C7193568C4700558C890BCF424958099B02B64CB16"
+      },
+      "after": {
+        "size": 68130,
+        "sha256": "7CD84A26F78F6FA6DF03A4C7193568C4700558C890BCF424958099B02B64CB16"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "COMPANY_WDP",
+      "acceptedBaselineSha256": "1E805901A4938AB89E0D77E46142743B4334F19916D47D5D2B12637E73C174F0",
+      "after": {
+        "size": 2646,
+        "sha256": "1E805901A4938AB89E0D77E46142743B4334F19916D47D5D2B12637E73C174F0"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "COMPANY_DWT",
+      "acceptedBaselineSha256": "D5DB332E88F16F18ED82FB3A2982EF2E4970F2438F09522DDEEE51E9F17A03DF",
+      "after": {
+        "size": 432343,
+        "sha256": "D5DB332E88F16F18ED82FB3A2982EF2E4970F2438F09522DDEEE51E9F17A03DF"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "COMPANY_WDT",
+      "acceptedBaselineSha256": "B851C9D43854F6EB9419FF690B7FE2506A62054C5051ADE0B3E23EA1EE6AAC70",
+      "after": {
+        "size": 308,
+        "sha256": "B851C9D43854F6EB9419FF690B7FE2506A62054C5051ADE0B3E23EA1EE6AAC70"
+      },
+      "unchanged": true
+    },
+    {
+      "alias": "COMPANY_WDL",
+      "acceptedBaselineSha256": "400260D1EDA538F10C1BD0ADC4313004A83570D35029D7B63EDCF86139F97076",
+      "after": {
+        "size": 101,
+        "sha256": "400260D1EDA538F10C1BD0ADC4313004A83570D35029D7B63EDCF86139F97076"
+      },
+      "unchanged": true
+    }
+  ],
+  "physicalExecution": "NOT_RUN",
+  "runId": null,
+  "executionEvidenceHash": null,
+  "generatedOutputs": []
+}

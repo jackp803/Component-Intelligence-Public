@@ -1,0 +1,2038 @@
+{
+  "taskId": "CODEX-W1-20260921-010",
+  "disposition": "PARTIAL",
+  "coordinationMain": "c17443c3ce30ca958ef1065ddcc754e4508a8b75",
+  "componentExecutableHead": "c87595c6179e28f246de3a0683ffb85f5910b009",
+  "componentExecutableTree": "4b86c499df5dac58889645a324584a939811ce6e",
+  "autoExecutableHead": "c61d1cc3cc66b392aa9a559468d995a0e9fb053b",
+  "autoExecutableTree": "ea1bb9bce25ef4ca41c9922b29f6f58a68646437",
+  "snapshotSha256": "2C589B730A3BAAA1515242FFF541650137CCE948D0AE68BE6246202882FE8680",
+  "workbookSha256": "7CD84A26F78F6FA6DF03A4C7193568C4700558C890BCF424958099B02B64CB16",
+  "catalogCount": 30,
+  "componentGapMatrix": [
+    {
+      "componentId": "COOLER_MASTER_MT-E-V11",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "SAFE_GENERATED_GENERIC",
+      "rootCause": "ARCHITECTURE_GAP",
+      "evidence": "Existing exact catalog PinIds and typed/full-equality project lineage; TopologyEndpointMode is interaction hint. Required endpoint-aware descriptor preserves truth without workbook changes."
+    },
+    {
+      "componentId": "IFM_AL1342",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "SAFE_GENERATED_GENERIC",
+      "rootCause": "ARCHITECTURE_GAP",
+      "evidence": "Existing exact catalog PinIds and typed/full-equality project lineage; TopologyEndpointMode is interaction hint. Required endpoint-aware descriptor preserves truth without workbook changes."
+    },
+    {
+      "componentId": "LEAD_YEAR_TC24-0250-01",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "SAFE_GENERATED_GENERIC",
+      "rootCause": "ARCHITECTURE_GAP",
+      "evidence": "Existing exact catalog PinIds and typed/full-equality project lineage; TopologyEndpointMode is interaction hint. Required endpoint-aware descriptor preserves truth without workbook changes."
+    },
+    {
+      "componentId": "MOXA_EDS-2005-EL",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "SAFE_GENERATED_GENERIC",
+      "rootCause": "ARCHITECTURE_GAP",
+      "evidence": "Existing exact catalog PinIds and typed/full-equality project lineage; TopologyEndpointMode is interaction hint. Required endpoint-aware descriptor preserves truth without workbook changes."
+    },
+    {
+      "componentId": "bom-unresolved:20:fuji:flyf003",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "UNSAFE_UNRESOLVED",
+      "rootCause": "PROJECT_IDENTITY_AMBIGUOUS",
+      "evidence": "Exact canonical/representation authority absent; source factory/common catalog is provenance context, not manufacturer identity."
+    },
+    {
+      "componentId": "common:cable-end:m12-female-a-4pin",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "UNSAFE_UNRESOLVED",
+      "rootCause": "INLINE_INTERFACE_ARTIFACT",
+      "evidence": "Exact canonical/representation authority absent; source factory/common catalog is provenance context, not manufacturer identity."
+    },
+    {
+      "componentId": "common:cable-end:m12-male-a-4pin",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "UNSAFE_UNRESOLVED",
+      "rootCause": "INLINE_INTERFACE_ARTIFACT",
+      "evidence": "Exact canonical/representation authority absent; source factory/common catalog is provenance context, not manufacturer identity."
+    },
+    {
+      "componentId": "common:cable-end:rj45-male-8p8c",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "UNSAFE_UNRESOLVED",
+      "rootCause": "INLINE_INTERFACE_ARTIFACT",
+      "evidence": "Exact canonical/representation authority absent; source factory/common catalog is provenance context, not manufacturer identity."
+    },
+    {
+      "componentId": "common:cat6-rj45-female-female-shielded-8c-coupler",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "UNSAFE_UNRESOLVED",
+      "rootCause": "INLINE_INTERFACE_ARTIFACT",
+      "evidence": "Exact canonical/representation authority absent; source factory/common catalog is provenance context, not manufacturer identity."
+    },
+    {
+      "componentId": "inline-mated-adapter:M12 female cable end (3 cores)",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "UNSAFE_UNRESOLVED",
+      "rootCause": "INLINE_INTERFACE_ARTIFACT",
+      "evidence": "Exact canonical/representation authority absent; source factory/common catalog is provenance context, not manufacturer identity."
+    },
+    {
+      "componentId": "inline-mated-adapter:M12 male cable end (3 cores)",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "UNSAFE_UNRESOLVED",
+      "rootCause": "INLINE_INTERFACE_ARTIFACT",
+      "evidence": "Exact canonical/representation authority absent; source factory/common catalog is provenance context, not manufacturer identity."
+    },
+    {
+      "componentId": "notion:3bdd4562-273e-813a-9530-d41b1f7e5a45",
+      "before": "UNSAFE_UNRESOLVED",
+      "after": "UNSAFE_UNRESOLVED",
+      "rootCause": "PROJECT_IDENTITY_AMBIGUOUS",
+      "evidence": "Exact canonical/representation authority absent; source factory/common catalog is provenance context, not manufacturer identity."
+    }
+  ],
+  "cableGapMatrix": [
+    {
+      "cableAlias": "ID-583811C2F608299C",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-CBEEA84397E6911B",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-5F7B0BF1B84B814C",
+      "cableDefinitionId": "UNRESOLVED-CABLE",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-0E74D43F01540EAF",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-AA449D6FB6958FCD",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-65A0F78E27896B00",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-7FD7FC1E85979A83",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-E7D3D19A793E3FF0",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-C139082C506F9918",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-9DC287CCB98BE436",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-5164021F301BCB97",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-7244273F0BE5CDBE",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-508BFE7490D6E8E6",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-D6119C4BC3074509",
+      "cableDefinitionId": "IFM_EVC014",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-0B48A4A913DC502B",
+      "cableDefinitionId": "IFM_EVC927",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-BABE6C4F2A32FFD1",
+      "cableDefinitionId": "IFM_EVC927",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-91BB907EE4F98D19",
+      "cableDefinitionId": "UNRESOLVED-CABLE",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-D577612D3EE949DF",
+      "cableDefinitionId": "IFM_EVC012",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-76E79F72F25B8E8B",
+      "cableDefinitionId": "UNRESOLVED-CABLE",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [
+        "ID-0F3EDFFCBFBF532F"
+      ],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-824B2AC4B8CF996D",
+      "cableDefinitionId": "UNRESOLVED-CABLE",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [
+        "ID-0F3EDFFCBFBF532F"
+      ],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-E3A4BE398674AB9B",
+      "cableDefinitionId": "UNRESOLVED-CABLE",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [
+        "ID-0F3EDFFCBFBF532F"
+      ],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    },
+    {
+      "cableAlias": "ID-0975BD5E36988883",
+      "cableDefinitionId": "UNRESOLVED-CABLE",
+      "role": "CableFunctional",
+      "before": "Unknown",
+      "after": "Unknown",
+      "evidenceClassification": "HUMAN_CONFIRMATION_REQUIRED",
+      "roleClassification": "UNSAFE_UNRESOLVED",
+      "assemblyAliases": [
+        "ID-9D5D22D22A09A1DD"
+      ],
+      "reason": "Per-instance construction missing. Catalog model, core mapping and assembly membership cannot establish Purchased/Custom. Production database has no project revision table."
+    }
+  ],
+  "fullComponentCoverage": [
+    {
+      "componentDefinitionId": "BELIMO_EV015R2+KBAC",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 2
+    },
+    {
+      "componentDefinitionId": "bom-unresolved:20:fuji:flyf003",
+      "role": "Schematic",
+      "classification": "UNSAFE_UNRESOLVED",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "common:cable-end:m12-female-a-4pin",
+      "role": "Schematic",
+      "classification": "UNSAFE_UNRESOLVED",
+      "instances": 11
+    },
+    {
+      "componentDefinitionId": "common:cable-end:m12-male-a-4pin",
+      "role": "Schematic",
+      "classification": "UNSAFE_UNRESOLVED",
+      "instances": 11
+    },
+    {
+      "componentDefinitionId": "common:cable-end:rj45-male-8p8c",
+      "role": "Schematic",
+      "classification": "UNSAFE_UNRESOLVED",
+      "instances": 2
+    },
+    {
+      "componentDefinitionId": "common:cat6-rj45-female-female-shielded-8c-coupler",
+      "role": "Schematic",
+      "classification": "UNSAFE_UNRESOLVED",
+      "instances": 2
+    },
+    {
+      "componentDefinitionId": "COOLER_MASTER_MT-E-V11",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "FUJI_ELECTRIC_FSZ15",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "GRUNDFOS_CIM_200",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 2
+    },
+    {
+      "componentDefinitionId": "IFM_AL1342",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 2
+    },
+    {
+      "componentDefinitionId": "IFM_AL5021",
+      "role": "Schematic",
+      "classification": "CANDIDATE_NOT_APPROVED_BUT_GENERIC_SAFE",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "IFM_E73008",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "IFM_PL1514",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 6
+    },
+    {
+      "componentDefinitionId": "IFM_SBY246",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "IFM_TA2115",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 6
+    },
+    {
+      "componentDefinitionId": "inline-mated-adapter:M12 female cable end (3 cores)",
+      "role": "Schematic",
+      "classification": "UNSAFE_UNRESOLVED",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "inline-mated-adapter:M12 male cable end (3 cores)",
+      "role": "Schematic",
+      "classification": "UNSAFE_UNRESOLVED",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "LEAD_YEAR_TC24-0250-01",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "MEAN_WELL_RSD-100C-24",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "MOXA_EDS-2005-EL",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "NEXTRONICS_223296",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "notion:3bdd4562-273e-813a-9530-d41b1f7e5a45",
+      "role": "Schematic",
+      "classification": "UNSAFE_UNRESOLVED",
+      "instances": 2
+    },
+    {
+      "componentDefinitionId": "OMRON_F03-20",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "OMRON_F03-20T",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "OMRON_K7L-AT50DP",
+      "role": "Schematic",
+      "classification": "APPROVED_EXACT",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "PHOENIX_CONTACT_3209578",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 18
+    },
+    {
+      "componentDefinitionId": "PHOENIX_CONTACT_3209604",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 6
+    },
+    {
+      "componentDefinitionId": "PRO_FACE_PFXGP6540WCDW",
+      "role": "Schematic",
+      "classification": "CANDIDATE_NOT_APPROVED_BUT_GENERIC_SAFE",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "SCHNEIDER_ELECTRIC_LC1D09BNE",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "SCHNEIDER_ELECTRIC_XB4BD25",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    },
+    {
+      "componentDefinitionId": "SCHNEIDER_ELECTRIC_XB4BS8442",
+      "role": "Schematic",
+      "classification": "SAFE_GENERATED_GENERIC",
+      "instances": 1
+    }
+  ],
+  "componentClassificationCounts": {
+    "": 31
+  },
+  "unsafeComponentRoles": 8,
+  "unsafeCableRoles": 22,
+  "unresolvedComponentInstances": 31,
+  "humanIdentityTypes": 2,
+  "humanIdentityInstances": 3,
+  "inlineInterfaceTypes": 6,
+  "inlineInterfaceInstances": 28,
+  "sourceContext": [
+    {
+      "exactIdentity": "COOLER_MASTER_MT-E-V11",
+      "present": true,
+      "manufacturer": "COOLER MASTER",
+      "model": "MT-E-V11",
+      "ports": 11,
+      "pins": 76,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "IFM_AL1342",
+      "present": true,
+      "manufacturer": "IFM",
+      "model": "AL1342",
+      "ports": 12,
+      "pins": 48,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "LEAD_YEAR_TC24-0250-01",
+      "present": true,
+      "manufacturer": "LEAD YEAR ENTERPRISE",
+      "model": "TC24-0250-01",
+      "ports": 3,
+      "pins": 18,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "MOXA_EDS-2005-EL",
+      "present": true,
+      "manufacturer": "MOXA",
+      "model": "EDS-2005-EL",
+      "ports": 6,
+      "pins": 42,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "bom-unresolved:20:fuji:flyf003",
+      "present": false,
+      "manufacturer": null,
+      "model": null,
+      "ports": null,
+      "pins": null,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "common:cable-end:m12-female-a-4pin",
+      "present": false,
+      "manufacturer": null,
+      "model": null,
+      "ports": null,
+      "pins": null,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "common:cable-end:m12-male-a-4pin",
+      "present": false,
+      "manufacturer": null,
+      "model": null,
+      "ports": null,
+      "pins": null,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "common:cable-end:rj45-male-8p8c",
+      "present": false,
+      "manufacturer": null,
+      "model": null,
+      "ports": null,
+      "pins": null,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "common:cat6-rj45-female-female-shielded-8c-coupler",
+      "present": false,
+      "manufacturer": null,
+      "model": null,
+      "ports": null,
+      "pins": null,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "inline-mated-adapter:M12 female cable end (3 cores)",
+      "present": false,
+      "manufacturer": null,
+      "model": null,
+      "ports": null,
+      "pins": null,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "inline-mated-adapter:M12 male cable end (3 cores)",
+      "present": false,
+      "manufacturer": null,
+      "model": null,
+      "ports": null,
+      "pins": null,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "notion:3bdd4562-273e-813a-9530-d41b1f7e5a45",
+      "present": true,
+      "manufacturer": "GRUNDFOS",
+      "model": "CRNE 3-3 MO-FGJ-A-N",
+      "ports": 0,
+      "pins": 0,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "IFM_EVC014",
+      "present": true,
+      "manufacturer": "IFM",
+      "model": "EVC014",
+      "ports": 2,
+      "pins": 8,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "UNRESOLVED-CABLE",
+      "present": false,
+      "manufacturer": null,
+      "model": null,
+      "ports": null,
+      "pins": null,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "IFM_EVC927",
+      "present": true,
+      "manufacturer": "IFM",
+      "model": "EVC927",
+      "ports": 2,
+      "pins": 12,
+      "authority": "context only; not alias or CableInstance construction authority"
+    },
+    {
+      "exactIdentity": "IFM_EVC012",
+      "present": true,
+      "manufacturer": "IFM",
+      "model": "EVC012",
+      "ports": 2,
+      "pins": 8,
+      "authority": "context only; not alias or CableInstance construction authority"
+    }
+  ],
+  "exactCachedDocuments": [],
+  "productionTables": [
+    "component_ir_snapshots",
+    "ElectricalProjects",
+    "component_knowledge_documents",
+    "component_knowledge_specs",
+    "component_ocr_review_candidates",
+    "component_sync_state"
+  ],
+  "proposedCentralKnowledgeChanges": [],
+  "automaticRepairs": [
+    "Required generic endpoints use unique existing catalog PortId/PinId; no topology mode/catalog mutation.",
+    "Same coverage gate is used by explicit review and configured drawing planning."
+  ],
+  "humanGate": "PARTIAL_INLINE_INTERFACE_AUTHORITY_GAP",
+  "uatReadiness": "NOT_READY",
+  "nativeExecution": {
+    "status": "NOT_RUN",
+    "reason": "unsafe component roles 8 and unsafe cable roles 22; Stage E prerequisite not satisfied",
+    "runId": null,
+    "executionEvidenceHash": null
+  },
+  "preservedPriorK7l": {
+    "runId": "CP3C-3A1F98EC95B7400C99820E7B13004B96",
+    "revision": "rev-001",
+    "sha256": "217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828",
+    "newApproval": false,
+    "repeatedPhysicalRun": false
+  },
+  "tests": [
+    {
+      "artifact": "review-focused-final.trx",
+      "sha256": "269B7B26383285A5BF61A15C3FD2A40601CFFC18D01480624EA603C9076D733E",
+      "total": 28,
+      "passed": 28,
+      "failed": 0,
+      "role": "FINAL_GATE"
+    },
+    {
+      "artifact": "task010-affected-final.trx",
+      "sha256": "A4337B0EFB3E2B64BB23BA9AD112F5A0AC057FFE47B9E8898A8B978F77F6156A",
+      "total": 662,
+      "passed": 662,
+      "failed": 0,
+      "role": "FINAL_GATE"
+    },
+    {
+      "artifact": "task010-full-final.trx",
+      "sha256": "5B88E40FAF47D0E12F2203D93A0E8F4553DD250C99279ECD4B7126746E01745E",
+      "total": 812,
+      "passed": 812,
+      "failed": 0,
+      "role": "FINAL_GATE"
+    },
+    {
+      "artifact": "ui-context-red.trx",
+      "sha256": "4D8DECD29FD5EF1753C0F8AE12BB7DB0EA7E30048E60B9218C96DDCF36FDD616",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "role": "EXPECTED_RED"
+    }
+  ],
+  "autoFocused": {
+    "passed": 43,
+    "failed": 0,
+    "runner": "bundled Python unittest",
+    "initialHostInterpreterErrors": [
+      "pytest unavailable",
+      "jsonschema unavailable"
+    ],
+    "productChanges": false
+  },
+  "desktopRelease": {
+    "status": "PASS",
+    "errors": 0,
+    "warnings": 22
+  },
+  "ui": {
+    "scope": "Real product WPF EngineeringReviewDialog in bounded local harness, disposable database, real Save/Revision repositories. Not full MainWindow navigation.",
+    "finalBuildSource": "c87595c6179e28f246de3a0683ffb85f5910b009",
+    "normalClose": true,
+    "fullAppNavigation": "NOT_RUN",
+    "noDefaultSelection": "PASS",
+    "missingIdentityAndMappingBlocked": "PASS",
+    "readableComponentContext": "PASS",
+    "readableCableContext": "PASS",
+    "customConsequenceVisible": "PASS",
+    "skipCancelNoSave": "PASS",
+    "saveReload": "PASS: one TEST-ONLY Purchased choice; two revisions; unknown count 22 -> 21 in disposable copy only",
+    "finalReopen": "PASS: 21 remaining and two revisions; failed component confirmation changed nothing",
+    "semanticSnapshotChangedFields": [
+      "/cables/6/cableConstructionType"
+    ],
+    "componentMappingPersistence": "PASS: synthetic temp-SQLite regression; actual ambiguous production identities remain unresolved",
+    "decisionsAreProductOwnerEngineeringApproval": false,
+    "interruption": "User Escape stopped Computer Use; resumed only after explicit user authorization."
+  },
+  "protectedChecked": 172,
+  "protectedChanged": 0,
+  "protected": [
+    {
+      "alias": "PROTECTED-001",
+      "beforeSize": 1536,
+      "beforeSha256": "19DFF524D27030EEA6809A7C868F27A384927237A1AD2F75961A8D4EAC496323",
+      "afterSize": 1536,
+      "afterSha256": "19DFF524D27030EEA6809A7C868F27A384927237A1AD2F75961A8D4EAC496323"
+    },
+    {
+      "alias": "PROTECTED-002",
+      "beforeSize": 310,
+      "beforeSha256": "2F4618FD5DE9F69E4CD19FBA4B4578E922ED91D6F2DE5629E6C9924BC64CDF49",
+      "afterSize": 310,
+      "afterSha256": "2F4618FD5DE9F69E4CD19FBA4B4578E922ED91D6F2DE5629E6C9924BC64CDF49"
+    },
+    {
+      "alias": "PROTECTED-003",
+      "beforeSize": 2646,
+      "beforeSha256": "1E805901A4938AB89E0D77E46142743B4334F19916D47D5D2B12637E73C174F0",
+      "afterSize": 2646,
+      "afterSha256": "1E805901A4938AB89E0D77E46142743B4334F19916D47D5D2B12637E73C174F0"
+    },
+    {
+      "alias": "PROTECTED-004",
+      "beforeSize": 308,
+      "beforeSha256": "B851C9D43854F6EB9419FF690B7FE2506A62054C5051ADE0B3E23EA1EE6AAC70",
+      "afterSize": 308,
+      "afterSha256": "B851C9D43854F6EB9419FF690B7FE2506A62054C5051ADE0B3E23EA1EE6AAC70"
+    },
+    {
+      "alias": "PROTECTED-005",
+      "beforeSize": 121,
+      "beforeSha256": "757C7DD3E5E4B67522583E0173DA1B95B8417434B7E350C32108FDF954EEED61",
+      "afterSize": 121,
+      "afterSha256": "757C7DD3E5E4B67522583E0173DA1B95B8417434B7E350C32108FDF954EEED61"
+    },
+    {
+      "alias": "PROTECTED-006",
+      "beforeSize": 101,
+      "beforeSha256": "400260D1EDA538F10C1BD0ADC4313004A83570D35029D7B63EDCF86139F97076",
+      "afterSize": 101,
+      "afterSha256": "400260D1EDA538F10C1BD0ADC4313004A83570D35029D7B63EDCF86139F97076"
+    },
+    {
+      "alias": "PROTECTED-007",
+      "beforeSize": 816565,
+      "beforeSha256": "A2702335F7882F5A008060F3E8036CD60DBA74B8AEBB887A3FB7D5062871A668",
+      "afterSize": 816565,
+      "afterSha256": "A2702335F7882F5A008060F3E8036CD60DBA74B8AEBB887A3FB7D5062871A668"
+    },
+    {
+      "alias": "PROTECTED-008",
+      "beforeSize": 539890,
+      "beforeSha256": "9FFE310ED9825A5F18F56C1419245FB74A8EC955B2AC81BC8D26DD3E802506D7",
+      "afterSize": 539890,
+      "afterSha256": "9FFE310ED9825A5F18F56C1419245FB74A8EC955B2AC81BC8D26DD3E802506D7"
+    },
+    {
+      "alias": "PROTECTED-009",
+      "beforeSize": 459138,
+      "beforeSha256": "A88797BD929932A915C1D17D38487B46E1771B99B6C8B84E5BA3A8D37D9F1EBC",
+      "afterSize": 459138,
+      "afterSha256": "A88797BD929932A915C1D17D38487B46E1771B99B6C8B84E5BA3A8D37D9F1EBC"
+    },
+    {
+      "alias": "PROTECTED-010",
+      "beforeSize": 460550,
+      "beforeSha256": "5CF3BFE80E32DDE2545F0DA8022DAABB3B73F283E87FF43009231695D56FFBD8",
+      "afterSize": 460550,
+      "afterSha256": "5CF3BFE80E32DDE2545F0DA8022DAABB3B73F283E87FF43009231695D56FFBD8"
+    },
+    {
+      "alias": "PROTECTED-011",
+      "beforeSize": 456032,
+      "beforeSha256": "FF23130BEB9BAF4E6795C1FAFC7EE347D78DBF0C9087E9B59F21450D377C6E6F",
+      "afterSize": 456032,
+      "afterSha256": "FF23130BEB9BAF4E6795C1FAFC7EE347D78DBF0C9087E9B59F21450D377C6E6F"
+    },
+    {
+      "alias": "PROTECTED-012",
+      "beforeSize": 626523,
+      "beforeSha256": "178E854A8E98E0D9D72656CEB9185EDDA9069AC50736A0E6E9619145193CF306",
+      "afterSize": 626523,
+      "afterSha256": "178E854A8E98E0D9D72656CEB9185EDDA9069AC50736A0E6E9619145193CF306"
+    },
+    {
+      "alias": "PROTECTED-013",
+      "beforeSize": 471875,
+      "beforeSha256": "AA04C3D0EDC9D8F69DF7264A8A2F90FF16D30F66561E75AEB6B2A01EAF125AB4",
+      "afterSize": 471875,
+      "afterSha256": "AA04C3D0EDC9D8F69DF7264A8A2F90FF16D30F66561E75AEB6B2A01EAF125AB4"
+    },
+    {
+      "alias": "PROTECTED-014",
+      "beforeSize": 467320,
+      "beforeSha256": "6883EAB6F39ADA052D86CEB36A8914BCE53BBF61D291AE622710A874990D6A5D",
+      "afterSize": 467320,
+      "afterSha256": "6883EAB6F39ADA052D86CEB36A8914BCE53BBF61D291AE622710A874990D6A5D"
+    },
+    {
+      "alias": "PROTECTED-015",
+      "beforeSize": 498925,
+      "beforeSha256": "6CEE4BB3570EE73E782EE314FD0ADE67A9EC061E44B3AE8E994C5DC4373C8088",
+      "afterSize": 498925,
+      "afterSha256": "6CEE4BB3570EE73E782EE314FD0ADE67A9EC061E44B3AE8E994C5DC4373C8088"
+    },
+    {
+      "alias": "PROTECTED-016",
+      "beforeSize": 652901,
+      "beforeSha256": "0EB4C368CB8A2C5EA5C74689FDFA0A3CF32C8FDF3F49BA83E943301B8C41F5A1",
+      "afterSize": 652901,
+      "afterSha256": "0EB4C368CB8A2C5EA5C74689FDFA0A3CF32C8FDF3F49BA83E943301B8C41F5A1"
+    },
+    {
+      "alias": "PROTECTED-017",
+      "beforeSize": 446877,
+      "beforeSha256": "E682EE5F7890EE0CCD57F59413BD37B064B99720D45E7B498C94A880676DBE16",
+      "afterSize": 446877,
+      "afterSha256": "E682EE5F7890EE0CCD57F59413BD37B064B99720D45E7B498C94A880676DBE16"
+    },
+    {
+      "alias": "PROTECTED-018",
+      "beforeSize": 447473,
+      "beforeSha256": "51C783DC38056A99D2A13D799E47D4E448EE1D25277F7913C176AEA5466542A0",
+      "afterSize": 447473,
+      "afterSha256": "51C783DC38056A99D2A13D799E47D4E448EE1D25277F7913C176AEA5466542A0"
+    },
+    {
+      "alias": "PROTECTED-019",
+      "beforeSize": 448593,
+      "beforeSha256": "F13830D6948CF8B746C00B5A18A31BD30A6611F9A9B59CA775D006BEC69DA9EE",
+      "afterSize": 448593,
+      "afterSha256": "F13830D6948CF8B746C00B5A18A31BD30A6611F9A9B59CA775D006BEC69DA9EE"
+    },
+    {
+      "alias": "PROTECTED-020",
+      "beforeSize": 486799,
+      "beforeSha256": "08B1D93E104D6DD5039250E0C507AC6608EEADB5527AF45A86B8043C6861CAC6",
+      "afterSize": 486799,
+      "afterSha256": "08B1D93E104D6DD5039250E0C507AC6608EEADB5527AF45A86B8043C6861CAC6"
+    },
+    {
+      "alias": "PROTECTED-021",
+      "beforeSize": 457824,
+      "beforeSha256": "D344C106842095771E75E2FE8FD732D6555EB5DFC55970154C6F785A9BCF404D",
+      "afterSize": 457824,
+      "afterSha256": "D344C106842095771E75E2FE8FD732D6555EB5DFC55970154C6F785A9BCF404D"
+    },
+    {
+      "alias": "PROTECTED-022",
+      "beforeSize": 487182,
+      "beforeSha256": "C31241571B1AAEE09934724182980459728B8C05BBA9AFF0B37DC31EA49D5161",
+      "afterSize": 487182,
+      "afterSha256": "C31241571B1AAEE09934724182980459728B8C05BBA9AFF0B37DC31EA49D5161"
+    },
+    {
+      "alias": "PROTECTED-023",
+      "beforeSize": 495005,
+      "beforeSha256": "6B341EFED05DA4BBE60235464685D7388E104D6ECC7996A1221CE0310F6AFB0D",
+      "afterSize": 495005,
+      "afterSha256": "6B341EFED05DA4BBE60235464685D7388E104D6ECC7996A1221CE0310F6AFB0D"
+    },
+    {
+      "alias": "PROTECTED-024",
+      "beforeSize": 976,
+      "beforeSha256": "1236BB1F9391AD5E3895835F998A91B1A3A00310463F91992525855372708C35",
+      "afterSize": 976,
+      "afterSha256": "1236BB1F9391AD5E3895835F998A91B1A3A00310463F91992525855372708C35"
+    },
+    {
+      "alias": "PROTECTED-025",
+      "beforeSize": 164,
+      "beforeSha256": "9D2C7D0DBED145F0993DE34A9E032DF21EDD7ABD1D9CAE1B87FD879F01B2EF33",
+      "afterSize": 164,
+      "afterSha256": "9D2C7D0DBED145F0993DE34A9E032DF21EDD7ABD1D9CAE1B87FD879F01B2EF33"
+    },
+    {
+      "alias": "PROTECTED-026",
+      "beforeSize": 185,
+      "beforeSha256": "C7C89DB56F7851298C28EB6247044B71526BFBDBC2BEA2FC38D4995C1E59FC15",
+      "afterSize": 185,
+      "afterSha256": "C7C89DB56F7851298C28EB6247044B71526BFBDBC2BEA2FC38D4995C1E59FC15"
+    },
+    {
+      "alias": "PROTECTED-027",
+      "beforeSize": 139,
+      "beforeSha256": "4E361EC0339AD78C0AA60224028347AAE4D5F33F0FCCADA6FB3096832BAF2888",
+      "afterSize": 139,
+      "afterSha256": "4E361EC0339AD78C0AA60224028347AAE4D5F33F0FCCADA6FB3096832BAF2888"
+    },
+    {
+      "alias": "PROTECTED-028",
+      "beforeSize": 7467,
+      "beforeSha256": "147A2E634B352522A78114302857A8B7DF53637A0FED97C79D3099C224414F6A",
+      "afterSize": 7467,
+      "afterSha256": "147A2E634B352522A78114302857A8B7DF53637A0FED97C79D3099C224414F6A"
+    },
+    {
+      "alias": "PROTECTED-029",
+      "beforeSize": 180,
+      "beforeSha256": "DA9B8C3CBEAD6AD6B265D134F5D34D23E56896C787019EA29A860D6697112321",
+      "afterSize": 180,
+      "afterSha256": "DA9B8C3CBEAD6AD6B265D134F5D34D23E56896C787019EA29A860D6697112321"
+    },
+    {
+      "alias": "PROTECTED-030",
+      "beforeSize": 141,
+      "beforeSha256": "0435A87172D0904C086F2C1C91E335AA8320DB7D315B21C5DA51FDEF7A70B901",
+      "afterSize": 141,
+      "afterSha256": "0435A87172D0904C086F2C1C91E335AA8320DB7D315B21C5DA51FDEF7A70B901"
+    },
+    {
+      "alias": "PROTECTED-031",
+      "beforeSize": 297,
+      "beforeSha256": "12D40005D650A1A58CAD69602F9471EDF0D84BE8032AC7E5D5AAD75B63A8011A",
+      "afterSize": 297,
+      "afterSha256": "12D40005D650A1A58CAD69602F9471EDF0D84BE8032AC7E5D5AAD75B63A8011A"
+    },
+    {
+      "alias": "PROTECTED-032",
+      "beforeSize": 164,
+      "beforeSha256": "9D2C7D0DBED145F0993DE34A9E032DF21EDD7ABD1D9CAE1B87FD879F01B2EF33",
+      "afterSize": 164,
+      "afterSha256": "9D2C7D0DBED145F0993DE34A9E032DF21EDD7ABD1D9CAE1B87FD879F01B2EF33"
+    },
+    {
+      "alias": "PROTECTED-033",
+      "beforeSize": 133,
+      "beforeSha256": "584CBE5D8AA53165CFADA322ECF12CACA3EAAE32983FC68F7A40DFCBD7E51405",
+      "afterSize": 133,
+      "afterSha256": "584CBE5D8AA53165CFADA322ECF12CACA3EAAE32983FC68F7A40DFCBD7E51405"
+    },
+    {
+      "alias": "PROTECTED-034",
+      "beforeSize": 175,
+      "beforeSha256": "521D181464672999D9E894AE70ACCCCF15BFECBEBC2F8EFB2E43BDD6B8D8CB5B",
+      "afterSize": 175,
+      "afterSha256": "521D181464672999D9E894AE70ACCCCF15BFECBEBC2F8EFB2E43BDD6B8D8CB5B"
+    },
+    {
+      "alias": "PROTECTED-035",
+      "beforeSize": 146,
+      "beforeSha256": "B21BD3787F63D41468E95BBA84A2D905BEB2DA302E1460AAD3B662317CEE7BAD",
+      "afterSize": 146,
+      "afterSha256": "B21BD3787F63D41468E95BBA84A2D905BEB2DA302E1460AAD3B662317CEE7BAD"
+    },
+    {
+      "alias": "PROTECTED-036",
+      "beforeSize": 228,
+      "beforeSha256": "81CD34B0D86BE6E3F793ADED9CC7B190FD3A3CAD4567672BDE32529EDA4FEB01",
+      "afterSize": 228,
+      "afterSha256": "81CD34B0D86BE6E3F793ADED9CC7B190FD3A3CAD4567672BDE32529EDA4FEB01"
+    },
+    {
+      "alias": "PROTECTED-037",
+      "beforeSize": 375,
+      "beforeSha256": "58642415CD6E929C7D0BFD737162BAFE921534A570C5F07C5417285E08ED0EE1",
+      "afterSize": 375,
+      "afterSha256": "58642415CD6E929C7D0BFD737162BAFE921534A570C5F07C5417285E08ED0EE1"
+    },
+    {
+      "alias": "PROTECTED-038",
+      "beforeSize": 170,
+      "beforeSha256": "759DF4AF3A91A2C9988A6928E418E07CEA5252EBFCB97A1EE8EE0D829890D278",
+      "afterSize": 170,
+      "afterSha256": "759DF4AF3A91A2C9988A6928E418E07CEA5252EBFCB97A1EE8EE0D829890D278"
+    },
+    {
+      "alias": "PROTECTED-039",
+      "beforeSize": 179,
+      "beforeSha256": "97FD71CD0A2D137C46F9BEC17BB3CB4482B14D6EA34E090620639FB34F995E96",
+      "afterSize": 179,
+      "afterSha256": "97FD71CD0A2D137C46F9BEC17BB3CB4482B14D6EA34E090620639FB34F995E96"
+    },
+    {
+      "alias": "PROTECTED-040",
+      "beforeSize": 316,
+      "beforeSha256": "117D28EF2630B6EB7B221DCB1271703461A7A4DBE69C5E9607179DCBB938CCA8",
+      "afterSize": 316,
+      "afterSha256": "117D28EF2630B6EB7B221DCB1271703461A7A4DBE69C5E9607179DCBB938CCA8"
+    },
+    {
+      "alias": "PROTECTED-041",
+      "beforeSize": 138,
+      "beforeSha256": "203FAB9445926755B725FC8535746738179F995B829A9432E206E18286A63943",
+      "afterSize": 138,
+      "afterSha256": "203FAB9445926755B725FC8535746738179F995B829A9432E206E18286A63943"
+    },
+    {
+      "alias": "PROTECTED-042",
+      "beforeSize": 293,
+      "beforeSha256": "F883B4D09ABE2A336B79C09BFD3860691A2C60B1048B3576602255675EAC145B",
+      "afterSize": 293,
+      "afterSha256": "F883B4D09ABE2A336B79C09BFD3860691A2C60B1048B3576602255675EAC145B"
+    },
+    {
+      "alias": "PROTECTED-043",
+      "beforeSize": 9873,
+      "beforeSha256": "7FA0C6E126013A24901F560037E8B2EE1CA5B399845EF8B164AD8C6F5313B2B9",
+      "afterSize": 9873,
+      "afterSha256": "7FA0C6E126013A24901F560037E8B2EE1CA5B399845EF8B164AD8C6F5313B2B9"
+    },
+    {
+      "alias": "PROTECTED-044",
+      "beforeSize": 13585,
+      "beforeSha256": "F54529696EEC1BECB573FD3F53C9C4C3627EF28F25C3BEE385EBB86ECD302CC7",
+      "afterSize": 13585,
+      "afterSha256": "F54529696EEC1BECB573FD3F53C9C4C3627EF28F25C3BEE385EBB86ECD302CC7"
+    },
+    {
+      "alias": "PROTECTED-045",
+      "beforeSize": 10277,
+      "beforeSha256": "E0D4383A6EC37E8BDCC4AFA5EA8A8D2471E5F349C15FEA9B60654DBD9AFE8E73",
+      "afterSize": 10277,
+      "afterSha256": "E0D4383A6EC37E8BDCC4AFA5EA8A8D2471E5F349C15FEA9B60654DBD9AFE8E73"
+    },
+    {
+      "alias": "PROTECTED-046",
+      "beforeSize": 13095,
+      "beforeSha256": "02A453A64C4394A9B64C6697AF4EEC0194B276BD9B21BE0FE9F5BBF127360688",
+      "afterSize": 13095,
+      "afterSha256": "02A453A64C4394A9B64C6697AF4EEC0194B276BD9B21BE0FE9F5BBF127360688"
+    },
+    {
+      "alias": "PROTECTED-047",
+      "beforeSize": 11786,
+      "beforeSha256": "EC866DBCE4CD8222E914035A266048AD16C584848F8545B5311B1F1E9A65A450",
+      "afterSize": 11786,
+      "afterSha256": "EC866DBCE4CD8222E914035A266048AD16C584848F8545B5311B1F1E9A65A450"
+    },
+    {
+      "alias": "PROTECTED-048",
+      "beforeSize": 12643,
+      "beforeSha256": "5CBB8A6C3232E992D7E47C41C9DE28C3848BD4AF09178DA6B9B71B9102545AE1",
+      "afterSize": 12643,
+      "afterSha256": "5CBB8A6C3232E992D7E47C41C9DE28C3848BD4AF09178DA6B9B71B9102545AE1"
+    },
+    {
+      "alias": "PROTECTED-049",
+      "beforeSize": 10894,
+      "beforeSha256": "A46566C75BC2A87A22A8B1B2A5FF62D0748B8BD29BB83D080F6403302FC11B9F",
+      "afterSize": 10894,
+      "afterSha256": "A46566C75BC2A87A22A8B1B2A5FF62D0748B8BD29BB83D080F6403302FC11B9F"
+    },
+    {
+      "alias": "PROTECTED-050",
+      "beforeSize": 12889,
+      "beforeSha256": "BE14E1884EA976536AAF2B86414B69D05A0CDD28848FF65BC7417CEBFE653567",
+      "afterSize": 12889,
+      "afterSha256": "BE14E1884EA976536AAF2B86414B69D05A0CDD28848FF65BC7417CEBFE653567"
+    },
+    {
+      "alias": "PROTECTED-051",
+      "beforeSize": 12422,
+      "beforeSha256": "9281D2BEA978BE8165EE53CC2D382B84288269E7FCBE70B213432123F8351BDF",
+      "afterSize": 12422,
+      "afterSha256": "9281D2BEA978BE8165EE53CC2D382B84288269E7FCBE70B213432123F8351BDF"
+    },
+    {
+      "alias": "PROTECTED-052",
+      "beforeSize": 15805,
+      "beforeSha256": "4DB94B8C0500CEB15E7EC3E7FEB2AC26445168707638409A2F54C7DDA4876E74",
+      "afterSize": 15805,
+      "afterSha256": "4DB94B8C0500CEB15E7EC3E7FEB2AC26445168707638409A2F54C7DDA4876E74"
+    },
+    {
+      "alias": "PROTECTED-053",
+      "beforeSize": 21130,
+      "beforeSha256": "D56B7C9FE1881903D4F9EDAAFCC082D4600EAB11202A692235A9BA60E3261BF1",
+      "afterSize": 21130,
+      "afterSha256": "D56B7C9FE1881903D4F9EDAAFCC082D4600EAB11202A692235A9BA60E3261BF1"
+    },
+    {
+      "alias": "PROTECTED-054",
+      "beforeSize": 16486,
+      "beforeSha256": "707D1C5E6C269528883BC9CABED5A609A978327305435C1C8FE2C76DD8AFD017",
+      "afterSize": 16486,
+      "afterSha256": "707D1C5E6C269528883BC9CABED5A609A978327305435C1C8FE2C76DD8AFD017"
+    },
+    {
+      "alias": "PROTECTED-055",
+      "beforeSize": 21890,
+      "beforeSha256": "901CE93FB6DD176CC4AE48DB0B6A6F59943054FF45DCA81E9861449B9192FB05",
+      "afterSize": 21890,
+      "afterSha256": "901CE93FB6DD176CC4AE48DB0B6A6F59943054FF45DCA81E9861449B9192FB05"
+    },
+    {
+      "alias": "PROTECTED-056",
+      "beforeSize": 23700,
+      "beforeSha256": "DC161C5FF75D1048B6E595B994A601142AE38F1DC4524790513543222696A126",
+      "afterSize": 23700,
+      "afterSha256": "DC161C5FF75D1048B6E595B994A601142AE38F1DC4524790513543222696A126"
+    },
+    {
+      "alias": "PROTECTED-057",
+      "beforeSize": 20520,
+      "beforeSha256": "3911A0315FC736F645F78D335006D6FA5C223D118CC525A483E0D05F268BE4FF",
+      "afterSize": 20520,
+      "afterSha256": "3911A0315FC736F645F78D335006D6FA5C223D118CC525A483E0D05F268BE4FF"
+    },
+    {
+      "alias": "PROTECTED-058",
+      "beforeSize": 20818,
+      "beforeSha256": "CAE8DF906833E39150DC8FD332A1BC2592B49419F14E683504BE9E26363333BF",
+      "afterSize": 20818,
+      "afterSha256": "CAE8DF906833E39150DC8FD332A1BC2592B49419F14E683504BE9E26363333BF"
+    },
+    {
+      "alias": "PROTECTED-059",
+      "beforeSize": 23838,
+      "beforeSha256": "FF243E0CBA6FB06B7FF4883CB21BDB2F60671720274629F6F0EA35DD9E30AB16",
+      "afterSize": 23838,
+      "afterSha256": "FF243E0CBA6FB06B7FF4883CB21BDB2F60671720274629F6F0EA35DD9E30AB16"
+    },
+    {
+      "alias": "PROTECTED-060",
+      "beforeSize": 77279,
+      "beforeSha256": "EE98526B51622F7D994DEE03A2F2B20F93C2DF396C3BAFBD708F7D89A4FBB17C",
+      "afterSize": 77279,
+      "afterSha256": "EE98526B51622F7D994DEE03A2F2B20F93C2DF396C3BAFBD708F7D89A4FBB17C"
+    },
+    {
+      "alias": "PROTECTED-061",
+      "beforeSize": 72896,
+      "beforeSha256": "F4596C7E05BB1CA716D1C7CEB5D88DE827E80457AC0B07ABB15DCE6DAC4B8E1F",
+      "afterSize": 72896,
+      "afterSha256": "F4596C7E05BB1CA716D1C7CEB5D88DE827E80457AC0B07ABB15DCE6DAC4B8E1F"
+    },
+    {
+      "alias": "PROTECTED-062",
+      "beforeSize": 78273,
+      "beforeSha256": "2DA32CD875FC1C9CB2368BE362F2EF26D937E8770DBCB48D6E3A5B770A4FAE23",
+      "afterSize": 78273,
+      "afterSha256": "2DA32CD875FC1C9CB2368BE362F2EF26D937E8770DBCB48D6E3A5B770A4FAE23"
+    },
+    {
+      "alias": "PROTECTED-063",
+      "beforeSize": 63197,
+      "beforeSha256": "1AC0F5244105801407C8392C9E8563971F4409F54539DC22D4D2AAA6464CCEA2",
+      "afterSize": 63197,
+      "afterSha256": "1AC0F5244105801407C8392C9E8563971F4409F54539DC22D4D2AAA6464CCEA2"
+    },
+    {
+      "alias": "PROTECTED-064",
+      "beforeSize": 58737,
+      "beforeSha256": "E11405B2CAB654D7B07F43D2D0E5748664DE9F9218D4D3B51C8BC1033384C3B5",
+      "afterSize": 58737,
+      "afterSha256": "E11405B2CAB654D7B07F43D2D0E5748664DE9F9218D4D3B51C8BC1033384C3B5"
+    },
+    {
+      "alias": "PROTECTED-065",
+      "beforeSize": 33906,
+      "beforeSha256": "1CC542492615D8E46E5A259328BD0844F76E520D875E1CDFB8EF5D60961777F0",
+      "afterSize": 33906,
+      "afterSha256": "1CC542492615D8E46E5A259328BD0844F76E520D875E1CDFB8EF5D60961777F0"
+    },
+    {
+      "alias": "PROTECTED-066",
+      "beforeSize": 43283,
+      "beforeSha256": "EECB6C4E8EF422C37079B3F798951DA4C09EBEE38B5E6982B0416173BEA16728",
+      "afterSize": 43283,
+      "afterSha256": "EECB6C4E8EF422C37079B3F798951DA4C09EBEE38B5E6982B0416173BEA16728"
+    },
+    {
+      "alias": "PROTECTED-067",
+      "beforeSize": 41585,
+      "beforeSha256": "04B075D6C3FE01CAFCD2EC6C96ABF84A8657AC8D6AF44C9D896B26ADA3D93750",
+      "afterSize": 41585,
+      "afterSha256": "04B075D6C3FE01CAFCD2EC6C96ABF84A8657AC8D6AF44C9D896B26ADA3D93750"
+    },
+    {
+      "alias": "PROTECTED-068",
+      "beforeSize": 45424,
+      "beforeSha256": "8CE319CCB8306DE641C9FC49979D4BC163B3FA8C449031BF4B2ACC66FE290292",
+      "afterSize": 45424,
+      "afterSha256": "8CE319CCB8306DE641C9FC49979D4BC163B3FA8C449031BF4B2ACC66FE290292"
+    },
+    {
+      "alias": "PROTECTED-069",
+      "beforeSize": 85088,
+      "beforeSha256": "89561C6C025B44393FC104CF1D85830DD1E13949A498551C156E949EA8C8B206",
+      "afterSize": 85088,
+      "afterSha256": "89561C6C025B44393FC104CF1D85830DD1E13949A498551C156E949EA8C8B206"
+    },
+    {
+      "alias": "PROTECTED-070",
+      "beforeSize": 73860,
+      "beforeSha256": "EC674AFF1015890D233F720E614F0B366AB88FA4EF8D21EC5F120AD341F350E0",
+      "afterSize": 73860,
+      "afterSha256": "EC674AFF1015890D233F720E614F0B366AB88FA4EF8D21EC5F120AD341F350E0"
+    },
+    {
+      "alias": "PROTECTED-071",
+      "beforeSize": 46354,
+      "beforeSha256": "73A94E1A2AB4355EF6D0793503A992665F9CA67552B8D8B73A6F9F6DA1991520",
+      "afterSize": 46354,
+      "afterSha256": "73A94E1A2AB4355EF6D0793503A992665F9CA67552B8D8B73A6F9F6DA1991520"
+    },
+    {
+      "alias": "PROTECTED-072",
+      "beforeSize": 375736,
+      "beforeSha256": "02C7BC08FFD4A99F83C81AAC8F14670688FFB1F67FE92186F854CBFB25CB0512",
+      "afterSize": 375736,
+      "afterSha256": "02C7BC08FFD4A99F83C81AAC8F14670688FFB1F67FE92186F854CBFB25CB0512"
+    },
+    {
+      "alias": "PROTECTED-073",
+      "beforeSize": 35282,
+      "beforeSha256": "BD77BAF5CEEC2EBDB15867A2513E274E6306BD86CA3B700009D0814C6E5A5360",
+      "afterSize": 35282,
+      "afterSha256": "BD77BAF5CEEC2EBDB15867A2513E274E6306BD86CA3B700009D0814C6E5A5360"
+    },
+    {
+      "alias": "PROTECTED-074",
+      "beforeSize": 39153,
+      "beforeSha256": "217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828",
+      "afterSize": 39153,
+      "afterSha256": "217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828"
+    },
+    {
+      "alias": "PROTECTED-075",
+      "beforeSize": 35121,
+      "beforeSha256": "C14334F81ECD42FD34ED09E2C8C23C6D5F91A456C83DB2E039EEDDD8B06CCAE6",
+      "afterSize": 35121,
+      "afterSha256": "C14334F81ECD42FD34ED09E2C8C23C6D5F91A456C83DB2E039EEDDD8B06CCAE6"
+    },
+    {
+      "alias": "PROTECTED-076",
+      "beforeSize": 72315,
+      "beforeSha256": "4649DAF52276C780B07F2D9415879D3075953D8E86938371872BB684C9FDE5F5",
+      "afterSize": 72315,
+      "afterSha256": "4649DAF52276C780B07F2D9415879D3075953D8E86938371872BB684C9FDE5F5"
+    },
+    {
+      "alias": "PROTECTED-077",
+      "beforeSize": 30922,
+      "beforeSha256": "33F0D76B96A7CCC62A109596BEF4AAF7A1D7E6382F7F4663CA40223DE0D0F5C3",
+      "afterSize": 30922,
+      "afterSha256": "33F0D76B96A7CCC62A109596BEF4AAF7A1D7E6382F7F4663CA40223DE0D0F5C3"
+    },
+    {
+      "alias": "PROTECTED-078",
+      "beforeSize": 32298,
+      "beforeSha256": "57378F895C3AE92590699D4EF41F893487F8B84BDFD23721AA80EF192EB75E4D",
+      "afterSize": 32298,
+      "afterSha256": "57378F895C3AE92590699D4EF41F893487F8B84BDFD23721AA80EF192EB75E4D"
+    },
+    {
+      "alias": "PROTECTED-079",
+      "beforeSize": 41423,
+      "beforeSha256": "77381AD5FF3BCE52D936C99799726A958FD6A6E9B7C391558DADF8074E362091",
+      "afterSize": 41423,
+      "afterSha256": "77381AD5FF3BCE52D936C99799726A958FD6A6E9B7C391558DADF8074E362091"
+    },
+    {
+      "alias": "PROTECTED-080",
+      "beforeSize": 38192,
+      "beforeSha256": "4EB6A0286558602F83B51A1E61F35782BE211F335604B2FA0FAAAF09D06ECA97",
+      "afterSize": 38192,
+      "afterSha256": "4EB6A0286558602F83B51A1E61F35782BE211F335604B2FA0FAAAF09D06ECA97"
+    },
+    {
+      "alias": "PROTECTED-081",
+      "beforeSize": 51956,
+      "beforeSha256": "843FE0F475B5D1F56221B9F9AB66B831A38FE94F0FC017257181EFC7E9D544FE",
+      "afterSize": 51956,
+      "afterSha256": "843FE0F475B5D1F56221B9F9AB66B831A38FE94F0FC017257181EFC7E9D544FE"
+    },
+    {
+      "alias": "PROTECTED-082",
+      "beforeSize": 38418,
+      "beforeSha256": "29268F34897483B192DFEA2CD645986CDE3F2C315373796411E0981BEFB0F4FE",
+      "afterSize": 38418,
+      "afterSha256": "29268F34897483B192DFEA2CD645986CDE3F2C315373796411E0981BEFB0F4FE"
+    },
+    {
+      "alias": "PROTECTED-083",
+      "beforeSize": 51575,
+      "beforeSha256": "85A4B0A8988F0B61BAD55D8E97275C52F77503665CBF0482FB143D68CC6234A3",
+      "afterSize": 51575,
+      "afterSha256": "85A4B0A8988F0B61BAD55D8E97275C52F77503665CBF0482FB143D68CC6234A3"
+    },
+    {
+      "alias": "PROTECTED-084",
+      "beforeSize": 62618,
+      "beforeSha256": "643E641F7DE8A232167E70BB8CD107617CB340665BD2F4D671B02AA6C94DDC39",
+      "afterSize": 62618,
+      "afterSha256": "643E641F7DE8A232167E70BB8CD107617CB340665BD2F4D671B02AA6C94DDC39"
+    },
+    {
+      "alias": "PROTECTED-085",
+      "beforeSize": 48175,
+      "beforeSha256": "566AB39BF05678B5D81AAF64434BB15C214CF9D8FEFCAECD8DF54B0D63AEDCA7",
+      "afterSize": 48175,
+      "afterSha256": "566AB39BF05678B5D81AAF64434BB15C214CF9D8FEFCAECD8DF54B0D63AEDCA7"
+    },
+    {
+      "alias": "PROTECTED-086",
+      "beforeSize": 47218,
+      "beforeSha256": "65F66F0003D0AD64F376A2BF7351B3EF811500C9E8D2366BF61E4DF20800E654",
+      "afterSize": 47218,
+      "afterSha256": "65F66F0003D0AD64F376A2BF7351B3EF811500C9E8D2366BF61E4DF20800E654"
+    },
+    {
+      "alias": "PROTECTED-087",
+      "beforeSize": 62424,
+      "beforeSha256": "99AF0D1821CBAFE9601ED15ADFEAEB6EA671EDFEE665704498A4C147D2E7B914",
+      "afterSize": 62424,
+      "afterSha256": "99AF0D1821CBAFE9601ED15ADFEAEB6EA671EDFEE665704498A4C147D2E7B914"
+    },
+    {
+      "alias": "PROTECTED-088",
+      "beforeSize": 57019,
+      "beforeSha256": "32315761B4C9C56ED55402EF30EDBF629C06B43E078C00B53B6BAA5B510E0E68",
+      "afterSize": 57019,
+      "afterSha256": "32315761B4C9C56ED55402EF30EDBF629C06B43E078C00B53B6BAA5B510E0E68"
+    },
+    {
+      "alias": "PROTECTED-089",
+      "beforeSize": 34097,
+      "beforeSha256": "D19B82714F1D99F3773E2917C7691B83FD8AB32F33251AA541DD033069465A82",
+      "afterSize": 34097,
+      "afterSha256": "D19B82714F1D99F3773E2917C7691B83FD8AB32F33251AA541DD033069465A82"
+    },
+    {
+      "alias": "PROTECTED-090",
+      "beforeSize": 51383,
+      "beforeSha256": "36C11FB3A6C3F251FF07B6F5B4A65FBCDC8ABFF58EAD68E5DF6581EB3190251F",
+      "afterSize": 51383,
+      "afterSha256": "36C11FB3A6C3F251FF07B6F5B4A65FBCDC8ABFF58EAD68E5DF6581EB3190251F"
+    },
+    {
+      "alias": "PROTECTED-091",
+      "beforeSize": 34577,
+      "beforeSha256": "22959093878D7799D389767B35856241B64B83C3790E8FCC9714926E1E8AC5A2",
+      "afterSize": 34577,
+      "afterSha256": "22959093878D7799D389767B35856241B64B83C3790E8FCC9714926E1E8AC5A2"
+    },
+    {
+      "alias": "PROTECTED-092",
+      "beforeSize": 51863,
+      "beforeSha256": "EEC6DF1548091CFE45D6E582342A2B0E32709F404EEC040ECCF6FEE454AB21A2",
+      "afterSize": 51863,
+      "afterSha256": "EEC6DF1548091CFE45D6E582342A2B0E32709F404EEC040ECCF6FEE454AB21A2"
+    },
+    {
+      "alias": "PROTECTED-093",
+      "beforeSize": 64855,
+      "beforeSha256": "45BB3F4A7B225A26C916A4A7555D868916CCFF926E1AC4D01C0532C80B0A76D0",
+      "afterSize": 64855,
+      "afterSha256": "45BB3F4A7B225A26C916A4A7555D868916CCFF926E1AC4D01C0532C80B0A76D0"
+    },
+    {
+      "alias": "PROTECTED-094",
+      "beforeSize": 48529,
+      "beforeSha256": "0B472CC7664252F12B8C9B7338C9D3EFA1E426EFD2EC4950B43927FBB21445EF",
+      "afterSize": 48529,
+      "afterSha256": "0B472CC7664252F12B8C9B7338C9D3EFA1E426EFD2EC4950B43927FBB21445EF"
+    },
+    {
+      "alias": "PROTECTED-095",
+      "beforeSize": 49583,
+      "beforeSha256": "BAAFCF62E7BC4976B085446AE1F482DA81BF917DA2952BCE12C4970998FDEE23",
+      "afterSize": 49583,
+      "afterSha256": "BAAFCF62E7BC4976B085446AE1F482DA81BF917DA2952BCE12C4970998FDEE23"
+    },
+    {
+      "alias": "PROTECTED-096",
+      "beforeSize": 61401,
+      "beforeSha256": "8C9A6B78F9C76412B0AAF941BCA726FB0C9296EAEBDB53D67F07B30A909439E5",
+      "afterSize": 61401,
+      "afterSha256": "8C9A6B78F9C76412B0AAF941BCA726FB0C9296EAEBDB53D67F07B30A909439E5"
+    },
+    {
+      "alias": "PROTECTED-097",
+      "beforeSize": 338,
+      "beforeSha256": "764BAC796A4FC5E8A24E189B81AD2532D9E548FEAEFF32E8F01CFAD52EFC7103",
+      "afterSize": 338,
+      "afterSha256": "764BAC796A4FC5E8A24E189B81AD2532D9E548FEAEFF32E8F01CFAD52EFC7103"
+    },
+    {
+      "alias": "PROTECTED-098",
+      "beforeSize": 191,
+      "beforeSha256": "BBEC2CE0210425EE437902B85DA39EC5D3AE65537B63A7E5DB52BCAE14903F47",
+      "afterSize": 191,
+      "afterSha256": "BBEC2CE0210425EE437902B85DA39EC5D3AE65537B63A7E5DB52BCAE14903F47"
+    },
+    {
+      "alias": "PROTECTED-099",
+      "beforeSize": 345,
+      "beforeSha256": "C9DB6425E49E5F9D3ABC06885F9F39E22766A7BD2C80D12F0F24A26E2A9E14A9",
+      "afterSize": 345,
+      "afterSha256": "C9DB6425E49E5F9D3ABC06885F9F39E22766A7BD2C80D12F0F24A26E2A9E14A9"
+    },
+    {
+      "alias": "PROTECTED-100",
+      "beforeSize": 152,
+      "beforeSha256": "CCAD9BB7D460349E9587F0361D4E1B97808C5AB282C265F9894C9586792B9D58",
+      "afterSize": 152,
+      "afterSha256": "CCAD9BB7D460349E9587F0361D4E1B97808C5AB282C265F9894C9586792B9D58"
+    },
+    {
+      "alias": "PROTECTED-101",
+      "beforeSize": 344,
+      "beforeSha256": "9010D857C4AE81BF0B523B6184D69706FFFA6504209327496D38AC38CB51CA39",
+      "afterSize": 344,
+      "afterSha256": "9010D857C4AE81BF0B523B6184D69706FFFA6504209327496D38AC38CB51CA39"
+    },
+    {
+      "alias": "PROTECTED-102",
+      "beforeSize": 1302,
+      "beforeSha256": "945FF5181FC2333E8FDCE3406A22C6F4F12E542BFFF51748E53ADFF0FE0E15B8",
+      "afterSize": 1302,
+      "afterSha256": "945FF5181FC2333E8FDCE3406A22C6F4F12E542BFFF51748E53ADFF0FE0E15B8"
+    },
+    {
+      "alias": "PROTECTED-103",
+      "beforeSize": 338,
+      "beforeSha256": "C02015C45377D74B51BFAC6673BB71863291F91C6C48A5229BD5F0E676BB32D8",
+      "afterSize": 338,
+      "afterSha256": "C02015C45377D74B51BFAC6673BB71863291F91C6C48A5229BD5F0E676BB32D8"
+    },
+    {
+      "alias": "PROTECTED-104",
+      "beforeSize": 199,
+      "beforeSha256": "21C0126DA09DBB0712AFF6666730B8838BBEC58FC62F571334D217E2ABEE14D8",
+      "afterSize": 199,
+      "afterSha256": "21C0126DA09DBB0712AFF6666730B8838BBEC58FC62F571334D217E2ABEE14D8"
+    },
+    {
+      "alias": "PROTECTED-105",
+      "beforeSize": 344,
+      "beforeSha256": "BD9CFA5C5C6E309EF10F7F3EA29303E305DF1DFE33CE26F02110AAC4C417A13E",
+      "afterSize": 344,
+      "afterSha256": "BD9CFA5C5C6E309EF10F7F3EA29303E305DF1DFE33CE26F02110AAC4C417A13E"
+    },
+    {
+      "alias": "PROTECTED-106",
+      "beforeSize": 147,
+      "beforeSha256": "B120FB1C13162BC85C58AEDA0756D790AA5002857B15B8424A6A518773279894",
+      "afterSize": 147,
+      "afterSha256": "B120FB1C13162BC85C58AEDA0756D790AA5002857B15B8424A6A518773279894"
+    },
+    {
+      "alias": "PROTECTED-107",
+      "beforeSize": 335,
+      "beforeSha256": "91380F04AF663D62E6B816D27427A312456C0E833E417407E24B39E4533AD654",
+      "afterSize": 335,
+      "afterSha256": "91380F04AF663D62E6B816D27427A312456C0E833E417407E24B39E4533AD654"
+    },
+    {
+      "alias": "PROTECTED-108",
+      "beforeSize": 421,
+      "beforeSha256": "19148F8525FEB9AA68C24BA5CFC61F6A2CB76AEE8BF1776A86D5A3D46B6D6671",
+      "afterSize": 421,
+      "afterSha256": "19148F8525FEB9AA68C24BA5CFC61F6A2CB76AEE8BF1776A86D5A3D46B6D6671"
+    },
+    {
+      "alias": "PROTECTED-109",
+      "beforeSize": 342,
+      "beforeSha256": "FAD8C4E2C29E819C225B37F9019EEBDB4E6814C331995B7314ECCFCB4093284E",
+      "afterSize": 342,
+      "afterSha256": "FAD8C4E2C29E819C225B37F9019EEBDB4E6814C331995B7314ECCFCB4093284E"
+    },
+    {
+      "alias": "PROTECTED-110",
+      "beforeSize": 159,
+      "beforeSha256": "8B1DF8F3296518464D94C59B591E9A30368513E9E9D711451B50EB9430ECD839",
+      "afterSize": 159,
+      "afterSha256": "8B1DF8F3296518464D94C59B591E9A30368513E9E9D711451B50EB9430ECD839"
+    },
+    {
+      "alias": "PROTECTED-111",
+      "beforeSize": 341,
+      "beforeSha256": "A5D824BB5C568F9DEAE42AB34D0F3DDA3929B01543E77288E8943F8F87AA24B6",
+      "afterSize": 341,
+      "afterSha256": "A5D824BB5C568F9DEAE42AB34D0F3DDA3929B01543E77288E8943F8F87AA24B6"
+    },
+    {
+      "alias": "PROTECTED-112",
+      "beforeSize": 172,
+      "beforeSha256": "8D7F3ABC0A6C02137AD0E93B97E40F3EDFC7B023637DBCCD4A95D445D9C3E455",
+      "afterSize": 172,
+      "afterSha256": "8D7F3ABC0A6C02137AD0E93B97E40F3EDFC7B023637DBCCD4A95D445D9C3E455"
+    },
+    {
+      "alias": "PROTECTED-113",
+      "beforeSize": 341,
+      "beforeSha256": "0F79B8E02BD61A2C819144FC3113A8856D43D8211A32A808BF9EC2E928FA612B",
+      "afterSize": 341,
+      "afterSha256": "0F79B8E02BD61A2C819144FC3113A8856D43D8211A32A808BF9EC2E928FA612B"
+    },
+    {
+      "alias": "PROTECTED-114",
+      "beforeSize": 172,
+      "beforeSha256": "D1E5ADB871AA157A904BF0F05BD42C557D2A86723AB31FAC1BE578AE1CAC6374",
+      "afterSize": 172,
+      "afterSha256": "D1E5ADB871AA157A904BF0F05BD42C557D2A86723AB31FAC1BE578AE1CAC6374"
+    },
+    {
+      "alias": "PROTECTED-115",
+      "beforeSize": 347,
+      "beforeSha256": "41E01E9D3F90EB3B72AFD93C6633B9970766BD25E62FE2FDA16C392011EB58DA",
+      "afterSize": 347,
+      "afterSha256": "41E01E9D3F90EB3B72AFD93C6633B9970766BD25E62FE2FDA16C392011EB58DA"
+    },
+    {
+      "alias": "PROTECTED-116",
+      "beforeSize": 149,
+      "beforeSha256": "B7EDC4FFF05C609ECC691EB3B79FF5D06338CEAB817A5B68C52A39B477524C7D",
+      "afterSize": 149,
+      "afterSha256": "B7EDC4FFF05C609ECC691EB3B79FF5D06338CEAB817A5B68C52A39B477524C7D"
+    },
+    {
+      "alias": "PROTECTED-117",
+      "beforeSize": 333,
+      "beforeSha256": "5C9DF3762D323C94CD498FF8AA67FE31143C145CF0ED117D685ED1D974DC09A1",
+      "afterSize": 333,
+      "afterSha256": "5C9DF3762D323C94CD498FF8AA67FE31143C145CF0ED117D685ED1D974DC09A1"
+    },
+    {
+      "alias": "PROTECTED-118",
+      "beforeSize": 281,
+      "beforeSha256": "E43C95FE459C7CF68ECA162C08FAB7846F71ED004352BEABF51D654C42B640AE",
+      "afterSize": 281,
+      "afterSha256": "E43C95FE459C7CF68ECA162C08FAB7846F71ED004352BEABF51D654C42B640AE"
+    },
+    {
+      "alias": "PROTECTED-119",
+      "beforeSize": 332,
+      "beforeSha256": "61B2BE611CE8EC3708BE89BEBCCB8DA7B54E480AADACFDB7B1D4F865E53234F0",
+      "afterSize": 332,
+      "afterSha256": "61B2BE611CE8EC3708BE89BEBCCB8DA7B54E480AADACFDB7B1D4F865E53234F0"
+    },
+    {
+      "alias": "PROTECTED-120",
+      "beforeSize": 429,
+      "beforeSha256": "FB4AF7A27CBB5EA88346A02E79D3101DF2F30406A309AB7A5DD2F13D03496AE0",
+      "afterSize": 429,
+      "afterSha256": "FB4AF7A27CBB5EA88346A02E79D3101DF2F30406A309AB7A5DD2F13D03496AE0"
+    },
+    {
+      "alias": "PROTECTED-121",
+      "beforeSize": 335,
+      "beforeSha256": "81CAB94E6876F1580E27766F480DF4A49F575C8AD5A557C6CB352A999EAF7F6C",
+      "afterSize": 335,
+      "afterSha256": "81CAB94E6876F1580E27766F480DF4A49F575C8AD5A557C6CB352A999EAF7F6C"
+    },
+    {
+      "alias": "PROTECTED-122",
+      "beforeSize": 185,
+      "beforeSha256": "A895A0F41CB0612CED8D5BF3C2C8B549B32D81735CE9C2D96CD608A8550BCA16",
+      "afterSize": 185,
+      "afterSha256": "A895A0F41CB0612CED8D5BF3C2C8B549B32D81735CE9C2D96CD608A8550BCA16"
+    },
+    {
+      "alias": "PROTECTED-123",
+      "beforeSize": 343,
+      "beforeSha256": "8E5402B60E42CF6CB293990059307FB1B937A8C0A1B4347E377F8A9BA6019372",
+      "afterSize": 343,
+      "afterSha256": "8E5402B60E42CF6CB293990059307FB1B937A8C0A1B4347E377F8A9BA6019372"
+    },
+    {
+      "alias": "PROTECTED-124",
+      "beforeSize": 2306,
+      "beforeSha256": "2828C30DE67161D068505B79EFC53989C9D7DC0C18F5D0E7B9C9742B5A47174D",
+      "afterSize": 2306,
+      "afterSha256": "2828C30DE67161D068505B79EFC53989C9D7DC0C18F5D0E7B9C9742B5A47174D"
+    },
+    {
+      "alias": "PROTECTED-125",
+      "beforeSize": 334,
+      "beforeSha256": "8202462AE4CB8391546AFA0D94B5150360DA6283E3CB7F1433DC3CAFCA2B7478",
+      "afterSize": 334,
+      "afterSha256": "8202462AE4CB8391546AFA0D94B5150360DA6283E3CB7F1433DC3CAFCA2B7478"
+    },
+    {
+      "alias": "PROTECTED-126",
+      "beforeSize": 224,
+      "beforeSha256": "069323EAB0714F098ACB73BDCE8DCD4F4399FCAC8361357A531C92B9D65BCF62",
+      "afterSize": 224,
+      "afterSha256": "069323EAB0714F098ACB73BDCE8DCD4F4399FCAC8361357A531C92B9D65BCF62"
+    },
+    {
+      "alias": "PROTECTED-127",
+      "beforeSize": 339,
+      "beforeSha256": "B9E38D29348E8C06CD035FE17AABCB9B0E769E74B6A6C3007DABB3B9E3382C93",
+      "afterSize": 339,
+      "afterSha256": "B9E38D29348E8C06CD035FE17AABCB9B0E769E74B6A6C3007DABB3B9E3382C93"
+    },
+    {
+      "alias": "PROTECTED-128",
+      "beforeSize": 1907,
+      "beforeSha256": "52C3C0675704B44BD334E8D06FE236E4D8CDA91FB2C2F76728EEDC832C013C3F",
+      "afterSize": 1907,
+      "afterSha256": "52C3C0675704B44BD334E8D06FE236E4D8CDA91FB2C2F76728EEDC832C013C3F"
+    },
+    {
+      "alias": "PROTECTED-129",
+      "beforeSize": 359,
+      "beforeSha256": "F233DB9D79B4402EF650AE2756570B1EB7C2BDFFAF2EB047BD2D2CB8E94ECABC",
+      "afterSize": 359,
+      "afterSha256": "F233DB9D79B4402EF650AE2756570B1EB7C2BDFFAF2EB047BD2D2CB8E94ECABC"
+    },
+    {
+      "alias": "PROTECTED-130",
+      "beforeSize": 259,
+      "beforeSha256": "DA98FB866404B5532832C9257FFD9F060F9EA409078187B40F8B3E1D83AF5C06",
+      "afterSize": 259,
+      "afterSha256": "DA98FB866404B5532832C9257FFD9F060F9EA409078187B40F8B3E1D83AF5C06"
+    },
+    {
+      "alias": "PROTECTED-131",
+      "beforeSize": 578,
+      "beforeSha256": "C66424E282AF2C05A0F22A03CC8559B5883AB9DAFE3F0E55CB2B221FF4EA63BD",
+      "afterSize": 578,
+      "afterSha256": "C66424E282AF2C05A0F22A03CC8559B5883AB9DAFE3F0E55CB2B221FF4EA63BD"
+    },
+    {
+      "alias": "PROTECTED-132",
+      "beforeSize": 2495,
+      "beforeSha256": "68EE4A9F7280ADBBB05C00CAF4FD4A4FE56E736216D92FA22C2D1CDD5AE775FE",
+      "afterSize": 2495,
+      "afterSha256": "68EE4A9F7280ADBBB05C00CAF4FD4A4FE56E736216D92FA22C2D1CDD5AE775FE"
+    },
+    {
+      "alias": "PROTECTED-133",
+      "beforeSize": 716,
+      "beforeSha256": "D0EDDC3DC47DB65BB2FA4341F6BB7FE52AFB2874DBD3569D46EF35DFA39B9968",
+      "afterSize": 716,
+      "afterSha256": "D0EDDC3DC47DB65BB2FA4341F6BB7FE52AFB2874DBD3569D46EF35DFA39B9968"
+    },
+    {
+      "alias": "PROTECTED-134",
+      "beforeSize": 342,
+      "beforeSha256": "574F840B8E33D9439B1ECDF70055B19E3E6F9FDDB46627B309607BE1B602268E",
+      "afterSize": 342,
+      "afterSha256": "574F840B8E33D9439B1ECDF70055B19E3E6F9FDDB46627B309607BE1B602268E"
+    },
+    {
+      "alias": "PROTECTED-135",
+      "beforeSize": 1239,
+      "beforeSha256": "FCA4DBB6FF4DB45CAF9F6E1EFBE1C8A93281E71D0F2B3131566B7E655CA8311D",
+      "afterSize": 1239,
+      "afterSha256": "FCA4DBB6FF4DB45CAF9F6E1EFBE1C8A93281E71D0F2B3131566B7E655CA8311D"
+    },
+    {
+      "alias": "PROTECTED-136",
+      "beforeSize": 348,
+      "beforeSha256": "48D6AFCF1E18DEB3888CD9935CB6564586EC73493D0A97075EC3D1C085B0EEB2",
+      "afterSize": 348,
+      "afterSha256": "48D6AFCF1E18DEB3888CD9935CB6564586EC73493D0A97075EC3D1C085B0EEB2"
+    },
+    {
+      "alias": "PROTECTED-137",
+      "beforeSize": 1313,
+      "beforeSha256": "2AE2E7192752B9FEED6E8D4B463B5BD62C1A4B9157E8303117D01F670654112B",
+      "afterSize": 1313,
+      "afterSha256": "2AE2E7192752B9FEED6E8D4B463B5BD62C1A4B9157E8303117D01F670654112B"
+    },
+    {
+      "alias": "PROTECTED-138",
+      "beforeSize": 342,
+      "beforeSha256": "15E5774B4BB1B477444134E7C8BC936FA0D109DD7810D87085639A5B94EC3866",
+      "afterSize": 342,
+      "afterSha256": "15E5774B4BB1B477444134E7C8BC936FA0D109DD7810D87085639A5B94EC3866"
+    },
+    {
+      "alias": "PROTECTED-139",
+      "beforeSize": 1255,
+      "beforeSha256": "A25C2C058746BD948BEA26330F6615D15C5AA1B7EF8AFF06A80FD1E1F7236FB3",
+      "afterSize": 1255,
+      "afterSha256": "A25C2C058746BD948BEA26330F6615D15C5AA1B7EF8AFF06A80FD1E1F7236FB3"
+    },
+    {
+      "alias": "PROTECTED-140",
+      "beforeSize": 348,
+      "beforeSha256": "222AAB02374B63AC1D641A17C79E7A906C9D7EDE0567A6AE86CB1BFB9F579903",
+      "afterSize": 348,
+      "afterSha256": "222AAB02374B63AC1D641A17C79E7A906C9D7EDE0567A6AE86CB1BFB9F579903"
+    },
+    {
+      "alias": "PROTECTED-141",
+      "beforeSize": 1348,
+      "beforeSha256": "A743228E05BDFA8024FDEE5CE3E5616967226DC8A781ED0C7F8EFB8AC118315A",
+      "afterSize": 1348,
+      "afterSha256": "A743228E05BDFA8024FDEE5CE3E5616967226DC8A781ED0C7F8EFB8AC118315A"
+    },
+    {
+      "alias": "PROTECTED-142",
+      "beforeSize": 350,
+      "beforeSha256": "A000E28759F802176825E955C0CF55771528BE1A6D89E0E83A2D9622732D4000",
+      "afterSize": 350,
+      "afterSha256": "A000E28759F802176825E955C0CF55771528BE1A6D89E0E83A2D9622732D4000"
+    },
+    {
+      "alias": "PROTECTED-143",
+      "beforeSize": 1356,
+      "beforeSha256": "2F73B7A4B639179F0849561C7901217B78BFC486DAE3E7652E64487ED3D4D294",
+      "afterSize": 1356,
+      "afterSha256": "2F73B7A4B639179F0849561C7901217B78BFC486DAE3E7652E64487ED3D4D294"
+    },
+    {
+      "alias": "PROTECTED-144",
+      "beforeSize": 348,
+      "beforeSha256": "69029A6E280EEB4D70957D5C980CB22CF1665DD76ED062D1B5210CAF9036606B",
+      "afterSize": 348,
+      "afterSha256": "69029A6E280EEB4D70957D5C980CB22CF1665DD76ED062D1B5210CAF9036606B"
+    },
+    {
+      "alias": "PROTECTED-145",
+      "beforeSize": 1297,
+      "beforeSha256": "A6DFD5E00C99EBC311A2302ED7A0739DEB2F146569929C7EC665BBC18C6B0254",
+      "afterSize": 1297,
+      "afterSha256": "A6DFD5E00C99EBC311A2302ED7A0739DEB2F146569929C7EC665BBC18C6B0254"
+    },
+    {
+      "alias": "PROTECTED-146",
+      "beforeSize": 348,
+      "beforeSha256": "E644FCE5F1F177C315A7C708082CB7D4E11F4122FBBD6C624317AA9F3F7F311A",
+      "afterSize": 348,
+      "afterSha256": "E644FCE5F1F177C315A7C708082CB7D4E11F4122FBBD6C624317AA9F3F7F311A"
+    },
+    {
+      "alias": "PROTECTED-147",
+      "beforeSize": 1304,
+      "beforeSha256": "670C7EF326DF93F3A101850CB58CFEAFEEE60D1EFDC892EDB4C49D31C636F6F6",
+      "afterSize": 1304,
+      "afterSha256": "670C7EF326DF93F3A101850CB58CFEAFEEE60D1EFDC892EDB4C49D31C636F6F6"
+    },
+    {
+      "alias": "PROTECTED-148",
+      "beforeSize": 350,
+      "beforeSha256": "DFA1B121D8B8E52523FB2D35E8CC5358BB90058E0B85674EDCF047A31F958048",
+      "afterSize": 350,
+      "afterSha256": "DFA1B121D8B8E52523FB2D35E8CC5358BB90058E0B85674EDCF047A31F958048"
+    },
+    {
+      "alias": "PROTECTED-149",
+      "beforeSize": 1344,
+      "beforeSha256": "8482EB022FA4FC3B3A478F8809EECFBB7C6A1CB57B3D66DE5F34DFF1688BC086",
+      "afterSize": 1344,
+      "afterSha256": "8482EB022FA4FC3B3A478F8809EECFBB7C6A1CB57B3D66DE5F34DFF1688BC086"
+    },
+    {
+      "alias": "PROTECTED-150",
+      "beforeSize": 350,
+      "beforeSha256": "B961A629E3A6207925CB404AE8024B43C23436690669F4DB91569CE3FA923589",
+      "afterSize": 350,
+      "afterSha256": "B961A629E3A6207925CB404AE8024B43C23436690669F4DB91569CE3FA923589"
+    },
+    {
+      "alias": "PROTECTED-151",
+      "beforeSize": 1412,
+      "beforeSha256": "E389F6F96F7E4901576FD7F010CB73AB4216F8684F9ED36B60AF95CBF4F1BCBF",
+      "afterSize": 1412,
+      "afterSha256": "E389F6F96F7E4901576FD7F010CB73AB4216F8684F9ED36B60AF95CBF4F1BCBF"
+    },
+    {
+      "alias": "PROTECTED-152",
+      "beforeSize": 338,
+      "beforeSha256": "F1A15B4C4C7E0C1E629329B20C4F1CE1D21273FC2C969F3C1FA3F962DC36EF21",
+      "afterSize": 338,
+      "afterSha256": "F1A15B4C4C7E0C1E629329B20C4F1CE1D21273FC2C969F3C1FA3F962DC36EF21"
+    },
+    {
+      "alias": "PROTECTED-153",
+      "beforeSize": 1057,
+      "beforeSha256": "6E8A91BBB3689FC8D2FD6A087A5E716C282D34F023201D407A55EB37D0512534",
+      "afterSize": 1057,
+      "afterSha256": "6E8A91BBB3689FC8D2FD6A087A5E716C282D34F023201D407A55EB37D0512534"
+    },
+    {
+      "alias": "PROTECTED-154",
+      "beforeSize": 344,
+      "beforeSha256": "7C325727D09685619E8EFB176D585628127D99D34C4A078DC0E9456ECC03D789",
+      "afterSize": 344,
+      "afterSha256": "7C325727D09685619E8EFB176D585628127D99D34C4A078DC0E9456ECC03D789"
+    },
+    {
+      "alias": "PROTECTED-155",
+      "beforeSize": 1105,
+      "beforeSha256": "7EB60436D8FF15A19134308F0592B06D563727958CF15AC16A7A5C47A24AEBDA",
+      "afterSize": 1105,
+      "afterSha256": "7EB60436D8FF15A19134308F0592B06D563727958CF15AC16A7A5C47A24AEBDA"
+    },
+    {
+      "alias": "PROTECTED-156",
+      "beforeSize": 338,
+      "beforeSha256": "AEFC8625EFCE583799BA5A67F509E9D9CC3C120B78B93558ECF0B23FE522E6BD",
+      "afterSize": 338,
+      "afterSha256": "AEFC8625EFCE583799BA5A67F509E9D9CC3C120B78B93558ECF0B23FE522E6BD"
+    },
+    {
+      "alias": "PROTECTED-157",
+      "beforeSize": 1071,
+      "beforeSha256": "50817BF736700930380E5F3741A05BB3E7D4CBEFFF73DCA0F06DF4E9AD20F088",
+      "afterSize": 1071,
+      "afterSha256": "50817BF736700930380E5F3741A05BB3E7D4CBEFFF73DCA0F06DF4E9AD20F088"
+    },
+    {
+      "alias": "PROTECTED-158",
+      "beforeSize": 344,
+      "beforeSha256": "E5D235D86BFAAA0AD24CE8FA50CA89DE5366B9C1FFF074E52E896892FC809B35",
+      "afterSize": 344,
+      "afterSha256": "E5D235D86BFAAA0AD24CE8FA50CA89DE5366B9C1FFF074E52E896892FC809B35"
+    },
+    {
+      "alias": "PROTECTED-159",
+      "beforeSize": 1101,
+      "beforeSha256": "B4CCD9673DA45D4DF35198C44798C660FA1903B735AF1649626E68F5EFEBEE8C",
+      "afterSize": 1101,
+      "afterSha256": "B4CCD9673DA45D4DF35198C44798C660FA1903B735AF1649626E68F5EFEBEE8C"
+    },
+    {
+      "alias": "PROTECTED-160",
+      "beforeSize": 346,
+      "beforeSha256": "24E9D1D89B67537C623B66973A7E9241A23073A84792810A1625C27E5B4871B7",
+      "afterSize": 346,
+      "afterSha256": "24E9D1D89B67537C623B66973A7E9241A23073A84792810A1625C27E5B4871B7"
+    },
+    {
+      "alias": "PROTECTED-161",
+      "beforeSize": 1109,
+      "beforeSha256": "D9220E025B69A38F8F9402F425458FA596431DE42EECE6F3320FBA4EEC50DD0C",
+      "afterSize": 1109,
+      "afterSha256": "D9220E025B69A38F8F9402F425458FA596431DE42EECE6F3320FBA4EEC50DD0C"
+    },
+    {
+      "alias": "PROTECTED-162",
+      "beforeSize": 344,
+      "beforeSha256": "FFF75411C6C776A3B8D285643013071C9C6D7F6D4343455533073C780576D690",
+      "afterSize": 344,
+      "afterSha256": "FFF75411C6C776A3B8D285643013071C9C6D7F6D4343455533073C780576D690"
+    },
+    {
+      "alias": "PROTECTED-163",
+      "beforeSize": 1074,
+      "beforeSha256": "75FFFC3B8853E8B2EFD5A4A79B3AD763A52C4696E17A422B90E435108877853D",
+      "afterSize": 1074,
+      "afterSha256": "75FFFC3B8853E8B2EFD5A4A79B3AD763A52C4696E17A422B90E435108877853D"
+    },
+    {
+      "alias": "PROTECTED-164",
+      "beforeSize": 344,
+      "beforeSha256": "98FCBC5808BE661455044C14459A9A66432BC40229E6C1C04C37A2A6DD02F37D",
+      "afterSize": 344,
+      "afterSha256": "98FCBC5808BE661455044C14459A9A66432BC40229E6C1C04C37A2A6DD02F37D"
+    },
+    {
+      "alias": "PROTECTED-165",
+      "beforeSize": 1063,
+      "beforeSha256": "5E43F309D577B367E5AAF9A2FA4303C3BC63AF3941F76F14E12AD43F4EFAC17E",
+      "afterSize": 1063,
+      "afterSha256": "5E43F309D577B367E5AAF9A2FA4303C3BC63AF3941F76F14E12AD43F4EFAC17E"
+    },
+    {
+      "alias": "PROTECTED-166",
+      "beforeSize": 346,
+      "beforeSha256": "122DAB8CB7DACCAA4ABCB2245C927E09DBEB8B98CCB377317B0D5DCF344A67EF",
+      "afterSize": 346,
+      "afterSha256": "122DAB8CB7DACCAA4ABCB2245C927E09DBEB8B98CCB377317B0D5DCF344A67EF"
+    },
+    {
+      "alias": "PROTECTED-167",
+      "beforeSize": 1140,
+      "beforeSha256": "912E62FFA55AE9668F2B52CEE996AC98C7907B3A68EC39BA19005D841ECD7261",
+      "afterSize": 1140,
+      "afterSha256": "912E62FFA55AE9668F2B52CEE996AC98C7907B3A68EC39BA19005D841ECD7261"
+    },
+    {
+      "alias": "PROTECTED-168",
+      "beforeSize": 47542272,
+      "beforeSha256": "4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41",
+      "afterSize": 47542272,
+      "afterSha256": "4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41"
+    },
+    {
+      "alias": "PROTECTED-169",
+      "beforeSize": 68130,
+      "beforeSha256": "7CD84A26F78F6FA6DF03A4C7193568C4700558C890BCF424958099B02B64CB16",
+      "afterSize": 68130,
+      "afterSha256": "7CD84A26F78F6FA6DF03A4C7193568C4700558C890BCF424958099B02B64CB16"
+    },
+    {
+      "alias": "PROTECTED-170",
+      "beforeSize": 432343,
+      "beforeSha256": "D5DB332E88F16F18ED82FB3A2982EF2E4970F2438F09522DDEEE51E9F17A03DF",
+      "afterSize": 432343,
+      "afterSha256": "D5DB332E88F16F18ED82FB3A2982EF2E4970F2438F09522DDEEE51E9F17A03DF"
+    },
+    {
+      "alias": "PROTECTED-171",
+      "beforeSize": 39153,
+      "beforeSha256": "217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828",
+      "afterSize": 39153,
+      "afterSha256": "217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828"
+    },
+    {
+      "alias": "PROTECTED-172",
+      "beforeSize": 1724,
+      "beforeSha256": "3E8E9D80DA4B6EB1C94AA2A3B6C8C1558DEC0643CE1C36900126128941E58E29",
+      "afterSize": 1724,
+      "afterSha256": "3E8E9D80DA4B6EB1C94AA2A3B6C8C1558DEC0643CE1C36900126128941E58E29"
+    }
+  ],
+  "rawEvidence": [
+    {
+      "artifact": "ui-cancel-proof.json",
+      "sha256": "C1D8DEB2DF022E897390CA5AD3088416DF61225CAE80C706F6066D1B8BD2A67B"
+    },
+    {
+      "artifact": "ui-save-proof.json",
+      "sha256": "8DCCF03427B8CFB6F73DF24F781BC8227959BB1A004647CA666CEC90321F2981"
+    },
+    {
+      "artifact": "ui-close.json",
+      "sha256": "8DCCF03427B8CFB6F73DF24F781BC8227959BB1A004647CA666CEC90321F2981"
+    },
+    {
+      "artifact": "ui-snapshot-diff.json",
+      "sha256": "1777BEA128475A8C4791724867EE6CE46CE1D21C4F0E7C6692C8378394AF2B76"
+    },
+    {
+      "artifact": "desktop-release.log",
+      "sha256": "C02627C72065C64D31B4A5096E92279E213CFD92499537AF089277B1A4D2A532"
+    },
+    {
+      "artifact": "probe/Program.cs",
+      "sha256": "BBAAC09443742371ED792C0CF24A56BAD1A5367C95438204617C4FB28FB9624A"
+    },
+    {
+      "artifact": "ui/Program.cs",
+      "sha256": "7C1F87E8BEDB1F95F3E706CEC768935D5009265DDE190B27402F31BEBDC36BD2"
+    }
+  ],
+  "limitations": [
+    "No PM acceptance, release, merge, or UAT readiness claimed.",
+    "Six inline interface types need an accepted evidence/representation authority path; no fake ComponentIR.",
+    "Candidate catalog entries are not inferred matches. All identity and endpoint mapping selections require explicit evidence.",
+    "Custom functional classification alone does not approve Cable Detail or mapping.",
+    "Private binary fixture NOT_RUN / FIXTURE_UNAVAILABLE.",
+    "APPLIED != VERIFIED; task009 proof retained as history, not rerun."
+  ]
+}

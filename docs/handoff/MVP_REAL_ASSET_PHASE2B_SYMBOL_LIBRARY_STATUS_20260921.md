@@ -426,3 +426,179 @@ evidence/phase2b-20260921/task009-recovery-evidence.json.
 
 PR #31 and #34 must remain Draft/Open/Unmerged.
 NOT_RUN != PASS. APPLIED != VERIFIED. DONE != Product Owner UAT acceptance.
+
+## Task-010 Engineering Evidence Closure (2026-09-21)
+
+Disposition: **PARTIAL**.
+**UAT_READINESS = NOT_READY**.
+**HUMAN_ENGINEERING_GATE = PARTIAL_INLINE_INTERFACE_AUTHORITY_GAP**.
+
+Authority: coordination main c17443c3ce30ca958ef1065ddcc754e4508a8b75,
+CODEX_UAT_ENGINEERING_EVIDENCE_CLOSURE_20260921.md, and the Product Owner's
+explicit approval of the readable, non-preselected Human Engineering Gate.
+Task-009 Stages 1/2 remain accepted; no source-restoration redesign, new K7L
+approval/revision or repeated K7L physical run occurred.
+
+### Executable identities and changes
+
+Component source commit: c87595c6179e28f246de3a0683ffb85f5910b009.
+Source tree: 4b86c499df5dac58889645a324584a939811ce6e.
+Parent evidence head: 7af47df94da84de77e404e1ad65a97453c1a03e9.
+Auto source remains c61d1cc3cc66b392aa9a559468d995a0e9fb053b,
+tree ea1bb9bce25ef4ca41c9922b29f6f58a68646437.
+Auto task-010 changes are documentation/evidence only, starting at 815f458f19cf0f10e1ad0665851c7ab4c4654424.
+Later evidence commits do not supersede these executable source identities.
+
+The Component change adds an explicit review service/dialog and integrates its
+same read-only coverage check into configured Drawing Planning. An unresolved
+component or Unknown cable now adds an actionable Blocker. It does not launch
+AutoCAD, approve symbols, or mutate project data merely to run coverage.
+Synchronous planning/file-hash boundaries avoid depending on the caller's UI
+message pump; a focused regression first observed five context posts, then zero.
+
+### Stage A/B: component closure and limits
+
+All 89 instances and 31 required Schematic type/roles remain in scope.
+The four Group A components already have the connected pins in the authoritative
+catalog. Connectivity.cs defines TopologyEndpointMode as an interaction hint,
+not deletion of catalog pins. The old default descriptor omitted those pins.
+GeneratedGeneric now accepts required exact catalog endpoint IDs, validates
+uniqueness and pin-parent existence, and includes only evidenced endpoints.
+No new pin, inferred pin number, mode change, workbook edit or catalog enrichment
+was required. Existing default descriptor behavior and approved-exact precedence
+are preserved. The actual project audit now covers the four roles:
+COOLER_MASTER_MT-E-V11, IFM_AL1342, LEAD_YEAR_TC24-0250-01, MOXA_EDS-2005-EL.
+
+Current type/role coverage:
+- APPROVED_EXACT: 1.
+- SAFE_GENERATED_GENERIC: 20.
+- CANDIDATE_NOT_APPROVED_BUT_GENERIC_SAFE: 2 (IFM_AL5021 and PRO_FACE_PFXGP6540WCDW remain unapproved).
+- UNSAFE_UNRESOLVED: 8, comprising 31 instances.
+
+Two physical identity types / three instances remain unresolved:
+- bom-unresolved:20:fuji:flyf003: no exact authoritative catalog/cache identity.
+- notion:3bdd4562-273e-813a-9530-d41b1f7e5a45: exact persisted cache supplies
+  GRUNDFOS / CRNE 3-3 MO-FGJ-A-N, but zero ports/pins. It is readable context,
+  not a proven canonical alias or endpoint mapping.
+
+The other six types / 28 instances are INLINE_INTERFACE_ARTIFACT with a remaining
+ARCHITECTURE_GAP: M12 male/female cable ends, RJ45 male cable end, shielded RJ45
+female/female coupler, and the two inline-mated-adapter types.
+CommonConnectorCatalog and TopologyConnectionEditor create these directly as
+project ComponentInstances; their names are not manufacturer/catalog identity.
+The current configured component Schematic resolver uses canonical catalog
+authority. There is no approved persisted human declaration making these
+particular legacy interfaces an allowed non-catalog representation source.
+They remain visible/unresolved, not remapped to arbitrary hardware.
+
+PM proposal: scope a bounded explicit inline-interface authority contract and
+review choice using the existing instance/contact IDs and connector evidence,
+with immutable provenance, physical-interface visibility and no connectivity
+changes. Do not synthesize ComponentIR or parse IDs to satisfy the catalog gate.
+Approve the evidence/persistence boundary before implementing that item.
+This is why the overall Human Gate is not labeled READY_FOR_PRODUCT_OWNER.
+
+Exact-id cached document lookup for the affected component/cable definition keys
+returned no attached document rows. No name-based document search was accepted
+as an identity alias. No official external source was newly retrieved.
+Proposed central knowledge mutations: none.
+
+### Stage C/D: usable bounded Human Gate
+
+All 22 CableInstances remain Unknown in the production project and are classified
+HUMAN_CONFIRMATION_REQUIRED. Exact cable definition/cache contexts and assembly
+membership were inspected. Manufacturer/model, existing core assignments and
+assembly-level IsCustom/ConstructionType do not establish per-instance truth.
+The production database has no project revision table to recover an older
+explicit per-instance choice from. No automatic cable backfill was performed.
+
+Implemented navigation: open Electrical Project -> Components tab -> 工程確認.
+Component review displays project name/model/reference, exact known catalog/cache
+manufacturer/model, current ports/pins/connections, available authoritative
+catalog entries, and catalog source/hash/reason. Entries are an unranked catalog,
+not inferred matches. Candidate, each mapping and confirmation start blank.
+Apply requires deliberate identity, unique complete port/pin mapping, correct
+pin-parent ownership, an evidence note, explicit confirmation and safe endpoint
+coverage. Instance/endpoint IDs, wiring and route geometry are preserved.
+Unresolved/Skip is allowed. No inline approval option is invented.
+
+Cable review shows readable reference/name, From/To device/interface and model
+context separately from Unknown truth. Purchased/Custom has no default.
+Custom explicitly warns that Cable Detail / Pin-Core Mapping evidence may be
+needed. The choice changes only construction on a draft; Skip/Cancel do not save.
+
+The modal workflow uses the existing project Save and revision services:
+pre-change checkpoint -> Save -> active project refresh -> post-change checkpoint.
+The decision/evidence and component mapping are retained in revision labels.
+Catalog hash drift rejects Save. Read-only cache context lookup does not
+initialize schema or change SQLite journal mode. Re-entrancy/close is blocked
+only while a confirmation is being applied.
+If post-Save revision creation fails, UI reports that Save already happened;
+it never falsely promises the data was unchanged.
+
+Post-review workflow: reopen 工程確認 or press 重新檢查, then run Drawing Planning
+again. Both use EngineeringReviewService coverage; no code change is needed to
+rerun supported component/cable decisions. The six inline types still require
+the bounded authority work above. Custom selection alone does not authorize
+downstream detail/mapping or other unresolved engineering policies.
+
+### Verification and protected state
+
+Fresh Release results on this source:
+- Engineering review + approved consumption focused tests: 28 passed.
+- Electrical / SymbolArchive / Repository regressions: 662 passed.
+- Full .NET project: 812 passed, zero failed/skipped.
+- Desktop Release build: PASS, zero errors, 22 existing warnings.
+- Auto planning input / IR v2 / command-plan v2 / execution-package / executor /
+  PowerShell-runtime focused suites: 43 passed with bundled Python unittest.
+- Initial host Python attempts lacked pytest/jsonschema; those attempts are not
+  PASS. No dependency or host runtime installation/change was needed.
+- Both git diff --check gates: PASS.
+- Auto full regression: NOT_RUN / no Auto product changes.
+- Private unavailable binary fixture: NOT_RUN / FIXTURE_UNAVAILABLE.
+
+Real WPF dialog smoke used the product dialog in a bounded local harness with
+real Save/Revision repositories and a disposable production DB copy, not a
+mock. It is not claimed as full MainWindow/navigation UAT.
+Observed readable context, blank initial selections, Chinese blocking message,
+Custom warning, Skip/Cancel, deliberate TEST-ONLY Purchased Save and normal close.
+The first Skip/Cancel run had zero revisions and 22 Unknown cables.
+One test Save produced two revisions and 21 Unknown cables on reload.
+Independent semantic comparison found exactly one changed field:
+cables[6].cableConstructionType. No connection/geometry/identity change.
+Final committed-build reopen preserved 21 and two revisions; unconfirmed
+component Save was rejected, then the window closed normally.
+The temporary Purchased choice is not Product Owner engineering approval.
+Synthetic temporary-SQLite tests also prove explicit identity/endpoint mapping
+Save/revision/reload with wiring and nonempty route geometry preserved.
+User Escape interrupted one UI continuation; it resumed only after explicit
+authorization. Final candidate process was closed normally.
+
+Protected immutable inputs: 172 checked against the retained pre-task baseline,
+zero changed. Production SQLite SHA-256 before/after:
+4B1218C982297B080E31C6E985AB1919F8A7986E4BF61C38969E7830D3338E41.
+This includes workbook, formal project/templates/drawings, source library,
+registry and K7L rev-001. No production application release or local runtime
+configuration was changed.
+
+### Stage E/F and handoff
+
+Fresh representative AutoCAD generation: NOT_RUN / prerequisite unmet
+(8 unsafe component roles and 22 unsafe cable roles).
+No new runId, WDP/DWG, execution result or pre-RC manifest exists.
+Task-009's accepted physical evidence is historical, not substituted for Stage E.
+No AutoCAD was launched by task-010.
+
+Sanitized complete 12-row component and 22-row cable before/after matrices,
+31-role coverage, source context, test/evidence hashes and protected-state
+manifest: evidence/phase2b-20260921/task010-evidence-closure.json.
+Raw local evidence remains under the task-010 local evidence root; no private
+absolute company paths are published.
+
+Next owner recommendation: PM scope/review the bounded inline-interface
+authority gap; then complete integrated navigation/engineering review and
+rerun the same coverage. Continue fresh real staging generation only at zero
+unsafe rows. Do not ask the Product Owner to make arbitrary catalog matches.
+
+PR #31 and #34 remain Draft/Open/Unmerged. No merge/release or CP3-D.
+NOT_RUN != PASS. APPLIED != VERIFIED. Worker completion != PM acceptance.

@@ -288,3 +288,141 @@ SymbolArchive.json. Sanitized full hashes and endpoint evidence:
 Task-007 evidence and approval are preserved. PR #31 and #34 remain
 Draft/Open/Unmerged. Final evidence commit identity is the Git commit containing
 this appended record, not a new executable source revision.
+
+## Task-009 Recovery Campaign (2026-09-21)
+
+Disposition: **PARTIAL**.
+**UAT_READINESS = NOT_READY**.
+
+Authority: coordination main db805d8 and
+CODEX_PHASE2B_RECOVERY_SOURCE_IDENTITY_UAT_READINESS_20260921.md.
+This section supersedes task-008's execution stop, not its historical evidence.
+No new branches, approvals, archive revisions, merge or release.
+
+### Executable identities
+
+Component starting evidence head: 4a464420765c91f84944f391f9f9c7f3d1a85a02.
+Implemented source: deba3a60b447fd6967a591a58a2a26a0e00224f4;
+tree: 09b5720aa10049c0eb3ef7ad5f81caa2d4816ceb.
+Auto actual execution checkout: a203b57c59eec36b902c26b766dca2e3579304b4;
+tree: 42d9c9c3dc380aef101aa8c65a60ffcc77920b95.
+Auto executable source remains accepted c61d1cc3cc66b392aa9a559468d995a0e9fb053b,
+tree ea1bb9bce25ef4ca41c9922b29f6f58a68646437; later commits are evidence only.
+The final documentation commit containing this section is not another executable revision.
+
+### Stage 1: source identity restoration
+
+PASS for bounded restoration and actual K7L prerequisite.
+Audited all 89 actual component instances: 58 DETERMINISTIC_EXACT_RESTORABLE,
+31 UNRESOLVED, zero CONFLICT. Endpoint-level evidence retains explicit legacy
+versus deterministic methods; mixed instances use the aggregate classification.
+K7L restores 3 port and 8 pin source identities: 8/8 approved pins bridge safely.
+
+The restorer accepts typed IDs, validated unambiguous SOURCE_PORT_ID capability,
+or full ordinal endpoint-ID equality with an authoritative bridge reconstruction.
+It does not parse endpoint IDs or infer from names, numbers, order or geometry.
+Analyze is pure; proposed restoration count is not a write count.
+Restore is explicit and conflict-atomic per component. Planning restores a clone.
+No automatic production persistence was introduced.
+
+A byte-for-byte disposable DB copy was saved/reloaded through the existing
+repository. Only source lineage changed; connections and all other serialized
+engineering data were preserved. Second restoration changed zero fields.
+The production DB remained read-only.
+
+### Stage 2: approved symbol consumption
+
+PASS for the bounded K7L physical proof, not whole-project drawing verification.
+Real archive resolver injection replaces the no-asset resolver for planning.
+Eligible Schematic selection is approved-exact-first; missing approved authority
+uses the existing bounded generic policy. Corrupt approved authority fails closed.
+Archive paths are confined, linked descendants rejected, and SHA verified.
+Catalog-to-instance binding uses only typed SourcePortId/SourcePinId.
+No PinNumber, PinName, PortName or positional fallback was added.
+
+Existing K7L authority is unchanged: OMRON_K7L-AT50DP / Schematic /
+ApprovedCustom / rev-001 /
+217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828.
+All eight approved ConnectionPointIds survive into the execution asset.
+
+A real non-mocked C# runtime harness exercised the production factory, planner,
+IR client and LocalDrawingExecutorClient, then Python, PowerShell and accoreconsole.
+Run: CP3C-3A1F98EC95B7400C99820E7B13004B96.
+Result: electrical-execution-result.v1 / APPLIED, 291/291 command events APPLIED.
+One staging WDP and one page DWG; all drawing references resolve below staging.
+Skeleton had zero legacy drawing references and no dependence on the 17 formal DWGs.
+
+Drawing IR SHA: 4A2389A60315B84E83B895B220AB02F16458A2341526EC53A75A2525937E4173.
+Executor plan SHA: 265B74243CEF71CB66A4179D31DA5577205B4939F080700655D0474F9E8ED7F2.
+Package SHA: A0F465C778B22E6BFCF1DD08BED2C8C482FE4DDB77561570A2C1D3D72626C9B6.
+Execution evidence SHA: BEAB1BB75BB789B58BDBA994FAD336A2E3EB45F2B7A97D8D1B48756F7754DA5F.
+DWG SHA: 4C74ABD9E93652FFE20207DEBF81BFA0C5CEB2A614B92521ADDB3176D636EFBE.
+
+Independent reopened disposable DWG readback found block symbol, handle 500B,
+29 attributes, LIQUID_LEAK_AMP8 profile and all eight approved XTERM attributes.
+Insertion at 700,670,0 matches IR; this is not a claim of usable A3 layout.
+Company titleblock was present, project name New Electrical Project, PG/TTL 1/1.
+Unspecified metadata stayed blank; no stale LRDU metadata was accepted.
+Readback copy pre/post hashes match. The generated drawing includes other generic
+representations whose safety is NOT certified by this K7L proof.
+
+Observed failures retained locally: non-ASCII path canonical hashing differed
+between C# and Python; a focused failing regression preceded the minimal UTF-8
+canonical serializer correction. Missing generated-page metadata failed before
+native execution; the disposable harness supplied explicit blank page records,
+without inventing engineering metadata. Initial readback scanner loading failed
+on the non-ASCII path; an unchanged scanner copy at a disposable ASCII path worked.
+No host security setting was relaxed.
+
+### Stage 3: representative coverage
+
+The complete representative project was audited, not reduced to evade gaps.
+31 required component Schematic type/roles:
+- APPROVED_EXACT: 1.
+- SAFE_GENERATED_GENERIC: 16.
+- CANDIDATE_NOT_APPROVED_BUT_GENERIC_SAFE: 2.
+- UNSAFE_UNRESOLVED: 12.
+
+The two unapproved candidates are IFM_AL5021 and PRO_FACE_PFXGP6540WCDW.
+Eight unresolved types lack sufficient exact catalog endpoint authority, including
+common connector/adapter types, unresolved Fuji and the persisted Notion identity.
+Four more have generic descriptors missing actually connected endpoints:
+COOLER_MASTER_MT-E-V11, IFM_AL1342, LEAD_YEAR_TC24-0250-01 and MOXA_EDS-2005-EL.
+No alternative endpoint mode or inferred identity was silently selected.
+
+Separately, all 22 CableFunctional instances retain Unknown construction.
+They are 22 unresolved cable-instance roles, not 22 additional component types.
+Total unresolved required coverage rows: 34. No new company approval was made.
+SAFE_GENERATED_GENERIC describes audit eligibility; the existing FunctionalGeneric
+planning fallback is not falsely relabeled as a CP3-A approved archive asset.
+Current READY/APPLIED output does not enforce or prove this UAT coverage gate.
+
+### Stage 4: readiness and verification
+
+Not ready for unified MVP RC; no pre-RC manifest published.
+Remaining needs: authoritative missing catalog/source lineage, explicit safe
+representation endpoint coverage and explicit cable construction evidence.
+These require bounded follow-up; no engineering meaning was guessed.
+
+Fresh final Release tests:
+- SymbolArchive: 33 passed.
+- Drawing: 68 passed.
+- Bridge/source identity: 27 passed.
+- Full .NET: 794 passed, zero failed/skipped.
+- Desktop Release build: PASS, zero errors, 22 existing warnings.
+- Auto focused planning input, IR v2, command plan v2, execution package,
+  executor and PowerShell runtime suites: 43 passed.
+- Auto full regression: NOT_RUN (no Auto product changes in this campaign).
+- WPF/manual functional UAT: NOT_RUN.
+- Private unavailable binary fixture: NOT_RUN / FIXTURE_UNAVAILABLE.
+
+Source self-review completed; no separate reviewer/agent claimed.
+Protected check: 172 immutable inputs, zero changes, including production SQLite,
+workbook, company WDP/DWT/WDT/WDL/formal DWGs, source library, registry and rev-001.
+Earlier Stage-1 protection set: 154 identities, zero changes.
+No persisted user runtime configuration or production application release changed.
+Raw logs, TRX, readback and disposable DB remain local; sanitized evidence:
+evidence/phase2b-20260921/task009-recovery-evidence.json.
+
+PR #31 and #34 must remain Draft/Open/Unmerged.
+NOT_RUN != PASS. APPLIED != VERIFIED. DONE != Product Owner UAT acceptance.

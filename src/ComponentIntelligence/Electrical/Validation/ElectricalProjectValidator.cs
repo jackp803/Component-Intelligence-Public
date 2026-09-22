@@ -370,6 +370,29 @@ public sealed class ElectricalProjectValidator
                 .ThenBy(member => member.CableInstanceId, StringComparer.Ordinal)
                 .ToArray();
 
+            if (assembly.PhysicalTopology is { } physical)
+            {
+                var pins = project.Components.SelectMany(c => c.Ports.SelectMany(p => p.Pins.Select(pin => (pin.PinId, p.PortId))))
+                    .GroupBy(x => x.PinId, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.ToArray(), StringComparer.Ordinal);
+                var selected = project.Connections.Where(c => physical.ConnectionIds.Contains(c.ConnectionId, StringComparer.Ordinal)).ToArray();
+                var ports = selected.SelectMany(c => new[] { c.FromEndpointId, c.ToEndpointId })
+                    .Where(pins.ContainsKey).SelectMany(id => pins[id].Select(p => p.PortId)).ToHashSet(StringComparer.Ordinal);
+                var ends = physical.Branches.Select(b => b.PortId).Append(physical.CommonPortId).ToArray();
+                var valid = physical.Branches.Count >= 2 && ends.Distinct(StringComparer.Ordinal).Count() == ends.Length && ports.SetEquals(ends) &&
+                    physical.Branches.All(b => b.Index > 0) && physical.Branches.Select(b => b.Index).Distinct().Count() == physical.Branches.Count &&
+                    physical.ConnectionIds.Count >= 2 && physical.ConnectionIds.Distinct(StringComparer.Ordinal).Count() == physical.ConnectionIds.Count &&
+                    selected.Length == physical.ConnectionIds.Count && selected.All(c => c.CableInstanceId == physical.CableInstanceId &&
+                        pins.TryGetValue(c.FromEndpointId, out var from) && from.Length == 1 && pins.TryGetValue(c.ToEndpointId, out var to) && to.Length == 1) &&
+                    project.Cables.Count(c => c.CableInstanceId == physical.CableInstanceId) == 1 &&
+                    members.Length == 1 && members[0].CableInstanceId == physical.CableInstanceId &&
+                    !project.Connections.Any(c => c.CableInstanceId == physical.CableInstanceId && !physical.ConnectionIds.Contains(c.ConnectionId, StringComparer.Ordinal)) &&
+                    !project.CableAssemblies.Any(a => a != assembly && (a.Members.Any(m => m.CableInstanceId == physical.CableInstanceId) ||
+                        a.PhysicalTopology?.ConnectionIds.Intersect(physical.ConnectionIds, StringComparer.Ordinal).Any() == true)) &&
+                    physical.Branches.Select(b => b.LengthMm).Append(physical.TrunkLengthMm).All(n => n is null || double.IsFinite(n.Value) && n.Value > 0);
+                if (!valid)
+                    results.Add(Block("RULE-MULTI-END-001", "多端線材的介面、分支或配線歸屬不完整；請使用多端 Cable 編輯器確認。", [assembly.CableAssemblyId]));
+            }
+
             var trunks = members
                 .Where(member => member.SegmentRoleType == CableAssemblySegmentRoleType.Trunk)
                 .ToArray();

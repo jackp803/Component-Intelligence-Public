@@ -78,6 +78,8 @@ public sealed record DrawingConnectionPlanningItem
 public sealed record DrawingCableEndpoint
 {
     public required string EndpointId { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? DisplayLabel { get; init; }
     public string? ConnectorId { get; init; }
     public DrawingInterfaceLayoutFamily InterfaceLayoutFamily { get; init; } = DrawingInterfaceLayoutFamily.Other;
     public string? ConnectorFamily { get; init; }
@@ -99,13 +101,44 @@ public sealed record DrawingCablePlanningItem
 {
     public required string CableInstanceId { get; init; }
     public required string ConstructionType { get; init; }
-    public required DrawingCableEndpoint EndA { get; init; }
-    public required DrawingCableEndpoint EndB { get; init; }
+    public required DrawingCableEndpoint? EndA { get; init; }
+    public required DrawingCableEndpoint? EndB { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public DrawingMultiEndCable? MultiEnd { get; init; }
     public IReadOnlyList<DrawingPinCoreMapping> PinCoreMappings { get; init; } = [];
     public string? Shield { get; init; }
     public double? Length { get; init; }
     public string? SourceControllerId { get; init; }
     public string? SourcePhysicalModuleId { get; init; }
+}
+
+public sealed record DrawingMultiEndCable
+{
+    public required string AssemblyId { get; init; }
+    public string? Reference { get; init; }
+    public required DrawingCableEndpoint CommonEnd { get; init; }
+    public double? TrunkLengthMm { get; init; }
+    public IReadOnlyList<DrawingMultiEndBranch> Branches { get; init; } = [];
+    public IReadOnlyList<DrawingMultiEndElectricalMapping> ElectricalMappings { get; init; } = [];
+}
+
+public sealed record DrawingMultiEndBranch
+{
+    public int Index { get; init; }
+    public required DrawingCableEndpoint End { get; init; }
+    public double? LengthMm { get; init; }
+}
+
+public sealed record DrawingMultiEndElectricalMapping
+{
+    public required string ConnectionId { get; init; }
+    public required string FromEndpointId { get; init; }
+    public required string ToEndpointId { get; init; }
+    public string? NetId { get; init; }
+    public string? CoreId { get; init; }
+    public string? OriginalCableInstanceId { get; init; }
+    public required string FromLabel { get; init; }
+    public required string ToLabel { get; init; }
 }
 
 public sealed record DrawingControllerModuleItem

@@ -125,6 +125,30 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         var cables = project.Cables.OrderBy(x => x.CableInstanceId, StringComparer.Ordinal).Select(cable =>
         {
             connectionsByCable.TryGetValue(cable.CableInstanceId, out var cableConnections);
+            var assembly = project.CableAssemblies.SingleOrDefault(a => a.PhysicalTopology?.CableInstanceId == cable.CableInstanceId);
+            DrawingMultiEndCable? multiEnd = null;
+            if (assembly?.PhysicalTopology is { } physical)
+            {
+                var editor = new MultiEndCableEditorService();
+                var draft = editor.PrepareExisting(project, assembly.CableAssemblyId);
+                editor.Validate(project, draft);
+                var labels = editor.GetEnds(project, draft).ToDictionary(e => e.PortId, e => e.Label, StringComparer.Ordinal);
+                multiEnd = new DrawingMultiEndCable
+                {
+                    AssemblyId = assembly.CableAssemblyId, Reference = assembly.ReferenceDesignator,
+                    CommonEnd = BuildEndpoint(project, physical.CommonPortId) with { DisplayLabel = labels[physical.CommonPortId] }, TrunkLengthMm = physical.TrunkLengthMm,
+                    Branches = physical.Branches.OrderBy(b => b.Index).Select(b => new DrawingMultiEndBranch
+                    { Index = b.Index, End = BuildEndpoint(project, b.PortId) with { DisplayLabel = labels[b.PortId] }, LengthMm = b.LengthMm }).ToArray(),
+                    ElectricalMappings = physical.ConnectionIds.Order(StringComparer.Ordinal).Select(id =>
+                    {
+                        var c = project.Connections.Single(c => c.ConnectionId == id);
+                        return new DrawingMultiEndElectricalMapping { ConnectionId = id, FromEndpointId = c.FromEndpointId,
+                            ToEndpointId = c.ToEndpointId, NetId = c.NetId, CoreId = c.CableCoreId,
+                            FromLabel = MappingEndpointLabel(project, c.FromEndpointId), ToLabel = MappingEndpointLabel(project, c.ToEndpointId),
+                            OriginalCableInstanceId = physical.ConductorEvidence.SingleOrDefault(e => e.ConnectionId == id)?.OriginalCableInstanceId };
+                    }).ToArray()
+                };
+            }
             var first = cableConnections?.FirstOrDefault();
             var endAId = first?.FromEndpointId ?? $"UNRESOLVED:{cable.CableInstanceId}:A";
             var endBId = first?.ToEndpointId ?? $"UNRESOLVED:{cable.CableInstanceId}:B";
@@ -143,8 +167,9 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
             {
                 CableInstanceId = cable.CableInstanceId,
                 ConstructionType = cable.CableConstructionType.ToString(),
-                EndA = BuildEndpoint(project, endAId),
-                EndB = BuildEndpoint(project, endBId),
+                EndA = multiEnd is null ? BuildEndpoint(project, endAId) : null,
+                EndB = multiEnd is null ? BuildEndpoint(project, endBId) : null,
+                MultiEnd = multiEnd,
                 PinCoreMappings = mappings,
                 Shield = null,
                 Length = cable.ProvidedLengthMm,
@@ -181,7 +206,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                     PortBindings = [],
                     PhysicalInterfaceMeaning = false
                 });
-                if (cable.PinCoreMappings.Count == 0)
+                if (cable.PinCoreMappings.Count == 0 && cable.MultiEnd is null)
                 {
                     issues.Add(new DrawingPlanningIssue
                     {
@@ -228,6 +253,13 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
             Issues = issues.OrderBy(x => x.IssueId, StringComparer.Ordinal).ToList()
         };
         return DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(input));
+    }
+
+    private static string MappingEndpointLabel(ElectricalProject project, string endpointId)
+    {
+        var match = project.Components.SelectMany(c => c.Ports.SelectMany(p => p.Pins.Select(pin => (c, p, pin))))
+            .Single(x => x.pin.PinId == endpointId);
+        return $"{match.c.ReferenceDesignator ?? match.c.DisplayName ?? "?"} / {match.p.Name} / Pin {match.pin.PinNumber}";
     }
 
     private static DrawingCableEndpoint BuildEndpoint(ElectricalProject project, string endpointId)

@@ -87,6 +87,8 @@ public sealed record DrawingCableDetailTemplate
     public required string TemplateId { get; init; }
     public required string EndAInterfaceLayoutFamily { get; init; }
     public required string EndBInterfaceLayoutFamily { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? BranchInterfaceLayoutFamilies { get; init; }
 }
 
 public sealed record DrawingPlanIssue

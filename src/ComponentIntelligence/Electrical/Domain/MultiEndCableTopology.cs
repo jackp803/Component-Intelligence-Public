@@ -11,6 +11,14 @@ public sealed class MultiEndCableTopology
     public double? TrunkLengthMm { get; set; }
     public List<MultiEndCableBranch> Branches { get; init; } = new();
     public List<string> ConnectionIds { get; init; } = new();
+    public List<MultiEndConductorEvidence> ConductorEvidence { get; init; } = new();
+}
+
+public sealed class MultiEndConductorEvidence
+{
+    public required string ConnectionId { get; init; }
+    public string? OriginalCableInstanceId { get; init; }
+    public CoreAssignment? OriginalCoreAssignment { get; init; }
 }
 
 public sealed class MultiEndCableBranch

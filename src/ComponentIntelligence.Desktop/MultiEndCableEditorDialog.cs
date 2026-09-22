@@ -14,6 +14,7 @@ public sealed class MultiEndCableEditorDialog : Window
     private readonly ComboBox _construction = new() { MinHeight = 30 };
     private readonly TextBox _reference = new();
     private readonly TextBox _trunk = new();
+    private readonly CheckBox _consolidate = new() { Content = "我確認將上列配線的既有 Cable 歸屬整併為一條實體線材", IsChecked = false };
     private readonly StackPanel _branches = new();
     private readonly ListBox _conductors = new() { Height = 185, DisplayMemberPath = nameof(MultiEndConductorContext.Label) };
     private readonly TextBlock _error = new() { TextWrapping = TextWrapping.Wrap, Foreground = System.Windows.Media.Brushes.Firebrick };
@@ -23,6 +24,7 @@ public sealed class MultiEndCableEditorDialog : Window
     public MultiEndCableEditorDialog(ElectricalProject project, MultiEndCableDraft draft, MultiEndCableEditorService service)
     {
         _project = project; Draft = draft; _service = service;
+        _consolidate.Unchecked += (_, _) => _service.ClearConsolidationConfirmation(Draft);
         Title = "多端線材 / Multi-End Cable";
         Width = 1050; Height = 830; MinWidth = 720; MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -42,11 +44,13 @@ public sealed class MultiEndCableEditorDialog : Window
         fields.Children.Add(Field("製造類型（必選）", _construction));
         fields.Children.Add(new TextBlock { Text = "Custom 可能需要 Cable Detail；保留既有 Pin 對 Pin 對應，不推導芯線、接腳或屏蔽接法。", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 10) });
         fields.Children.Add(Field("選取的原始 Pin 配線", _conductors));
+        fields.Children.Add(_consolidate);
         fields.Children.Add(Button("增減配線…", () =>
         {
             var picker = new MultiEndConductorPickerDialog(project, Draft.ConnectionIds, Draft.IsNew ? null : Draft.CableId) { Owner = this };
             if (picker.ShowDialog() != true) return;
             Draft.ConnectionIds.Clear(); Draft.ConnectionIds.AddRange(picker.SelectedIds);
+            _consolidate.IsChecked = false;
             RefreshConductors();
             _error.Text = "配線範圍已修改，請重新確認共同端及分支。";
         }));
@@ -98,6 +102,7 @@ public sealed class MultiEndCableEditorDialog : Window
             Draft.ConstructionType = _construction.SelectedItem is ComboBoxItem { Tag: CableConstructionType type } ? type : CableConstructionType.Unknown;
             Draft.TrunkLengthMm = ParseLength(_trunk.Text);
             foreach (var pair in _lengths) pair.Branch.LengthMm = ParseLength(pair.Length.Text);
+            if (_consolidate.IsChecked == true) _service.ConfirmConsolidation(_project, Draft);
             _service.Validate(_project, Draft);
             DialogResult = true;
         }
@@ -152,11 +157,12 @@ public sealed class MultiEndConductorPickerDialog : Window
         }));
         DockPanel.SetDock(bottom, Dock.Bottom); root.Children.Add(bottom);
         var list = new StackPanel();
-        foreach (var c in project.Connections.Where(c => c.Kind == ConnectionKind.Wire &&
-                     (string.IsNullOrWhiteSpace(c.CableInstanceId) || c.CableInstanceId == cableId)).OrderBy(c => c.ConnectionId, StringComparer.Ordinal))
+        foreach (var c in project.Connections.Where(c => c.Kind is ConnectionKind.Wire or ConnectionKind.Cable &&
+                     (cableId is null || string.IsNullOrWhiteSpace(c.CableInstanceId) || c.CableInstanceId == cableId)).OrderBy(c => c.ConnectionId, StringComparer.Ordinal))
         {
             if (!pins.TryGetValue(c.FromEndpointId, out var from) || !pins.TryGetValue(c.ToEndpointId, out var to)) continue;
-            var label = $"{from} -> {to}";
+            var ownership = project.Cables.SingleOrDefault(x => x.CableInstanceId == c.CableInstanceId);
+            var label = $"{from} -> {to} | Cable: {ownership?.ReferenceDesignator ?? c.CableInstanceId ?? "未指定"}";
             var check = new CheckBox { Content = label, IsChecked = selectedIds.Contains(c.ConnectionId), Margin = new Thickness(2, 6, 2, 6), ToolTip = c.ConnectionId };
             check.Checked += (_, _) => count.Text = $"已選 {SelectedIds.Count} 條";
             check.Unchecked += (_, _) => count.Text = $"已選 {SelectedIds.Count} 條";

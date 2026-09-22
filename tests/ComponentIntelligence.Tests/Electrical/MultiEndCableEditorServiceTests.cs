@@ -1,6 +1,9 @@
 using System.Text.Json;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Editing;
+using ComponentIntelligence.Electrical.Validation;
+using ComponentIntelligence.Electrical.Topology;
+using ComponentIntelligence.Electrical.Drawing;
 using Xunit;
 
 namespace ComponentIntelligence.Tests.Electrical;
@@ -8,6 +11,119 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class MultiEndCableEditorServiceTests
 {
     private readonly MultiEndCableEditorService _service = new();
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void PlanningKeepsPhysicalEndsSeparateFromExactElectricalMappings(int branches)
+    {
+        var p = Fixture(branches);
+        var a = _service.Apply(p, Confirmed(p));
+        var before = JsonSerializer.Serialize(p);
+        var builder = new DrawingPlanningInputBuilder(new RepresentationPolicy(new NoAssets()));
+        var input = builder.Build(p);
+        var cable = Assert.Single(input.Cables);
+        Assert.Null(cable.EndA);
+        Assert.Null(cable.EndB);
+        Assert.Equal(a.CableAssemblyId, cable.MultiEnd!.AssemblyId);
+        Assert.Equal(branches, cable.MultiEnd.Branches.Count);
+        Assert.Equal("common", cable.MultiEnd.CommonEnd.EndpointId);
+        Assert.Equal(p.Connections.Count, cable.MultiEnd.ElectricalMappings.Count);
+        Assert.All(cable.MultiEnd.ElectricalMappings, m => {
+            var original = p.Connections.Single(c => c.ConnectionId == m.ConnectionId);
+            Assert.Equal(original.FromEndpointId, m.FromEndpointId);
+            Assert.Equal(original.ToEndpointId, m.ToEndpointId);
+            Assert.Equal(original.NetId, m.NetId);
+            Assert.Null(m.CoreId);
+        });
+        Assert.Single(input.Representations.Where(r => r.Role == DrawingRepresentationRole.CableDetail));
+        Assert.DoesNotContain(input.Issues, i => i.TargetId == cable.CableInstanceId && i.Severity == DrawingPlanningIssueSeverity.Blocker);
+        Assert.Equal(DrawingPlanningJson.Serialize(input), DrawingPlanningJson.Serialize(builder.Build(p)));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    private sealed class NoAssets : IDrawingAssetResolver
+    {
+        public DrawingAssetResolution? Resolve(string ownerId, DrawingRepresentationRole role) => null;
+    }
+
+    [Fact]
+    public void PointToPointConnectorEditorCannotRewriteMultiEndConductors()
+    {
+        var p = Fixture(2);
+        var a = _service.Apply(p, Confirmed(p));
+        var before = JsonSerializer.Serialize(p);
+        var candidate = new ConnectorCableCandidate("source", "common", "connector", "X1", "RJ45", ConnectorGender.Female,
+            null, null, null, "branch", p.Connections.Take(1).ToArray(), [a.PhysicalTopology!.CableInstanceId]);
+        Assert.Throws<InvalidOperationException>(() => new ConnectorCableTopologyService().AssignCandidateAsCable(p, candidate, new CableSegmentOptions()));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    [Theory]
+    [InlineData("duplicate-branch")]
+    [InlineData("missing-connection")]
+    [InlineData("wrong-cable")]
+    [InlineData("missing-common")]
+    public void PersistedMalformedPhysicalTopologyIsBlocked(string defect)
+    {
+        var p = Fixture(2);
+        var a = _service.Apply(p, Confirmed(p));
+        var t = a.PhysicalTopology!;
+        if (defect == "duplicate-branch") t.Branches[1].Index = t.Branches[0].Index;
+        if (defect == "missing-connection") t.ConnectionIds.Add("missing");
+        if (defect == "wrong-cable") p.Connections[0].CableInstanceId = "different";
+        if (defect == "missing-common") t.CommonPortId = "missing";
+        Assert.Contains(new ElectricalProjectValidator().Validate(p).Results, r => r.RuleId == "RULE-MULTI-END-001" && r.SourceObjectIds.Contains(a.CableAssemblyId));
+    }
+
+    [Fact]
+    public void LegacyAssemblyEditorCannotReplacePhysicalTopology()
+    {
+        var p = Fixture(2);
+        var a = _service.Apply(p, Confirmed(p));
+        var before = JsonSerializer.Serialize(p);
+        var legacy = new CableAssemblyEditorService();
+        Assert.Throws<InvalidOperationException>(() => legacy.PrepareExistingFromConnection(p, p.Connections[0].ConnectionId));
+        var forged = new CableAssemblyEditDraft { CableAssemblyId = a.CableAssemblyId, IsNew = false };
+        Assert.False(legacy.Validate(p, forged).CanSave);
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    [Fact]
+    public void ExistingCableOwnershipNeedsExplicitConfirmationAndNeverChangesUnrelatedCable()
+    {
+        var p = Fixture(2);
+        foreach (var c in p.Connections)
+        {
+            c.Kind = ConnectionKind.Cable; c.CableInstanceId = "old-" + c.ConnectionId; c.CableCoreId = "1";
+            p.Cables.Add(new CableInstance { CableInstanceId = c.CableInstanceId, CableDefinitionId = "source", CoreAssignments =
+                [new CoreAssignment { CoreId = "1", FromEndpointId = c.FromEndpointId, ToEndpointId = c.ToEndpointId }] });
+        }
+        p.Cables.Add(new CableInstance { CableInstanceId = "unrelated", CableDefinitionId = "keep" });
+        var truth = Truth(p);
+        var d = Confirmed(p);
+        Assert.Throws<InvalidOperationException>(() => _service.Apply(p, d));
+        _service.ConfirmConsolidation(p, d);
+        _service.Apply(p, d);
+        Assert.Equal(truth, Truth(p));
+        Assert.Equal(2, p.Cables.Count);
+        Assert.Contains(p.Cables, c => c.CableInstanceId == "unrelated" && c.CableDefinitionId == "keep");
+        Assert.Equal(p.Connections.Count, p.CableAssemblies.Single().PhysicalTopology!.ConductorEvidence.Count);
+    }
+
+    [Fact]
+    public void PhysicalCommonCanDifferFromElectricalGraphHub()
+    {
+        var p = Fixture(2);
+        var old = p.Connections[2];
+        p.Connections[2] = new ElectricalConnection { ConnectionId = old.ConnectionId,
+            FromEndpointId = "contact-1-2", ToEndpointId = old.ToEndpointId, NetId = old.NetId };
+        var truth = Truth(p);
+        var d = Confirmed(p);
+        var assembly = _service.Apply(p, d);
+        Assert.Equal("common", assembly.PhysicalTopology!.CommonPortId);
+        Assert.Equal(truth, Truth(p));
+    }
 
     [Theory]
     [InlineData(2)]
@@ -97,7 +213,7 @@ public sealed class MultiEndCableEditorServiceTests
     {
         var p = Fixture(2);
         var d = _service.PrepareNew(p, p.Connections.Select(c => c.ConnectionId).ToArray());
-        Assert.Throws<InvalidOperationException>(() => _service.ConfirmEnds(p, d, "branch1"));
+        Assert.Throws<InvalidOperationException>(() => _service.ConfirmEnds(p, d, "missing-interface"));
         p.Components[1].Ports[0].Pins.Add(p.Components[0].Ports[0].Pins[0]);
         Assert.Throws<InvalidOperationException>(() => _service.PrepareNew(p, d.ConnectionIds));
         p = Fixture(2);

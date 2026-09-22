@@ -17,6 +17,7 @@ public sealed class MultiEndCableDraft
     internal Dictionary<string, string> OriginalConnections { get; init; } = new(StringComparer.Ordinal);
     internal string? OriginalAssembly { get; init; }
     internal string? OriginalCable { get; init; }
+    internal string? ConfirmedOwnership { get; set; }
 }
 
 public sealed record MultiEndPortContext(string PortId, string Label);
@@ -24,6 +25,25 @@ public sealed record MultiEndConductorContext(string ConnectionId, string Label,
 
 public sealed class MultiEndCableEditorService
 {
+    public void ClearConsolidationConfirmation(MultiEndCableDraft draft) => draft.ConfirmedOwnership = null;
+
+    public void ConfirmConsolidation(ElectricalProject project, MultiEndCableDraft draft) =>
+        draft.ConfirmedOwnership = OwnershipSnapshot(project, draft);
+
+    private static string OwnershipSnapshot(ElectricalProject project, MultiEndCableDraft draft)
+    {
+        var selected = project.Connections.Where(c => draft.ConnectionIds.Contains(c.ConnectionId, StringComparer.Ordinal)).ToArray();
+        var ids = selected.Select(c => c.CableInstanceId).Where(id => !string.IsNullOrEmpty(id) && id != draft.CableId).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+        foreach (var id in ids)
+        {
+            if (!draft.IsNew || project.Cables.Count(c => c.CableInstanceId == id) != 1 ||
+                project.Connections.Any(c => c.CableInstanceId == id && !draft.ConnectionIds.Contains(c.ConnectionId, StringComparer.Ordinal)) ||
+                project.CableAssemblies.Any(a => a.Members.Any(m => m.CableInstanceId == id)))
+                throw new InvalidOperationException("原 Cable 仍有未選配線或既有複合線歸屬，不可整併；請先確認完整範圍。");
+        }
+        return ids.Length == 0 ? "" : JsonSerializer.Serialize(new { Connections = selected.OrderBy(c => c.ConnectionId, StringComparer.Ordinal),
+            Cables = ids.Select(id => project.Cables.Single(c => c.CableInstanceId == id)) });
+    }
     public MultiEndCableDraft PrepareNew(ElectricalProject project, IReadOnlyCollection<string> connectionIds)
     {
         var draft = new MultiEndCableDraft
@@ -76,6 +96,9 @@ public sealed class MultiEndCableEditorService
 
     public void Validate(ElectricalProject project, MultiEndCableDraft draft)
     {
+        var ownership = OwnershipSnapshot(project, draft);
+        if (ownership.Length > 0 && draft.ConfirmedOwnership != ownership)
+            throw new InvalidOperationException("請明確確認將所選配線的既有 Cable 歸屬整併為一條實體線材。");
         if (draft.ConstructionType is not (CableConstructionType.Purchased or CableConstructionType.Custom))
             throw new InvalidOperationException("請明確選擇外購 Purchased 或自製 Custom；多端形狀不代表自製。");
         if (string.IsNullOrWhiteSpace(draft.CommonPortId))
@@ -109,6 +132,18 @@ public sealed class MultiEndCableEditorService
         Validate(project, draft);
         var existing = project.CableAssemblies.SingleOrDefault(a => a.CableAssemblyId == draft.AssemblyId);
         var cable = project.Cables.SingleOrDefault(c => c.CableInstanceId == draft.CableId);
+        var oldCableIds = project.Connections.Where(c => draft.ConnectionIds.Contains(c.ConnectionId, StringComparer.Ordinal))
+            .Select(c => c.CableInstanceId).Where(id => !string.IsNullOrEmpty(id) && id != draft.CableId).ToHashSet(StringComparer.Ordinal);
+        var evidence = draft.ConnectionIds.Select(id =>
+        {
+            var previous = existing?.PhysicalTopology?.ConductorEvidence.SingleOrDefault(e => e.ConnectionId == id);
+            if (previous is not null) return previous;
+            var connection = project.Connections.Single(c => c.ConnectionId == id);
+            var source = project.Cables.SingleOrDefault(c => c.CableInstanceId == connection.CableInstanceId);
+            var core = source?.CoreAssignments.SingleOrDefault(c => c.CoreId == connection.CableCoreId);
+            return new MultiEndConductorEvidence { ConnectionId = id, OriginalCableInstanceId = connection.CableInstanceId,
+                OriginalCoreAssignment = core is null ? null : JsonSerializer.Deserialize<CoreAssignment>(JsonSerializer.Serialize(core)) };
+        }).ToList();
         var replacement = new CableAssembly
         {
             CableAssemblyId = draft.AssemblyId, ReferenceDesignator = draft.Reference?.Trim(),
@@ -118,7 +153,7 @@ public sealed class MultiEndCableEditorService
             {
                 CableInstanceId = draft.CableId, CommonPortId = draft.CommonPortId!, TrunkLengthMm = draft.TrunkLengthMm,
                 Branches = draft.Branches.OrderBy(b => b.Index).Select(CopyBranch).ToList(),
-                ConnectionIds = draft.ConnectionIds.Order(StringComparer.Ordinal).ToList()
+                ConnectionIds = draft.ConnectionIds.Order(StringComparer.Ordinal).ToList(), ConductorEvidence = evidence
             }
         };
         if (cable is null)
@@ -137,6 +172,7 @@ public sealed class MultiEndCableEditorService
         }
         if (existing is null) project.CableAssemblies.Add(replacement);
         else project.CableAssemblies[project.CableAssemblies.IndexOf(existing)] = replacement;
+        project.Cables.RemoveAll(c => oldCableIds.Contains(c.CableInstanceId) && !project.Connections.Any(w => w.CableInstanceId == c.CableInstanceId));
         return replacement;
     }
 
@@ -152,10 +188,10 @@ public sealed class MultiEndCableEditorService
             var matches = project.Connections.Where(c => c.ConnectionId == id).ToArray();
             if (matches.Length != 1) throw new InvalidOperationException($"配線不存在或 ID 重複：{id}");
             var c = matches[0];
-            if (c.Kind != ConnectionKind.Wire || !pins.TryGetValue(c.FromEndpointId, out var from) || from.Length != 1 ||
+            if (c.Kind is not (ConnectionKind.Wire or ConnectionKind.Cable) || !pins.TryGetValue(c.FromEndpointId, out var from) || from.Length != 1 ||
                 !pins.TryGetValue(c.ToEndpointId, out var to) || to.Length != 1 || from[0].Port.PortId == to[0].Port.PortId)
                 throw new InvalidOperationException($"需要明確且唯一歸屬的 Pin 對 Pin 普通配線：{id}");
-            if (!string.IsNullOrWhiteSpace(c.CableInstanceId) && (draft.IsNew || c.CableInstanceId != draft.CableId))
+            if (!string.IsNullOrWhiteSpace(c.CableInstanceId) && !draft.IsNew && c.CableInstanceId != draft.CableId)
                 throw new InvalidOperationException($"此配線已有其他 Cable 歸屬，不能自動吸收：{id}");
             if (project.CableAssemblies.Any(a => a.CableAssemblyId != draft.AssemblyId &&
                 (a.PhysicalTopology?.ConnectionIds.Contains(id, StringComparer.Ordinal) == true ||
@@ -165,7 +201,8 @@ public sealed class MultiEndCableEditorService
                 if (project.Components.SelectMany(x => x.Ports).Count(p => p.PortId == portId) != 1)
                     throw new InvalidOperationException("介面歸屬不唯一，請先確認專案資料。");
             result.Add(new MultiEndConductorContext(id,
-                $"{PortLabel(project, from[0].Port.PortId)} / Pin {from[0].Pin.PinNumber} -> {PortLabel(project, to[0].Port.PortId)} / Pin {to[0].Pin.PinNumber}",
+                $"{PortLabel(project, from[0].Port.PortId)} / Pin {from[0].Pin.PinNumber} -> {PortLabel(project, to[0].Port.PortId)} / Pin {to[0].Pin.PinNumber}" +
+                $" | Cable: {project.Cables.SingleOrDefault(x => x.CableInstanceId == c.CableInstanceId)?.ReferenceDesignator ?? c.CableInstanceId ?? "未指定"}",
                 from[0].Port.PortId, to[0].Port.PortId));
         }
         return result;
@@ -173,9 +210,9 @@ public sealed class MultiEndCableEditorService
 
     private static HashSet<string> BranchPorts(IReadOnlyList<MultiEndConductorContext> conductors, string common)
     {
-        if (conductors.Any(c => c.FromPortId != common && c.ToPortId != common))
-            throw new InvalidOperationException("選取配線並非共用此共同端，請重新選取或確認共同端。");
-        var branches = conductors.Select(c => c.FromPortId == common ? c.ToPortId : c.FromPortId).ToHashSet(StringComparer.Ordinal);
+        var branches = conductors.SelectMany(c => new[] { c.FromPortId, c.ToPortId }).ToHashSet(StringComparer.Ordinal);
+        if (!branches.Remove(common))
+            throw new InvalidOperationException("共同端必須是選取配線中的實際介面。");
         if (branches.Count < 2) throw new InvalidOperationException("多端線材需要至少兩個不同的分支介面。");
         return branches;
     }

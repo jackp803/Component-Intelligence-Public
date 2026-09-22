@@ -1,0 +1,86 @@
+[
+  {
+    "name": "task012-baseline.trx",
+    "sha256": "013663D4C008F97F906012A664812A45D7EDD3BF63C2A953DE850FD4CA076040",
+    "counters": {
+      "total": "64",
+      "executed": "64",
+      "passed": "64",
+      "failed": "0",
+      "error": "0",
+      "notExecuted": "0"
+    }
+  },
+  {
+    "name": "task012-full.trx",
+    "sha256": "931E9EA290DED684A524391D2FDA1E6A2C59EB349D45E0F7A9F8D5EBEF757DDA",
+    "counters": {
+      "total": "841",
+      "executed": "841",
+      "passed": "841",
+      "failed": "0",
+      "error": "0",
+      "notExecuted": "0"
+    }
+  },
+  {
+    "name": "task012-model-green.trx",
+    "sha256": "141AED39A4DAE17306D5C86C8D85520FDCC93E7118BB2881D05594E62E31182D",
+    "counters": {
+      "total": "1",
+      "executed": "1",
+      "passed": "1",
+      "failed": "0",
+      "error": "0",
+      "notExecuted": "0"
+    }
+  },
+  {
+    "name": "task012-model-red.trx",
+    "sha256": "2B66AE21F70EBF6CADFEAB5E3BF60757DB4093789C767450C709545BED6519CA",
+    "counters": {
+      "total": "1",
+      "executed": "1",
+      "passed": "0",
+      "failed": "1",
+      "error": "0",
+      "notExecuted": "0"
+    }
+  },
+  {
+    "name": "task012-service-first.trx",
+    "sha256": "1688021105485C15EFFD6981F24DD597033D45B6B12A0431C78564B3F8B45EC3",
+    "counters": {
+      "total": "11",
+      "executed": "11",
+      "passed": "10",
+      "failed": "1",
+      "error": "0",
+      "notExecuted": "0"
+    }
+  },
+  {
+    "name": "task012-service-green.trx",
+    "sha256": "51A6F15D64274556733314F08EFF5C262C43488D57A8EA699ACD43CBDA7E8CF5",
+    "counters": {
+      "total": "75",
+      "executed": "75",
+      "passed": "75",
+      "failed": "0",
+      "error": "0",
+      "notExecuted": "0"
+    }
+  },
+  {
+    "name": "task012-ui-red.trx",
+    "sha256": "6D02C2C37CDC2097DB91F323F65B0CF9FEA5773F6EAAFB7E5C4AAAE41EFBC0C7",
+    "counters": {
+      "total": "1",
+      "executed": "1",
+      "passed": "0",
+      "failed": "1",
+      "error": "0",
+      "notExecuted": "0"
+    }
+  }
+]

@@ -109,3 +109,68 @@ Full tests include the focused UI navigation test. Initial Desktop compile had a
 Do not mark DONE or resume the Human Engineering Gate based on this WIP. First reconcile the acceptance input and physical/electrical grouping semantics with PM. Then complete bounded domain validation, safe legacy editor protection, multi-end planning/detail consumption, real editor and revision/reload verification, all fresh final gates and any admitted isolated execution proof. Do not auto-confirm other cables.
 
 `NOT_RUN != PASS`. `APPLIED != VERIFIED`. `DONE != Product Owner UAT acceptance`.
+
+## 2026-09-22 amendment continuation checkpoint
+
+The preceding BLOCKED record is historical. PM amendment at coordination main
+`ba83a6356ed7eecc2895b75c535349595b95f730` resolves the direct-star rule.
+The same task and branch continue; no new task ID or K7L authority is created.
+
+Current checkpoint: PARTIAL, not a terminal DONE claim. Real editor Apply is
+paused for action-time confirmation of removal of the six unreferenced legacy
+Cable records in the disposable copy. Production is never the target.
+
+Executable Component commit: `b01024a7ef411b9a4d3e03baa65637b50dd7ed46`.
+Tree: `0a8f2b6fe3dac4963f9e9ef5b74848aa98cab968`.
+Paired Auto commit: `d7e53dd0c883f2753aeca8ad858d3c21fd447fe7`.
+Auto tree: `816eb69a094ab6e88cec9e4be5002e7f8193d20c`.
+
+Implemented and tested:
+- Physical Common/Branches are independent of electrical edge direction. A chain
+  is accepted without creating a star, new endpoint, junction, or Net.
+- Explicit old Cable ownership confirmation is fingerprinted; incompatible,
+  shared, stale, or assembly-owned membership fails closed before mutation.
+- Old scoped core assignment evidence is retained separately. No new manufacturing
+  core numbering or branch-specific conductor route is inferred.
+- Persisted malformed physical topology receives RULE-MULTI-END-001 diagnostics.
+- Legacy assembly and point-to-point assignment paths cannot replace multi-end truth.
+- Planning carries one whole Cable identity with assembly identity, confirmed ends,
+  exact mapping list and optional lengths. Multi-end endA/endB are null, not a false
+  two-end projection. The additive optional planning fields retain v1 contract names.
+- Cable Detail retains physical shape separately from electrical mappings. Auto
+  consumes explicit precomputed display geometry on CP3C_CABLE_PHYSICAL, never a
+  wire/junction helper. No physical execution has occurred for this checkpoint.
+
+Fresh gates:
+- Multi-end focused Release: 24 PASS / 0 FAIL / 0 SKIP.
+- Full Component Release: 853 PASS / 0 FAIL / 0 SKIP.
+- Desktop Release build: PASS, 0 errors, 22 existing warnings.
+- Both git diff --check: PASS.
+- Auto multi-end + PowerShell runtime/parse/safety: 11 PASS.
+- Auto full regression: 485 run, 484 PASS, 1 ERROR. The historical
+  `test_package_is_staging_only_and_has_hd1_and_all_gaps` requires private legacy POC
+  WDP/AEPX/three DWGs absent from the isolated worktree. Exact diagnostic:
+  `CM_LRDU_SOURCE_MISSING`. It was not skipped, repaired, or represented as PASS.
+- Real Python -> C# -> Python three-branch Drawing Plan: exact object/hash equality,
+  hash `8D4EAC3CBB6124BA8B7CDDEB17C8A45729DFA42C4BD79C3137B3EAE00BEB3B1F`.
+- Schema validation of synthetic 1->2 / 1->3 input/page-plan/drawing-plan: PASS.
+
+UI checkpoint: disposable path visibly verified; the six existing mappings are
+selected with their current Cable references; Common X1, Branch X4/X5 and Custom
+were explicitly selected. Apply has NOT been clicked. Save/Revision/Reload and
+final edited-state Cancel remain NOT_RUN. The open UI build predates the final
+planning changes; its authoring service matches the staged authoring behavior,
+but final-build UI verification is still required.
+
+Protection: fresh resume production DB size 64,823,296, SHA-256
+`4D74B2C59B1A7079508BD2FB371FC232D42B4F16D68535299AC67D33E8B6C33A`.
+This differs from the historical initial task baseline before resumption and was
+not normalized. Disposable initial copy matched byte-for-byte. 172 protected
+files rechecked after the above gates: changed 0. No AutoCAD process was launched.
+Raw manifests, snapshots, TRX and Auto regression log remain local/private.
+
+Remaining in order: explicit UI consolidation confirmation; Apply and normal
+Save/Revision/Reload preservation comparison; final-build reopen/Cancel smoke;
+actual real cable-slice planning and isolated execution if no unrelated engineering
+blocker; resolve/report the external regression fixture dependency; final fresh
+gates/protected hashes; publish exact heads/trees and terminal disposition.

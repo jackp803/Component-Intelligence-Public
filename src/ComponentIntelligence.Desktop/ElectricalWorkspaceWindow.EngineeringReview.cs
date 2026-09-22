@@ -50,6 +50,7 @@ public partial class ElectricalWorkspaceWindow
             var dialog = new EngineeringReviewDialog(service, () => _project, async (draft, evidence) =>
             {
                 if (catalogHash != CatalogHash()) throw new InvalidOperationException("型錄已變更，未儲存；請關閉並重新開啟工程確認。");
+                draft = CableConstructionAuthority.ApplyDefinitions(draft, catalog);
                 var revisions = EnsureDrawingRevisionService();
                 await revisions.CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, "Before " + evidence);
                 // The modal dialog edits a clone. The active project changes only after normal Save succeeds.

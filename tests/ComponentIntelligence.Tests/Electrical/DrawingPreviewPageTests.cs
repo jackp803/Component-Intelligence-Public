@@ -7,6 +7,22 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class DrawingPreviewPageTests
 {
     [Fact]
+    public void HeavyContinuationPreservesExactOwnerAndContactCoverageWithoutCopyingApprovedArt()
+    {
+        var rep = new DrawingRepresentationDecision { RepresentationId = "HD", OwnerId = "physical",
+            PortBindings = Enumerable.Range(1, 55).Select(i => new DrawingPortBinding
+                { EngineeringEndpointId = $"P{i:000}", ConnectionPointId = $"X{i:000}" }).ToArray() };
+        var input = new DrawingPlanningInput { ProjectId = "P", Representations = [rep], HeavyDutyConnectors = [new()
+            { HeavyDutyConnectorId = "physical", RepresentationIds = ["HD"], ContactIds = rep.PortBindings.Select(p => p.EngineeringEndpointId).ToArray(), RowsPerPage = 19 }] };
+        var preview = DrawingPreviewCatalog.Build(input);
+        Assert.Equal(new[] { "HD", "HD:CONTINUATION:002", "HD:CONTINUATION:003" }, preview.Select(r => r.RepresentationId));
+        Assert.All(preview, r => Assert.Equal("physical", r.OwnerId));
+        Assert.Equal(55, preview.SelectMany(r => r.PortBindings).Select(p => p.EngineeringEndpointId).Distinct().Count());
+        Assert.Equal(55, rep.PortBindings.Count);
+        Assert.Single(DrawingPreviewCatalog.Build(input with { Representations = [rep with { AssetPath = "approved.dwg" }] }));
+    }
+
+    [Fact]
     public void PreviewLabelsUseNamesWithoutTurningIdentityIntoEngineeringEvidence()
     {
         var project = new ElectricalProject

@@ -252,6 +252,7 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
             WiringRules = [],
             Issues = issues.OrderBy(x => x.IssueId, StringComparer.Ordinal).ToList()
         };
+        input = DrawingGroupingEvidence.Apply(project, catalog, input);
         return DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(input));
     }
 

@@ -15,6 +15,7 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
     private string? _draggingRepresentationId;
     private Point _dragOffset;
     private double _zoom = 1.0;
+    private IReadOnlyDictionary<string, DrawingRepresentationDecision> _previewCatalog = new Dictionary<string, DrawingRepresentationDecision>();
 
     public IDrawingPlannerClient? PlannerClient { get; set; }
     public Func<DrawingPlanningInput>? PlanningInputProvider { get; set; }
@@ -28,7 +29,13 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
     public DrawingPlanningWorkspaceControl() { InitializeComponent(); }
 
 
-    public void LoadPlan(DrawingPlanDocument? plan) { _controller.Load(plan); Refresh(); }
+    public void LoadPlan(DrawingPlanDocument? plan, DrawingPlanningInput? previewInput = null)
+    {
+        var input = previewInput ?? (plan is null ? null : PlanningInputProvider?.Invoke());
+        _previewCatalog = input is null ? new Dictionary<string, DrawingRepresentationDecision>()
+            : DrawingPreviewCatalog.Build(input).ToDictionary(r => r.RepresentationId, StringComparer.Ordinal);
+        _controller.Load(plan); Refresh();
+    }
     public DrawingPlanDocument? CurrentPlan => _controller.CurrentPlan;
 
     private async void GeneratePreview_Click(object sender, RoutedEventArgs e)
@@ -99,8 +106,14 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
         public override string ToString() => Label.Replace('\n', ' ');
     }
 
-    private IReadOnlyDictionary<string, string> PreviewLabels() => ProjectProvider is null
-        ? new Dictionary<string, string>() : DrawingPreviewLabels.Build(ProjectProvider());
+    private IReadOnlyDictionary<string, string> PreviewLabels()
+    {
+        var labels = ProjectProvider is null ? new Dictionary<string, string>() : DrawingPreviewLabels.Build(ProjectProvider()).ToDictionary(p => p.Key, p => p.Value);
+        foreach (var rep in _previewCatalog.Values)
+            if (!labels.ContainsKey(rep.RepresentationId) && labels.TryGetValue($"REP:{rep.OwnerId}:Schematic", out var label))
+                labels[rep.RepresentationId] = label + "\n接點續頁";
+        return labels;
+    }
 
     private void Refresh()
     {
@@ -124,15 +137,41 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
         DrawingCanvas.Height = page.Bounds.Height;
         foreach (var route in _controller.VisibleRoutes)
         {
-            var polyline = new Polyline { Stroke = Brushes.SteelBlue, StrokeThickness = 1.5, IsHitTestVisible = false }; foreach (var point in route.Points) polyline.Points.Add(new Point(point.X, point.Y)); DrawingCanvas.Children.Add(polyline);
+            var polyline = new Polyline { Stroke = Brushes.DimGray, StrokeThickness = 1.2, IsHitTestVisible = false }; foreach (var point in route.Points) polyline.Points.Add(new Point(point.X, point.Y)); DrawingCanvas.Children.Add(polyline);
         }
         foreach (var placement in plan.Placements.Where(x => x.PageId == pageId))
         {
             var label = labels.GetValueOrDefault(placement.RepresentationId, "名稱待確認");
             var border = new Border { Width = placement.Width, Height = placement.Height, BorderBrush = placement.State == DrawingPlanControlState.Locked ? Brushes.DarkRed : Brushes.DimGray, BorderThickness = new Thickness(1.5), Background = Brushes.WhiteSmoke, Tag = placement.RepresentationId, ToolTip = label,
-                Child = CablePreview(placement, project, label) ?? new Viewbox { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Margin = new Thickness(5),
-                    Child = new TextBlock { Width = Math.Max(30, placement.Width - 12), Text = label, TextWrapping = TextWrapping.Wrap, FontSize = 13 } } };
+                Child = CablePreview(placement, project, label) ?? HeavyDutyPreview(placement, project, label) ?? (placement.Height < 40
+                    ? new TextBlock { Text = label.Replace('\n', ' '), FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(4, 2, 4, 2) }
+                    : new Viewbox { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Margin = new Thickness(5),
+                    Child = new TextBlock { Width = Math.Max(30, placement.Width - 12), Text = label, TextWrapping = TextWrapping.Wrap, FontSize = 13 } }) };
             Canvas.SetLeft(border, placement.X); Canvas.SetTop(border, placement.Y); border.RenderTransform = new RotateTransform(placement.RotationDegrees, placement.Width / 2.0, placement.Height / 2.0); border.MouseLeftButtonDown += Placement_MouseLeftButtonDown; border.MouseMove += Placement_MouseMove; border.MouseLeftButtonUp += Placement_MouseLeftButtonUp; DrawingCanvas.Children.Add(border);
+        }
+        DrawContinuationLabels(plan, pageId);
+    }
+
+    private void DrawContinuationLabels(DrawingPlanDocument plan, string pageId)
+    {
+        foreach (var relation in plan.CrossPageRelations.Where(r => r.RelationKind == "ElectricalConnectionContinuation"))
+        {
+            var source = relation.SourcePageId == pageId;
+            if (!source && relation.DestinationPageId != pageId) continue;
+            var routeId = source ? relation.SourceRouteId : relation.DestinationRouteId;
+            var route = plan.Routes.SingleOrDefault(r => r.RouteId == routeId);
+            var targetPage = plan.Pages.SingleOrDefault(p => p.PageId == (source ? relation.DestinationPageId : relation.SourcePageId));
+            if (route is null || targetPage is null || route.Points.Count < 2) continue;
+            var p = route.Points[^1]; var previous = route.Points[^2];
+            var dx = Math.Sign(p.X - previous.X); var dy = Math.Sign(p.Y - previous.Y);
+            var arrow = new Polygon { Stroke = Brushes.DimGray, Fill = Brushes.White, StrokeThickness = 1,
+                Points = new PointCollection { new(p.X, p.Y), new(p.X - dx * 7 - dy * 3, p.Y - dy * 7 + dx * 3), new(p.X - dx * 7 + dy * 3, p.Y - dy * 7 - dx * 3) } };
+            DrawingCanvas.Children.Add(arrow);
+            var caption = new TextBlock { Text = $"P.{targetPage.Order + 1}", FontSize = 10, Background = Brushes.White,
+                ToolTip = targetPage.PageId };
+            Canvas.SetLeft(caption, Math.Clamp(p.X + (dx < 0 ? -30 : 4), 0, DrawingCanvas.Width - 35));
+            Canvas.SetTop(caption, Math.Clamp(p.Y - 14, 0, DrawingCanvas.Height - 20));
+            DrawingCanvas.Children.Add(caption);
         }
     }
 }

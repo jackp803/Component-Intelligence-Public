@@ -174,3 +174,100 @@ Save/Revision/Reload preservation comparison; final-build reopen/Cancel smoke;
 actual real cable-slice planning and isolated execution if no unrelated engineering
 blocker; resolve/report the external regression fixture dependency; final fresh
 gates/protected hashes; publish exact heads/trees and terminal disposition.
+
+## 2026-09-22 final directive execution
+
+Current terminal disposition: **PARTIAL**. This section supersedes the previous
+pre-Apply checkpoint, without removing its history. Authority: coordination main
+`c97ab5eceaa7a16469fea140662b7636cb6f992d`,
+`PM_TASK012_FINAL_VERIFICATION_20260922.md` and the physical/electrical amendment.
+
+Component executable remains `b01024a7ef411b9a4d3e03baa65637b50dd7ed46`
+(tree `0a8f2b6fe3dac4963f9e9ef5b74848aa98cab968`); tested evidence head
+`c1bcbf3e8b931c10931127addfef06eaf5a6decf` has no intervening product changes.
+Real execution used Auto `dee5faadd161ac7cb93b9963da11fa7d400e212b`, tree
+`077f7295f79060affd674333fab1309f314e8a8c`.
+
+### Actual Desktop acceptance
+
+- Fresh disposable DB matched production byte-for-byte; the displayed application
+  path was checked before entering Topology. Production was never opened for writes.
+- Normal Load and Save established the baseline after normal catalog synchronization.
+- The normal multi-end picker selected exactly six existing X1/X4/X5 connections.
+  Construction and Common were initially unselected. Custom, Common X1, Branch 1
+  X4, Branch 2 X5 and the explicit membership-consolidation checkbox were selected.
+- Apply, normal Project Save, Load, actual wire double-click editor reopen: PASS.
+- Reference `TEST-X1-X4-X5`; one new physical assembly and one overall Cable.
+  Exact existing port IDs remain RJ45-B at X1 and WIRE-A at X4/X5. The UI discloses
+  their M12 sibling-interface context; no WIRE-A contact was replaced by an M12 pin.
+- All 180 connection IDs remain. The selected six differ only in CableInstanceId;
+  FromEndpointId, ToEndpointId, NetId and explicit pin meaning are unchanged.
+  The other 174 connections are identical. Components/Ports/Pins, nets, topology
+  placements/routes and every other project field are unchanged.
+- Six old Cable records were removed only after scoped confirmation and no remaining
+  references; other 22 cables and prior two assemblies are unchanged.
+- Saved assembly: `cable-assembly-b8ac120277044b62aab3365fb5786f48`.
+  Overall cable: `cbl-ce99780c5c3b4ef9b1b1ed81260210e0`.
+- Normal revision snapshot `REV-265C1E4C140DB1C505260D97` matches the saved project.
+  The repository recorded trigger `MajorImport`; no direct revision write was used.
+- Fresh reopened editor: changed Reference to `CANCEL-MUST-NOT-PERSIST`, Cancel,
+  normal Save. Entire persisted project JSON equals the first saved state: PASS.
+- Candidate closed normally. No electrical star rewrite or fake junction occurred.
+
+### Real planning and execution
+
+The bounded slice uses the three actual components, six original connections,
+saved assembly and overall cable. C# DrawingPlanningInputBuilder, real
+PythonDrawingPlannerClient and PythonDrawingIrClient produced READY, two pages,
+one multi-end Cable Detail, null endA/endB and all six exact electrical mappings.
+This is not a full-project readiness or company-symbol approval claim.
+
+Initial runtime preflight rejected missing page metadata, before AutoCAD launch.
+The disposable harness registered the two actual generated page IDs; all unconfirmed
+project/title-block text fields remain null. User runtime settings were not changed.
+The next preflight exposed Windows PowerShell HTML escaping of `->` as `-\u003e`,
+causing packageHash mismatch. Auto's bounded canonicalization repair was RED/GREEN
+tested, including literal escaped text and tamper rejection; no hash gate disabled.
+
+Fresh real C# LocalDrawingExecutorClient -> Python -> PowerShell -> accoreconsole:
+- run `CP3C-B7D3E8134FD947558367F9110752AF9C`;
+- `electrical-execution-result.v1` status APPLIED; 13/13 command IDs APPLIED;
+- self-contained company WDP with two local page DWGs; no legacy drawing references;
+- IR hash `2A5C7AF20C3D04BE3E6689718ED3559623F9A9C255FA631ABF43B7CE1FEC0C48`;
+- executor plan hash `266AD0667131252B4D821D99B413BA43B714E5C1262EC08FE85F00EA9C2B7BC9`;
+- evidence hash `23A66ABBFF5D82FB4293BCAE5D57DA860E5D2EEC60699CCD6A43427502028247`.
+
+### Open verification anomaly / stop boundary
+
+A separate bounded accoreconsole inventory reopened the generated Cable Detail.
+It returned exactly the five expected LINE segments on CP3C_CABLE_PHYSICAL;
+their endpoints match the IR. The execution package contains no junction command.
+However, the inventory script's before/after DWG SHA comparison failed with
+`Readback changed DWG`, despite an inspection-only script and QUIT / N.
+This affects only the disposable generated output, not any protected source.
+The cause is unresolved. No further AutoCAD attempt or cleanup was performed.
+Do not claim readback immutability, semantic VERIFIED, or terminal DONE.
+The diagnostic stopped before persisting both hash strings, so those exact two
+values are not claimed as durable evidence. The script, exception and raw readback
+logs are preserved; a future investigation must capture them before another run.
+
+### Fresh final gates and protection
+
+- Component multi-end Release: 24 PASS; full Release: 853 PASS / 0 FAIL / 0 SKIP.
+- Desktop Release build: PASS, 0 errors, 22 existing warnings.
+- Auto focused planner/IR/package/executor/Windows PowerShell: 28 PASS.
+- Auto full regression: 486 run, 485 PASS, 1 ERROR in the same unavailable private
+  legacy POC fixture (`CM_LRDU_SOURCE_MISSING`); not represented as full-suite PASS.
+- Both git diff --check: PASS. No implementation was changed in Component.
+- Protected pre/post: 172 files, zero size/SHA differences. Production DB remains
+  64,823,296 bytes, SHA `4D74B2C59B1A7079508BD2FB371FC232D42B4F16D68535299AC67D33E8B6C33A`.
+- Private evidence remains under the task-ID temp root: final-ui.db, three project
+  snapshots, normal revision query/proof scripts, real planning/IR/package/result,
+  runtime logs, readback logs, TRX/build/test logs and protected manifests.
+- Sanitized machine-readable evidence accompanies this handoff. Private absolute
+  paths and production project snapshots are not published.
+
+PR #32 / Auto #35 remain Draft/Open/Unmerged. No cleanup/slimming, release, CP3-D,
+formal CAD write, central workbook write, source library write or K7L change.
+Next bounded decision: investigate the staging readback hash discrepancy; do not
+repeat the successful UI consolidation or rewrite the electrical graph.

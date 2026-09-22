@@ -1,5 +1,9 @@
 # Drawing Preview quality checkpoint
 
+Historical checkpoint below. The subsequent same-task overnight continuation is
+recorded in [the consolidated handoff](DRAWING_QUALITY_OVERNIGHT_HANDOFF_20260922.md).
+Its disposition is BLOCKED on explicit engineering evidence, not READY_FOR_BLOCK_ARCHIVE.
+
 Disposition: PARTIAL; not Product Owner visual acceptance.
 
 Implemented page-local route display, including continuation legs, to prevent all

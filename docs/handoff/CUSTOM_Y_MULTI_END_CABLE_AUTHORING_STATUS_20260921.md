@@ -14,6 +14,11 @@ This is a preserved WIP, not a release candidate or completed implementation. Do
 - Isolated branch: `codex/custom-y-multi-end-cable-authoring-20260921`.
 - Auto source remains `c61d1cc3cc66b392aa9a559468d995a0e9fb053b`, tree `ea1bb9bce25ef4ca41c9922b29f6f58a68646437`; no Auto branch or source changes.
 - PR #31/#34 preserved; no merge/release.
+- Preserved WIP executable commit: `58c06a915d57d0ea65ad6b0ff0135bc27e2d06a1`.
+- Preserved WIP tree: `4d2f690b21b261849f0d8fd8d69efaf987786256`.
+- Both identities confirmed through the GitHub commits API after push.
+- Draft PR: https://github.com/jackp803/Component-Intelligence-Public/pull/32, stacked against the existing Phase 2B Component branch; do not merge.
+- Subsequent handoff-only commits do not change the tested executable source.
 
 ## Decisive real-project evidence
 

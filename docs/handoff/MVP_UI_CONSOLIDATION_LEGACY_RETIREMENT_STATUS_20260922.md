@@ -88,4 +88,9 @@ No Auto source edit, CP3-D, merge, release, or production save. Existing unresol
 
 ## Publication
 
-Pending exact implementation identity and remote confirmation below. The complete changed/deleted file inventory is the implementation commit's Git diff against the exact baseline, including new tests and actual removed legacy files.
+- Final executable implementation commit: `614a3bd2f124a55a4357c084521083ccab162e0d`.
+- Tree: `2b0a609cf35ee64626d11a7bfa4cd017594b049e`.
+- Remote Git object SHA/tree confirmed through GitHub API after push.
+- Stacked Draft PR: https://github.com/jackp803/Component-Intelligence-Public/pull/33 ; base `codex/custom-y-multi-end-cable-authoring-20260921`. No existing PR was retargeted or merged.
+- Staged `git diff --check`: PASS, including new files. Final implementation includes 61 changed/added/deleted files. The complete inventory is `git diff --name-status b01024a7ef411b9a4d3e03baa65637b50dd7ed46 614a3bd2f124a55a4357c084521083ccab162e0d`.
+- This publication follow-up is documentation-only. GitHub PR head is the final durable evidence revision; the executable identity above remains unchanged.

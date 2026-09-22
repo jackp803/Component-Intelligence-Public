@@ -121,6 +121,8 @@ public sealed class CableAssemblyEditorService
                 $"線段 '{connection.CableInstanceId}' 同時屬於多個複合線：{string.Join(", ", owners.Select(item => item.CableAssemblyId))}。");
 
         var assembly = owners[0];
+        if (assembly.PhysicalTopology is not null)
+            throw new InvalidOperationException("此線材具有多端實體結構，請使用多端 Cable 編輯器。");
         var draft = new CableAssemblyEditDraft
         {
             CableAssemblyId = assembly.CableAssemblyId,
@@ -222,6 +224,8 @@ public sealed class CableAssemblyEditorService
         ArgumentNullException.ThrowIfNull(project);
         ArgumentNullException.ThrowIfNull(draft);
         var issues = new List<CableAssemblyEditIssue>();
+        if (project.CableAssemblies.Any(a => a.CableAssemblyId == draft.CableAssemblyId && a.PhysicalTopology is not null))
+            return new CableAssemblyEditValidation([Block("EDIT-MULTI-END-REQUIRED", "請使用多端 Cable 編輯器，不能以線段角色覆寫實體結構。", [draft.CableAssemblyId])]);
 
         if (draft.IsNew && draft.Members.Count < 2)
             issues.Add(Block("INPUT-ASSEMBLY-MEMBERS", "複合線至少需要兩個線段。", [draft.CableAssemblyId]));

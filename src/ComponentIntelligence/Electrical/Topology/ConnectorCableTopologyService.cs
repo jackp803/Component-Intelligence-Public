@@ -106,6 +106,9 @@ public sealed class ConnectorCableTopologyService
             throw new InvalidOperationException("The selected cable conductors changed. Please select the connector again.");
         if (connections.Any(connection => connection.Kind == ConnectionKind.DirectMating))
             throw new InvalidOperationException("Direct connector mating cannot be assigned as cable material.");
+        if (project.CableAssemblies.Any(a => a.PhysicalTopology is { } physical &&
+            (physical.ConnectionIds.Any(connectionIds.Contains) || connections.Any(c => c.CableInstanceId == physical.CableInstanceId))))
+            throw new InvalidOperationException("此配線已屬於多端實體線材，請使用多端 Cable 編輯器；不可改為獨立點對點線材。");
 
         var previousCableIds = connections
             .Select(connection => connection.CableInstanceId)

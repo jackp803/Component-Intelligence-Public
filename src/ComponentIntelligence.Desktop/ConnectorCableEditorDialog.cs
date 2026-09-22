@@ -55,7 +55,7 @@ public sealed class ConnectorCableEditorDialog : Window
 
         var intro = new TextBlock
         {
-            Text = "程式只整理你已經畫好的 Pin 連線，不會自動接線、改 Pin 或合併其他分支。若同一接頭連到兩個 M12，請在下方一次選一個分支設定。",
+            Text = "此處設定獨立的點對點線材。若共用外皮後分成多支、屬於同一實體線材，請取消並使用拓樸工具列的「建立多端 Cable / Y Cable」，不要分支逐條建立。",
             TextWrapping = TextWrapping.Wrap,
             Foreground = System.Windows.Media.Brushes.DimGray,
             Margin = new Thickness(0, 0, 0, 12)

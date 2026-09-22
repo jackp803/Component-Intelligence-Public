@@ -188,6 +188,7 @@ public sealed class CableAssembly
     public List<CableAssemblyMember> Members { get; init; } = new();
     public string? EndAConnectorId { get; set; }
     public string? EndBConnectorId { get; set; }
+    public MultiEndCableTopology? PhysicalTopology { get; set; }
 }
 
 public sealed class CableAssemblyMember

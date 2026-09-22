@@ -50,6 +50,7 @@ public static class DrawingPlanJson
         var placementPages = plan.Placements.ToDictionary(x => x.RepresentationId, x => x.PageId, StringComparer.Ordinal);
         foreach (var template in plan.CableDetailTemplates)
         {
+            if (template.BranchInterfaceLayoutFamilies is { } branches && (branches.Count < 2 || branches.Any(x => x is not ("M12" or "RJ45" or "LooseLead" or "Special" or "Other")))) throw new InvalidDataException("Multi-end template branch interface families are invalid.");
             if (string.IsNullOrWhiteSpace(template.EndAInterfaceLayoutFamily) || string.IsNullOrWhiteSpace(template.EndBInterfaceLayoutFamily)) throw new InvalidDataException("Cable template interface families are required.");
             if (!new[] { "M12", "RJ45", "LooseLead", "Special", "Other" }.Contains(template.EndAInterfaceLayoutFamily, StringComparer.Ordinal) || !new[] { "M12", "RJ45", "LooseLead", "Special", "Other" }.Contains(template.EndBInterfaceLayoutFamily, StringComparer.Ordinal)) throw new InvalidDataException("Cable template interface family is invalid.");
         }

@@ -1,0 +1,72 @@
+{
+  "taskId": "CODEX-W1-20260921-012",
+  "disposition": "PARTIAL",
+  "executionStatus": "APPLIED",
+  "runId": "CP3C-B7D3E8134FD947558367F9110752AF9C",
+  "drawingIrHash": "2A5C7AF20C3D04BE3E6689718ED3559623F9A9C255FA631ABF43B7CE1FEC0C48",
+  "executorPlanHash": "266AD0667131252B4D821D99B413BA43B714E5C1262EC08FE85F00EA9C2B7BC9",
+  "executionEvidenceHash": "23A66ABBFF5D82FB4293BCAE5D57DA860E5D2EEC60699CCD6A43427502028247",
+  "appliedCommands": 13,
+  "pageDrawings": 2,
+  "multiEndDetailCount": 1,
+  "exactElectricalMappings": 6,
+  "physicalLayer": "CP3C_CABLE_PHYSICAL",
+  "physicalLineSegmentsReadBack": [
+    [
+      280.0,
+      228.0,
+      320.0,
+      228.0
+    ],
+    [
+      240.0,
+      240.0,
+      280.0,
+      228.0
+    ],
+    [
+      280.0,
+      252.0,
+      320.0,
+      252.0
+    ],
+    [
+      240.0,
+      240.0,
+      280.0,
+      252.0
+    ],
+    [
+      80.0,
+      240.0,
+      240.0,
+      240.0
+    ]
+  ],
+  "electricalJunctionCommands": 0,
+  "protectedFiles": 172,
+  "protectedDifferences": 0,
+  "readbackImmutability": "FAIL: disposable output DWG hash changed across reopen/QUIT N; cause unresolved",
+  "componentFocusedPassed": 24,
+  "componentFullPassed": 853,
+  "desktopReleaseErrors": 0,
+  "autoFocusedPassed": 28,
+  "autoFullPassed": 485,
+  "autoFullErrors": 1,
+  "autoHistoricalError": "CM_LRDU_SOURCE_MISSING / private fixture unavailable",
+  "notSemanticVerification": true,
+  "privateEvidenceHashes": {
+    "final-before-authoring.private.json": "BB47EBF46524D1558A5B7B52C28360757AEB3FA0B720E75547C2F578DDF657CA",
+    "final-after-save.private.json": "5082D25ADF11BA77E36E151B887F6A492CA8A1CB88E30D56A1CCCB2B66094CFD",
+    "final-after-cancel.private.json": "5082D25ADF11BA77E36E151B887F6A492CA8A1CB88E30D56A1CCCB2B66094CFD",
+    "real-planning-input.json": "D038171CC85DE65F1BDC7311624036A26AD59010A8F4B5BCAE3223323DA406E9",
+    "client-drawing-plan.json": "7A6CC284BF6AC68E2FE7CCF8EE0D401FD04DCAA99C4967A6CD8C79ADFFA5A13E",
+    "client-drawing-ir.json": "D40B3EAD5428A28C1065F563CB26F4F83EEB8B71CFF93249EAC4AD60DF16C9FE",
+    "real-execution-result.json": "7E57D69F5F13B6DE42A0A364343A853766DB674AF021A344D8EE6AF780739FF8",
+    "physical-readback.txt": "8B51777F2A0AF7E695DD7AF0984AD4AD58C96D003643A079339EB4948D0990B7",
+    "physical-readback.stdout.log": "E0601522848051519A38F9C928021A8F7C0FB932238F738E670A5DA66901AC1A",
+    "final-auto-full.log": "BC5E88BAA78CF7CD1E1EEF523FD2E79E0DD52C4C311027747F6E169E60DCA995",
+    "final-component-full.log": "8D865A2F84FE81F43D87652BE3B51652C234BAA1A758777B53266BF1D1870AA6",
+    "final-desktop-build.log": "5696D144F2CBDD65B6102A99AC070B1C6AF29D1C9E9B40DCD3645C6C5BA68403"
+  }
+}

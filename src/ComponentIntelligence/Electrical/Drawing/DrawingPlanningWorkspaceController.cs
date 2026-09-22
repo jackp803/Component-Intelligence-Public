@@ -10,6 +10,8 @@ public sealed class DrawingPlanningWorkspaceController(DrawingPlanEditService ed
     public IReadOnlyList<string> SelectedRepresentationIds { get; private set; } = [];
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
+    public IReadOnlyList<DrawingRoute> VisibleRoutes => CurrentPlan?.Routes
+        .Where(route => string.Equals(route.PageId, SelectedPageId, StringComparison.Ordinal)).ToArray() ?? [];
 
     public void Load(DrawingPlanDocument? plan) { CurrentPlan = plan; _undo.Clear(); _redo.Clear(); SelectedPageId = plan?.Pages.OrderBy(x => x.Order).FirstOrDefault()?.PageId; SelectedRepresentationIds = []; }
     public void SelectPage(string pageId) { RequirePlan(); if (!CurrentPlan!.Pages.Any(x => x.PageId == pageId)) throw new InvalidOperationException("Page not found."); SelectedPageId = pageId; SelectedRepresentationIds = []; }

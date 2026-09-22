@@ -27,6 +27,7 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
 
     public DrawingPlanningWorkspaceControl() { InitializeComponent(); }
 
+
     public void LoadPlan(DrawingPlanDocument? plan) { _controller.Load(plan); Refresh(); }
     public DrawingPlanDocument? CurrentPlan => _controller.CurrentPlan;
 
@@ -75,7 +76,7 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
     }
 
     private void PageList_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (PageList.SelectedItem is DrawingPlanPage page) { _controller.SelectPage(page.PageId); RefreshCanvas(); } }
-    private void SelectionList_SelectionChanged(object sender, SelectionChangedEventArgs e) { _controller.SelectRepresentations(SelectionList.SelectedItems.Cast<string>()); }
+    private void SelectionList_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (CurrentPlan is not null) _controller.SelectRepresentations(SelectionList.SelectedItems.Cast<PreviewSelection>().Select(x => x.Id)); }
     private void ApplyPlacementState_Click(object sender, RoutedEventArgs e) { var state = StateCombo.SelectedIndex switch { 1 => DrawingPlanControlState.Manual, 2 => DrawingPlanControlState.Locked, _ => DrawingPlanControlState.Auto }; foreach (var id in _controller.SelectedRepresentationIds.ToArray()) TryEdit(() => _controller.SetPlacementState(id, state)); }
     private void Rotate_Click(object sender, RoutedEventArgs e) { foreach (var id in _controller.SelectedRepresentationIds.ToArray()) { var p = _controller.CurrentPlan?.Placements.SingleOrDefault(x => x.RepresentationId == id); if (p is null) continue; var legal = p.AllowedRotations.OrderBy(x => x).ToArray(); var next = legal.FirstOrDefault(x => x > p.RotationDegrees); if (!legal.Contains(next)) next = legal[0]; TryEdit(() => _controller.RotatePlacement(id, next)); } }
 
@@ -93,19 +94,44 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
 
     private void TryEdit(Action action) { try { action(); PersistPlan(); Refresh(); } catch (Exception ex) { StatusText.Text = ex.Message; } }
     private void PersistPlan() { if (_controller.CurrentPlan is null || ProjectProvider is null || ProjectReplaced is null) return; var project = ProjectProvider(); project.DrawingPlan = _controller.CurrentPlan; ProjectReplaced(project); }
-    private void Refresh() { var plan = _controller.CurrentPlan; PageList.ItemsSource = plan?.Pages.OrderBy(x => x.Order).ToArray() ?? []; SelectionList.ItemsSource = plan?.Placements.Select(x => x.RepresentationId).OrderBy(x => x, StringComparer.Ordinal).ToArray() ?? []; RefreshCanvas(); }
+    private sealed record PreviewSelection(string Id, string Label)
+    {
+        public override string ToString() => Label.Replace('\n', ' ');
+    }
+
+    private IReadOnlyDictionary<string, string> PreviewLabels() => ProjectProvider is null
+        ? new Dictionary<string, string>() : DrawingPreviewLabels.Build(ProjectProvider());
+
+    private void Refresh()
+    {
+        var plan = _controller.CurrentPlan;
+        var selected = _controller.SelectedPageId;
+        PageList.ItemsSource = plan?.Pages.OrderBy(x => x.Order).ToArray() ?? [];
+        PageList.SelectedItem = plan?.Pages.FirstOrDefault(x => x.PageId == selected);
+        var labels = PreviewLabels();
+        SelectionList.ItemsSource = plan?.Placements.Select(x => new PreviewSelection(x.RepresentationId,
+            labels.GetValueOrDefault(x.RepresentationId, "名稱待確認"))).ToArray() ?? [];
+        RefreshCanvas();
+    }
 
     private void RefreshCanvas()
     {
         DrawingCanvas.Children.Clear(); var plan = _controller.CurrentPlan; if (plan is null) return; var pageId = _controller.SelectedPageId ?? plan.Pages.OrderBy(x => x.Order).FirstOrDefault()?.PageId; if (pageId is null) return;
-        foreach (var route in plan.Routes)
+        var labels = PreviewLabels();
+        var project = ProjectProvider?.Invoke();
+        var page = plan.Pages.Single(x => x.PageId == pageId);
+        DrawingCanvas.Width = page.Bounds.Width;
+        DrawingCanvas.Height = page.Bounds.Height;
+        foreach (var route in _controller.VisibleRoutes)
         {
-            var placements = plan.Placements.Where(p => p.PageId == pageId).Select(p => p.RepresentationId).ToHashSet(StringComparer.Ordinal); if (placements.Count == 0) continue;
             var polyline = new Polyline { Stroke = Brushes.SteelBlue, StrokeThickness = 1.5, IsHitTestVisible = false }; foreach (var point in route.Points) polyline.Points.Add(new Point(point.X, point.Y)); DrawingCanvas.Children.Add(polyline);
         }
         foreach (var placement in plan.Placements.Where(x => x.PageId == pageId))
         {
-            var border = new Border { Width = placement.Width, Height = placement.Height, BorderBrush = placement.State == DrawingPlanControlState.Locked ? Brushes.DarkRed : Brushes.DimGray, BorderThickness = new Thickness(1.5), Background = Brushes.WhiteSmoke, Tag = placement.RepresentationId, Child = new TextBlock { Text = placement.RepresentationId, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4) } };
+            var label = labels.GetValueOrDefault(placement.RepresentationId, "名稱待確認");
+            var border = new Border { Width = placement.Width, Height = placement.Height, BorderBrush = placement.State == DrawingPlanControlState.Locked ? Brushes.DarkRed : Brushes.DimGray, BorderThickness = new Thickness(1.5), Background = Brushes.WhiteSmoke, Tag = placement.RepresentationId, ToolTip = label,
+                Child = CablePreview(placement, project, label) ?? new Viewbox { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Margin = new Thickness(5),
+                    Child = new TextBlock { Width = Math.Max(30, placement.Width - 12), Text = label, TextWrapping = TextWrapping.Wrap, FontSize = 13 } } };
             Canvas.SetLeft(border, placement.X); Canvas.SetTop(border, placement.Y); border.RenderTransform = new RotateTransform(placement.RotationDegrees, placement.Width / 2.0, placement.Height / 2.0); border.MouseLeftButtonDown += Placement_MouseLeftButtonDown; border.MouseMove += Placement_MouseMove; border.MouseLeftButtonUp += Placement_MouseLeftButtonUp; DrawingCanvas.Children.Add(border);
         }
     }

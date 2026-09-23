@@ -20,7 +20,8 @@ public partial class ElectricalWorkspaceWindow
         _drawingPlanningWorkspace = new DrawingPlanningWorkspaceControl();
         ConfigureDrawingPlanningWorkspace(_drawingPlanningWorkspace);
         DrawingPlanningTab.Content = _drawingPlanningWorkspace;
-        WorkspaceTabs.SelectionChanged += (_, _) => {
+        WorkspaceTabs.SelectionChanged += (_, e) => {
+            if (!ReferenceEquals(e.Source, WorkspaceTabs)) return;
             if (ReferenceEquals(WorkspaceTabs.SelectedItem, LayoutTab)) _cabinetLayoutWorkspace.RefreshWorkspace();
             else if (ReferenceEquals(WorkspaceTabs.SelectedItem, DrawingPlanningTab)) _drawingPlanningWorkspace.LoadPlan(_project.DrawingPlan);
         };

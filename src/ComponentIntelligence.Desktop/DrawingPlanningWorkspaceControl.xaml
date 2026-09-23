@@ -39,7 +39,12 @@
         <ListBox x:Name="SelectionList" Grid.Row="1" Height="120" SelectionMode="Extended" SelectionChanged="SelectionList_SelectionChanged"/>
         <StackPanel Grid.Row="2"><TextBlock Text="Grid snap" Margin="0,8,0,2"/><TextBox x:Name="GridSnapText" Text="10"/></StackPanel>
         <StackPanel Grid.Row="3"><TextBlock Text="Route / Placement state" Margin="0,8,0,2"/><ComboBox x:Name="StateCombo" SelectedIndex="0"><ComboBoxItem Content="Auto"/><ComboBoxItem Content="Manual"/><ComboBoxItem Content="Locked"/></ComboBox></StackPanel>
-        <WrapPanel Grid.Row="4" Margin="0,6,0,0"><Button Content="Apply State" Margin="0,0,6,0" Click="ApplyPlacementState_Click"/><Button Content="Rotate legal" Click="Rotate_Click"/></WrapPanel>
+        <WrapPanel Grid.Row="4" Margin="0,6,0,0">
+          <Button Content="Apply State" Margin="0,0,6,6" Click="ApplyPlacementState_Click"/>
+          <Button Content="Rotate legal" Margin="0,0,6,6" Click="Rotate_Click"/>
+          <Button Content="選取同群組" Margin="0,0,6,6" Click="SelectGroup_Click"/>
+          <Button Content="將選取物件移至其他頁" Margin="0,0,6,6" Click="TransferPage_Click"/>
+        </WrapPanel>
         <TextBlock Grid.Row="5" Text="Issues / Preflight" FontWeight="SemiBold" Margin="0,10,0,4"/>
         <ListBox x:Name="IssueList" Grid.Row="6" MouseDoubleClick="IssueList_MouseDoubleClick"/>
       </Grid>

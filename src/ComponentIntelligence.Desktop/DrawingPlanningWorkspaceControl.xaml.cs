@@ -103,9 +103,20 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
         if (_refreshingSelection || CurrentPlan is null) return;
         _selectedRouteId = null;
         _controller.SelectRepresentations(SelectionList.SelectedItems.Cast<PreviewSelection>().Select(x => x.Id));
+        RefreshSelectedState();
         RefreshCanvas();
     }
-    private void ApplyPlacementState_Click(object sender, RoutedEventArgs e) { var state = StateCombo.SelectedIndex switch { 1 => DrawingPlanControlState.Manual, 2 => DrawingPlanControlState.Locked, _ => DrawingPlanControlState.Auto }; if (_selectedRouteId is { } route) { SetRouteState(route, state); return; } foreach (var id in _controller.SelectedRepresentationIds.ToArray()) TryEdit(() => _controller.SetPlacementState(id, state)); }
+    private void ApplyPlacementState_Click(object sender, RoutedEventArgs e)
+    {
+        if (StateCombo.SelectedIndex < 0)
+        {
+            StatusText.Text = "請先選擇要套用的狀態。";
+            return;
+        }
+        var state = StateCombo.SelectedIndex switch { 1 => DrawingPlanControlState.Manual, 2 => DrawingPlanControlState.Locked, _ => DrawingPlanControlState.Auto };
+        if (_selectedRouteId is { } route) { SetRouteState(route, state); return; }
+        TryEdit(() => _controller.SetSelectedPlacementState(state));
+    }
     private void Rotate_Click(object sender, RoutedEventArgs e) { foreach (var id in _controller.SelectedRepresentationIds.ToArray()) { var p = _controller.CurrentPlan?.Placements.SingleOrDefault(x => x.RepresentationId == id); if (p is null) continue; var legal = p.AllowedRotations.OrderBy(x => x).ToArray(); var next = legal.FirstOrDefault(x => x > p.RotationDegrees); if (!legal.Contains(next)) next = legal[0]; TryEdit(() => _controller.RotatePlacement(id, next)); } }
 
     public void MoveRouteSegment(string routeId, int segmentIndex, long delta) => TryEdit(() => _controller.MoveRouteSegment(routeId, segmentIndex, delta));
@@ -166,7 +177,10 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
             foreach (var item in items.Where(i => selected.Contains(i.Id))) SelectionList.SelectedItems.Add(item);
         }
         finally { _refreshingSelection = false; }
+        RefreshSelectedState();
     }
+
+    private void RefreshSelectedState() => StateCombo.SelectedIndex = _controller.SelectionState(_selectedRouteId) is { } state ? (int)state : -1;
 
     private void RefreshCanvas()
     {

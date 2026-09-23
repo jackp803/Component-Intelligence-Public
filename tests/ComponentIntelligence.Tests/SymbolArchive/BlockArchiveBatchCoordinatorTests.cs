@@ -11,6 +11,42 @@ public sealed class BlockArchiveBatchCoordinatorTests : IDisposable
     public BlockArchiveBatchCoordinatorTests() => Directory.CreateDirectory(_root);
 
     [Fact]
+    public async Task ReviewDraftRoundTripDoesNotApproveOrModifySourceAndRechecksHash()
+    {
+        var sourceRoot = SourceRoot(("MODEL.dwg", "one"));
+        var coordinator = Coordinator([Component("C1", "MFR", "MODEL")]);
+        var row = Assert.Single(await coordinator.ScanAsync(sourceRoot));
+        Configure(row);
+        row.PortBindings = [new SymbolPortBinding { EngineeringEndpointId = "PIN-1", ConnectionPointId = "TERM01" }];
+        await coordinator.SaveReviewDraftAsync([row]);
+        var loaded = Assert.Single(await Coordinator([Component("C1", "MFR", "MODEL")]).LoadReviewDraftAsync());
+        Assert.Equal("C1", loaded.SelectedComponentId);
+        Assert.Equal(row.PortBindings, loaded.PortBindings);
+        Assert.False(loaded.UserConfirmed);
+        Assert.Null(loaded.ApprovedRevision);
+        Assert.False(File.Exists(Path.Combine(_root, SymbolArchiveRepository.FileName)));
+        Assert.Equal("one", File.ReadAllText(row.Candidate.SourcePath));
+        File.WriteAllText(row.Candidate.SourcePath, "different");
+        var stale = Assert.Single(await coordinator.LoadReviewDraftAsync());
+        Assert.True(stale.Candidate.SourceIntegrityFailed);
+        Assert.Equal("BlockedIntegrity", stale.ReviewStatus);
+    }
+
+    [Fact]
+    public async Task IncompleteReviewDraftRemainsUnselectedAndDoesNotCreateRevision()
+    {
+        var sourceRoot = SourceRoot(("MODEL.dwg", "one"));
+        var coordinator = Coordinator([Component("C1", "MFR", "MODEL")]);
+        await coordinator.SaveReviewDraftAsync(await coordinator.ScanAsync(sourceRoot));
+        var loaded = Assert.Single(await coordinator.LoadReviewDraftAsync());
+        Assert.Null(loaded.SelectedComponentId);
+        Assert.Null(loaded.SelectedRole);
+        Assert.Null(loaded.SelectedSourceType);
+        Assert.False(loaded.UserConfirmed);
+        Assert.False(Directory.Exists(Path.Combine(_root, "Documents")));
+    }
+
+    [Fact]
     public async Task ScanAndMatchingNeverPopulateUserAuthority()
     {
         var sourceRoot = SourceRoot(("MODEL.dwg", "one"));

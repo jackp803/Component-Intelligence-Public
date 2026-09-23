@@ -34,6 +34,7 @@ public partial class DrawingPlanningWorkspaceControl
             hit.MouseLeftButtonDown += (_, e) =>
             {
                 _selectedRouteId = route.RouteId; _controller.SelectRepresentations([]);
+                RefreshSelection();
                 if (route.State == DrawingPlanControlState.Locked) { StatusText.Text="走線已鎖定，請先解除鎖定。"; RefreshCanvas(); e.Handled=true; return; }
                 _draggingSegment = (route.RouteId, index, a.X == b.X);
                 BeginCanvasGesture(e.GetPosition(DrawingCanvas)); RefreshCanvas(); e.Handled=true;
@@ -68,7 +69,7 @@ public partial class DrawingPlanningWorkspaceControl
         if (!_gestureActive) return;
         try { _controller.CommitGesture(); PersistPlan(); }
         catch (Exception ex) { _controller.CancelGesture(); StatusText.Text=ex.Message; }
-        EndCanvasGesture(); RefreshCanvas(); e.Handled=true;
+        EndCanvasGesture(); RefreshSelectedState(); RefreshCanvas(); e.Handled=true;
     }
 
     private void EndCanvasGesture()

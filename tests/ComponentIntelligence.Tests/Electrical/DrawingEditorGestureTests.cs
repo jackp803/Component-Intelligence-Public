@@ -4,6 +4,40 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class DrawingEditorGestureTests
 {
+    [Fact]
+    public void SelectedPlacementState_IsOneAtomicUndoForTheWholeSelection()
+    {
+        var seed = WithPlacement();
+        var plan = DrawingPlanJson.Rehash(seed with
+        {
+            Groups = [seed.Groups[0] with { RepresentationIds = ["REP", "REP2"] }],
+            Placements = [seed.Placements[0], seed.Placements[0] with { RepresentationId = "REP2", X = 400 }]
+        });
+        var controller = new DrawingPlanningWorkspaceController(new DrawingPlanEditService());
+        controller.Load(plan);
+        controller.SelectRepresentations(["REP", "REP2"]);
+        controller.SetSelectedPlacementState(DrawingPlanControlState.Locked);
+        Assert.All(controller.CurrentPlan!.Placements, p => Assert.Equal(DrawingPlanControlState.Locked, p.State));
+        Assert.True(controller.Undo());
+        Assert.Equal(plan.DrawingPlanHash, controller.CurrentPlan!.DrawingPlanHash);
+        Assert.False(controller.CanUndo);
+        Assert.True(controller.Redo());
+        Assert.All(controller.CurrentPlan!.Placements, p => Assert.Equal(DrawingPlanControlState.Locked, p.State));
+    }
+
+    [Fact]
+    public void SelectedStateReflectsUndoAndRouteSelection()
+    {
+        var controller = new DrawingPlanningWorkspaceController(new DrawingPlanEditService());
+        controller.Load(WithPlacement()); controller.SelectRepresentations(["REP"]);
+        Assert.Equal(DrawingPlanControlState.Auto, controller.SelectionState());
+        controller.SetPlacementState("REP", DrawingPlanControlState.Locked);
+        Assert.Equal(DrawingPlanControlState.Locked, controller.SelectionState());
+        controller.Undo();
+        Assert.Equal(DrawingPlanControlState.Auto, controller.SelectionState());
+        controller.SetRouteState("R", DrawingPlanControlState.Manual);
+        Assert.Equal(DrawingPlanControlState.Manual, controller.SelectionState("R"));
+    }
     internal static DrawingPlanDocument Plan() => DrawingPlanJson.Rehash(new DrawingPlanDocument
     {
         ProjectId = "P", SourcePlanningInputHash = new string('1', 64), SourcePagePlanHash = new string('2', 64),

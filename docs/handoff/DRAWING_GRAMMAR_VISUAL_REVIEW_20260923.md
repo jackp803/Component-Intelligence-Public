@@ -139,3 +139,43 @@ Input-voltage data-quality recommendation only: official RSD-100 specification d
 - No normal UI power acceptance or AutoCAD execution performed in this data-trace checkpoint. Prior UI evidence is retained, not rerun or relabeled as proof of this correction.
 
 Continuation: keep the existing unrelated UI/grammar plan active. Obtain only the concrete source/output/return decisions in the private table before the real paired-power acceptance; preserve domain separation even though both returns are zero volts. Complete the remaining UI/page/anchor/crossing gates listed above. Do not declare READY_FOR_VISUAL_REVIEW from these adapter tests.
+
+## Operational Delivery Continuation (In Progress)
+
+Same Task-013, same branches and PRs. Start Component `9825ca65f50631056aed06be36322bafeb9bc240`, paired Auto `6bb082bfeb4298abe91484f8ebba6b802c4ae06d`. No reset or replacement of prior evidence. Current disposition remains PARTIAL, not a delivered candidate.
+
+- First-selection root cause identified: child selection events bubbled into the workspace tab handler and reloaded the entire Drawing Plan, clearing selection/history. The handler now accepts only events from the tab control itself. Focused regression observed RED then GREEN.
+- Fresh normal mouse evidence in private `task013-editor-delivery-20260923`: first list selection -> Locked -> Apply locks the intended object; locked drag rejects with Chinese feedback; Undo removes and Redo restores the lock. Screenshots `ui-01` through `ui-04`. This is fresh evidence, separate from the earlier second-attempt workaround.
+- A separate stale-state dropdown after Undo was observed. Selection-state synchronization is implemented and focused tests pass; fresh candidate rebuild/UI retest remains pending. No-selection/mixed-state must not silently select Auto.
+- Disposable project and archive were prepared. Archive registry and referenced approved assets were copied byte-for-byte with hash checks, not newly approved. Launcher explicitly selects the disposable DB and workbook. No archive authoring UI acceptance yet.
+- Current fresh focused gesture/event tests: 10 PASS. Full final suite/build, protected-state verification, draft archive round-trip, all-page review and remaining interaction gates are NOT_RUN for this continuation.
+
+### Remaining Delivery Gates (Dependency Order)
+
+1. Complete selection/state UI retest, route lock/unlock, Escape and atomic multi-selection state edits.
+2. Atomic representation/group page transfer, shared planner preservation of explicit page edits, same/cross-page reconstruction and readable peer references/navigation. Keep page viewing and order changes distinct.
+3. Mouse bend editing, lane/crossing/junction recalculation and locked/manual conflict handling using shared Plan/IR authority.
+4. Page-family readability and full representative project page inventory; no hidden difficult pages. Synthetic power grammar and blocked real power pair must be labeled separately.
+5. Normal isolated archive candidate inspection/binding/draft-save/reopen/Cancel; approved asset exact revision/hash consumption. Publish A/B/C archive inventory without approving assets.
+6. Complete normal editor Save/Close/Reload/regenerate workflow, fresh final test/build/diff/protection checks, paired launcher/settings and evidence publication to original PRs.
+
+Real power-pair acceptance remains dependent on the concrete project source/return decisions, not on the now-correct component pin voltages. Product Owner visual acceptance remains PENDING.
+
+### Implemented After The Initial Delivery Checkpoint
+
+- Selection state now follows Undo/Redo and selected routes; mixed/unselected state cannot silently apply Auto. Multi-selection state changes use one atomic Undo entry. Focused editor/event tests: 11 PASS.
+- Added a distinct normal WPF move-to-page dialog and same-group selection. The proposal is not written to the project until the paired Python planner rebuilds successfully. Missing rebuilt connections, changed representation/source identity and concurrent edits reject the whole operation. Manual/Locked attached routes require explicit resolution, never silent unlocking. Controller tests: 4 PASS, including failed-rebuild isolation and selection following Undo/Redo.
+- Paired Python honors explicit Manual/Locked page/group ownership when the engineering input hash is unchanged. Changed engineering grouping still fails closed against preserved edits. Synthetic same-page -> cross-page -> same-page regression passes without changing connection or endpoint identities. This is NOT real-project normal mouse acceptance.
+- Existing Block Archive now exposes separate Save Draft (Unapproved) / Open Draft actions. Its review sidecar does not create SymbolArchive revisions or write source CAD/workbook assets. Source SHA is checked at save/reload; changed/unavailable source remains blocked; confirmation/approval is never restored from the draft. Two new draft regressions plus existing batch tests: 9 PASS.
+- Fresh UI opened the rebuilt archive through the normal main-window entry and visibly showed the isolated workbook/archive and draft controls. The folder-dialog interaction did not complete: helper returned `element 169 is not available in cached app state`, and coordinate focus verification continued reporting the search box instead of the folder field. A separate earlier `coordinate input geometry is unavailable` recovered with a fresh screenshot. Do not count draft Save/Close/Reopen or candidate binding inspection as PASS. Shared-desktop operation question was sent; no answer had arrived at this checkpoint.
+- Existing candidate still running is the earlier build with draft buttons, NOT the later page-transfer build. The later Release output is local-only `task013-editor-delivery-20260923/candidate-next`; it has been built but NOT launched or accepted. Do not point the user at it as a tested final deliverable.
+
+### Fresh Technical Gates
+
+- Component full Release: 914 PASS, 0 failed/skipped. Desktop Release: PASS, 0 errors, 16 existing warnings.
+- Paired Auto focused Drawing Plan + golden layout: 27 PASS. Full regression initially exposed the preserved-engineering-group compatibility defect; code corrected without weakening its existing assertion.
+- The remaining historical Python failure was traced to missing private POC WDP/AEPX/three DWGs in the isolated runtime, not a pip dependency. Located the existing POC root, copied seven source files (including WDT/WDL) into the already gitignored local dependency path, refused overwrites, checked source before/after and copied SHA equality. No AutoCAD execution. Private dependency files are NOT committed.
+- Final fresh Python full regression: 508 PASS, 0 failed/errors. Earlier 507-pass/1-error result is superseded only after restoring the actual dependency and rerunning, not by skipping the test.
+- Component and Auto diff checks PASS. Current production SQLite, central workbook and K7L rev-001 SHA values match the preceding trace checkpoint. All 171 other protected manifest assets match size/SHA.
+
+Overall remains PARTIAL. Remaining implementation includes complete human-readable shared cross-reference rendering/navigation, mouse bend controls, crossing/lane/junction rules, all-family visual refinement and archive appearance/inventory/binding workflow. Real normal UI page-transfer/reload/regenerate and draft lifecycle remain unproven. The earlier dependency-ordered delivery list still governs continuation; no READY_FOR_VISUAL_REVIEW or visual-acceptance claim.

@@ -179,3 +179,40 @@ Real power-pair acceptance remains dependent on the concrete project source/retu
 - Component and Auto diff checks PASS. Current production SQLite, central workbook and K7L rev-001 SHA values match the preceding trace checkpoint. All 171 other protected manifest assets match size/SHA.
 
 Overall remains PARTIAL. Remaining implementation includes complete human-readable shared cross-reference rendering/navigation, mouse bend controls, crossing/lane/junction rules, all-family visual refinement and archive appearance/inventory/binding workflow. Real normal UI page-transfer/reload/regenerate and draft lifecycle remain unproven. The earlier dependency-ordered delivery list still governs continuation; no READY_FOR_VISUAL_REVIEW or visual-acceptance claim.
+
+## Bounded Draft And Bend UI Verification (2026-09-23)
+
+This entry supersedes only the earlier folder-picker and bend-control status, not the remaining grammar or power gates. Same Task-013, Component branch and Draft PR33; Auto PR36/source unchanged. Disposition: PARTIAL pending the active-drag Escape UI check and the previously recorded broader delivery gates.
+
+### Exact Candidate And Preservation
+
+- Before verification, HEAD was `7d4e9690f250a73ee5f92504d1755451adfac4ed`, tree `58ce0f9a1823d011811b0d49fed1f95d43e4dccb`. Three modified source files and the untracked `DrawingBendEditingTests.cs` were preserved in a local recoverable checkpoint. They were NOT in that remote head.
+- The actual tested Release candidate is local alias `task013-editor-delivery-20260923/candidate-bend`, not `candidate-next`. Desktop DLL SHA256: `CEE4DE2F6939EFDC58665E9C77B0EE46D9E6E724AE9FE64C5F71F72B90AC71EE`. It contains the preserved bend changes published with this entry. The private launcher now explicitly selects this candidate and both disposable DB/workbook overrides.
+- Paired Auto remains `5b9d68da5da7ee1cb9b5c3c6ca0632a4c7388c12`, tree `9f8787cf17c7d38f230602cfcf32442e6ac4f431`; clean, no AutoCAD execution or Auto source changes in this bounded verification.
+- A prior reopened process displayed the formal archive root; it was normally closed without Save/Approve. The subsequently launched process visibly showed the disposable DB and archive root before authoring. Formal assets remained unchanged. This incident is not hidden as a successful isolated run.
+
+### Archive Draft Chain
+
+- HUMAN_ASSISTED folder selection resolved the native dialog obstacle. Subsequent actions used the normal WPF main-window Block Archive entry and controls, not service calls or database mutation.
+- Scanned the disposable copy of the existing approved K7L asset. UI displayed its source SHA and exact duplicate revision. Saved one **unapproved, incomplete** review draft with one existing catalog PinId/connection-point binding.
+- Normally closed archive and application, restarted the same candidate through the isolated launcher, opened Block Archive and used Open Draft. Source SHA, binding text and ReviewRequired status were retained; UI rechecked source integrity and reported zero rows requiring rescan.
+- Changed the binding text without saving, used Close, reopened the archive and loaded the draft again. The original binding returned. Draft SHA remained `99324DB7E0187BC8AA88A5AD207ACF75403D537F1226AB998FBFBFCEB7D4BF5A`; isolated approval registry SHA remained `3E8E9D80DA4B6EB1C94AA2A3B6C8C1558DEC0643CE1C36900126128941E58E29`.
+- The existing draft format has **no separate DraftId**: identity was checked using draft location and candidate source SHA. Component/Role/SourceType remained unset and explicitly ReviewRequired. This does not prove completed engineering mapping, appearance/deep inspection, or new approval. Close-without-Save is the existing discard action; there is no separate Cancel button here.
+- Local screenshots: `archive-draft-saved`, `archive-draft-reopened`, `archive-unsaved-edit`, `archive-cancel-reopened` in `human-folder-checkpoint-20260923-125807`. Private source files/screenshots are not published.
+
+### Bend Editing Chain
+
+- Normal WPF representative project: loaded the saved 32-page plan; selected an existing route between XB4BD25 and LC1D09BNE on the first page; right-clicked Add Bend; dragged the new circular handle into an orthogonal detour.
+- One normal Undo restored the pre-drag route including its inserted point; one Redo restored the detour. Applied Locked, attempted a mouse drag and observed Chinese lock rejection with unchanged geometry.
+- Used Save Plan and normal project Save, closed the Electrical workspace, reopened it from the main product entry, loaded the same project and opened Drawing Planning. Detour and Locked state survived. This is actual UI Save/Close/Reload, not only a serializer test.
+- Independent read-only SQLite comparison confirms all **180 full ElectricalConnection records unchanged**, including IDs, endpoints, NetIds and mappings. Exactly one DrawingRoute changed: intermediate vertices and control state only. Its page, route/connection IDs, endpoint IDs and first/last coordinates remain identical; all legs are orthogonal. This proves preservation of existing anchors, not approval of every formal symbol anchor in the project.
+- Screenshots: `bend-added`, `bend-dragged`, `bend-undo`, `bend-redo`, `bend-locked-rejected`, `bend-saved`, `bend-reloaded-locked`; machine readback `readback-result.json` and a read-only verification script are local in the same evidence checkpoint.
+- **Escape during an active mouse drag remains NOT_RUN by automation.** The available desktop tool exposes an indivisible drag, not a held-button gesture with an intervening key. A single precise human-assisted gesture was requested after unlocking the route to Manual. Do not substitute the controller Cancel unit test or Escape after mouse release for this UI result. No additional mouse/keyboard events are sent while awaiting that response.
+- Current physical drawing style, readable cross-references, page transfer, crossing/lane/junction reconstruction, full grammar quality and real project power binding are not accepted by this bounded test. Corner deletion still rejects a diagonal shortcut; no general corner-deletion UI PASS is claimed.
+
+### Fresh Gates And Exact Continuation
+
+- Full Component Release: **919 PASS, 0 failed, 0 skipped**; TRX stored locally. Desktop Release: **PASS, 0 errors, 16 existing warnings**. Diff check PASS. Auto suite was not rerun in this bounded unchanged-Auto pass; retain the prior 508 PASS as historical only.
+- Production SQLite SHA stays `540BFD1DD421AC0CCA6E4B66E9E2C9132464E75E363A55AC8E072E0E7C5C7C1B`; workbook and K7L SHA stay as recorded above. The other 171 protected manifest assets match size/SHA. No formal draft, new archive revision, AutoCAD output, merge or release.
+- Resume at the single pending active-drag Escape check. Observe the user's result and fresh screenshot; verify the restored path, then save/reload and compare if needed. Mark HUMAN_ASSISTED only if actually performed. Preserve the currently saved Locked detour and all evidence; do not repeat the folder selection or completed draft chain.
+- `EDITOR_WORKFLOW`: the explicitly listed add/drag/Undo/Redo/Locked/Save/Close/Reload steps PASS; active-drag Escape pending. `BLOCK_ARCHIVE_WORKFLOW`: incomplete unapproved draft save/reopen/discard PASS, HUMAN_ASSISTED folder selection. `DRAWING_GRAMMAR`: overall PARTIAL. `REAL_POWER_PAIR`: awaiting explicit project binding. `PRODUCT_OWNER_VISUAL_ACCEPTANCE`: PENDING.

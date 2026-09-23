@@ -47,7 +47,26 @@ public sealed partial class DrawingPlanEditService
     public DrawingPlanDocument MoveBendPoint(DrawingPlanDocument plan, string routeId, int pointIndex, long x, long y) => UpdateRoute(plan, routeId, route =>
     {
         EnsureEditable(route); if (pointIndex <= 0 || pointIndex >= route.Points.Count - 1) throw new InvalidOperationException("Only interior bend points can move.");
-        var points = route.Points.ToArray(); points[pointIndex] = new DrawingPoint(x, y); ValidateOrthogonal(points); return route with { Points = points, State = DrawingPlanControlState.Manual };
+        var original = route.Points[pointIndex];
+        var target = new DrawingPoint(x, y);
+        if (target == original) return route;
+        var previous = route.Points[pointIndex - 1];
+        var next = route.Points[pointIndex + 1];
+        var points = route.Points.Take(pointIndex).ToList();
+        // Only rebuild the two incident legs; external anchors and all other vertices stay fixed.
+        var collinear = previous.X == original.X && original.X == next.X ||
+                        previous.Y == original.Y && original.Y == next.Y;
+        var incomingHorizontal = previous.Y == original.Y;
+        var outgoingHorizontal = next.Y == original.Y;
+        var lead = collinear
+            ? (incomingHorizontal ? new DrawingPoint(previous.X, y) : new DrawingPoint(x, previous.Y))
+            : (incomingHorizontal ? new DrawingPoint(x, previous.Y) : new DrawingPoint(previous.X, y));
+        var tail = outgoingHorizontal ? new DrawingPoint(next.X, y) : new DrawingPoint(x, next.Y);
+        if (!collinear) tail = outgoingHorizontal ? new DrawingPoint(x, next.Y) : new DrawingPoint(next.X, y);
+        foreach (var point in new[] { lead, target, tail }.Concat(route.Points.Skip(pointIndex + 1)))
+            if (points[^1] != point) points.Add(point);
+        ValidateOrthogonal(points);
+        return route with { Points = points, State = DrawingPlanControlState.Manual };
     });
 
     public DrawingPlanDocument AddBendPoint(DrawingPlanDocument plan, string routeId, int segmentIndex, long x, long y) => UpdateRoute(plan, routeId, route =>

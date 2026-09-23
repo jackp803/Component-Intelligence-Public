@@ -26,6 +26,7 @@ public sealed class DrawingPlanningWorkspaceController(DrawingPlanEditService ed
     public void Load(DrawingPlanDocument? plan) { CancelGesture(); CurrentPlan = plan; _undo.Clear(); _redo.Clear(); SelectedPageId = plan?.Pages.OrderBy(x => x.Order).FirstOrDefault()?.PageId; SelectedRepresentationIds = []; }
     public void BeginGesture() { if (_gestureBase is not null) throw new InvalidOperationException("An edit gesture is already active."); _gestureBase = RequirePlan(); _gestureDraft = _gestureBase; }
     public void PreviewRouteSegment(string id, int segmentIndex, long delta) => _gestureDraft = _edits.MoveRouteSegment(RequireGesture(), id, segmentIndex, delta);
+    public void PreviewBendPoint(string id, int pointIndex, long x, long y) => _gestureDraft = _edits.MoveBendPoint(RequireGesture(), id, pointIndex, x, y);
     public void PreviewPlacement(string id, long x, long y) => _gestureDraft = _edits.MovePlacement(RequireGesture(), id, x, y);
     public void CommitGesture() { var before = RequireGesture(); var after = _gestureDraft!; if (!ReferenceEquals(before, CurrentPlan)) throw new InvalidOperationException("Plan changed during gesture."); CancelGesture(); Apply(_ => after); }
     public void CancelGesture() { _gestureBase = null; _gestureDraft = null; }

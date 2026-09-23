@@ -223,7 +223,6 @@ public sealed class ComponentProjectBridge
 
     private static PowerCapability? BuildPowerCapability(ContractPin pin, ComponentIntelligence.Contracts.ComponentPower sourcePower)
     {
-        var voltage = MapVoltage(sourcePower.OperatingVoltage);
         var role = DeterminePowerRole(pin.Direction);
         var function = $"{pin.PinName} {pin.Function} {pin.PinRole} {pin.SignalType} {pin.VoltageDomain} {pin.Description}".ToUpperInvariant();
         var isReturn = ContainsAny(function, "0V", "V-", "L-", "RETURN", "RTN");
@@ -231,6 +230,12 @@ public sealed class ComponentProjectBridge
                                (!isReturn && ContainsAny(function, "SUPPLY", "POWER"));
 
         if (isReturn && role == PowerRole.Unknown) role = PowerRole.Return;
+
+        // Endpoint voltage evidence is not the device input operating range, nor a domain identity.
+        // Do not inherit a port's positive supply voltage onto its return pin.
+        var voltage = !string.IsNullOrWhiteSpace(pin.VoltageDomain)
+            ? EndpointVoltageParser.Parse(pin.VoltageDomain)
+            : role == PowerRole.Input && !isReturn ? MapVoltage(sourcePower.OperatingVoltage) : null;
 
         double? requiredCurrent = null;
         double? maxCurrent = null;

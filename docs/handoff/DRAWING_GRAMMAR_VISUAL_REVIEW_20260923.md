@@ -102,3 +102,40 @@ Read-only saved-snapshot comparison: all 180 full connection records identical; 
 5. Finish IO/Communication/Field/Cable family rendering, per-instance mapping, paper/title-block constraints; inventory missing approved blocks without approval. Confirm HD ordering in regenerated real pages.
 6. Capture all real pages and paired power pages through normal candidate UI; page move/reorder, geometry edits, lock preservation, Undo/Redo, Save/Close/Reload. Do not count synthetic or offscreen renders as these interactions.
 7. Fresh final test/build/hash gates; explain or restore the external LRDU fixture without bypassing its test; publish final paired version/launcher evidence. Only then consider READY_FOR_VISUAL_REVIEW, never self-declare Product Owner acceptance.
+
+## RSD Endpoint Voltage Adapter Correction
+
+Same Task-013 branch and worktree, no reset. Disposition remains PARTIAL; this checkpoint is data tracing and correction, not normal UI or real power-pair acceptance.
+
+Correction to the earlier checkpoint interpretation: the erroneous converter voltage was NOT evidence that endpoint voltage was absent from the source. Workbook ingestion preserved it in ComponentIR. `ComponentProjectBridge.BuildPowerCapability` ignored `ComponentPin.VoltageDomain` and copied the device operating/input range into output and return pins. Separately, the earlier `EndpointPowerEvidence` planning projection omitted structured voltage entirely. Both adapter defects are corrected generically, without an RSD-only planner case.
+
+The actual local workbook matches the user-supplied SHA256 `7CD84A26F78F6FA6DF03A4C7193568C4700558C890BCF424958099B02B64CB16`. Its referenced mechanical/terminal-assignment image exists and was visually read. Source workbook and company images were not changed. Exact ComponentId plus typed SourcePortId/SourcePinId, or the already accepted full reconstructed endpoint-ID restoration, authorize power refresh; matching PinNumber alone cannot refresh Power.
+
+| Source pin suffix | Raw workbook / ComponentIR VoltageDomain | Existing saved project before correction | New / synced / reloaded project | DrawingPlanningInput after correction |
+| --- | --- | --- | --- | --- |
+| INPUT_1 | 28.8...67.2 VDC | 28.8-67.2 VDC | Same source range retained | Input, same range; domain null |
+| INPUT_2 | 0 V return | Incorrect 28.8-67.2 VDC | Nominal 0, type Unknown (no invented DC token) | Return, nominal 0; domain null |
+| INPUT_3 | NotApplicable; FG | No Power capability | Unchanged, not made into a supply | No EndpointPowerEvidence row; no voltage invented |
+| OUTPUT_1 | 0 VDC | Incorrect 28.8-67.2 VDC | Nominal 0 VDC | Return, nominal 0 VDC; domain null |
+| OUTPUT_2 | +24 VDC | Incorrect 28.8-67.2 VDC | Nominal 24 VDC | Source, nominal 24 VDC; domain null |
+
+Input-voltage data-quality recommendation only: official RSD-100 specification dated 2025-07-18 distinguishes 33.6-62.4 VDC continuous from 28.8-67.2 VDC for one second. The workbook omits that duration qualification. Do not rewrite the workbook or silently substitute corrected catalog authority in the planner. Official reference: https://www.meanwell.com/Upload/PDF/RSD-100/RSD-100-SPEC.PDF . A later web re-fetch timed out; it does not supersede the earlier successful source read or the actual local terminal image inspection.
+
+### Net / Conversion Diagnosis (Separate From Voltage)
+
+- `TopologyEndpointConnectionService.ConnectEndpoints` accepts optional NetId; when no prior explicit branching Net exists it preserves null, rather than creating a Net definition. Repository Save/Get serializes and restores these nulls. `DrawingPlanningInputBuilder` directly copies connection.NetId; it did not lose a populated NetId in this inspected snapshot.
+- The export machine-net resolver derives NET-TBD identities from connection endpoint adjacency without materializing project NetIds. It does not distinguish multi-pin Port vertices from individual Pin vertices, so this is not used as conductor-level PowerDomain or source authorization. No nets or internal terminal/converter edges were created during this audit.
+- The inspected project still has 180 null connection NetIds and the converter still has zero PowerConversions. Component electrical ratings and the two evidence contracts are not project-level source/output/return approval.
+- The real converter ReferenceDesignator is null. Its four power pins each connect to an existing terminal-block pin; FG is unconnected. A local-only five-row confirmation table includes exact runtime/source IDs, direct peers, known facts and the actual missing decisions. No request to fill 180 NetIds.
+
+### Fresh Verification And Evidence
+
+- Local-only evidence alias: `task013-rsd-trace-20260923/verified`. Includes workbook raw rows, ComponentIR, before/new/synced/reloaded component, exact endpoint context, peer components, planning input, page/drawing plan, invariants and `MINIMAL_POWER_CONFIRMATION.md`. Private data is not committed.
+- New disposable DB copied byte-for-byte from the current production source. All 180 full connection records remain identical through sync/Save/Reload; instance reload equality PASS. No project power-domain or conversion record synthesized.
+- Production DB before/after SHA256 `540BFD1DD421AC0CCA6E4B66E9E2C9132464E75E363A55AC8E072E0E7C5C7C1B`; workbook before/after hash identical to the authority above.
+- Focused RED evidence retained for explicit zero-return parsing and missing planning voltage; corrected tests are included in full Release result: 905 PASS, 0 failed, 0 skipped.
+- Desktop Release build PASS. Initial build succeeded with existing warnings but its shell command had an unquoted logger separator; corrected quoted command exits 0. This shell error is not hidden as a successful command.
+- Paired Auto `6bb082bfeb4298abe91484f8ebba6b802c4ae06d` successfully accepts the real corrected input and emits page/drawing plans. This proves adapter compatibility, NOT drawing quality, power-domain approval, READY or AutoCAD APPLIED. Auto source unchanged.
+- No normal UI power acceptance or AutoCAD execution performed in this data-trace checkpoint. Prior UI evidence is retained, not rerun or relabeled as proof of this correction.
+
+Continuation: keep the existing unrelated UI/grammar plan active. Obtain only the concrete source/output/return decisions in the private table before the real paired-power acceptance; preserve domain separation even though both returns are zero volts. Complete the remaining UI/page/anchor/crossing gates listed above. Do not declare READY_FOR_VISUAL_REVIEW from these adapter tests.

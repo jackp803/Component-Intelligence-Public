@@ -161,7 +161,8 @@ internal static class DrawingGroupingEvidence
         var powerEvidence = project.Components.SelectMany(c => c.Ports.SelectMany(p => p.Pins))
             .Where(p => p.Power is not null && p.Power.Role != PowerRole.Unknown)
             .OrderBy(p => p.PinId, StringComparer.Ordinal)
-            .Select(p => new { endpointId = p.PinId, role = p.Power!.Role.ToString(), powerDomainId = p.PowerDomainId }).ToArray();
+            .Select(p => new { endpointId = p.PinId, role = p.Power!.Role.ToString(), powerDomainId = p.PowerDomainId,
+                voltage = p.Power.Voltage }).ToArray();
         var rules = input.WiringRules.ToList();
         var contactOrder = heavy.SelectMany(h => project.Components.Single(c => c.ComponentInstanceId == h.HeavyDutyConnectorId)
                 .Ports.OrderBy(p => p.PortId, StringComparer.Ordinal).SelectMany(p => p.Pins

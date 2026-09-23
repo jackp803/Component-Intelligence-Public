@@ -5,7 +5,10 @@ public sealed class DrawingPlanningWorkspaceController(DrawingPlanEditService ed
     private readonly DrawingPlanEditService _edits = editService ?? throw new ArgumentNullException(nameof(editService));
     private readonly Stack<DrawingPlanDocument> _undo = new();
     private readonly Stack<DrawingPlanDocument> _redo = new();
+    private DrawingPlanDocument? _gestureBase;
+    private DrawingPlanDocument? _gestureDraft;
     public DrawingPlanDocument? CurrentPlan { get; private set; }
+    public DrawingPlanDocument? DisplayPlan => _gestureDraft ?? CurrentPlan;
     public string? SelectedPageId { get; private set; }
     public IReadOnlyList<string> SelectedRepresentationIds { get; private set; } = [];
     public bool CanUndo => _undo.Count > 0;
@@ -13,7 +16,13 @@ public sealed class DrawingPlanningWorkspaceController(DrawingPlanEditService ed
     public IReadOnlyList<DrawingRoute> VisibleRoutes => CurrentPlan?.Routes
         .Where(route => string.Equals(route.PageId, SelectedPageId, StringComparison.Ordinal)).ToArray() ?? [];
 
-    public void Load(DrawingPlanDocument? plan) { CurrentPlan = plan; _undo.Clear(); _redo.Clear(); SelectedPageId = plan?.Pages.OrderBy(x => x.Order).FirstOrDefault()?.PageId; SelectedRepresentationIds = []; }
+    public void Load(DrawingPlanDocument? plan) { CancelGesture(); CurrentPlan = plan; _undo.Clear(); _redo.Clear(); SelectedPageId = plan?.Pages.OrderBy(x => x.Order).FirstOrDefault()?.PageId; SelectedRepresentationIds = []; }
+    public void BeginGesture() { if (_gestureBase is not null) throw new InvalidOperationException("An edit gesture is already active."); _gestureBase = RequirePlan(); _gestureDraft = _gestureBase; }
+    public void PreviewRouteSegment(string id, int segmentIndex, long delta) => _gestureDraft = _edits.MoveRouteSegment(RequireGesture(), id, segmentIndex, delta);
+    public void PreviewPlacement(string id, long x, long y) => _gestureDraft = _edits.MovePlacement(RequireGesture(), id, x, y);
+    public void CommitGesture() { var before = RequireGesture(); var after = _gestureDraft!; if (!ReferenceEquals(before, CurrentPlan)) throw new InvalidOperationException("Plan changed during gesture."); CancelGesture(); Apply(_ => after); }
+    public void CancelGesture() { _gestureBase = null; _gestureDraft = null; }
+    private DrawingPlanDocument RequireGesture() => _gestureBase ?? throw new InvalidOperationException("No edit gesture is active.");
     public void SelectPage(string pageId) { RequirePlan(); if (!CurrentPlan!.Pages.Any(x => x.PageId == pageId)) throw new InvalidOperationException("Page not found."); SelectedPageId = pageId; SelectedRepresentationIds = []; }
     public void SelectRepresentations(IEnumerable<string> ids) { var values = ids.Distinct(StringComparer.Ordinal).ToArray(); RequirePlan(); if (values.Any(id => !CurrentPlan!.Placements.Any(x => x.RepresentationId == id))) throw new InvalidOperationException("Unknown representation selection."); SelectedRepresentationIds = values; }
 
@@ -38,5 +47,5 @@ public sealed class DrawingPlanningWorkspaceController(DrawingPlanEditService ed
     public bool Redo() { if (_redo.Count == 0 || CurrentPlan is null) return false; _undo.Push(CurrentPlan); CurrentPlan = _redo.Pop(); return true; }
 
     private DrawingPlanDocument RequirePlan() => CurrentPlan ?? throw new InvalidOperationException("Drawing Plan is not loaded.");
-    private void Apply(Func<DrawingPlanDocument, DrawingPlanDocument> operation) { var before = RequirePlan(); var after = operation(before); _undo.Push(before); _redo.Clear(); CurrentPlan = after; }
+    private void Apply(Func<DrawingPlanDocument, DrawingPlanDocument> operation) { var before = RequirePlan(); var after = operation(before); if (DrawingPlanJson.Serialize(before) == DrawingPlanJson.Serialize(after)) return; _undo.Push(before); _redo.Clear(); CurrentPlan = after; }
 }

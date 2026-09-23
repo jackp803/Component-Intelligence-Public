@@ -163,6 +163,13 @@ internal static class DrawingGroupingEvidence
             .OrderBy(p => p.PinId, StringComparer.Ordinal)
             .Select(p => new { endpointId = p.PinId, role = p.Power!.Role.ToString(), powerDomainId = p.PowerDomainId }).ToArray();
         var rules = input.WiringRules.ToList();
+        var contactOrder = heavy.SelectMany(h => project.Components.Single(c => c.ComponentInstanceId == h.HeavyDutyConnectorId)
+                .Ports.OrderBy(p => p.PortId, StringComparer.Ordinal).SelectMany(p => p.Pins
+                    .OrderBy(pin => pin.PinNumber, DrawingContactDisplayOrder.NumberComparer)
+                    .ThenBy(pin => pin.PinId, StringComparer.Ordinal)))
+            .Select((pin, order) => new { endpointId = pin.PinId, order }).ToArray();
+        if (contactOrder.Length > 0) rules.Add(new() { WiringRuleId = "PRESENTATION:CONTACT-DISPLAY-ORDER", RuleKind = "ContactDisplayOrder",
+            Source = "ElectricalProject.ComponentPin.PinNumber", Value = contactOrder });
         if (powerEvidence.Length > 0) rules.Add(new() { WiringRuleId = "WIRING:EXPLICIT-ENDPOINT-POWER", RuleKind = "EndpointPowerEvidence",
             Source = "ElectricalProject.ComponentPin.Power", Value = powerEvidence });
         return input with { Representations = reps, Connections = connections, ControllerModules = moduleItems,

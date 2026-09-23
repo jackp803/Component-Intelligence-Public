@@ -7,6 +7,22 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class DrawingPreviewPageTests
 {
     [Fact]
+    public void HeavyWithoutContacts_RemainsVisibleForUnresolvedEvidence()
+    {
+        var rep = new DrawingRepresentationDecision { RepresentationId = "HD", OwnerId = "physical" };
+        var input = new DrawingPlanningInput { ProjectId = "P", Representations = [rep],
+            HeavyDutyConnectors = [new() { HeavyDutyConnectorId = "physical", RepresentationIds = ["HD"], RowsPerPage = 19 }] };
+        Assert.Equal(rep, Assert.Single(DrawingPreviewCatalog.Build(input)));
+    }
+
+    [Fact]
+    public void ContactNumberComparer_OrdersDisplayNumbersWithoutChangingTheirText()
+    {
+        var numbers = new[] { "12", "2", "1", "X10", "X2" };
+        Assert.Equal(new[] { "1", "2", "12", "X2", "X10" }, numbers.OrderBy(n => n, DrawingContactDisplayOrder.NumberComparer));
+    }
+
+    [Fact]
     public void HeavyContinuationPreservesExactOwnerAndContactCoverageWithoutCopyingApprovedArt()
     {
         var rep = new DrawingRepresentationDecision { RepresentationId = "HD", OwnerId = "physical",
@@ -20,6 +36,20 @@ public sealed class DrawingPreviewPageTests
         Assert.Equal(55, preview.SelectMany(r => r.PortBindings).Select(p => p.EngineeringEndpointId).Distinct().Count());
         Assert.Equal(55, rep.PortBindings.Count);
         Assert.Single(DrawingPreviewCatalog.Build(input with { Representations = [rep with { AssetPath = "approved.dwg" }] }));
+    }
+
+    [Fact]
+    public void HeavyContactOrder_UsesExplicitDisplayOrderNotOpaqueEndpointIds()
+    {
+        var rep = new DrawingRepresentationDecision { RepresentationId="HD",OwnerId="physical",PortBindings =
+            new[] { "opaque-a", "opaque-b", "opaque-c" }.Select(id=>new DrawingPortBinding { EngineeringEndpointId=id,ConnectionPointId=id }).ToArray() };
+        var input = new DrawingPlanningInput { ProjectId="P",Representations=[rep],
+            HeavyDutyConnectors=[new() { HeavyDutyConnectorId="physical",RepresentationIds=["HD"],ContactIds=["opaque-a","opaque-b","opaque-c"],RowsPerPage=2 }],
+            WiringRules=[new() { WiringRuleId="ORDER",RuleKind="ContactDisplayOrder",Source="ElectricalProject.ComponentPin.PinNumber",
+                Value=new[] { new { endpointId="opaque-c",order=0 },new {endpointId="opaque-a",order=1},new {endpointId="opaque-b",order=2} } }] };
+        var result = DrawingPreviewCatalog.Build(DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(input)));
+        Assert.Equal(new[] {"opaque-c","opaque-a"},result[0].PortBindings.Select(b=>b.EngineeringEndpointId));
+        Assert.Equal("opaque-b",Assert.Single(result[1].PortBindings).EngineeringEndpointId);
     }
 
     [Fact]

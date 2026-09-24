@@ -36,6 +36,26 @@ public sealed class TopologyElectricalContinuityTests
     }
 
     [Fact]
+    public void ExplicitBridgeConnectionSharesPotentialOnlyBetweenItsTwoTerminals()
+    {
+        var project = new ElectricalProject { ProjectId = "terminal-bridge-continuity" };
+        project.Components.Add(Device("SOURCE", "SOURCE:+24V", "+24V", ElectricalLayer.Power, Polarity.Positive));
+        project.Components.Add(QuattroTerminal("TB1"));
+        project.Components.Add(QuattroTerminal("TB2"));
+        project.Components.Add(QuattroTerminal("TB3"));
+        project.Components.Add(Device("LOAD2", "LOAD2:AI", "AI2", ElectricalLayer.Analog, Polarity.Unknown));
+        project.Components.Add(Device("LOAD3", "LOAD3:AI", "AI3", ElectricalLayer.Analog, Polarity.Unknown));
+
+        AddConnection(project, "C1", "SOURCE:+24V", "TB1:IN1");
+        AddConnection(project, "C2", "TB1:BRIDGE:PORT", "TB2:BRIDGE:PORT");
+        var bridgedOutput = AddConnection(project, "C3", "TB2:OUT1", "LOAD2:AI");
+        var unbridgedOutput = AddConnection(project, "C4", "TB3:OUT1", "LOAD3:AI");
+
+        Assert.Equal(TopologyPotentialClass.PositiveDc, TopologyConnectionPotentialClassifier.Classify(project, bridgedOutput));
+        Assert.Equal(TopologyPotentialClass.Unknown, TopologyConnectionPotentialClassifier.Classify(project, unbridgedOutput));
+    }
+
+    [Fact]
     public void QuattroPartNumberInDisplayNameDoesNotAuthorizeInternalContinuity()
     {
         var project = new ElectricalProject { ProjectId = "terminal-display-identity" };
@@ -97,6 +117,7 @@ public sealed class TopologyElectricalContinuityTests
         Ports =
         {
             Port(id, "INPUT", Pin($"{id}:IN1", "IN1", ElectricalLayer.Unknown)),
+            Port(id, "BRIDGE", Pin($"{id}:BRIDGE", "BRIDGE", ElectricalLayer.Unknown)),
             Port(id, "OUTPUT", Pin($"{id}:OUT1", "OUT1", ElectricalLayer.Unknown))
         }
     };

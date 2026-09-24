@@ -2,7 +2,49 @@
 
 Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The user's approved Drawing_Grammar_Editor_20260922.md supplements current contracts. Historical handoffs are preserved. No rollback to the source-observation SHA.
 
-## Visual Inspection
+## Direct Schematic MVP WIP Checkpoint (2026-09-24)
+
+The Product Owner changed the primary workflow to a single manually authored,
+multi-page schematic canvas and will create a new acceptance project. This is
+the same Task-013; older terminal-preview output remains visually rejected.
+The execution ledger is `../superpowers/plans/2026-09-24-direct-schematic-mvp.md`.
+
+- Source base: Component `d5b18bcc05f0d003a469a76ee8b21421f041b9aa` plus
+  uncommitted WIP; Auto `eb84bee61d562881d861eb17ce990e44f56aff76` plus preserved
+  earlier terminal WIP. The new features are NOT present in those commits alone.
+- Implemented WIP: versioned schematic persistence, explicit catalog identity,
+  page authoring/rename/order, rotation, anchor binding, incomplete free wires,
+  paired continuations, segment/bend edits, locks, transactional page transfers,
+  exact completed-connection invariants, existing cable-editor integration,
+  and fixed CAD geometry import. New image-based anchor positions stay unconfirmed.
+- CAD source conversion used a disposable DWT copy through real accoreconsole.
+  Source before/after SHA matched. MText now retains plain text and attachment;
+  font/formatting fidelity and Hatch remain incomplete, explicitly diagnosed.
+  No new symbol revision or approval was created.
+- Fresh full Component Release tests: **962 PASS, 0 FAIL, 0 SKIP**.
+  A separate snapshot of only the staged checkpoint passed **959/959** and its
+  Desktop Release build passed with 16 warnings/0 errors. The difference is the
+  preserved, unstaged legacy terminal-preview work, not skipped/deleted tests.
+  Fresh Desktop Release build: **PASS, 0 errors, 16 warnings**. Build output is
+  separate from the already running candidate. Current anchor-notification,
+  multiline-text, page-rename, route-style and ordinary-wire deletion changes have NOT been mouse-tested in that
+  running older candidate.
+- Native Windows evidence establishes only startup, visible disposable DB and
+  workbook isolation, and new schematic-tab loading. During resumed observation
+  an OMRON F03-20 had been placed since the last recorded UI state; this is not
+  attributed to automated testing. Input was paused and takeover requested.
+- No final launcher, complete UI acceptance, direct canvas-to-Plan/IR export,
+  or full company-template fidelity is claimed. Further work remains on explicit
+  branching, lane separation, cable-detail presentation and no-replanning export.
+  Automated tests do not substitute for those gates.
+- Local recovery artifacts preserve tracked/untracked source and candidate/data
+  identities; private source CAD, project DB and workbook are not published.
+- This checkpoint publishes the bounded direct-authoring WIP only; the captured
+  base SHA above is not its resulting commit. Exact commit/tree authority is the
+  Git commit containing this record. Earlier terminal-preview WIP stays local.
+- Overall **PARTIAL**. `PRODUCT_OWNER_VISUAL_ACCEPTANCE=PENDING`.
+
+## Earlier Visual Inspection Record
 
 All 17 page PNGs and all seven negative PNGs were actually inspected on 2026-09-23. PDF SHA256: `4C4CDC244BE78584D8FB7F276B5A0F00C6CCAA0D6A3CDEB946D29804D4377581`. Existing rendered pages reference-01..17 came from the same SHA-pinned PDF. All nine SOURCE_MANIFEST file hashes and sizes match. Text extraction is not the inspection evidence.
 

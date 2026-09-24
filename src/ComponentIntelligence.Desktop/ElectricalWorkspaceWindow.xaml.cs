@@ -67,11 +67,12 @@ public partial class ElectricalWorkspaceWindow : Window
         }
     }
 
-    private static ElectricalProject CreateProject() => new()
-    {
-        ProjectId = Guid.NewGuid().ToString("N"),
-        Name = "New Electrical Project"
-    };
+    private static ElectricalProject CreateProject() =>
+        new ComponentIntelligence.Electrical.Schematic.SchematicAuthoringService().AddPage(new ElectricalProject
+        {
+            ProjectId = Guid.NewGuid().ToString("N"),
+            Name = "New Electrical Project"
+        }, "工程圖 1");
 
     private void NewProject_Click(object sender, RoutedEventArgs e)
     {
@@ -79,10 +80,12 @@ public partial class ElectricalWorkspaceWindow : Window
         _history.Clear();
         RefreshAll();
         WorkspaceStatusText.Text = "已建立新的 Electrical Project（電氣專案）。";
+        WorkspaceTabs.SelectedItem = SchematicTab;
     }
 
     private async void SaveProject_Click(object sender, RoutedEventArgs e)
     {
+        if (_schematicWorkspace?.FinishPendingDraft() == false) return;
         var newName = ProjectNameText.Text?.Trim();
         if (!string.Equals(_project.Name, newName, StringComparison.Ordinal))
         {
@@ -91,7 +94,7 @@ public partial class ElectricalWorkspaceWindow : Window
         }
         try
         {
-            TopologyCanvas.PersistCurrentRouteGeometry();
+            if (ReferenceEquals(WorkspaceTabs.SelectedItem, TopologyTab)) TopologyCanvas.PersistCurrentRouteGeometry();
             var saveDraft = _project;
             if (System.IO.File.Exists(_centralWorkbookPath))
             {
@@ -102,6 +105,8 @@ public partial class ElectricalWorkspaceWindow : Window
             if (recovered)
                 await EnsureDrawingRevisionService().CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, "Before explicit cable definition evidence");
             await _repository.SaveAsync(saveDraft);
+            if (saveDraft.Schematic is not null)
+                await EnsureDrawingRevisionService().CreateCheckpointAsync(saveDraft, ProjectRevisionTrigger.Save, "Save schematic");
             _project = saveDraft;
             if (recovered)
                 await EnsureDrawingRevisionService().CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, "Explicit cable definition evidence");
@@ -174,6 +179,7 @@ public partial class ElectricalWorkspaceWindow : Window
         TopologyCanvas.SetProject(_project);
         _cabinetLayoutWorkspace?.RefreshWorkspace();
         _drawingPlanningWorkspace?.LoadPlan(_project.DrawingPlan);
+        _schematicWorkspace?.RefreshWorkspace();
         UpdateHistoryButtons();
     }
 

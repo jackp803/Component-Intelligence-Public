@@ -48,6 +48,7 @@
         </Border>
 
         <TabControl x:Name="WorkspaceTabs" Grid.Row="2">
+            <TabItem x:Name="SchematicTab" Header="工程圖" />
             <TabItem x:Name="TopologyTab" Header="拓樸 Topology">
                 <Grid Margin="12">
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>

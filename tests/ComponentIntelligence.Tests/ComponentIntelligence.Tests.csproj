@@ -17,6 +17,7 @@
     <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadEngineeringDrawingEvidenceLoader.cs" Link="Electrical/AutocadEngineeringDrawingEvidenceLoader.cs" />
     <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadCoreConsoleLocator.cs" Link="SymbolArchive/AutocadCoreConsoleLocator.cs" />
     <Compile Include="../../src/ComponentIntelligence.Desktop/AutocadBlockDeepInspector.cs" Link="SymbolArchive/AutocadBlockDeepInspector.cs" />
+    <Compile Include="../../src/ComponentIntelligence.Desktop/SchematicCadFileLoader.cs" Link="Electrical/SchematicCadFileLoader.cs" />
     <Compile Include="../../src/ComponentIntelligence.Desktop/BlockArchiveBatchCoordinator.cs" Link="SymbolArchive/BlockArchiveBatchCoordinator.cs" />
   </ItemGroup>
 </Project>

@@ -13,12 +13,12 @@ public sealed class ConsolidatedWorkspaceNavigationTests
     }
 
     [Fact]
-    public void WorkspaceDefinesOnlyThreeAcceptedTabsWithoutRuntimeHiding()
+    public void WorkspaceAddsDirectSchematicEntryWhileLegacyMigrationRemainsAvailable()
     {
         var desktop = Desktop();
         var xml = XDocument.Load(Path.Combine(desktop, "ElectricalWorkspaceWindow.xaml"));
         var tabs = xml.Descendants().Where(e => e.Name.LocalName == "TabItem").ToArray();
-        Assert.Equal(new[] { "拓樸 Topology", "Layout｜實體佈局", "Drawing Planning｜圖面規劃" }, tabs.Select(t => (string?)t.Attribute("Header")));
+        Assert.Equal(new[] { "工程圖", "拓樸 Topology", "Layout｜實體佈局", "Drawing Planning｜圖面規劃" }, tabs.Select(t => (string?)t.Attribute("Header")));
         Assert.False(File.Exists(Path.Combine(desktop, "ElectricalWorkspaceWindow.PrimaryTabs.cs")));
         Assert.DoesNotContain(xml.Descendants(), e => (string?)e.Attribute("Click") is "AutoArrangeTopology_Click" or "AutoCadReview_Click" or "ExportAutocadV2_Click" or "AddTerminalBlock_Click");
     }

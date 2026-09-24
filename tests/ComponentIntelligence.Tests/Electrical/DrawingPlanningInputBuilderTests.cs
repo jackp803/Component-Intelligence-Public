@@ -6,6 +6,67 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class DrawingPlanningInputBuilderTests
 {
     [Fact]
+    public void Build_CarriesExplicitPortAndPinDisplayNamesWithoutChangingEndpointIdentity()
+    {
+        var project = new ElectricalProject
+        {
+            ProjectId = "P-LABEL",
+            Components = [new ComponentInstance
+            {
+                ComponentInstanceId = "IO-1", ComponentDefinitionId = "IFM_AL1342", TypeKey = "IO", DisplayName = "IFM AL1342",
+                Ports = [new ComponentPort
+                {
+                    PortId = "OPAQUE-PORT-ID", Name = "X01",
+                    Pins = [new ComponentPin { PinId = "OPAQUE-PIN-ID", PinNumber = "1", PinName = "L+" }]
+                }]
+            }]
+        };
+
+        var input = new DrawingPlanningInputBuilder(new RepresentationPolicy(new NoAssets())).Build(project);
+        var representation = Assert.Single(input.Representations);
+        Assert.Equal("IFM AL1342", representation.DisplayLabel);
+        var bindings = representation.PortBindings;
+        Assert.Equal("X01", Assert.Single(bindings, b => b.EngineeringEndpointId == "OPAQUE-PORT-ID").DisplayLabel);
+        Assert.Equal("X01 / 1 L+", Assert.Single(bindings, b => b.EngineeringEndpointId == "OPAQUE-PIN-ID").DisplayLabel);
+        Assert.Equal("X01", Assert.Single(DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(input))
+            .Representations).PortBindings.Single(b => b.EngineeringEndpointId == "OPAQUE-PORT-ID").DisplayLabel);
+    }
+
+    [Fact]
+    public void Build_CarriesOnlyExplicitCardinalPortSidesToPortAndPinBindings()
+    {
+        var project = new ElectricalProject
+        {
+            ProjectId = "P-ORIENTATION",
+            Components = [new ComponentInstance
+            {
+                ComponentInstanceId = "CONVERTER-1", ComponentDefinitionId = "CONVERTER", TypeKey = "Power",
+                Ports =
+                [
+                    new ComponentPort { PortId = "INPUT", Name = "INPUT", PhysicalLocation = new PhysicalPortLocation { Side = "Left" },
+                        Pins = [new ComponentPin { PinId = "INPUT-PIN", PinNumber = "1" }] },
+                    new ComponentPort { PortId = "OUTPUT", Name = "OUTPUT", PhysicalLocation = new PhysicalPortLocation { Side = "Right" },
+                        Pins = [new ComponentPin { PinId = "OUTPUT-PIN", PinNumber = "2" }] },
+                    new ComponentPort { PortId = "ACCESSORY", Name = "ACCESSORY", PhysicalLocation = new PhysicalPortLocation { Side = "Accessory side" } }
+                ]
+            }]
+        };
+
+        var representation = Assert.Single(new DrawingPlanningInputBuilder(new RepresentationPolicy(new NoAssets())).Build(project).Representations);
+        Assert.All(representation.PortBindings.Where(b => b.EngineeringEndpointId.StartsWith("INPUT", StringComparison.Ordinal)),
+            binding => Assert.Equal("Left", binding.PhysicalSide));
+        Assert.All(representation.PortBindings.Where(b => b.EngineeringEndpointId.StartsWith("OUTPUT", StringComparison.Ordinal)),
+            binding => Assert.Equal("Right", binding.PhysicalSide));
+        Assert.Null(Assert.Single(representation.PortBindings, b => b.EngineeringEndpointId == "ACCESSORY").PhysicalSide);
+        var roundTrip = DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(new DrawingPlanningInput
+        {
+            ProjectId = project.ProjectId, Representations = [representation]
+        }));
+        Assert.Equal("Left", Assert.Single(roundTrip.Representations[0].PortBindings,
+            b => b.EngineeringEndpointId == "INPUT-PIN").PhysicalSide);
+    }
+
+    [Fact]
     public void Build_IsPureProjectionAndDoesNotInferPlanningContextFromTypeKeyOrDisplayName()
     {
         var project = new ElectricalProject

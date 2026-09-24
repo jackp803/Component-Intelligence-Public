@@ -45,11 +45,14 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         foreach (var component in project.Components.OrderBy(x => x.ComponentInstanceId, StringComparer.Ordinal))
         {
             var explicitBindings = component.Ports
-                .Select(port => new DrawingPortBinding { EngineeringEndpointId = port.PortId, ConnectionPointId = $"PORT:{port.PortId}" })
+                .Select(port => new DrawingPortBinding { EngineeringEndpointId = port.PortId, ConnectionPointId = $"PORT:{port.PortId}", DisplayLabel = port.Name,
+                    PhysicalSide = CardinalSide(port.PhysicalLocation?.Side) })
                 .Concat(component.Ports.SelectMany(port => port.Pins.Select(pin => new DrawingPortBinding
                 {
                     EngineeringEndpointId = pin.PinId,
-                    ConnectionPointId = $"PIN:{pin.PinId}"
+                    ConnectionPointId = $"PIN:{pin.PinId}",
+                    DisplayLabel = $"{port.Name} / {pin.PinNumber}{(string.IsNullOrWhiteSpace(pin.PinName) ? "" : " " + pin.PinName)}",
+                    PhysicalSide = CardinalSide(port.PhysicalLocation?.Side)
                 })))
                 .GroupBy(x => x.EngineeringEndpointId, StringComparer.Ordinal)
                 .Select(x => x.First())
@@ -97,7 +100,10 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                 HeavyDutyConnectorId = null,
                 FieldDeviceClass = null
             });
-            representations.Add(result.Decision);
+            var bindingsByEndpoint = explicitBindings.ToDictionary(b => b.EngineeringEndpointId, StringComparer.Ordinal);
+            representations.Add(result.Decision with { PortBindings = result.Decision.PortBindings
+                .Select(b => b with { DisplayLabel = bindingsByEndpoint.GetValueOrDefault(b.EngineeringEndpointId)?.DisplayLabel,
+                    PhysicalSide = bindingsByEndpoint.GetValueOrDefault(b.EngineeringEndpointId)?.PhysicalSide }).ToArray() });
             issues.AddRange(result.Issues);
         }
 
@@ -237,11 +243,13 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
             .OrderBy(x => x, StringComparer.Ordinal)
             .Select(id => new DrawingPowerDomainItem { PowerDomainId = id, RepresentationIds = [] }).ToList();
 
+        var representationLabels = DrawingPreviewLabels.Build(project);
         var input = new DrawingPlanningInput
         {
             ProjectId = project.ProjectId,
             ProjectMetadata = projectMetadata ?? DrawingProjectMetadata.Empty,
-            Representations = representations.OrderBy(x => x.RepresentationId, StringComparer.Ordinal).ToList(),
+            Representations = representations.Select(r => r with { DisplayLabel = representationLabels.GetValueOrDefault(r.RepresentationId) })
+                .OrderBy(x => x.RepresentationId, StringComparer.Ordinal).ToList(),
             Connections = connections,
             Cables = cables,
             ControllerModules = [],
@@ -255,6 +263,11 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
         input = DrawingGroupingEvidence.Apply(project, catalog, input);
         return DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(input));
     }
+
+    private static string? CardinalSide(string? side) => side?.Trim().ToLowerInvariant() switch
+    {
+        "left" => "Left", "right" => "Right", "top" => "Top", "bottom" => "Bottom", _ => null
+    };
 
     private static string MappingEndpointLabel(ElectricalProject project, string endpointId)
     {

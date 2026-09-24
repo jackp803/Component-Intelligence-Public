@@ -40,7 +40,8 @@ public partial class DrawingPlanningWorkspaceControl
             if (settings is null || !validation.IsValid) throw new InvalidOperationException("請先確認 Drawing Planning runtime 設定。");
             var client = PlannerClient ?? new PythonDrawingPlannerClient(settings);
             var input = PlanningInputProvider();
-            await _controller.TransferSelectedAsync(destination.PageId, proposal => client.GenerateAsync(input, proposal, CancellationToken.None));
+            await _controller.TransferSelectedAsync(destination.PageId, proposal => client.GenerateAsync(input, proposal, CancellationToken.None), input);
+            _previewInput = input;
             _selectedRouteId=null;
             PersistPlan(); Refresh();
             StatusText.Text="已搬頁並重建同頁／跨頁路線。一次 Undo 可回復整筆操作；尚未儲存專案。";

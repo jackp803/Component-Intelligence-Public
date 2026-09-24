@@ -43,7 +43,7 @@ public sealed class DrawingPlanningWorkspaceController(DrawingPlanEditService ed
         return plan;
     });
     public void MovePage(string id, int index) => Apply(plan => _edits.MovePage(plan, id, index));
-    public async Task TransferSelectedAsync(string targetPageId, Func<DrawingPlanDocument, Task<DrawingPlanDocument>> rebuild)
+    public async Task TransferSelectedAsync(string targetPageId, Func<DrawingPlanDocument, Task<DrawingPlanDocument>> rebuild, DrawingPlanningInput? currentInput = null)
     {
         var before = RequirePlan();
         var selected = SelectedRepresentationIds.ToArray();
@@ -51,7 +51,10 @@ public sealed class DrawingPlanningWorkspaceController(DrawingPlanEditService ed
         if (ReferenceEquals(before, proposal)) return;
         var after = DrawingPlanJson.Rehash(await rebuild(proposal));
         if (!ReferenceEquals(before, CurrentPlan)) throw new InvalidOperationException("搬頁期間圖面已變更，請重新操作。結果未套用。");
-        if (after.ProjectId != before.ProjectId || after.SourcePlanningInputHash != before.SourcePlanningInputHash ||
+        var sameInput = after.SourcePlanningInputHash == before.SourcePlanningInputHash ||
+            (currentInput is not null && after.SourcePlanningInputHash == currentInput.PlanningInputHash &&
+             DrawingPlanningInputHashCompatibility.IsPresentationMetadataOnlyUpgrade(currentInput, before.SourcePlanningInputHash));
+        if (after.ProjectId != before.ProjectId || !sameInput ||
             !before.Placements.Select(p => p.RepresentationId).ToHashSet(StringComparer.Ordinal).SetEquals(after.Placements.Select(p => p.RepresentationId)))
             throw new InvalidOperationException("搬頁不得變更專案或 representation 身分。結果未套用。");
         foreach (var id in selected)

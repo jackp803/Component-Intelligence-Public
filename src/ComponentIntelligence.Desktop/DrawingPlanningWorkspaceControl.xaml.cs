@@ -17,6 +17,7 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
     private Point _dragOffset;
     private double _zoom = 1.0;
     private bool _refreshingSelection;
+    private DrawingPlanningInput? _previewInput;
     private IReadOnlyDictionary<string, DrawingRepresentationDecision> _previewCatalog = new Dictionary<string, DrawingRepresentationDecision>();
 
     public IDrawingPlannerClient? PlannerClient { get; set; }
@@ -34,6 +35,7 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
     public void LoadPlan(DrawingPlanDocument? plan, DrawingPlanningInput? previewInput = null)
     {
         var input = previewInput ?? (plan is null ? null : PlanningInputProvider?.Invoke());
+        _previewInput = input;
         _previewCatalog = input is null ? new Dictionary<string, DrawingRepresentationDecision>()
             : DrawingPreviewCatalog.Build(input).ToDictionary(r => r.RepresentationId, StringComparer.Ordinal);
         _edits.SetEndpointBindings(_previewCatalog.ToDictionary(p => p.Key,
@@ -201,28 +203,56 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
                     Child = new TextBlock { Width = Math.Max(30, placement.Width - 12), Text = label, TextWrapping = TextWrapping.Wrap, FontSize = 13 } }) };
             Canvas.SetLeft(border, placement.X); Canvas.SetTop(border, placement.Y); border.RenderTransform = new RotateTransform(placement.RotationDegrees, placement.Width / 2.0, placement.Height / 2.0); border.MouseLeftButtonDown += Placement_MouseLeftButtonDown; DrawingCanvas.Children.Add(border);
         }
+        if (_previewInput is not null)
+            foreach (var port in DrawingIoPortLabels.Build(_previewInput, plan).Where(label => label.PageId == pageId))
+            {
+                var text = new TextBlock { Text = port.Text, FontSize = 11, Foreground = Brushes.Black, Background = Brushes.White,
+                    ToolTip = port.EngineeringEndpointId };
+                Canvas.SetLeft(text, port.X); Canvas.SetTop(text, port.Y); DrawingCanvas.Children.Add(text);
+            }
         DrawContinuationLabels(plan, pageId);
     }
 
     private void DrawContinuationLabels(DrawingPlanDocument plan, string pageId)
     {
-        foreach (var relation in plan.CrossPageRelations.Where(r => r.RelationKind == "ElectricalConnectionContinuation"))
+        if (_previewInput is null) return;
+        var labels = DrawingContinuationPresentation.Build(_previewInput, plan, PreviewLabels());
+        foreach (var placed in DrawingContinuationLayout.Place(plan, labels, pageId))
         {
-            var source = relation.SourcePageId == pageId;
-            if (!source && relation.DestinationPageId != pageId) continue;
-            var routeId = source ? relation.SourceRouteId : relation.DestinationRouteId;
-            var route = plan.Routes.SingleOrDefault(r => r.RouteId == routeId);
-            var targetPage = plan.Pages.SingleOrDefault(p => p.PageId == (source ? relation.DestinationPageId : relation.SourcePageId));
-            if (route is null || targetPage is null || route.Points.Count < 2) continue;
-            var p = route.Points[^1]; var previous = route.Points[^2];
+            var label = placed.Label;
+            var relation = plan.CrossPageRelations.Single(r => r.RelationId == label.RelationId);
+            var routeId = relation.SourcePageId == pageId ? relation.SourceRouteId : relation.DestinationRouteId;
+            var route = plan.Routes.Single(r => r.RouteId == routeId);
+            var p = label.Anchor;
+            var previous = p == route.Points[0] ? route.Points[1] : route.Points[^2];
             var dx = Math.Sign(p.X - previous.X); var dy = Math.Sign(p.Y - previous.Y);
             var arrow = new Polygon { Stroke = Brushes.DimGray, Fill = Brushes.White, StrokeThickness = 1,
                 Points = new PointCollection { new(p.X, p.Y), new(p.X - dx * 7 - dy * 3, p.Y - dy * 7 + dx * 3), new(p.X - dx * 7 + dy * 3, p.Y - dy * 7 - dx * 3) } };
             DrawingCanvas.Children.Add(arrow);
-            var caption = new TextBlock { Text = $"P.{targetPage.Order + 1}", FontSize = 10, Background = Brushes.White,
-                ToolTip = targetPage.PageId };
-            Canvas.SetLeft(caption, Math.Clamp(p.X + (dx < 0 ? -30 : 4), 0, DrawingCanvas.Width - 35));
-            Canvas.SetTop(caption, Math.Clamp(p.Y - 14, 0, DrawingCanvas.Height - 20));
+            var box = placed.Box;
+            void Navigate(object? _, MouseButtonEventArgs e)
+            {
+                _controller.SelectPage(label.PeerPageId); _selectedRouteId = null; Refresh();
+                DrawingScroll.UpdateLayout();
+                DrawingScroll.ScrollToHorizontalOffset(Math.Max(0, label.PeerAnchor.X - DrawingScroll.ViewportWidth / 2));
+                DrawingScroll.ScrollToVerticalOffset(Math.Max(0, label.PeerAnchor.Y - DrawingScroll.ViewportHeight / 2));
+                e.Handled = true;
+            }
+            var marker = new TextBlock { Text = $"↗{placed.Index}", FontSize = 9, Foreground = Brushes.Black,
+                Background = Brushes.White, Cursor = Cursors.Hand, ToolTip = "跨頁參照索引，非線號。" };
+            marker.MouseLeftButtonDown += Navigate;
+            Canvas.SetLeft(marker, Math.Clamp(p.X + (dx < 0 ? -25 : 5), 0, DrawingCanvas.Width - 30));
+            Canvas.SetTop(marker, Math.Clamp(p.Y - 15, 0, DrawingCanvas.Height - 16));
+            Canvas.SetZIndex(marker, 3);
+            DrawingCanvas.Children.Add(marker);
+            var caption = new Border { Width = box.Width, Height = box.Height, Background = Brushes.White,
+                BorderBrush = placed.FitsWithoutOverlap ? Brushes.LightGray : Brushes.DarkOrange,
+                BorderThickness = new Thickness(0.5), Padding = new Thickness(3), Cursor = Cursors.Hand,
+                ToolTip = $"跨頁參照 {placed.Index}（非線號）/ 前往 {label.PeerPageId} / 對端位置 ({label.PeerAnchor.X}, {label.PeerAnchor.Y})",
+                Child = new TextBlock { Text = $"↗{placed.Index}  {label.Text}", FontSize = 10, LineHeight = 12, TextWrapping = TextWrapping.Wrap } };
+            caption.MouseLeftButtonDown += Navigate;
+            Canvas.SetLeft(caption, box.X); Canvas.SetTop(caption, box.Y);
+            Canvas.SetZIndex(caption, 2);
             DrawingCanvas.Children.Add(caption);
         }
     }

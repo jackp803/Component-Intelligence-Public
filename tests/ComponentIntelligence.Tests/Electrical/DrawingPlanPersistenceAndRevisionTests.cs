@@ -8,13 +8,14 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class DrawingPlanPersistenceAndRevisionTests
 {
     [Fact]
-    public void NewProjectAndV04Migration_UseV05WithoutInventingDrawingPlan()
+    public void NewProjectAndV04Migration_UseCurrentSchemaWithoutInventingDrawingPlan()
     {
-        Assert.Equal("0.5", new ElectricalProject { ProjectId = "NEW" }.SchemaVersion);
+        Assert.Equal("0.6", new ElectricalProject { ProjectId = "NEW" }.SchemaVersion);
         var legacy = new ElectricalProject { SchemaVersion = "0.4", ProjectId = "P1", Components = [new ComponentInstance { ComponentInstanceId = "C1", ComponentDefinitionId = "D1", TypeKey = "DO_NOT_INFER" }] };
         var migrated = ElectricalProjectMigrator.Migrate(legacy);
-        Assert.Equal("0.5", migrated.SchemaVersion);
+        Assert.Equal("0.6", migrated.SchemaVersion);
         Assert.Null(migrated.DrawingPlan);
+        Assert.Null(migrated.Schematic);
         Assert.Equal("C1", Assert.Single(migrated.Components).ComponentInstanceId);
     }
 

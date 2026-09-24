@@ -135,7 +135,7 @@ public sealed class MultiEndConductorPickerDialog : Window
     private readonly List<Row> _rows = new();
     public IReadOnlyList<string> SelectedIds => _rows.Where(r => r.Check.IsChecked == true).Select(r => r.Id).ToArray();
 
-    public MultiEndConductorPickerDialog(ElectricalProject project, IEnumerable<string> selected, string? cableId = null)
+    public MultiEndConductorPickerDialog(ElectricalProject project, IEnumerable<string> selected, string? cableId = null, int minimumConnections = 2)
     {
         Title = "選取多端線材配線"; Width = 1120; Height = 700; MinWidth = 700; MinHeight = 400;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -152,7 +152,7 @@ public sealed class MultiEndConductorPickerDialog : Window
         bottom.Children.Add(MultiEndCableEditorDialog.Button("取消", () => DialogResult = false));
         bottom.Children.Add(MultiEndCableEditorDialog.Button("確認配線", () =>
         {
-            if (SelectedIds.Count < 2) { count.Text = "請至少選取兩條配線"; return; }
+            if (SelectedIds.Count < minimumConnections) { count.Text = $"請至少選取 {minimumConnections} 條配線"; return; }
             DialogResult = true;
         }));
         DockPanel.SetDock(bottom, Dock.Bottom); root.Children.Add(bottom);

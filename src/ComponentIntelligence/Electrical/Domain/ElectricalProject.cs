@@ -4,10 +4,11 @@ namespace ComponentIntelligence.Electrical.Domain;
 
 public sealed class ElectricalProject
 {
-    public string SchemaVersion { get; init; } = "0.5";
+    public string SchemaVersion { get; init; } = "0.6";
     public required string ProjectId { get; init; }
     public string? Name { get; set; }
     public DrawingPlanDocument? DrawingPlan { get; set; }
+    public Schematic.SchematicDocument? Schematic { get; set; }
     public List<ComponentInstance> Components { get; init; } = new();
     public List<NetDefinition> Nets { get; init; } = new();
     public List<ElectricalConnection> Connections { get; init; } = new();

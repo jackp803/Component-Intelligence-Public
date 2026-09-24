@@ -47,6 +47,7 @@ public sealed class ElectricalProjectRepository
         ct.ThrowIfCancellationRequested();
         await InitializeAsync(ct);
         var current = ElectricalProjectMigrator.Migrate(project);
+        Schematic.SchematicAuthoringService.Validate(current);
         var json = JsonSerializer.Serialize(current, _jsonOptions);
 
         using var connection = _connectionFactory.Open(_databasePath);
@@ -81,7 +82,10 @@ public sealed class ElectricalProjectRepository
         var result = await command.ExecuteScalarAsync(ct);
         if (result is not string json || string.IsNullOrWhiteSpace(json)) return null;
         var project = JsonSerializer.Deserialize<ElectricalProject>(json, _jsonOptions);
-        return project is null ? null : ElectricalProjectMigrator.Migrate(project);
+        if (project is null) return null;
+        var current = ElectricalProjectMigrator.Migrate(project);
+        Schematic.SchematicAuthoringService.Validate(current);
+        return current;
     }
 
     public async Task<IReadOnlyList<ElectricalProjectSummary>> ListAsync(CancellationToken ct = default)

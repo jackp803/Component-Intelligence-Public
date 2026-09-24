@@ -95,15 +95,14 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#555" Text="尚未掃描 / Not scanned" />
-            <Button Grid.Column="1" x:Name="ArchiveButton" Content="歸檔選取項目 / Archive Selected" Padding="16,8" Margin="8,0" Click="ArchiveSelected_Click" />
-            <Button Grid.Column="2" Content="關閉 / Close" Padding="16,8" Click="Close_Click" />
-        </Grid>
+        <StackPanel Grid.Row="4">
+            <TextBlock x:Name="StatusText" Foreground="#555" Text="尚未掃描 / Not scanned" TextWrapping="Wrap" Margin="0,0,0,6" />
+            <WrapPanel HorizontalAlignment="Right">
+                <Button x:Name="LoadDraftButton" Content="開啟草稿" Padding="16,8" Margin="4,0" Click="LoadDraft_Click" />
+                <Button x:Name="SaveDraftButton" Content="保存草稿（未核准）" Padding="16,8" Margin="4,0" Click="SaveDraft_Click" />
+                <Button x:Name="ArchiveButton" Content="核准歸檔選取項目" Padding="16,8" Margin="4,0" Click="ArchiveSelected_Click" />
+                <Button Content="關閉 / Close" Padding="16,8" Margin="4,0" Click="Close_Click" />
+            </WrapPanel>
+        </StackPanel>
     </Grid>
 </Window>

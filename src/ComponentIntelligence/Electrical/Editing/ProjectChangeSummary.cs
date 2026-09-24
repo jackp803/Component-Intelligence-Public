@@ -27,6 +27,10 @@ public sealed record ProjectChangeSummary
         if (!LogicalEqual(oldPlan?.Routes, newPlan?.Routes)) visual.Add("RouteBendOrLockChanges");
         if (!LogicalEqual(oldPlan?.Groups, newPlan?.Groups)) visual.Add("GroupLayoutChanges");
         if (oldPlan?.SourcePlanningInputHash != newPlan?.SourcePlanningInputHash) structure.Add("RepresentationOrPlanningInputChanges");
+        if (!LogicalEqual(before.Schematic?.Pages, after.Schematic?.Pages)) structure.Add("SchematicPageChanges");
+        if (!LogicalEqual(before.Schematic?.Continuations, after.Schematic?.Continuations)) structure.Add("SchematicContinuationChanges");
+        if (!LogicalEqual(before.Schematic?.Symbols, after.Schematic?.Symbols)) visual.Add("SchematicSymbolChanges");
+        if (!LogicalEqual(before.Schematic?.Wires, after.Schematic?.Wires)) visual.Add("SchematicRouteChanges");
         return new ProjectChangeSummary { EngineeringChanges = engineering.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray(), DrawingStructureChanges = structure.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray(), VisualChanges = visual.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray() };
     }
 

@@ -86,21 +86,6 @@ public partial class TopologyCanvasControl : UserControl
         _archiveWorkbookPath = string.IsNullOrWhiteSpace(workbookPath) ? null : workbookPath.Trim();
     }
 
-    public void AutoArrange()
-    {
-        if (_project is null) return;
-        MutationStarting?.Invoke(this, new TopologyMutationEventArgs("Auto arrange topology"));
-        if (_project.TopologyPlacements.Count == 0) _projection.EnsurePlacements(_project);
-        var arrangement = _projection.ArrangeConnectedPlacements(_project);
-        Surface.Width = Math.Max(3200d, arrangement.RequiredWidth + 160d);
-        Surface.Height = Math.Max(2000d, arrangement.RequiredHeight + 160d);
-        _manualRouteWaypoints.Clear();
-        Render();
-        SelectionText.Text = $"自動排版完成：{arrangement.NodeCount} 個元件 / {arrangement.LayerCount} 層";
-        HintText.Text = "已依連線方向重新排列元件並整理線路；不滿意可按 Undo 復原。";
-        ProjectChanged?.Invoke(this, EventArgs.Empty);
-    }
-
     public void RefreshCanvas() => Render();
 
     public void ExportCurrentVisualPdf(string filePath)
@@ -308,7 +293,7 @@ public partial class TopologyCanvasControl : UserControl
             _connectionEditor.ConnectPorts(_project, _pendingWireEndpointId, portId);
             _pendingWireEndpointId = null;
             SelectionText.Text = "連線已建立";
-            HintText.Text = "連線完成。可以繼續點兩個 Port 拉下一條線；雙擊任何線路可切段並插入 Connector / Terminal，或設定 Cable Segment。";
+            HintText.Text = "連線完成。可以繼續點兩個 Port 拉下一條線；雙擊任何線路可切段並插入 Connector / Terminal，或開啟線材設定。";
             Render();
             ProjectChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -338,107 +323,39 @@ public partial class TopologyCanvasControl : UserControl
             return;
         }
 
-        if (TryOpenCableAssemblyEditor(connection))
+        var selectedIds = _selectedTopologyConnectionIds.Contains(connectionId)
+            ? _selectedTopologyConnectionIds.ToArray() : new[] { connectionId };
+        var dialog = new ConnectionActionDialog(BuildConnectionSummary(connection)) { Owner = Window.GetWindow(this) };
+        if (dialog.ShowDialog() == true)
         {
-            e.Handled = true;
-            return;
-        }
-
-        var assignedCable = _project.Cables.FirstOrDefault(item =>
-            string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
-        var selectedConnectionIds = _selectedTopologyConnectionIds.Count >= 2 &&
-                                    _selectedTopologyConnectionIds.Contains(connectionId)
-            ? new[] { connectionId }.Concat(_project.Connections
-                .Where(item => _selectedTopologyConnectionIds.Contains(item.ConnectionId) &&
-                               !string.Equals(item.ConnectionId, connectionId, StringComparison.OrdinalIgnoreCase))
-                .Select(item => item.ConnectionId)).ToArray()
-            : new[] { connectionId };
-        var dialog = new InlineConnectionDialog(
-            BuildConnectionSummary(connection),
-            _availableCableMaterials,
-            assignedCable?.CableDefinitionId,
-            assignedCable?.CableConstructionType ?? CableConstructionType.Unknown,
-            hasExplicitCable: connection.CableInstanceId is not null,
-            selectedConnectionCount: selectedConnectionIds.Length)
-        {
-            Owner = Window.GetWindow(this)
-        };
-        if (dialog.ShowDialog() != true)
-        {
-            e.Handled = true;
-            return;
-        }
-
-        try
-        {
-            MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Edit topology connection {connectionId}"));
-            switch (dialog.Operation)
+            try
             {
-                case InlineConnectionOperation.Connector:
-                    _connectionEditor.InsertInlineConnector(_project, connectionId, dialog.ConnectorOptions);
-                    HintText.Text = "已插入 Connector（接頭），原本線路已拆成兩段；A/B 原端點資料保持不變。";
-                    break;
-                case InlineConnectionOperation.LooseWireMatedConnectorPair:
-                    _connectionEditor.InsertLooseWireMatedConnectorPair(_project, connectionId, dialog.ConnectorOptions);
-                    HintText.Text = "已建立：散線 → M12母 ↔ M12公 → 散線。中間為正式 Direct Mating；雙擊兩側線段可分別設定 Pin Mapping 與線材。";
-                    break;
-                case InlineConnectionOperation.BundleCableAssembly:
-                    var bundle = _connectionEditor.BundleLooseWireConnections(
-                        _project,
-                        selectedConnectionIds,
-                        dialog.ConnectorOptions,
-                        dialog.CableOptions);
-                    _selectedTopologyConnectionIds.Clear();
-                    _selectedRouteConnectionId = null;
-                    HintText.Text = $"已將 {selectedConnectionIds.Length} 條散線合併為 {bundle.Cable.ReferenceDesignator ?? bundle.Cable.CableInstanceId}：散線 → M12母端 → {selectedConnectionIds.Length} 芯電纜 → M12公端 → 散線。";
-                    break;
-                case InlineConnectionOperation.CustomTwoEndCableAssembly:
-                case InlineConnectionOperation.CustomYCableAssembly:
-                    ApplyCustomCableAssembly(
-                        selectedConnectionIds,
-                        dialog.Operation == InlineConnectionOperation.CustomYCableAssembly,
-                        dialog.CustomCableOptions);
-                    break;
-                case InlineConnectionOperation.Terminal:
-                    _connectionEditor.InsertInlineTerminal(_project, connectionId, dialog.TerminalOptions);
-                    HintText.Text = "已插入 Terminal（端子），原本線路已拆成兩段。";
-                    break;
-                case InlineConnectionOperation.CableSegment:
-                    var cable = _connectionEditor.AssignCableSegment(_project, connectionId, dialog.CableOptions);
-                    HintText.Text = $"已指定 Cable Segment：{cable.ReferenceDesignator ?? cable.CableInstanceId}。";
-                    break;
-                case InlineConnectionOperation.DeleteConnection:
-                    _connectionEditor.DeleteConnection(_project, connectionId);
-                    HintText.Text = "已刪除目前連線。";
-                    break;
+                switch (dialog.Action)
+                {
+                    case ConnectionEditAction.PinMapping:
+                        if (Window.GetWindow(this) is ElectricalWorkspaceWindow workspace)
+                            workspace.EditConnectionPinMapping(connectionId);
+                        break;
+                    case ConnectionEditAction.CableSettings:
+                        OpenUnifiedCableSettings(selectedIds);
+                        break;
+                    case ConnectionEditAction.InsertInterface:
+                        OpenInsertInterface(connection);
+                        break;
+                    case ConnectionEditAction.DeleteConnection:
+                        if (MessageBox.Show(Window.GetWindow(this), "刪除此連線？", "刪除連線",
+                            MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK) break;
+                        MutationStarting?.Invoke(this, new TopologyMutationEventArgs("Delete connection"));
+                        _connectionEditor.DeleteConnection(_project, connectionId);
+                        Render();
+                        ProjectChanged?.Invoke(this, EventArgs.Empty);
+                        break;
+                }
             }
-            _pendingWireEndpointId = null;
-            Render();
-            ProjectChanged?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show(Window.GetWindow(this), exception.Message, "線路編輯失敗", MessageBoxButton.OK, MessageBoxImage.Error);
+            catch (InvalidOperationException exception)
+            { MessageBox.Show(Window.GetWindow(this), exception.Message, "線路編輯未套用"); }
         }
         e.Handled = true;
-    }
-
-    private void CreateCustomHarness_Click(object sender, RoutedEventArgs e)
-    {
-        if (_project is null) return;
-        if (!string.IsNullOrWhiteSpace(_selectedConnectorPortId))
-        {
-            EditSelectedConnectorCable(_selectedConnectorPortId);
-            return;
-        }
-
-        HintText.Text = "LEGACY_CP2E2_REPLACEMENT_PENDING：舊版直接建立自製線束的入口已停用；請等待新版 Cable Assembly Editor。";
-        MessageBox.Show(
-            Window.GetWindow(this),
-            "舊版直接建立自製線束的入口已停用，避免以 MAIN／TRUNK／BRANCH-A／BRANCH-B 舊規則寫入目前專案。新版 Cable Assembly Editor 完成後再由明確選擇建立 Purchased／Custom Cable。",
-            "Cable Assembly Editor 尚未接入",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
     }
 
     private void EditSelectedConnectorCable(string connectorPortId)
@@ -446,57 +363,11 @@ public partial class TopologyCanvasControl : UserControl
         if (_project is null) return;
         try
         {
-            var topology = _connectorCableTopology.AnalyzeConnector(_project, connectorPortId);
-            if (topology.Candidates.Count == 0)
-            {
-                MessageBox.Show(
-                    Window.GetWindow(this),
-                    "這個接頭目前沒有已畫好的 Pin 連線。請先雙擊接頭圓點展開 Pin，再自行拉線到另一個接頭或散線端。",
-                    "尚無 Cable 導體",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-                return;
-            }
-
-            var dialog = new ConnectorCableEditorDialog(
-                topology.Candidates,
-                _project.Cables,
-                _availableCableMaterials)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            if (dialog.ShowDialog() != true) return;
-
-            MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Assign connector side {connectorPortId} as cable"));
-            var result = _connectorCableTopology.AssignCandidateAsCable(
-                _project,
-                dialog.SelectedCandidate,
-                dialog.CableOptions,
-                dialog.ProvidedLengthMm);
-            _selectedTopologyConnectionIds.Clear();
-            _selectedRouteConnectionId = null;
-            HintText.Text = $"已建立／更新 {result.Cable.ReferenceDesignator ?? result.Cable.CableInstanceId}：{result.Candidate.Display}。只整理你實際畫好的 {result.Candidate.Connections.Count} 條 Pin 連線，沒有改接任何端點。";
-            Render();
-            ProjectChanged?.Invoke(this, EventArgs.Empty);
+            var candidates = _connectorCableTopology.AnalyzeConnector(_project, connectorPortId).Candidates;
+            OpenCableSettingsPicker(candidates.SelectMany(c => c.Connections).Select(c => c.ConnectionId).Distinct(StringComparer.Ordinal));
         }
-        catch (Exception exception)
-        {
-            MessageBox.Show(Window.GetWindow(this), exception.Message, "接頭 Cable 編輯失敗", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void ApplyCustomCableAssembly(
-        IReadOnlyCollection<string> connectionIds,
-        bool isYHarness,
-        CustomCableAssemblyOptions options)
-    {
-        if (_project is null) return;
-        var result = _connectionEditor.CreateCustomCableAssembly(_project, connectionIds, isYHarness, options);
-        _selectedTopologyConnectionIds.Clear();
-        _selectedRouteConnectionId = null;
-        HintText.Text = isYHarness
-            ? $"已建立自製 Y 型線束 {result.Assembly.ReferenceDesignator}：TRUNK、BRANCH-A、BRANCH-B 共用同一線束編號；不需要原始 BOM。各線可再雙擊編輯 Pin Mapping。"
-            : $"已建立自製一般線束 {result.Assembly.ReferenceDesignator}；不需要原始 BOM。可再雙擊線路編輯 Pin Mapping。";
+        catch (InvalidOperationException exception)
+        { MessageBox.Show(Window.GetWindow(this), exception.Message, "線材設定未套用"); }
     }
 
     private void SelectMode_Click(object sender, RoutedEventArgs e)
@@ -679,7 +550,8 @@ public partial class TopologyCanvasControl : UserControl
     private string BuildConnectionSummary(ElectricalConnection connection)
     {
         if (_project is null) return connection.ConnectionId;
-        return $"Connection: {connection.ConnectionId}\nA: {DescribeEndpoint(connection.FromEndpointId)}\nB: {DescribeEndpoint(connection.ToEndpointId)}\nCable: {connection.CableInstanceId ?? "未指定"}\nNet: {connection.NetId ?? "未指定"}";
+        var cable = _project.Cables.FirstOrDefault(c => c.CableInstanceId == connection.CableInstanceId);
+        return $"A: {DescribeEndpoint(connection.FromEndpointId)}\nB: {DescribeEndpoint(connection.ToEndpointId)}\n線材: {cable?.ReferenceDesignator ?? cable?.DisplayName ?? (cable is null ? "未指定" : "未命名")}";
     }
 
     private string DescribeEndpoint(string endpointId)
@@ -689,10 +561,10 @@ public partial class TopologyCanvasControl : UserControl
         foreach (var port in component.Ports)
         {
             if (string.Equals(port.PortId, endpointId, StringComparison.OrdinalIgnoreCase))
-                return $"{component.ReferenceDesignator ?? component.ComponentInstanceId}.{port.Name} [{port.Connector?.Family ?? "?"} / {port.Protocol ?? "?"}]";
+                return $"{component.ReferenceDesignator ?? component.DisplayName ?? component.ComponentInstanceId}.{port.Name} [{port.Connector?.Family ?? "?"} / {port.Protocol ?? "?"}]";
             var pin = port.Pins.FirstOrDefault(item => string.Equals(item.PinId, endpointId, StringComparison.OrdinalIgnoreCase));
             if (pin is not null)
-                return $"{component.ReferenceDesignator ?? component.ComponentInstanceId}.{port.Name}.Pin{pin.PinNumber} {pin.Function ?? "?"}";
+                return $"{component.ReferenceDesignator ?? component.DisplayName ?? component.ComponentInstanceId}.{port.Name}.Pin{pin.PinNumber} {pin.Function ?? "?"}";
         }
         return endpointId;
     }

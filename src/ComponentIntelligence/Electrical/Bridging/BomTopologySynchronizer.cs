@@ -23,6 +23,7 @@ public sealed record BomConnectionMaterialOption(
     string Category,
     int? AvailableQuantity)
 {
+    public CableProductAuthority? CableProduct { get; init; }
     public string DisplayLabel =>
         $"{Manufacturer} {Model} · {Category} · BOM Qty {(AvailableQuantity is int quantity ? quantity : "?")}";
 }
@@ -194,7 +195,7 @@ public sealed class BomTopologySynchronizer
             manufacturer,
             model,
             category,
-            quantity);
+            quantity) { CableProduct = component.CableProduct };
     }
 
     private static string InstanceDisplayName(string manufacturer, string model, int index, int count, bool quantityUnknown)

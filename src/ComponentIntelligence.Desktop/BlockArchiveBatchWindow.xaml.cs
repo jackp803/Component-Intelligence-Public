@@ -84,6 +84,54 @@ public partial class BlockArchiveBatchWindow : Window
         }
     }
 
+    private async void SaveDraft_Click(object sender, RoutedEventArgs e)
+    {
+        if (_coordinator is null) return;
+        SaveDraftButton.IsEnabled = false;
+        try
+        {
+            RowsGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+            RowsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+            if (RowsGrid.SelectedItem is BlockArchiveReviewRow row)
+                row.PortBindings = ParseMappings();
+            await _coordinator.SaveReviewDraftAsync(_rows);
+            StatusText.Text = $"已保存 {_rows.Count} 筆未核准草稿；來源檔案與核准紀錄未修改。";
+        }
+        catch (Exception exception) { StatusText.Text = "草稿未保存：" + exception.Message; }
+        finally { SaveDraftButton.IsEnabled = true; }
+    }
+
+    private async void LoadDraft_Click(object sender, RoutedEventArgs e)
+    {
+        if (_coordinator is null) return;
+        LoadDraftButton.IsEnabled = false;
+        try
+        {
+            var rows = await _coordinator.LoadReviewDraftAsync();
+            if (rows.Count == 0) { StatusText.Text = "尚無已保存的草稿。"; return; }
+            _rows.Clear();
+            foreach (var row in rows) _rows.Add(row);
+            RowsGrid.SelectedIndex = 0;
+            SourcePathText.Text = _coordinator.ReviewDraftPath;
+            StatusText.Text = $"已開啟 {rows.Count} 筆未核准草稿並重新核對來源 SHA；{rows.Count(r => r.Candidate.SourceIntegrityFailed)} 筆需重新掃描。";
+        }
+        catch (Exception exception) { StatusText.Text = "草稿未載入：" + exception.Message; }
+        finally { LoadDraftButton.IsEnabled = true; }
+    }
+
+    private IReadOnlyList<SymbolPortBinding> ParseMappings()
+    {
+        var mappings = new List<SymbolPortBinding>();
+        foreach (var raw in PortBindingsText.Text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = raw.Split('=', 2, StringSplitOptions.TrimEntries);
+            if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+                throw new InvalidDataException($"Mapping 必須是 stable-id=connection-point：'{raw}'");
+            mappings.Add(new SymbolPortBinding { EngineeringEndpointId = parts[0], ConnectionPointId = parts[1] });
+        }
+        return mappings.OrderBy(m => m.EngineeringEndpointId, StringComparer.Ordinal).ToArray();
+    }
+
     private async void DeepInspectSelected_Click(object sender, RoutedEventArgs e)
     {
         if (_coordinator is null) return;
@@ -121,21 +169,8 @@ public partial class BlockArchiveBatchWindow : Window
         if (RowsGrid.SelectedItem is not BlockArchiveReviewRow row) return;
         try
         {
-            var mappings = new List<SymbolPortBinding>();
-            foreach (var raw in PortBindingsText.Text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var parts = raw.Split('=', 2, StringSplitOptions.TrimEntries);
-                if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
-                    throw new InvalidDataException($"Mapping 必須是 stable-id=connection-point：'{raw}'");
-                mappings.Add(new SymbolPortBinding
-                {
-                    EngineeringEndpointId = parts[0],
-                    ConnectionPointId = parts[1]
-                });
-            }
-            row.PortBindings = mappings
-                .OrderBy(mapping => mapping.EngineeringEndpointId, StringComparer.Ordinal)
-                .ToArray();
+            var mappings = ParseMappings();
+            row.PortBindings = mappings;
             RowsGrid.Items.Refresh();
             RefreshDetails(row);
             StatusText.Text = $"已套用 {mappings.Count} 筆 Port/Pin mapping；尚未寫入 archive。";

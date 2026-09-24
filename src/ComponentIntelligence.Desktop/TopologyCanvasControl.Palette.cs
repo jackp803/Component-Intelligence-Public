@@ -19,7 +19,6 @@ public partial class TopologyCanvasControl
     private string? _topologyPaletteSignature;
     private bool _finalTopologyVisualRefreshScheduled;
     private IReadOnlyList<ArchiveMaterialOption> _terminalArchiveOptions = Array.Empty<ArchiveMaterialOption>();
-    private IReadOnlyList<ArchiveMaterialOption> _jumperArchiveOptions = Array.Empty<ArchiveMaterialOption>();
     private readonly IReadOnlyList<CommonConnectorOption> _commonConnectorOptions = CommonConnectorCatalog.Options;
 
     private void TopologyCanvas_Loaded(object sender, RoutedEventArgs e)
@@ -187,8 +186,6 @@ public partial class TopologyCanvasControl
 
         if (TerminalProjectCountText is not null)
             TerminalProjectCountText.Text = $"專案數量：{terminalCount}";
-        if (JumperProjectCountText is not null)
-            JumperProjectCountText.Text = $"專案數量：{jumperCount}";
         if (CommonConnectorProjectCountText is not null)
             CommonConnectorProjectCountText.Text = $"專案數量：{commonConnectorCount}";
 
@@ -210,9 +207,6 @@ public partial class TopologyCanvasControl
 
     private void AddArchivedTerminal_Click(object sender, RoutedEventArgs e) =>
         AddArchivedMaterial(TerminalArchiveCombo.SelectedItem as ArchiveMaterialOption, TopologyPaletteMaterialKind.TerminalBlock);
-
-    private void AddArchivedJumper_Click(object sender, RoutedEventArgs e) =>
-        AddArchivedMaterial(JumperArchiveCombo.SelectedItem as ArchiveMaterialOption, TopologyPaletteMaterialKind.ShortingJumper);
 
     private void AddCommonConnector_Click(object sender, RoutedEventArgs e)
     {
@@ -251,7 +245,7 @@ public partial class TopologyCanvasControl
             MessageBox.Show("中央歸檔中沒有可選項目，或尚未選擇型號。請確認中央工作簿路徑與 Category。", "公用元件", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (option.Kind != expectedKind) return;
+        if (option.Kind != expectedKind || expectedKind != TopologyPaletteMaterialKind.TerminalBlock) return;
 
         MutationStarting?.Invoke(this, new TopologyMutationEventArgs($"Add archived common material {option.Component.Identity.ComponentId}"));
         var existingCount = _project.Components.Count(component =>
@@ -290,10 +284,6 @@ public partial class TopologyCanvasControl
         var terminalId = preserveSelection && TerminalArchiveCombo.SelectedItem is ArchiveMaterialOption terminal
             ? terminal.Component.Identity.ComponentId
             : null;
-        var jumperId = preserveSelection && JumperArchiveCombo.SelectedItem is ArchiveMaterialOption jumper
-            ? jumper.Component.Identity.ComponentId
-            : null;
-
         IReadOnlyList<ComponentIR> components = Array.Empty<ComponentIR>();
         if (!string.IsNullOrWhiteSpace(_archiveWorkbookPath))
         {
@@ -313,18 +303,14 @@ public partial class TopologyCanvasControl
             .Select(component => new ArchiveMaterialOption(
                 component,
                 TopologyPaletteMaterialPolicy.Classify(FirstNonBlank(component.Classification.Subcategory, component.Classification.Category))))
-            .Where(option => option.Kind is TopologyPaletteMaterialKind.TerminalBlock or TopologyPaletteMaterialKind.ShortingJumper)
+            .Where(option => option.Kind == TopologyPaletteMaterialKind.TerminalBlock)
             .OrderBy(option => option.Component.Identity.Model, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         _terminalArchiveOptions = options.Where(option => option.Kind == TopologyPaletteMaterialKind.TerminalBlock).ToArray();
-        _jumperArchiveOptions = options.Where(option => option.Kind == TopologyPaletteMaterialKind.ShortingJumper).ToArray();
 
         TerminalArchiveCombo.ItemsSource = _terminalArchiveOptions;
-        JumperArchiveCombo.ItemsSource = _jumperArchiveOptions;
         TerminalArchiveCombo.SelectedItem = _terminalArchiveOptions.FirstOrDefault(option =>
             string.Equals(option.Component.Identity.ComponentId, terminalId, StringComparison.OrdinalIgnoreCase)) ?? _terminalArchiveOptions.FirstOrDefault();
-        JumperArchiveCombo.SelectedItem = _jumperArchiveOptions.FirstOrDefault(option =>
-            string.Equals(option.Component.Identity.ComponentId, jumperId, StringComparison.OrdinalIgnoreCase)) ?? _jumperArchiveOptions.FirstOrDefault();
     }
 
     private static string? FirstNonBlank(params string?[] values) =>

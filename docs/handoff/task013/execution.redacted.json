@@ -1,0 +1,292 @@
+{
+  "schemaVersion": "electrical-execution-result.v1",
+  "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+  "status": "APPLIED",
+  "sourceDrawingIrHash": "97897C1024E21BC25D2EBB980098BD3CFB1C32DDD1D234EC04D521D8B4198687",
+  "sourceExecutorPlanHash": "FAF749D68085AF167671EF7805424670A8B88998B6FB8F49744ABA2C60D7E80C",
+  "sourcePackageHash": "FFC0EE09CAF47E26575E2E1C04E6111AEC42113F295B030C8D1B0460DD1E28B2",
+  "executionEvidenceHash": "B6BD97F7C698832E8C3C9E9A8F1BDB1C5BC72FED05A81C1A89A119EB0201842B",
+  "commandEvents": [
+    {
+      "commandId": "CMD:OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableDetail",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-40-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableDetail",
+      "startedAtUtc": "2026-09-22T06:42:26.1390499Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-40-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "startedAtUtc": "2026-09-22T06:42:26.1471959Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableFunctional",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableFunctional",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cmp-common-332f86afeaad4a6dbcb5d25bd28037c7:Schematic",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cmp-common-332f86afeaad4a6dbcb5d25bd28037c7:Schematic",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cmp-common-d22d0496041842658c0d3f37cd4d8f92:Schematic",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cmp-common-d22d0496041842658c0d3f37cd4d8f92:Schematic",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cmp-common-e630a8c4caa64aac970d58bf9e81cce6:Schematic",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cmp-common-e630a8c4caa64aac970d58bf9e81cce6:Schematic",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-0452c3f5a4dc4c9d8c98e2da0770bb54",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-0452c3f5a4dc4c9d8c98e2da0770bb54",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-24e5fc15a29d43ab9f820ba03b786d6f",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-24e5fc15a29d43ab9f820ba03b786d6f",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-55d15ed79dd64ec18ccafb4b4568d2c9",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-55d15ed79dd64ec18ccafb4b4568d2c9",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-7157cf207342481994b95df843558383",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-7157cf207342481994b95df843558383",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-872d33b9a12340cbbeac7f98842b1064",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-872d33b9a12340cbbeac7f98842b1064",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-9e612bb102f141aa8f9fc395711341d8",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-9e612bb102f141aa8f9fc395711341d8",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:XREF:REL:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "completedAtUtc": null,
+      "evidenceRef": null,
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:XREF:REL:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "startedAtUtc": "2026-09-22T06:42:28.9351464Z",
+      "state": "STARTED"
+    },
+    {
+      "commandId": "CMD:OP:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "completedAtUtc": "2026-09-22T06:42:31.6423202Z",
+      "evidenceRef": "staging:CMD:OP:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "pageId": "PAGE-40-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableDetail",
+      "completedAtUtc": "2026-09-22T06:42:31.6423202Z",
+      "evidenceRef": "staging:CMD:OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableDetail",
+      "pageId": "PAGE-40-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableDetail",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableFunctional",
+      "completedAtUtc": "2026-09-22T06:42:31.6423202Z",
+      "evidenceRef": "staging:CMD:OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableFunctional",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cbl-d5d32e75527a4007bba8ba32382d6243:CableFunctional",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cmp-common-332f86afeaad4a6dbcb5d25bd28037c7:Schematic",
+      "completedAtUtc": "2026-09-22T06:42:31.6423202Z",
+      "evidenceRef": "staging:CMD:OP:REP:REP:cmp-common-332f86afeaad4a6dbcb5d25bd28037c7:Schematic",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cmp-common-332f86afeaad4a6dbcb5d25bd28037c7:Schematic",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cmp-common-d22d0496041842658c0d3f37cd4d8f92:Schematic",
+      "completedAtUtc": "2026-09-22T06:42:31.6423202Z",
+      "evidenceRef": "staging:CMD:OP:REP:REP:cmp-common-d22d0496041842658c0d3f37cd4d8f92:Schematic",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cmp-common-d22d0496041842658c0d3f37cd4d8f92:Schematic",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:REP:REP:cmp-common-e630a8c4caa64aac970d58bf9e81cce6:Schematic",
+      "completedAtUtc": "2026-09-22T06:42:31.6423202Z",
+      "evidenceRef": "staging:CMD:OP:REP:REP:cmp-common-e630a8c4caa64aac970d58bf9e81cce6:Schematic",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:REP:REP:cmp-common-e630a8c4caa64aac970d58bf9e81cce6:Schematic",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-0452c3f5a4dc4c9d8c98e2da0770bb54",
+      "completedAtUtc": "2026-09-22T06:42:31.6433199Z",
+      "evidenceRef": "staging:CMD:OP:ROUTE:ROUTE:conn-0452c3f5a4dc4c9d8c98e2da0770bb54",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-0452c3f5a4dc4c9d8c98e2da0770bb54",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-24e5fc15a29d43ab9f820ba03b786d6f",
+      "completedAtUtc": "2026-09-22T06:42:31.6433199Z",
+      "evidenceRef": "staging:CMD:OP:ROUTE:ROUTE:conn-24e5fc15a29d43ab9f820ba03b786d6f",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-24e5fc15a29d43ab9f820ba03b786d6f",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-55d15ed79dd64ec18ccafb4b4568d2c9",
+      "completedAtUtc": "2026-09-22T06:42:31.6433199Z",
+      "evidenceRef": "staging:CMD:OP:ROUTE:ROUTE:conn-55d15ed79dd64ec18ccafb4b4568d2c9",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-55d15ed79dd64ec18ccafb4b4568d2c9",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-7157cf207342481994b95df843558383",
+      "completedAtUtc": "2026-09-22T06:42:31.6433199Z",
+      "evidenceRef": "staging:CMD:OP:ROUTE:ROUTE:conn-7157cf207342481994b95df843558383",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-7157cf207342481994b95df843558383",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-872d33b9a12340cbbeac7f98842b1064",
+      "completedAtUtc": "2026-09-22T06:42:31.6433199Z",
+      "evidenceRef": "staging:CMD:OP:ROUTE:ROUTE:conn-872d33b9a12340cbbeac7f98842b1064",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-872d33b9a12340cbbeac7f98842b1064",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:ROUTE:ROUTE:conn-9e612bb102f141aa8f9fc395711341d8",
+      "completedAtUtc": "2026-09-22T06:42:31.6433199Z",
+      "evidenceRef": "staging:CMD:OP:ROUTE:ROUTE:conn-9e612bb102f141aa8f9fc395711341d8",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:ROUTE:ROUTE:conn-9e612bb102f141aa8f9fc395711341d8",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    },
+    {
+      "commandId": "CMD:OP:XREF:REL:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "completedAtUtc": "2026-09-22T06:42:31.6433199Z",
+      "evidenceRef": "staging:CMD:OP:XREF:REL:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "pageId": "PAGE-60-001",
+      "runId": "CP3C-2EA0A65DFB9D4411BFFE7D0DAC840BC7",
+      "sourceOperationId": "OP:XREF:REL:CABLE:cbl-d5d32e75527a4007bba8ba32382d6243",
+      "startedAtUtc": null,
+      "state": "APPLIED"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "TASK013-BOUNDED-Y.wdp",
+      "size": 1589,
+      "sha256": "87049F54521FE3C29207AEDFB41068FFF99E6B29AD14497A624BFD8053EC7CFF",
+      "belowStaging": true
+    },
+    {
+      "name": "001_CustomCableDetail_PAGE-40-001.dwg",
+      "size": 434932,
+      "sha256": "08525709777BE5B532D0C67EE265D85E9BCDE843A4ADC6BD2C87021C6775AEBE",
+      "belowStaging": true
+    },
+    {
+      "name": "002_FieldDevices_PAGE-60-001.dwg",
+      "size": 440691,
+      "sha256": "DD24616C5B3CB652DD97392C5AB7B08374CB9196AB603FB29D8032347D8E4E35",
+      "belowStaging": true
+    }
+  ],
+  "issues": []
+}

@@ -36,7 +36,7 @@ public sealed class TopologyElectricalContinuityTests
     }
 
     [Fact]
-    public void QuattroPartNumberInDisplayNameStillPropagatesPositivePotentialThroughBridgePin()
+    public void QuattroPartNumberInDisplayNameDoesNotAuthorizeInternalContinuity()
     {
         var project = new ElectricalProject { ProjectId = "terminal-display-identity" };
         project.Components.Add(Device("SOURCE", "SOURCE:+24V", "+24V", ElectricalLayer.Power, Polarity.Positive));
@@ -59,15 +59,40 @@ public sealed class TopologyElectricalContinuityTests
         AddConnection(project, "C2", "TB:BRIDGE:PORT", "LOAD:AI");
 
         Assert.Equal(
-            TopologyPotentialClass.PositiveDc,
+            TopologyPotentialClass.Unknown,
             TopologyConnectionPotentialClassifier.Classify(project, project.Connections[1]));
-        Assert.Equal(ElectricalLayer.Power, TopologyElectricalContinuity.ResolveLayer(project, project.Connections[1]));
+        Assert.Equal(ElectricalLayer.Analog, TopologyElectricalContinuity.ResolveLayer(project, project.Connections[1]));
+    }
+
+    [Fact]
+    public void GenericTerminalPinNamesDoNotAuthorizeInternalContinuity()
+    {
+        var project = new ElectricalProject { ProjectId = "terminal-unreviewed" };
+        project.Components.Add(Device("SOURCE", "SOURCE:+24V", "+24V", ElectricalLayer.Power, Polarity.Positive));
+        project.Components.Add(new ComponentInstance
+        {
+            ComponentInstanceId = "TB",
+            ComponentDefinitionId = "UNREVIEWED_TERMINAL",
+            TypeKey = "DIN Rail Terminal Block",
+            Ports =
+            {
+                Port("TB", "INPUT", Pin("TB:IN1", "IN1", ElectricalLayer.Unknown)),
+                Port("TB", "OUTPUT", Pin("TB:OUT1", "OUT1", ElectricalLayer.Unknown))
+            }
+        });
+        project.Components.Add(Device("LOAD", "LOAD:AI", "AI1", ElectricalLayer.Analog, Polarity.Unknown));
+
+        AddConnection(project, "C1", "SOURCE:+24V", "TB:IN1");
+        var output = AddConnection(project, "C2", "TB:OUT1", "LOAD:AI");
+
+        Assert.Equal(TopologyPotentialClass.Unknown, TopologyConnectionPotentialClassifier.Classify(project, output));
+        Assert.Equal(ElectricalLayer.Analog, TopologyElectricalContinuity.ResolveLayer(project, output));
     }
 
     private static ComponentInstance QuattroTerminal(string id) => new()
     {
         ComponentInstanceId = id,
-        ComponentDefinitionId = $"PHOENIX_CONTACT_3209578:{id}",
+        ComponentDefinitionId = "PHOENIX_CONTACT_3209578",
         TypeKey = "Feed-through Terminal Block",
         Ports =
         {

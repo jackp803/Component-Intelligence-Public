@@ -85,63 +85,17 @@ public static class TopologyElectricalContinuity
         IDictionary<string, HashSet<string>> adjacency)
     {
         foreach (var component in project.Components.Where(component =>
-                     TopologyPaletteMaterialPolicy.Classify(component.TypeKey) == TopologyPaletteMaterialKind.TerminalBlock))
+                     TopologyPaletteMaterialPolicy.Classify(component.TypeKey) == TopologyPaletteMaterialKind.TerminalBlock &&
+                     string.Equals(component.ComponentDefinitionId, "PHOENIX_CONTACT_3209578", StringComparison.OrdinalIgnoreCase)))
         {
             var pins = component.Ports.SelectMany(port => port.Pins).ToArray();
             if (pins.Length < 2) continue;
 
-            var isQuattroCommonPotential = IsQuattroCommonPotential(component);
-            if (isQuattroCommonPotential)
-            {
-                // Existing projects may connect either an exact terminal Pin or the visible
-                // INPUT / OUTPUT / BRIDGE Port.  Both selectors represent the same copper body on
-                // this model, so include both identity levels in the continuity graph.
-                ConnectGroup(adjacency, component.Ports
-                    .SelectMany(port => new[] { port.PortId }.Concat(port.Pins.Select(pin => pin.PinId))));
-                continue;
-            }
-
-            foreach (var group in pins.GroupBy(TerminalPotentialGroup, StringComparer.OrdinalIgnoreCase)
-                         .Where(group => group.Key is not null && group.Count() > 1))
-                ConnectGroup(adjacency, group.Select(pin => pin.PinId));
+            // The reviewed Quattro identity is one common-potential body. Its visible Port and
+            // exact Pin selectors refer to that body; model-looking labels are not identity proof.
+            ConnectGroup(adjacency, component.Ports
+                .SelectMany(port => new[] { port.PortId }.Concat(port.Pins.Select(pin => pin.PinId))));
         }
-    }
-
-    private static bool IsQuattroCommonPotential(ComponentInstance component)
-    {
-        // Archive imports do not guarantee that the manufacturer part number is used as the
-        // ComponentDefinitionId.  Older projects commonly retain it only in DisplayName or
-        // EquipmentTag.  PT 2,5-QUATTRO (3209578) is one common-potential feed-through terminal,
-        // so all IN / OUT / bridge points must carry the same displayed potential.
-        var identity = string.Join(' ', new[]
-        {
-            component.ComponentDefinitionId,
-            component.DisplayName,
-            component.EquipmentTag,
-            component.ReferenceDesignator
-        }.Where(value => !string.IsNullOrWhiteSpace(value)));
-        var compact = new string(identity.ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
-        return compact.Contains("3209578", StringComparison.Ordinal) ||
-               compact.Contains("PT25QUATTRO", StringComparison.Ordinal);
-    }
-
-    private static string? TerminalPotentialGroup(ComponentPin pin)
-    {
-        var value = $"{pin.PinName} {pin.Function}".ToUpperInvariant();
-        if (value.Contains("L1", StringComparison.Ordinal)) return "LEVEL:1";
-        if (value.Contains("L2", StringComparison.Ordinal)) return "LEVEL:2";
-
-        var compactName = new string((pin.PinName ?? string.Empty)
-            .ToUpperInvariant()
-            .Where(char.IsLetterOrDigit)
-            .ToArray());
-        if (compactName.StartsWith("IN", StringComparison.Ordinal) ||
-            compactName.StartsWith("OUT", StringComparison.Ordinal))
-        {
-            var channel = new string(compactName.Where(char.IsDigit).ToArray());
-            return channel.Length > 0 ? $"CHANNEL:{channel}" : "COMMON";
-        }
-        return null;
     }
 
     private static void ConnectGroup(

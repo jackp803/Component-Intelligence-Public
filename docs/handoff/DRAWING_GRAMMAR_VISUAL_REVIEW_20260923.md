@@ -6,6 +6,25 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Cable contact/text checkpoint: the existing binding action now lists every
+archived cable external Pin, including omitted bindings, with Port/Pin labels and
+explicit CAD-contact choices. Removing a contact with an attached wire is rejected;
+internal mapping is unchanged. Clearing a grid choice commits cell and row edits
+before refreshing. Native interaction remains NOT_RUN.
+
+Explicit archived text-field bindings now render Reference, length and specification
+from the physical cable instance in the shared canvas/print geometry and DXF path.
+Unbound CAD text is preserved. Missing length/spec remain draft placeholders;
+missing text fields use a separate caption rather than guessing CAD attribute intent.
+Caption collision/rotation appearance still needs current-build native visual review.
+
+Fresh full Release regression: 1115 passed, zero failed/skipped. Desktop Release:
+zero errors, 16 warnings. Verification includes the preserved older dirty Drawing
+Planning WIP, not a claim of clean-commit isolation. Current changes are not in old
+candidate AD. Native PDF save assistance remains unconfirmed; no new native PASS
+is claimed. Material accounting and complete native cable/print workflows remain
+open. Overall PARTIAL; no production or approved archive writes authorized.
+
 Archived cable instance editor continuation: selecting a cable-owned CAD symbol
 and invoking Cable Settings (C) or Cable Detail now opens a direct physical-cable
 draft editor, not the historical conductor picker. Reference, nullable length,

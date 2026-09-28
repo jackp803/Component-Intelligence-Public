@@ -173,6 +173,16 @@ public sealed class ArchivedCableInstanceTests
         Assert.Empty(draft.Components); Assert.Empty(draft.Connections);
         Assert.Equal(before, JsonSerializer.Serialize(p));
         var symbol = draft.Schematic.Symbols[0];
+        var withContacts = symbol with { Geometry = symbol.Geometry! with {
+            ConnectionPoints = [new("CONTACT", "", new(0, 5), Direction: "Left")] } };
+        draft.Schematic.Symbols[0] = withContacts;
+        var bound = service.SetCableContactBindings(draft, symbol.SymbolId, new Dictionary<string, string> { ["common-5"] = "CONTACT" });
+        Assert.Equal("common-5", Assert.Single(bound.Schematic!.Symbols[0].Anchors).SourcePinId);
+        Assert.Equal("CONTACT", bound.Schematic.Symbols[0].Anchors[0].CadContactId);
+        Assert.Equal(2, SchematicDraftReview.Inspect(bound).Count(i => i.Code == "MISSING_CABLE_CONTACT"));
+        Assert.Empty(draft.Schematic.Symbols[0].Anchors);
+        Assert.Throws<InvalidOperationException>(() => service.SetCableContactBindings(draft, symbol.SymbolId,
+            new Dictionary<string, string> { ["unknown-pin"] = "CONTACT" }));
         draft.Schematic.Symbols[0] = symbol with { ComponentInstanceId = "fake" };
         Assert.Throws<InvalidOperationException>(() => SchematicAuthoringService.Validate(draft));
     }

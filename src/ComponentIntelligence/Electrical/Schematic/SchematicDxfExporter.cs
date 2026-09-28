@@ -174,7 +174,7 @@ public sealed class SchematicDxfExporter
                 };
                 return new(symbol.Position.X + local.X, symbol.Position.Y + local.Y);
             }
-            if (SchematicSymbolPresentation.Geometry(symbol, owner.Reference) is { } geometry)
+            if (SchematicSymbolPresentation.GeometryForOwner(symbol, owner) is { } geometry)
             {
                 foreach (var p in geometry.Primitives) Primitive(p, "SCHEMATIC_SYMBOL", .25, Map, symbol.Rotation);
                 diagnostics.AddRange(geometry.Diagnostics.Select(d => symbol.SymbolId + ": " + d));
@@ -199,8 +199,13 @@ public sealed class SchematicDxfExporter
                 Primitive(new() { Kind = "MTEXT", Start = layout.LabelTopLeft, Text = owner.DisplayName,
                     TextHeight = 11d / 3, TextWidth = layout.LabelWidth, TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25, Map, symbol.Rotation);
             }
-            if (SchematicSymbolPresentation.ShowReferenceLabel(symbol))
+            if (SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
                 Label(owner.Reference ?? "Reference 未設定", new(symbol.Position.X, symbol.Position.Y - 6), "SCHEMATIC_LABEL", 11d / 3);
+            var caption = SchematicSymbolPresentation.CableCaption(symbol, owner);
+            if (caption.Length > 0)
+                Primitive(new() { Kind = "MTEXT", Text = caption, TextHeight = 10d / 3, TextAttachment = "TopLeft",
+                    TextWidth = symbol.Rotation % 180 == 0 ? symbol.Width : symbol.Height,
+                    Start = new(symbol.Position.X, symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2) }, "SCHEMATIC_LABEL", .25);
             foreach (var anchor in symbol.Anchors)
             {
                 var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);

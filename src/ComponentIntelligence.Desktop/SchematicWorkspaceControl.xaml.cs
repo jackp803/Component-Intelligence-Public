@@ -314,7 +314,7 @@ public partial class SchematicWorkspaceControl : UserControl
             content.Children.Add(label);
         }
         body.Child = content;
-        if (SchematicSymbolPresentation.Geometry(symbol, owner.Reference) is { } cad) body.Child = CadCanvas(cad);
+        if (SchematicSymbolPresentation.GeometryForOwner(symbol, owner) is { } cad) body.Child = CadCanvas(cad);
         // Selection strokes overlay geometry; their width must not shift the CAD body away from its anchors.
         var drawing = body.Child; body.Child = null;
         var layers = new Grid(); layers.Children.Add(drawing);
@@ -368,8 +368,17 @@ public partial class SchematicWorkspaceControl : UserControl
                 Sheet.Children.Add(label);
             }
         }
-        if (SchematicSymbolPresentation.ShowReferenceLabel(symbol))
+        if (SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
             Text(owner.Reference ?? "Reference 未設定", symbol.Position.X, referenceY, 11, Brushes.Black);
+        var caption = SchematicSymbolPresentation.CableCaption(symbol, owner);
+        if (caption.Length > 0)
+        {
+            var label = new TextBlock { Text = caption, FontSize = 10, TextWrapping = TextWrapping.Wrap,
+                Width = (symbol.Rotation % 180 == 0 ? symbol.Width : symbol.Height) * 3, IsHitTestVisible = false };
+            Canvas.SetLeft(label, symbol.Position.X * 3);
+            Canvas.SetTop(label, (symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2) * 3);
+            Sheet.Children.Add(label);
+        }
     }
 
     private readonly Dictionary<string, BitmapImage?> _images = new(StringComparer.Ordinal);
@@ -717,6 +726,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void Bindings_Click(object sender, RoutedEventArgs e)
     {
         var p = _getProject(); var s = p.Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId); if (s is null) return;
+        if (s.CableInstanceId is not null) { EditCableBindings(s); return; }
         var rows = s.Anchors.Select(a => new AnchorRow(a)).ToList();
         var dialog = new Window { Title = "接點位置與綁定", Width = 850, Height = 480, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new DockPanel { Margin = new(12) };

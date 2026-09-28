@@ -4,6 +4,20 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed partial class SchematicAuthoringService
 {
+    public ElectricalProject SetCableContactBindings(ElectricalProject project, string symbolId,
+        IReadOnlyDictionary<string, string> contacts)
+    {
+        var symbol = project.Schematic?.Symbols.Single(s => s.SymbolId == symbolId)
+            ?? throw new InvalidOperationException("Select a cable representation.");
+        var cable = SchematicSymbolOwner.Resolve(project, symbol).Cable
+            ?? throw new InvalidOperationException("Select a cable representation.");
+        var next = CreateCableSymbol(cable, symbol.Geometry!, contacts, symbol.PageId, symbol.Position);
+        var removed = symbol.Anchors.Select(a => a.EndpointId).Except(next.Anchors.Select(a => a.EndpointId), StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
+        if (project.Schematic!.Wires.SelectMany(w => new[] { w.Start, w.End }).Any(a => a.SymbolId == symbolId && a.EndpointId is not null && removed.Contains(a.EndpointId)))
+            throw new InvalidOperationException("仍有導線接在將移除的接點；請先明確處理接線。");
+        return SetSymbolDetails(project, symbolId, cable.ReferenceDesignator, next.Anchors);
+    }
+
     public ElectricalProject PlaceExistingRepresentation(ElectricalProject project, string symbolId,
         string pageId, SchematicPoint position) => Edit(project, (_, doc) =>
     {

@@ -12,7 +12,11 @@ public sealed record ArchivedCableTemplate
     public string? MappingEvidence { get; init; }
     public bool MappingConfirmed { get; init; }
     public List<CablePinMapping> Mapping { get; init; } = [];
+    public List<CableTextBinding> TextBindings { get; init; } = [];
 }
+
+public enum CableTextField { Reference, LengthMm, Specification }
+public sealed record CableTextBinding(string AttributeTag, CableTextField Field);
 
 public sealed record CablePinMapping(string FromSourcePinId, string ToSourcePinId);
 

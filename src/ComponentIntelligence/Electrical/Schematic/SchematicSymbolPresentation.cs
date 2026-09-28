@@ -1,3 +1,6 @@
+using System.Globalization;
+using ComponentIntelligence.Electrical.Domain;
+
 namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed record SchematicAnchorLabel(SchematicPoint Position, int Rotation, bool OppositeCorner)
@@ -8,6 +11,38 @@ public sealed record SchematicAnchorLabel(SchematicPoint Position, int Rotation,
 
 public static class SchematicSymbolPresentation
 {
+    public static SchematicCadAsset? GeometryForOwner(SchematicSymbol symbol, SchematicSymbolOwner owner)
+    {
+        var asset = Geometry(symbol, owner.Reference);
+        if (asset is null || owner.Cable?.ArchivedCable is not { } archived) return asset;
+        var fields = archived.Template.TextBindings.ToDictionary(b => b.AttributeTag, b => b.Field, StringComparer.Ordinal);
+        return asset with { Primitives = asset.Primitives.Select(p => p.Kind is "TEXT" or "MTEXT" &&
+            p.AttributeTag is not null && fields.TryGetValue(p.AttributeTag, out var field)
+                ? p with { Text = CableFieldValue(owner.Cable, field) } : p).ToArray() };
+    }
+
+    public static bool ShowReferenceForOwner(SchematicSymbol symbol, SchematicSymbolOwner owner) =>
+        !HasCableField(symbol, owner, CableTextField.Reference) && ShowReferenceLabel(symbol);
+
+    public static string CableCaption(SchematicSymbol symbol, SchematicSymbolOwner owner)
+    {
+        if (owner.Cable is not { } cable) return "";
+        return string.Join("\n", new[] { CableTextField.LengthMm, CableTextField.Specification }
+            .Where(f => !HasCableField(symbol, owner, f)).Select(f => CableFieldValue(cable, f)));
+    }
+
+    private static bool HasCableField(SchematicSymbol symbol, SchematicSymbolOwner owner, CableTextField field) =>
+        owner.Cable?.ArchivedCable?.Template.TextBindings.Any(b => b.Field == field &&
+            symbol.Geometry?.Primitives.Any(p => p.AttributeTag == b.AttributeTag && p.Kind is "TEXT" or "MTEXT") == true) == true;
+
+    private static string CableFieldValue(CableInstance cable, CableTextField field) => field switch
+    {
+        CableTextField.Reference => cable.ReferenceDesignator ?? "Reference 待填",
+        CableTextField.LengthMm => cable.ProvidedLengthMm is double length ? length.ToString("0.###", CultureInfo.InvariantCulture) + " mm" : "長度待填",
+        CableTextField.Specification => cable.Specification ?? "規格待填",
+        _ => throw new InvalidOperationException("Unknown cable text field.")
+    };
+
     public static bool ShowReferenceLabel(SchematicSymbol symbol) =>
         symbol.Geometry?.Primitives.Any(p => p.AttributeTag == "TAG1" && p.Kind is "TEXT" or "MTEXT") != true;
 

@@ -59,6 +59,9 @@ public static class ArchivedCableInstanceFactory
         if (template.MappingConfirmed && (string.IsNullOrWhiteSpace(template.MappingRevision) || string.IsNullOrWhiteSpace(template.MappingEvidence)))
             throw new InvalidOperationException("Confirmed cable mapping requires revision and source evidence.");
         ValidateMapping(template, template.Mapping);
+        if (template.TextBindings.Any(b => string.IsNullOrWhiteSpace(b.AttributeTag) || !Enum.IsDefined(b.Field)) ||
+            template.TextBindings.Select(b => b.AttributeTag).Distinct(StringComparer.Ordinal).Count() != template.TextBindings.Count)
+            throw new InvalidOperationException("Cable text fields require unique explicit CAD attribute bindings.");
     }
 
     public static void ValidateProject(ElectricalProject project)

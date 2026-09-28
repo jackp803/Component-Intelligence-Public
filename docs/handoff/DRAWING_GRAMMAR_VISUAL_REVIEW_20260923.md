@@ -6,6 +6,27 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Pin Hit Target Correction (Built, Native Retest Pending)
+
+- Native w on company-frame third page: placed IFM PL1514 from normal catalog,
+  clicked near its first pin at zoom 0.65, drew an L draft, then moved the device.
+  The wire stayed behind with a free-end square. FAIL: tiny hit target allowed a
+  near miss to silently create a free attachment. Private anchor-near-miss-w.png
+  records this. These latest w UI changes are unsaved disposable state.
+- Root: only the 7-canvas-pixel marker handler bound a Pin; surrounding canvas
+  unconditionally used Free with grid rounding. Added same-page nearest-anchor
+  hit resolution from the unrounded pointer, within 8 displayed pixels adjusted
+  for zoom. Equidistant hits fail with an explicit prompt; no list-order choice.
+  Exact endpoint/anchor identity is retained, including rotation; Confirmed is
+  never promoted by snapping. Free points outside tolerance remain supported.
+- TDD RED missing resolver, then four tests GREEN; full Release 1053 passed,
+  zero failed/skipped; Desktop Release zero errors, 16 existing warnings.
+  The running launcher still selects w, which does NOT include this correction.
+  Next: save/close or discard only authorized disposable w test state, package
+  new candidate, repeat near-pin click -> wire -> move/rotate -> Undo/Redo ->
+  Save/Close/Load with normal UI. Do not report native PASS before this rerun.
+  All prior unrelated WIP remains. Overall PARTIAL.
+
 #### Candidate W: New Page Inherits Active Format
 
 - Fixed the native v usability gap below. AddPage accepts an explicit source

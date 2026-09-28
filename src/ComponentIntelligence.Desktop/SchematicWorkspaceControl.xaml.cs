@@ -441,7 +441,20 @@ public partial class SchematicWorkspaceControl : UserControl
             Apply(p => _service.AddCatalogComponent(p, item.Component, _pageId, point), "已放置元件；接點位置待確認");
             _placeMode = false; _placementPreview = null; Render(_getProject()); return;
         }
-        if (_wireMode) { WireAt(SchematicAttachment.Free(), point, e.ClickCount > 1); e.Handled = true; }
+        if (_wireMode)
+        {
+            var pointer = e.GetPosition(Sheet);
+            SchematicAnchorHit? hit;
+            try
+            {
+                hit = SchematicAnchorSnap.Find(_getProject().Schematic?.Symbols ?? [], _pageId ?? "",
+                    new(pointer.X / 3, pointer.Y / 3), 8 / (3 * Zoom.Value));
+            }
+            catch (InvalidOperationException) { Status.Text = "附近有多個等距接點，請放大並點選指定 Pin。"; e.Handled = true; return; }
+            WireAt(hit is null ? SchematicAttachment.Free() : SchematicAttachment.Pin(hit.SymbolId, hit.EndpointId),
+                hit?.Position ?? point, e.ClickCount > 1);
+            e.Handled = true;
+        }
         else { _selectionId = null; Render(_getProject()); }
     }
     private void BeginGesture(MouseButtonEventArgs e)

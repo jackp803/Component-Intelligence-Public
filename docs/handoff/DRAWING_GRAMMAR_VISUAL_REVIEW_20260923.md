@@ -6,6 +6,24 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Candidate R Native Settings Checkpoint
+
+- Fresh r launched after p editor/main closed normally. Disposable SQLite path
+  visibly confirmed before entering Electrical Design. Existing company-template
+  test project loaded normally. Frame/page action opened settings directly with
+  no file picker or CAD conversion. Independent-grid toggle enabled its fields.
+- Cancel path: checked the toggle, closed without Apply, reopened; toggle was
+  still unchecked. No settings undo entry appeared. This is observed UI cancel
+  behavior, not a fresh binary DB comparison.
+- Apply/Save/Load/reopen settings: toggle persisted checked with X=10,Y=10,
+  width=400,height=277. These are test values, NOT approved company grid mapping.
+  Same-process Load PASS; new-process reload and replacement-picker Cancel still
+  pending. Local screenshots settings-cancel-native-r.png and
+  settings-reload-native-r.png. No broad workflow acceptance is implied.
+- Local launcher now pins r Desktop SHA-256
+  09B01CB0774E4F504F18BAE2DE5A0E7E2FD3122A54146BCC8F3B86892E52D2C3
+  and core BD652F60F8AAAE3969EC8E720C36F18D0129F6A3DCD0BDE0118CA97608A95E75.
+
 #### Page Settings Without Reimport (Candidate R, Native NOT_RUN)
 
 - Frame/page action now opens settings directly. Explicit Choose/Replace

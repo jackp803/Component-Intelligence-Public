@@ -13,6 +13,29 @@ public sealed record SchematicCadPrimitive
     public double StartAngle { get; init; }
     public double EndAngle { get; init; }
     public string? Text { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? DisplayText
+    {
+        get
+        {
+            if (Text is null || Kind != "TEXT") return Text;
+            // Decode once, retaining source text and unsupported formatting verbatim.
+            var display = new System.Text.StringBuilder();
+            for (var i = 0; i < Text.Length; i++)
+            {
+                if (i + 2 < Text.Length && Text[i] == '%' && Text[i + 1] == '%')
+                {
+                    var symbol = char.ToLowerInvariant(Text[i + 2]) switch
+                    {
+                        'p' => '\u00b1', 'd' => '\u00b0', 'c' => '\u2300', '%' => '%', _ => '\0'
+                    };
+                    if (symbol != '\0') { display.Append(symbol); i += 2; continue; }
+                }
+                display.Append(Text[i]);
+            }
+            return display.ToString();
+        }
+    }
     public string? AttributeTag { get; init; }
     public double TextHeight { get; init; }
     public double Rotation { get; init; }

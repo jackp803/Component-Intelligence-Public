@@ -47,7 +47,7 @@ public partial class SchematicWorkspaceControl
                     element = new System.Windows.Shapes.Path { Data = new PathGeometry([figure]), Stroke = Brushes.Black, StrokeThickness = 1 };
                     break;
                 case "TEXT":
-                    var singleLine = new TextBlock { Text = primitive.Text, FontSize = Math.Max(1, primitive.TextHeight * 3),
+                    var singleLine = new TextBlock { Text = primitive.DisplayText, FontSize = Math.Max(1, primitive.TextHeight * 3),
                         Foreground = Brushes.Black };
                     singleLine.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                     var offset = primitive.TextAnchorOffset(singleLine.DesiredSize.Width, singleLine.DesiredSize.Height, singleLine.BaselineOffset);

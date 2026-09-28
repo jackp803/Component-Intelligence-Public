@@ -6,6 +6,31 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Company Template Symbol Display (Candidate V)
+
+- Owner reconfirmed: this application is the final schematic editing surface;
+  AutoCAD is auxiliary block/template authoring only. No WDP/DWG execution gate.
+- TEXT display now decodes case-insensitive %%p/%%d/%%c and literal %%% in one
+  pass. Raw Text remains unchanged; computed display is excluded from JSON.
+  Unknown codes remain visible, not silently discarded. MTEXT is unchanged.
+  This does not claim full SHX or CAD rich-format fidelity.
+- TDD: missing DisplayText produced CS1061, then all seven symbol/source tests
+  passed. Fresh full Release: 1046 passed, zero failed/skipped. Desktop Release:
+  zero errors, 16 existing warnings. git diff --check PASS (CRLF advisories).
+- Native: closed u normally, launched hash-pinned v, visibly verified disposable
+  SQLite, opened Electrical Design and loaded the existing company-frame test
+  project. Existing saved template now displays plus/minus and degree symbols
+  without reimport. Screenshot company-template-symbols-native-v.png is private.
+  No source template or engineering identity changes. Full company-frame wire /
+  cross-page / edit / save workflow remains pending; this is not overall READY.
+- Candidate v Desktop SHA-256
+  BC9E73F43B6838FF36D7F6B2DB3DF02AD3F9F15FC15860FE01A7D8A8FBE91E28;
+  core 4BD1E3EA229B7A916443F255799F95B46B2A9C10EC5CCAFCFE85C99F8069CAAE.
+  Existing local launcher selects v. Preserved older unrelated WIP is included
+  in the build but is not part of this scoped commit. Production SQLite,
+  workbook, approved K7L and company DWT hashes/sizes remain at baseline.
+  Continue native company-frame authoring next; do not restart import work.
+
 #### Company Template Text And Hidden Attributes (Candidate U)
 
 - Read-only source inspection found company grid labels use MiddleCenter and

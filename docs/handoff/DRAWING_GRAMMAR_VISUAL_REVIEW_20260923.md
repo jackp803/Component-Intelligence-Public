@@ -6,6 +6,42 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Company Template Closure Repair (Candidate T, Native Save/Reopen PASS)
+
+- Supersedes the hatch root-cause uncertainty below, not the remaining MVP list.
+  Read-only ASCII DXF inspection proved all 19 used company logo paths have
+  group 73 = 1. netDxf 3.0.1 loses this flag during reading; its polyline clone
+  also omits IsClosed. The apparent closing gaps were adapter loss, not missing
+  company engineering evidence. Upstream evidence:
+  https://github.com/haplokuon/netDxf/blob/master/netDxf/IO/DxfReader.cs
+  and https://github.com/haplokuon/netDxf/blob/master/netDxf/Entities/HatchBoundaryPath.cs.
+- Added bounded ASCII HATCH flag restoration by exact entity handle/path order
+  before block explosion; linear boundaries become explicit edges before clone.
+  No proximity-based closure, source rewrite, or blanket closed-loop assumption.
+  Binary DXF does not use this repair. Unsupported curved/style cases remain
+  diagnostics. Synthetic direct/block closed cases failed before the fix;
+  open-boundary rejection and the closed cases now pass (4 focused cases).
+- Real converted company template now imports 1 solid fill with 19 contours.
+  Candidate t normal UI: r closed normally, t launched with visible disposable
+  DB path; load existing test project, Frame/Page -> Replace -> disposable DWT
+  -> unit 1 -> acknowledge remaining TEXT/MTEXT formatting warning -> Apply ->
+  Save -> close editor/main -> launch same t -> Load same project. Company logo
+  fill visibly retained after new-process reload. No DB/service injection.
+  Local evidence: company-template-hatch-native-t.png and
+  company-template-hatch-reload-native-t.png in the existing private evidence
+  directory. This proves template geometry persistence, not full drawing quality.
+- Fresh full Release: 1030 passed, 0 failed/skipped. Desktop t build: 0 errors,
+  16 existing warnings. Diff check passed. Production DB, central workbook,
+  approved K7L and source DWT size/SHA-256 match existing protected baselines.
+- Local launcher pins t: Desktop SHA-256
+  A0168B5ED6652C81B61DB89071EA71E7D1698CFE13862C8DCF6A766CB7782313;
+  core FC1993EF88B652FC0F8B7489200244D84DC0EB930075140B93A64420C75EC57D.
+  The earlier seven dirty/untracked Drawing Planning files remain preserved and
+  uncommitted; this candidate is a working-tree build, not a clean-commit build.
+- Next: template text alignment/font fidelity and usable native page editing
+  on the imported company frame; retain the existing full remaining checklist.
+  No AutoCAD project generation/executor gate is required by current owner scope.
+
 #### Solid Hatch Investigation (Candidate S, Incomplete)
 
 - Actual disposable company template DXF contains one SOLID/Normal Hatch with

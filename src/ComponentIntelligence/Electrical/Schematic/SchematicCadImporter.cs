@@ -53,6 +53,7 @@ public sealed class SchematicCadImporter
         var bytes = File.ReadAllBytes(path);
         using var stream = new MemoryStream(bytes, writable: false);
         var doc = DxfDocument.Load(stream) ?? throw new InvalidDataException("DXF could not be read.");
+        SchematicDxfHatchClosure.Restore(doc, bytes);
         var raw = new List<SchematicCadPrimitive>(); var contacts = new List<SchematicCadContact>(); var diagnostics = new List<string>();
         var bounds = new List<SchematicPoint>();
         SchematicPoint Point(Vector3 p)
@@ -72,6 +73,12 @@ public sealed class SchematicCadImporter
                     var loops = new List<IReadOnlyList<SchematicPoint>>();
                     foreach (var path in hatch.BoundaryPaths)
                     {
+                        if (path.Edges.Count == 1 && path.Edges[0] is HatchBoundaryPath.Polyline edge &&
+                            edge.IsClosed && edge.Vertexes.Length >= 3 && edge.Vertexes.All(v => v.Z == 0))
+                        {
+                            loops.Add(edge.Vertexes.Select(v => Point(new Vector3(v.X, v.Y, hatch.Elevation))).ToArray());
+                            continue;
+                        }
                         var lines = path.Edges.OfType<HatchBoundaryPath.Line>().ToArray();
                         if (lines.Length != path.Edges.Count || lines.Length < 3 ||
                             lines.Where((line, i) => (line.End - lines[(i + 1) % lines.Length].Start).Modulus() > 0.000001).Any())

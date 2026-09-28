@@ -6,6 +6,41 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Owner Scope Correction: Editor Is The Product
+
+- AutoCAD now serves only as the external block/template authoring tool. WDP/DWG
+  output and a real execution pipeline are not required delivery gates. Stop
+  direct executor development; preserve existing editor and archive work.
+- Unpublished execution-compiler preparation and its tests were preserved in a
+  local checkpoint, then withdrawn from the worktree. They were never connected
+  to product UI. The prior 1020-test run included those four tests; it must not
+  be reported as the current editor suite count.
+- Priority remains normal company-template import, new-project authoring and
+  Save/Close/Reload, with genuine UI evidence. Earlier output requirements below
+  are historical. Overall completion and owner visual acceptance remain pending.
+- Candidate o native placement/save was exercised after the older checkpoint
+  below: both pin columns start independently and fit the test sheet. This is
+  fallback readability evidence, not confirmation of physical pin positions.
+  Native company-template import/reload remains to be exercised.
+
+#### Fresh Native Template Import (Candidate O)
+
+- Normal WPF file picker selected an isolated byte-for-byte company DWT copy;
+  source/copy SHA-256 both D5DB332E88F16F18ED82FB3A2982EF2E4970F2438F09522DDEEE51E9F17A03DF.
+  CAD conversion was import-only, not project generation. Units 1 mm, test page
+  420 x 297 mm, existing default margin/grid values used for visual inspection,
+  not asserted as approved company coordinate mapping.
+- Import completed with explicit text/font review and unsupported Hatch warnings.
+  Template appeared on the existing disposable page and normal Save succeeded.
+  Screenshot retained locally as company-template-native-o.png.
+- FAIL: built-in frame coordinate labels and footer are still overlaid on the
+  imported company frame. Imported grid alignment, hatch fidelity and reload
+  are not accepted. Next: shared frame-presentation correction with regression,
+  then fresh candidate native import/reload. Do not declare template-ready yet.
+- Fresh current Release regression after withdrawing superseded compiler:
+  1016 passed, zero failed/skipped. No new Desktop build was needed for this
+  documentation-only checkpoint; native candidate remains o, code 817236e.
+
 #### Catalog Fallback Row Correction
 
 - Native n evidence led to a specific root cause: generic left/right anchors used

@@ -7,6 +7,12 @@ preserved and must not be represented as accepted.
 
 ## Confirmed Scope
 
+- 2026-09-28 owner clarification supersedes the historical execution-output
+  requirements below: this application is the primary schematic editor.
+  AutoCAD is an auxiliary authoring tool for imported blocks/templates only.
+  WDP/DWG generation, execution packages and real AutoCAD execution are NOT
+  delivery gates. Do not continue the direct executor integration.
+
 - No in-product AI service. Read the existing component data centre.
 - The owner will create a new project for acceptance. No automatic rewriting of
   the existing representative project or its 180 connections.
@@ -18,8 +24,8 @@ preserved and must not be represented as accepted.
 - Draft wires can be saved before engineering endpoints are complete.
 - Colours are centrally controlled. Do not claim a preview palette implements
   international conductor standards until its applicability is substantiated.
-- Existing archive, project repository, revision history, cable authorities and
-  isolated AutoCAD executor are reused. Production data and approved assets stay
+- Existing archive, project repository, revision history and cable authorities
+  are reused. Production data and approved assets stay
   protected. No new symbol approval, merge or release.
 
 ## Execution Order / Durable Ledger
@@ -33,8 +39,10 @@ preserved and must not be represented as accepted.
    geometry plus explicit page/grid metadata, preserving source hashes.
 5. Complete route edits, branches, crossovers, cable detail authoring and shared
    displayed/exported geometry. No colour-based connectivity.
-6. Build direct-authoring Plan/IR projection and test unchanged user coordinates
-   through the existing isolated exporter; incomplete engineering stays blocked.
+6. Verify the editable authored document, company template, exact anchors,
+   page order, continuations and manual routes survive Save/Close/Reload.
+   Incomplete engineering remains visibly unresolved but does not prevent draft
+   authoring. No AutoCAD output prerequisite.
 7. Run focused/full tests/build and actual UI flows on a new disposable project.
    Native UI evidence is reported separately from service/API tests.
 8. Publish candidate launcher and handoff, update existing Draft PRs, leave
@@ -43,6 +51,12 @@ preserved and must not be represented as accepted.
 ## Current Checkpoint
 
 ### 2026-09-28 Continuation
+
+- Current priority: native company-template import and new-project authoring.
+  The superseded uncommitted execution compiler and its four tests were backed
+  up locally and withdrawn; no executor was connected to the product. Historical
+  execution requirements/results below are retained for audit, not active scope.
+  Current published code is 817236e; candidate o is the native editor candidate.
 
 - Latest published detail checkpoint: b113df4. Linked cable detail uses existing
   cable authority, with normal point-to-point Save/Close/new-process Reload and

@@ -42,6 +42,29 @@ preserved and must not be represented as accepted.
 
 ## Current Checkpoint
 
+### 2026-09-28 Continuation
+
+- Product Owner conversation is the current feature authority; do not restart
+  Task-013 or let historical coordination handoffs override the agreed editor.
+- Previous direct-authoring checkpoint was published as de7c312. Earlier
+  "uncommitted" entries below are historical, not the current publication state.
+- Added ordered all-sheet viewing, first-wire/other-sheet/second-wire pairing,
+  command shortcut catalog/dispatch, pending placement preview, explicit AWG
+  selection/area/persistence and exact catalog-core lookup (no inferred size).
+- Fresh Release tests: 969 passed, zero failed/skipped. Desktop Release build:
+  zero errors, 16 existing warnings. Diff check passed.
+- Native disposable UI proved click/bend/double-click draft drawing, explicit
+  AWG selection, two-page wire pairing, Ctrl+S, F6 all-pages, normal close and
+  reload retaining page IDs, signal and AWG. Screenshot evidence stays local.
+- UI exposed keyboard focus restoration after canvas selection and low-zoom
+  wire visibility. Minimum screen weight was rebuilt/retested successfully.
+  Further focus correction is pending native retest; do not label all shortcuts
+  accepted. Placement Escape/drag, cable detail and direct export still need
+  end-to-end verification.
+- Production SQLite still matches the reconciled E6708879... baseline; no
+  claim is made that the earlier historical write did not happen.
+- Overall remains PARTIAL; continue the same execution order below.
+
 - Local recoverable WIP backup created before implementation, including tracked
   patches and untracked files for both repositories. Private paths stay local.
 - Previous terminal-page screenshot: FAIL. It groups terminals as standalone

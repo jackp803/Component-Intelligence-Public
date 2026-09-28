@@ -8,6 +8,27 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed class SchematicAuthoringService
 {
+    public ElectricalProject SetWireAwg(ElectricalProject project, string wireId, int? awg)
+    {
+        if (awg is < 0 or > 40) throw new ArgumentOutOfRangeException(nameof(awg));
+        return Edit(project, (draft, doc) =>
+        {
+            var wire = doc.Wires.Single(w => w.WireId == wireId);
+            var members = wire.ConnectionId is null ? [wire] : doc.Wires.Where(w => w.ConnectionId == wire.ConnectionId).ToArray();
+            if (members.Any(w => w.Locked)) throw new InvalidOperationException("A route segment is locked.");
+            var connection = draft.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
+            if (connection?.CableCoreId is not null)
+                throw new InvalidOperationException("Edit the authoritative cable core specification before overriding its wire size.");
+            foreach (var member in members)
+            {
+                var index = doc.Wires.FindIndex(w => w.WireId == member.WireId);
+                doc.Wires[index] = member with { Awg = awg };
+            }
+            if (connection is not null)
+                connection.ConductorAreaMm2 = awg is int value ? Cables.WireSize.AwgToAreaMm2(value) : null;
+        });
+    }
+
     public ElectricalProject DeleteWire(ElectricalProject project, string wireId) => Edit(project, (draft, doc) =>
     {
         var wire = doc.Wires.SingleOrDefault(w => w.WireId == wireId)
@@ -154,6 +175,29 @@ public sealed class SchematicAuthoringService
         doc.Continuations.Add(new() { ContinuationId = id, Signal = signal.Trim(),
             Source = new() { MarkerId = id + ":source", PageId = sourcePage, Position = source },
             Destination = new() { MarkerId = id + ":destination", PageId = destinationPage, Position = destination } });
+    });
+
+    public ElectricalProject ConnectAcrossPages(ElectricalProject project, string firstWireId, bool firstStart,
+        string secondWireId, bool secondStart, string signal) => Edit(project, (draft, doc) =>
+    {
+        var first = doc.Wires.Single(w => w.WireId == firstWireId);
+        var second = doc.Wires.Single(w => w.WireId == secondWireId);
+        if (first.PageId == second.PageId || first.WireId == second.WireId)
+            throw new InvalidOperationException("Select two wires on different pages.");
+        if (first.Locked || second.Locked || first.ConnectionId is not null || second.ConnectionId is not null)
+            throw new InvalidOperationException("Only unlocked incomplete wires can be paired; existing circuits cannot be merged.");
+        if ((firstStart ? first.Start : first.End).Kind != SchematicAttachmentKind.Free ||
+            (secondStart ? second.Start : second.End).Kind != SchematicAttachmentKind.Free)
+            throw new InvalidOperationException("Select a free end; a bound endpoint cannot be replaced.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(signal);
+        var id = $"xref-{Guid.NewGuid():N}";
+        var source = new SchematicMarker { MarkerId = id + ":source", PageId = first.PageId, Position = firstStart ? first.Points[0] : first.Points[^1] };
+        var destination = new SchematicMarker { MarkerId = id + ":destination", PageId = second.PageId, Position = secondStart ? second.Points[0] : second.Points[^1] };
+        doc.Continuations.Add(new() { ContinuationId = id, Signal = signal.Trim(), Source = source, Destination = destination });
+        doc.Wires[doc.Wires.IndexOf(first)] = firstStart ? first with { Start = SchematicAttachment.Marker(source.MarkerId) } : first with { End = SchematicAttachment.Marker(source.MarkerId) };
+        doc.Wires[doc.Wires.IndexOf(second)] = secondStart ? second with { Start = SchematicAttachment.Marker(destination.MarkerId) } : second with { End = SchematicAttachment.Marker(destination.MarkerId) };
+        Validate(draft);
+        ResolveCompletedConnections(draft, doc);
     });
 
     public ElectricalProject DrawWire(ElectricalProject project, string pageId,
@@ -545,15 +589,20 @@ public sealed class SchematicAuthoringService
                 if (visited.Add(neighbour.WireId)) chain.Add(neighbour);
             }
             if (ends.Count != 2 || ends.Any(e => e.Kind != SchematicAttachmentKind.Pin)) continue;
+            var sizes = chain.Where(w => w.Awg.HasValue).Select(w => w.Awg!.Value).Distinct().ToArray();
+            if (sizes.Length > 1) throw new InvalidOperationException("Paired wire segments have conflicting AWG specifications.");
+            int? awg = sizes.Length == 1 ? sizes[0] : null;
             var existingIds = chain.Select(w => w.ConnectionId).Where(id => id is not null).Distinct(StringComparer.Ordinal).ToArray();
             if (existingIds.Length > 1) throw new InvalidOperationException("Continuation cannot join different existing connections.");
             var id = existingIds.SingleOrDefault();
             if (id is null)
                 id = new TopologyEndpointConnectionService().ConnectEndpoints(project, ends[0].EndpointId!, ends[1].EndpointId!).ConnectionId;
+            if (awg is int gauge)
+                project.Connections.Single(c => c.ConnectionId == id).ConductorAreaMm2 = Cables.WireSize.AwgToAreaMm2(gauge);
             foreach (var member in chain)
             {
                 var index = doc.Wires.FindIndex(w => w.WireId == member.WireId);
-                doc.Wires[index] = member with { ConnectionId = id };
+                doc.Wires[index] = member with { ConnectionId = id, Awg = awg };
             }
         }
     }

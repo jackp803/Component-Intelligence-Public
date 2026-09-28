@@ -35,6 +35,14 @@ public partial class SchematicWorkspaceControl : UserControl
     private string? _dragMarker;
     private string? _resumeWireId;
     private bool _resumeReversed;
+    private readonly Dictionary<string, Canvas> _pageCanvases = new(StringComparer.Ordinal);
+    private readonly Canvas _emptyCanvas = new();
+    private Canvas? _renderCanvas;
+    private Canvas Sheet => _renderCanvas ?? (_pageId is not null && _pageCanvases.TryGetValue(_pageId, out var canvas) ? canvas : _emptyCanvas);
+    private bool _allPages;
+    private bool _pairMode;
+    private (string WireId, bool Start)? _pairFirst;
+    private ElectricalProject? _placementPreview;
 
     public SchematicWorkspaceControl(Func<ElectricalProject> getProject, Action<ElectricalProject, string> commit,
         Func<Task<IReadOnlyList<ComponentIR>>> catalogProvider, Func<string, Task<Uri?>> imageResolver,
@@ -73,19 +81,62 @@ public partial class SchematicWorkspaceControl : UserControl
 
     private void Render(ElectricalProject project)
     {
+        var pages = project.Schematic?.Pages ?? [];
+        foreach (var id in _pageCanvases.Keys.Where(id => pages.All(p => p.PageId != id)).ToArray())
+        { PageHost.Children.Remove(_pageCanvases[id]); _pageCanvases.Remove(id); }
+        for (var index = 0; index < pages.Count; index++)
+        {
+            var page = pages[index];
+            if (!_pageCanvases.TryGetValue(page.PageId, out var canvas))
+            {
+                canvas = new Canvas { Background = Brushes.White, Margin = new(12), Tag = page.PageId, Focusable = true };
+                var pageId = page.PageId;
+                canvas.PreviewMouseLeftButtonDown += (s, _) => { ActivatePage(pageId); Keyboard.Focus((Canvas)s); };
+                canvas.PreviewMouseRightButtonDown += (s, _) => { ActivatePage(pageId); Keyboard.Focus((Canvas)s); };
+                canvas.MouseLeftButtonDown += Sheet_Down; canvas.MouseMove += Sheet_Move; canvas.MouseLeftButtonUp += Sheet_Up;
+                _pageCanvases.Add(pageId, canvas);
+            }
+            if (PageHost.Children.IndexOf(canvas) != index)
+            { PageHost.Children.Remove(canvas); PageHost.Children.Insert(index, canvas); }
+            canvas.Visibility = _allPages || page.PageId == _pageId ? Visibility.Visible : Visibility.Collapsed;
+            _renderCanvas = canvas;
+            try { RenderPage(project, page); } finally { _renderCanvas = null; }
+        }
+        UpdateSelection(project);
+    }
+
+    private void ActivatePage(string pageId)
+    {
+        if (_pageId == pageId) return;
+        if (!FinishPendingDraft()) return;
+        CancelGesture(); _pageId = pageId; _selectionId = null;
+        _refreshing = true;
+        try { PageList.SelectedItem = PageList.Items.Cast<PageItem>().FirstOrDefault(p => p.Id == pageId); }
+        finally { _refreshing = false; }
+    }
+
+    private void AllPages_Click(object sender, RoutedEventArgs e)
+    {
+        if (!FinishPendingDraft()) return;
+        CancelGesture(); _allPages = AllPagesTool.IsChecked == true; Render(_getProject()); Sheet.BringIntoView();
+    }
+
+    private void RenderPage(ElectricalProject project, SchematicPage page)
+    {
         Sheet.Children.Clear();
-        var doc = project.Schematic; var page = doc?.Pages.SingleOrDefault(p => p.PageId == _pageId);
-        if (doc is null || page is null) { Status.Text = "尚無工程圖頁面"; return; }
+        var doc = project.Schematic!;
         Sheet.Width = page.Width * PixelsPerMm; Sheet.Height = page.Height * PixelsPerMm;
         if (page.TemplateGeometry is not null)
         {
             var geometry = CadCanvas(page.TemplateGeometry); geometry.IsHitTestVisible = false; Sheet.Children.Add(geometry);
         }
         DrawFrame(page, doc.Pages.IndexOf(page) + 1, project.Name);
-        var crossings = SchematicCrossingService.Analyze(doc.Wires.Where(w => w.PageId == _pageId).ToArray());
-        foreach (var wire in doc.Wires.Where(w => w.PageId == _pageId))
+        var crossings = SchematicCrossingService.Analyze(doc.Wires.Where(w => w.PageId == page.PageId).ToArray());
+        foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))
         {
-            var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : Brushes.Black, wire.WireId == _selectionId ? 2.5 : 1.3);
+            var specification = SchematicWirePresentation.Resolve(project, wire);
+            var weight = Math.Max(1.5 / Zoom.Value, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
+            var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : Brushes.Black, wire.WireId == _selectionId ? weight + 1 : weight);
             if (wire.ConnectionId is null) line.StrokeDashArray = new DoubleCollection([5, 3]);
             line.ToolTip = wire.ConnectionId is null ? "待接續導線" : "已建立工程連線";
             line.MouseLeftButtonDown += (_, e) =>
@@ -109,6 +160,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 hit.Cursor = wire.Locked ? Cursors.Arrow : horizontal ? Cursors.SizeNS : Cursors.SizeWE;
                 hit.MouseLeftButtonDown += (_, e) =>
                 {
+                    if (_pairMode) { PairWire(wire, Snap(e.GetPosition(Sheet))); e.Handled = true; return; }
                     _selectionId = wire.WireId;
                     if (!wire.Locked) { BeginGesture(e); _dragSegment = index; }
                     UpdateSelection(_getProject()); e.Handled = true;
@@ -141,6 +193,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 Canvas.SetLeft(endHandle, point.X * 3 - 4); Canvas.SetTop(endHandle, point.Y * 3 - 4); Sheet.Children.Add(endHandle);
                 endHandle.MouseLeftButtonDown += (_, e) =>
                 {
+                    if (_pairMode) { PairWire(wire, point); e.Handled = true; return; }
                     if (wire.Locked) { Status.Text = "導線已鎖定"; e.Handled = true; return; }
                     _wireMode = true; WireTool.IsChecked = true; SelectTool.IsChecked = false;
                     _resumeWireId = wire.WireId; _resumeReversed = atStart;
@@ -170,9 +223,9 @@ public partial class SchematicWorkspaceControl : UserControl
             var warning = Marker(conflict.Position, Brushes.Transparent, Brushes.Firebrick, 12);
             warning.ToolTip = conflict.Code == "COLLINEAR_OVERLAP" ? "不同導線共線重疊；請分開走線通道" : "未連接的接觸／交叉間距不足";
         }
-        foreach (var symbol in doc.Symbols.Where(s => s.PageId == _pageId)) RenderSymbol(project, symbol);
+        foreach (var symbol in doc.Symbols.Where(s => s.PageId == page.PageId)) RenderSymbol(project, symbol);
         foreach (var pair in doc.Continuations)
-        foreach (var marker in new[] { pair.Source, pair.Destination }.Where(m => m.PageId == _pageId))
+        foreach (var marker in new[] { pair.Source, pair.Destination }.Where(m => m.PageId == page.PageId))
         {
             var point = marker.Position; var arrow = new Polygon
             {
@@ -188,7 +241,17 @@ public partial class SchematicWorkspaceControl : UserControl
             Sheet.Children.Add(arrow);
             Text(_service.ReferenceFor(project, marker.MarkerId), point.X + 2, point.Y - 5, 10, Brushes.Black);
         }
-        RenderWirePreview();
+        if (page.PageId == _pageId)
+        {
+            RenderWirePreview();
+            if (_placeMode && _pointer is not null && _placementPreview?.Schematic?.Symbols.LastOrDefault() is SchematicSymbol ghost)
+            {
+                var first = Sheet.Children.Count;
+                RenderSymbol(_placementPreview, ghost with { Position = _pointer });
+                foreach (UIElement element in Sheet.Children.Cast<UIElement>().Skip(first))
+                { element.IsHitTestVisible = false; element.Opacity = .55; }
+            }
+        }
         UpdateSelection(project);
     }
 
@@ -327,21 +390,22 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void Sheet_Down(object sender, MouseButtonEventArgs e)
     {
-        Focus(); var point = Snap(e.GetPosition(Sheet));
+        FocusCanvas(); var point = Snap(e.GetPosition(Sheet));
         if (_placeMode && CatalogList.SelectedItem is CatalogItem item && _pageId is not null)
         {
             Apply(p => _service.AddCatalogComponent(p, item.Component, _pageId, point), "已放置元件；接點位置待確認");
-            _placeMode = false; return;
+            _placeMode = false; _placementPreview = null; Render(_getProject()); return;
         }
         if (_wireMode) { WireAt(SchematicAttachment.Free(), point, e.ClickCount > 1); e.Handled = true; }
         else { _selectionId = null; Render(_getProject()); }
     }
     private void BeginGesture(MouseButtonEventArgs e)
     {
-        Focus(); _gestureStart = _getProject(); _gesturePreview = null; _dragStart = Snap(e.GetPosition(Sheet)); Sheet.CaptureMouse();
+        Keyboard.Focus(Sheet); _gestureStart = _getProject(); _gesturePreview = null; _dragStart = Snap(e.GetPosition(Sheet)); Sheet.CaptureMouse();
     }
     private void Sheet_Move(object sender, MouseEventArgs e)
     {
+        if (sender is Canvas canvas && canvas != Sheet) return;
         _pointer = Snap(e.GetPosition(Sheet));
         if (_gestureStart is not null && _dragStart is not null && e.LeftButton == MouseButtonState.Pressed)
         {
@@ -372,34 +436,36 @@ public partial class SchematicWorkspaceControl : UserControl
             }
             catch (Exception error) { _gesturePreview = null; Status.Text = error.Message; }
         }
-        else if (_wireMode && _wireStart is not null) Render(_getProject());
+        else if ((_wireMode && _wireStart is not null) || _placeMode) Render(_getProject());
     }
     private void Sheet_Up(object sender, MouseButtonEventArgs e)
     {
         if (_gestureStart is null) return;
         if (_gesturePreview is not null && _pointer != _dragStart) _commit(_gesturePreview, "調整圖面位置／路徑");
-        CancelGesture(); RefreshWorkspace();
+        CancelGesture(); RefreshWorkspace(); FocusCanvas();
+    }
+    private void FocusCanvas()
+    {
+        FocusManager.SetFocusedElement(Window.GetWindow(this), Sheet);
+        Keyboard.Focus(Sheet);
     }
     private void CancelGesture()
     { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragSymbol = null; _dragVertex = null; _dragSegment = null; _dragMarker = null; Sheet.ReleaseMouseCapture(); }
-    private void OnKeyDown(object sender, KeyEventArgs e)
+    private void CancelCommand()
     {
-        if (e.Key == Key.Escape) { CancelGesture(); ClearPendingWire(); _placeMode = false; Render(_getProject()); e.Handled = true; }
-        else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key is Key.Z or Key.Y)
-        {
-            if (e.OriginalSource is TextBox) return;
-            CancelGesture(); ClearPendingWire(); if (e.Key == Key.Z) _undo(); else _redo(); RefreshWorkspace(); e.Handled = true;
-        }
+        CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;
+        _wireMode = false; _placementPreview = null; SelectTool.IsChecked = true; WireTool.IsChecked = false;
+        _selectionId = null; Render(_getProject());
     }
-    private void Select_Click(object sender, RoutedEventArgs e) { if (!FinishPendingDraft()) return; _wireMode = false; SelectTool.IsChecked = true; WireTool.IsChecked = false; ClearPendingWire(); Render(_getProject()); }
-    private void Wire_Click(object sender, RoutedEventArgs e) { _wireMode = true; SelectTool.IsChecked = false; WireTool.IsChecked = true; Focus(); }
+    private void Select_Click(object sender, RoutedEventArgs e) { if (!FinishPendingDraft()) return; CancelCommand(); Focus(); }
+    private void Wire_Click(object sender, RoutedEventArgs e) { _pairMode = false; _pairFirst = null; _placeMode = false; _wireMode = true; SelectTool.IsChecked = false; WireTool.IsChecked = true; Focus(); }
     private void FinishWire_Click(object sender, RoutedEventArgs e)
     { if (_wireStart is not null && _wirePoints.Count > 1) WireAt(SchematicAttachment.Free(), _wirePoints[^1], true); }
     private void AddPage_Click(object sender, RoutedEventArgs e)
     {
         if (!FinishPendingDraft()) return;
         Apply(p => _service.AddPage(p, $"工程圖 {(p.Schematic?.Pages.Count ?? 0) + 1}"), "已新增頁面");
-        _pageId = _getProject().Schematic?.Pages.LastOrDefault()?.PageId; RefreshWorkspace();
+        _pageId = _getProject().Schematic?.Pages.LastOrDefault()?.PageId; _selectionId = null; RefreshWorkspace();
     }
     private void Page_Selected(object sender, SelectionChangedEventArgs e)
     {
@@ -422,7 +488,17 @@ public partial class SchematicWorkspaceControl : UserControl
         CatalogList.ItemsSource = _catalog.Select(c => new CatalogItem(c, $"{c.Identity.Manufacturer} {c.Identity.Model}"))
             .Where(c => c.Label.Contains(search, StringComparison.OrdinalIgnoreCase)).ToArray();
     }
-    private void Place_Click(object sender, RoutedEventArgs e) { if (CatalogList.SelectedItem is CatalogItem) { _placeMode = true; _wireMode = false; Status.Text = "選定元件待放置"; Focus(); } }
+    private void Place_Click(object sender, RoutedEventArgs e)
+    {
+        if (CatalogList.SelectedItem is not CatalogItem item || _pageId is null || !FinishPendingDraft()) return;
+        CancelCommand();
+        try
+        {
+            _placementPreview = _service.AddCatalogComponent(_getProject(), item.Component, _pageId, new(20, 20));
+            _placeMode = true; Status.Text = "選定元件待放置"; Focus(); Render(_getProject());
+        }
+        catch (Exception error) { Status.Text = error.Message; }
+    }
     private void Rotate_Click(object sender, RoutedEventArgs e)
     {
         var s = _getProject().Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
@@ -445,6 +521,12 @@ public partial class SchematicWorkspaceControl : UserControl
             w is not null ? $"{(w.Locked ? "已鎖定" : "可編輯")}\n{(w.ConnectionId is null ? "待接續" : "工程連線已建立")}" : "";
         if (s?.Geometry is not null)
             SelectionState.Text += "\n" + (s.AssetRevision is null ? "圖塊草稿／未核准" : s.AssetRevision) + "\n" + string.Join("\n", s.Geometry.Diagnostics);
+        if (w is not null)
+        {
+            var spec = SchematicWirePresentation.Resolve(p, w);
+            SelectionState.Text += "\n" + (spec.Awg is int awg ? $"AWG {awg}" : "AWG 未指定");
+            if (spec.AreaMm2 is double area) SelectionState.Text += $" / {area:0.###} mm²";
+        }
     }
     private void Reference_Click(object sender, RoutedEventArgs e)
     {
@@ -452,35 +534,47 @@ public partial class SchematicWorkspaceControl : UserControl
         if (s is not null) Apply(p => _service.SetSymbolDetails(p, s.SymbolId, reference, s.Anchors), "已更新 Reference");
     }
     private void Zoom_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
-    { if (SheetZoom is not null) SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue; }
+    { if (SheetZoom is not null) { SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue; Render(_getProject()); } }
     private void Navigate_Click(object sender, RoutedEventArgs e)
     {
         var pair = _getProject().Schematic?.Continuations.SingleOrDefault(c => c.Source.MarkerId == _selectionId || c.Destination.MarkerId == _selectionId);
         if (pair is null || !FinishPendingDraft()) return; var other = pair.Source.MarkerId == _selectionId ? pair.Destination : pair.Source;
-        _pageId = other.PageId; _selectionId = other.MarkerId; RefreshWorkspace();
+        _pageId = other.PageId; _selectionId = other.MarkerId; RefreshWorkspace(); Sheet.BringIntoView(new Rect(other.Position.X * 3, other.Position.Y * 3, 100, 40));
     }
     private void Continuation_Click(object sender, RoutedEventArgs e)
     {
         var doc = _getProject().Schematic;
         if (doc is null || _pageId is null || doc.Pages.Count < 2) { Status.Text = "跨頁符號需要至少兩頁"; return; }
-        var dialog = new Window { Title = "跨頁符號", Width = 400, Height = 230, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+        if (!FinishPendingDraft()) return;
+        CancelGesture(); _pairMode = true; _pairFirst = null; _wireMode = false; _placeMode = false;
+        SelectTool.IsChecked = true; WireTool.IsChecked = false;
+        Status.Text = "跨頁配對：選取第一條未完成導線"; Render(_getProject()); Focus();
+    }
+
+    private void PairWire(SchematicWire wire, SchematicPoint click)
+    {
+        if (wire.Locked || wire.ConnectionId is not null) { Status.Text = "請選取未鎖定的待接續導線；不能合併既有完整回路"; return; }
+        var ends = new[] { true, false }.Where(start => (start ? wire.Start : wire.End).Kind == SchematicAttachmentKind.Free).ToArray();
+        if (ends.Length == 0) { Status.Text = "此導線沒有自由端"; return; }
+        var atStart = ends.OrderBy(start => { var p = start ? wire.Points[0] : wire.Points[^1]; return Math.Abs(p.X - click.X) + Math.Abs(p.Y - click.Y); }).First();
+        if (_pairFirst is null)
+        {
+            _pairFirst = (wire.WireId, atStart); _selectionId = wire.WireId;
+            Status.Text = "跨頁配對：到另一頁選取第二條未完成導線"; Render(_getProject()); return;
+        }
+        var first = _pairFirst.Value;
+        var firstWire = _getProject().Schematic!.Wires.Single(w => w.WireId == first.WireId);
+        if (firstWire.PageId == wire.PageId) { Status.Text = "第二條導線必須在另一頁"; return; }
+        var dialog = new Window { Title = "跨頁配對", Width = 400, Height = 190, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
         var panel = new StackPanel { Margin = new(16) }; var signal = new TextBox { Margin = new(0, 4, 0, 12) };
-        var destination = new ComboBox { ItemsSource = doc.Pages.Where(p => p.PageId != _pageId).ToArray(), DisplayMemberPath = "Title", SelectedIndex = 0 };
         panel.Children.Add(new TextBlock { Text = "訊號／電位名稱" }); panel.Children.Add(signal);
-        panel.Children.Add(new TextBlock { Text = "接收頁面" }); panel.Children.Add(destination);
-        var ok = new Button { Content = "建立配對", Margin = new(0, 14, 0, 0), Padding = new(8) };
+        var ok = new Button { Content = "建立配對", IsDefault = true, Padding = new(8) };
         ok.Click += (_, _) => { if (!string.IsNullOrWhiteSpace(signal.Text)) dialog.DialogResult = true; };
         panel.Children.Add(ok); dialog.Content = panel;
-        if (dialog.ShowDialog() != true || destination.SelectedItem is not SchematicPage target) return;
-        var sourcePoint = _wirePoints.LastOrDefault() ?? _pointer ?? new(80, 40);
-        var applied = Apply(p =>
-        {
-            var next = _service.AddContinuation(p, signal.Text, _pageId, sourcePoint, target.PageId, new(20, 40));
-            if (_wireStart is not null && _wirePoints.Count > 1)
-                next = SaveWire(next, _pageId, _wireStart, SchematicAttachment.Marker(next.Schematic!.Continuations.Last().Source.MarkerId), _wirePoints);
-            return next;
-        }, "已建立跨頁配對");
-        if (applied) ClearPendingWire(); Render(_getProject());
+        dialog.Loaded += (_, _) => signal.Focus();
+        if (dialog.ShowDialog() != true) return;
+        if (Apply(p => _service.ConnectAcrossPages(p, first.WireId, first.Start, wire.WireId, atStart, signal.Text), "已連接兩頁導線並建立跨頁參照"))
+        { _pairMode = false; _pairFirst = null; }
     }
 
     private void RenamePage_Click(object sender, RoutedEventArgs e)

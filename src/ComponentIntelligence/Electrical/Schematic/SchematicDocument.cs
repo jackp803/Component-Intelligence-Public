@@ -75,6 +75,7 @@ public sealed record SchematicWire
     public required string WireId { get; init; }
     public required string PageId { get; init; }
     public string? ConnectionId { get; init; }
+    public int? Awg { get; init; }
     public SchematicAttachment Start { get; init; } = SchematicAttachment.Free();
     public SchematicAttachment End { get; init; } = SchematicAttachment.Free();
     public List<SchematicPoint> Points { get; init; } = [];

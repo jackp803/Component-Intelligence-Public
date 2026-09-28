@@ -29,6 +29,7 @@ public partial class ElectricalWorkspaceWindow
             : await new ComponentIrCatalogReader(_databasePath).ListAsync(),
             ResolveComponentImageAsync, () => Undo_Click(this, new RoutedEventArgs()), () => Redo_Click(this, new RoutedEventArgs()));
         SchematicTab.Content = _schematicWorkspace;
+        _schematicWorkspace.SaveRequested += (_, _) => SaveProject_Click(this, new RoutedEventArgs());
         _cabinetLayoutWorkspace = new CabinetLayoutWorkspaceControl(
             () => _project, RecordMutation, UpdateHistoryButtons,
             status => WorkspaceStatusText.Text = status, ResolveComponentImageAsync);

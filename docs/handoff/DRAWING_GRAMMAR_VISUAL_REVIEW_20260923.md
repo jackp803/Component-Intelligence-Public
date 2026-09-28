@@ -4,6 +4,44 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ## Direct Schematic MVP WIP Checkpoint (2026-09-24)
 
+### Latest Continuation: 2026-09-28 (PARTIAL)
+
+The 2026-09-24 source checkpoint was pushed as de7c312. This continuation adds
+ordered all-pages viewing, pairing two existing draft wires across pages,
+shortcut dispatch, placement preview and explicit AWG. Exact CableDefinitionId
+and CoreId lookup can read catalog core size/color; no model/voltage inference.
+This is not yet an assertion that every runtime catalog adapter supplies cores.
+
+Native UI on isolated DB/workbook copies: new project, click-start/bend and
+double-click-finish, select AWG, create second page, select one wire on each
+page, label TEST-SIGNAL, pair, Ctrl+S, F6 all-pages, normal close, restart and
+reload all passed for the bounded draft case. The reloaded same page IDs,
+paired label and AWG 40 / 0.005 mm2 were visible. AWG 40 is a disposable UI
+test value, not an engineering recommendation. No new electrical endpoints
+were invented to make these free-ended drafts appear complete.
+
+Candidate b Desktop DLL SHA-256:
+710C320EC45A1E1C67EC05FBA3888DC607EE17B223A02A74C301E35C6A3561AD.
+Local evidence folder: task013-schematic-mvp-20260924-160248/ui-20260928.
+Private absolute paths and project payloads are not published.
+
+Observed issue: mouse canvas selection loses reliable keyboard focus on
+subsequent letter commands. A further focus repair after candidate b awaits
+native retest. Low zoom made thin strokes unreadable; minimum preview screen
+weight was repaired and visibly verified after restart. All-keyboard workflow
+is NOT PASS yet. Placement cancellation and connected-pin pairing are not
+covered by this draft-only native pass; domain tests are separate evidence.
+
+Fresh full Release tests: 969 passed, 0 failed/skipped. Release Desktop build:
+0 errors, 16 existing warnings. Diff check PASS. Production SQLite SHA-256
+remains E67088796366875E9DEF97B307D9D44D8AE5DE8084CAD327E50159F7A30E63F1.
+Only that fresh comparison is claimed; preserve the earlier write history.
+Auto source unchanged in this segment; no Auto execution or new symbol approval.
+
+Continue: finish native keyboard/placement/route-edit proof, direct same-geometry
+Plan/IR/export, catalog geometry/color integration and cable detail authoring.
+Overall MVP PARTIAL; PRODUCT_OWNER_VISUAL_ACCEPTANCE=PENDING.
+
 The Product Owner changed the primary workflow to a single manually authored,
 multi-page schematic canvas and will create a new acceptance project. This is
 the same Task-013; older terminal-preview output remains visually rejected.

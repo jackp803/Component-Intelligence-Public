@@ -17,6 +17,9 @@
    <Button Content="前往對端" Padding="12,5" Margin="4,0" Click="Navigate_Click"/>
    <Button Content="搬到其他頁" Padding="12,5" Click="MoveSymbolPage_Click"/>
    <Button Content="線材設定" Padding="12,5" Margin="4,0" Click="CableSettings_Click"/>
+   <Button Content="AWG" Padding="12,5" Click="Gauge_Click" ToolTip="導線規格 (G)"/>
+   <Button Content="?" Padding="12,5" Click="Shortcuts_Click" ToolTip="快捷鍵 (F1)"/>
+   <ToggleButton x:Name="AllPagesTool" Content="所有頁面" Padding="12,5" Click="AllPages_Click" ToolTip="單頁／所有頁面 (F6)"/>
    <Slider x:Name="Zoom" Minimum="0.25" Maximum="2" Value="0.65" Width="110" Margin="12,0" ToolTip="縮放" ValueChanged="Zoom_Changed"/>
   </WrapPanel>
   <Grid Grid.Row="1">
@@ -42,11 +45,10 @@
     <Button Grid.Row="4" Content="放置元件" Padding="10,6" Margin="0,5,0,0" Click="Place_Click"/>
    </Grid>
    <Border Grid.Column="1" BorderBrush="#CBD0D2" BorderThickness="1" Background="#E9ECEC">
-    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-     <Canvas x:Name="Sheet" Background="White" Width="1260" Height="891" Margin="12"
-       MouseLeftButtonDown="Sheet_Down" MouseMove="Sheet_Move" MouseLeftButtonUp="Sheet_Up">
-      <Canvas.LayoutTransform><ScaleTransform x:Name="SheetZoom" ScaleX="0.65" ScaleY="0.65"/></Canvas.LayoutTransform>
-     </Canvas>
+    <ScrollViewer x:Name="PageScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+     <StackPanel x:Name="PageHost" HorizontalAlignment="Left">
+      <StackPanel.LayoutTransform><ScaleTransform x:Name="SheetZoom" ScaleX="0.65" ScaleY="0.65"/></StackPanel.LayoutTransform>
+     </StackPanel>
     </ScrollViewer>
    </Border>
    <StackPanel Grid.Column="2" Margin="10,0,0,0">

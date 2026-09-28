@@ -12,6 +12,24 @@ public sealed class SchematicAuthoringTests
     private readonly SchematicAuthoringService _service = new();
 
     [Fact]
+    public void CompletingCrossPageDraftPropagatesExplicitWireSizeAndRejectsConflict()
+    {
+        var p = PlacedProject(); var pages = p.Schematic!.Pages;
+        p = _service.DrawWire(p, pages[0].PageId, Pin("S1", "A"), SchematicAttachment.Free(), [new(60, 40), new(100, 40)]);
+        p = _service.DrawWire(p, pages[1].PageId, SchematicAttachment.Free(), Pin("S2", "B"), [new(20, 40), new(120, 40)]);
+        var first = p.Schematic!.Wires[0].WireId; var second = p.Schematic.Wires[1].WireId;
+        p = _service.SetWireAwg(p, first, 18);
+        var conflicting = _service.SetWireAwg(p, second, 22);
+        Assert.Throws<InvalidOperationException>(() => _service.ConnectAcrossPages(conflicting, first, false, second, true, "S"));
+        Assert.Empty(conflicting.Connections);
+        var connected = _service.ConnectAcrossPages(p, first, false, second, true, "S");
+        Assert.All(connected.Schematic!.Wires, w => Assert.Equal(18, w.Awg));
+        Assert.InRange(Assert.Single(connected.Connections).ConductorAreaMm2!.Value, .82, .83);
+        var changed = _service.SetWireAwg(connected, second, 20);
+        Assert.All(changed.Schematic!.Wires, w => Assert.Equal(20, w.Awg));
+    }
+
+    [Fact]
     public void LegacyProjectLoadsWithoutInventingPagesOrConnections()
     {
         var legacy = new ElectricalProject { ProjectId = "OLD", SchemaVersion = "0.5" };
@@ -335,6 +353,43 @@ public sealed class SchematicAuthoringTests
         p.Connections[0].CableInstanceId = "EXISTING-CABLE";
         var before = JsonSerializer.Serialize(p);
         Assert.Throws<InvalidOperationException>(() => _service.DeleteWire(p, id));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    [Fact]
+    public void PairTwoExistingDraftLinesAcrossSheetsWithoutChangingPinIdentityOrWireIds()
+    {
+        var p = PlacedProject(); var pages = p.Schematic!.Pages;
+        p = _service.DrawWire(p, pages[0].PageId, Pin("S1", "A"), SchematicAttachment.Free(), [new(60, 40), new(100, 40)]);
+        p = _service.DrawWire(p, pages[1].PageId, SchematicAttachment.Free(), Pin("S2", "B"), [new(30, 40), new(120, 40)]);
+        var wires = p.Schematic!.Wires.ToArray(); var before = JsonSerializer.Serialize(p);
+        var next = _service.ConnectAcrossPages(p, wires[0].WireId, false, wires[1].WireId, true, "TEST SIGNAL");
+        var connection = Assert.Single(next.Connections);
+        Assert.Equal("A", connection.FromEndpointId); Assert.Equal("B", connection.ToEndpointId);
+        Assert.Null(connection.NetId); Assert.Null(connection.CableInstanceId);
+        Assert.Equal(wires.Select(w => w.WireId), next.Schematic!.Wires.Select(w => w.WireId));
+        Assert.Equal(wires[0].Points, next.Schematic.Wires[0].Points);
+        Assert.Equal(wires[1].Points, next.Schematic.Wires[1].Points);
+        Assert.Single(next.Schematic.Continuations);
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+        Assert.Throws<InvalidOperationException>(() => _service.ConnectAcrossPages(next, wires[0].WireId, false, wires[1].WireId, true, "OTHER"));
+    }
+
+    [Fact]
+    public void CrossSheetPairingRejectsBoundEndSameSheetOrLockedWire()
+    {
+        var p = PlacedProject(); var page = p.Schematic!.Pages[0].PageId;
+        p = _service.DrawWire(p, page, Pin("S1", "A"), SchematicAttachment.Free(), [new(60, 40), new(100, 40)]);
+        p = _service.DrawWire(p, page, SchematicAttachment.Free(), SchematicAttachment.Free(), [new(30, 80), new(120, 80)]);
+        var a = p.Schematic!.Wires[0].WireId; var b = p.Schematic.Wires[1].WireId;
+        Assert.Throws<InvalidOperationException>(() => _service.ConnectAcrossPages(p, a, false, b, true, "TEST"));
+        var second = p.Schematic.Pages[1].PageId;
+        p = _service.DrawWire(p, second, SchematicAttachment.Free(), Pin("S2", "B"), [new(30, 40), new(120, 40)]);
+        b = p.Schematic!.Wires[2].WireId;
+        Assert.Throws<InvalidOperationException>(() => _service.ConnectAcrossPages(p, a, true, b, true, "TEST"));
+        p = _service.SetLocked(p, a, true);
+        var before = JsonSerializer.Serialize(p);
+        Assert.Throws<InvalidOperationException>(() => _service.ConnectAcrossPages(p, a, false, b, true, "TEST"));
         Assert.Equal(before, JsonSerializer.Serialize(p));
     }
 

@@ -262,6 +262,7 @@ public partial class BlockArchiveBatchWindow : Window
             .AppendLine($"Suggestions: {row.SuggestedComponentDisplay}")
             .AppendLine($"Selected Component: {row.SelectedComponentId ?? "<review required>"}")
             .AppendLine($"Selected Role: {row.SelectedRole?.ToString() ?? "<review required>"}")
+            .AppendLine($"Representation: {row.RepresentationId}")
             .AppendLine($"Selected SourceType: {row.SelectedSourceType?.ToString() ?? "<review required>"}")
             .AppendLine($"Review status: {row.ReviewStatus}");
 

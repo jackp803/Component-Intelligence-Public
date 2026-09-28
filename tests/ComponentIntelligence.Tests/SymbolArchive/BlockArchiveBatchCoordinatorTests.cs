@@ -33,6 +33,23 @@ public sealed class BlockArchiveBatchCoordinatorTests : IDisposable
     }
 
     [Fact]
+    public async Task RepresentationDraftReloadRetainsSelectionButNotApproval()
+    {
+        var coordinator = Coordinator([Component("C1", "MFR", "MODEL")]);
+        var row = Assert.Single(await coordinator.ScanAsync(SourceRoot(("coil.dwg", "coil"))));
+        Configure(row);
+        row.RepresentationId = "coil";
+        await coordinator.SaveReviewDraftAsync([row]);
+        var loaded = Assert.Single(await coordinator.LoadReviewDraftAsync());
+        Assert.Equal("coil", loaded.RepresentationId);
+        Assert.False(loaded.UserConfirmed);
+        Assert.Null(loaded.ApprovedRevision);
+        loaded.UserConfirmed = true;
+        await coordinator.ApproveSelectedAsync([loaded]);
+        Assert.Equal("coil", Assert.Single(new SymbolArchiveRepository(_root).Load().Bindings).RepresentationId);
+    }
+
+    [Fact]
     public async Task IncompleteReviewDraftRemainsUnselectedAndDoesNotCreateRevision()
     {
         var sourceRoot = SourceRoot(("MODEL.dwg", "one"));

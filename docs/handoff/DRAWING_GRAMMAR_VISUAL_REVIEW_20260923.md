@@ -6,6 +6,17 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Archive draft variant continuation: existing review grid now exposes representation
+identity; review details include that identity. Save/reload preserves it while
+resetting confirmation and retaining Unapproved status. Approval batch preflight
+validates the stable key and passes it to the scoped approval service. Variant
+drafts use review-draft version 2; old default drafts remain version 1 and both are
+readable. A temporary fixture proves round-trip and explicit approval routing;
+no real symbol was approved. Fresh full Release 1101 passed, zero failed/skipped;
+Desktop Release zero errors, 16 warnings. Native archive draft/variant selection
+and placement acceptance remain NOT_RUN. Human-readable representation naming
+can still improve beyond the current stable-key field; this is not final UX signoff.
+
 Another-representation placement continuation: the direct editor now has a separate
 selection-panel action and Shift+P. It requires a selected existing physical
 component and explicitly selected Approved archive representation (no preselection).

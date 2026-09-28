@@ -54,6 +54,7 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
+                <DataGridTextColumn Header="表示識別" Binding="{Binding RepresentationId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="120" />
                 <DataGridTemplateColumn Header="Source Type" Width="1.2*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>

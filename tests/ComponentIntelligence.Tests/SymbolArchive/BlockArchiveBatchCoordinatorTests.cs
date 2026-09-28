@@ -39,14 +39,17 @@ public sealed class BlockArchiveBatchCoordinatorTests : IDisposable
         var row = Assert.Single(await coordinator.ScanAsync(SourceRoot(("coil.dwg", "coil"))));
         Configure(row);
         row.RepresentationId = "coil";
+        row.RepresentationName = "線圈 A1/A2";
         await coordinator.SaveReviewDraftAsync([row]);
         var loaded = Assert.Single(await coordinator.LoadReviewDraftAsync());
         Assert.Equal("coil", loaded.RepresentationId);
+        Assert.Equal("線圈 A1/A2", loaded.RepresentationName);
         Assert.False(loaded.UserConfirmed);
         Assert.Null(loaded.ApprovedRevision);
         loaded.UserConfirmed = true;
         await coordinator.ApproveSelectedAsync([loaded]);
         Assert.Equal("coil", Assert.Single(new SymbolArchiveRepository(_root).Load().Bindings).RepresentationId);
+        Assert.Equal("線圈 A1/A2", Assert.Single(new SymbolArchiveRepository(_root).Load().Bindings).RepresentationName);
     }
 
     [Fact]

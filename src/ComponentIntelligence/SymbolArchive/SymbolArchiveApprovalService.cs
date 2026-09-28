@@ -6,6 +6,7 @@ namespace ComponentIntelligence.SymbolArchive;
 public sealed record ApproveSymbolRequest
 {
     public string RepresentationId { get; init; } = "default";
+    public string? RepresentationName { get; init; }
     public required string SourcePath { get; init; }
     public required string ComponentId { get; init; }
     public required SymbolRole Role { get; init; }
@@ -118,7 +119,7 @@ public sealed class SymbolArchiveApprovalService
                     .OrderBy(item => item.EngineeringEndpointId, StringComparer.Ordinal)
                     .ToArray()
             };
-            var updated = AddApprovedRevision(document, request.ComponentId, request.Role, revisionRecord, request.RepresentationId);
+            var updated = AddApprovedRevision(document, request.ComponentId, request.Role, revisionRecord, request.RepresentationId, request.RepresentationName);
             try
             {
                 _repository.Save(updated);
@@ -215,7 +216,7 @@ public sealed class SymbolArchiveApprovalService
         string componentId,
         SymbolRole role,
         SymbolRevisionRecord revision,
-        string representationId)
+        string representationId, string? representationName)
     {
         var found = false;
         var bindings = document.Bindings.Select(binding =>
@@ -228,7 +229,7 @@ public sealed class SymbolArchiveApprovalService
                     : existing)
                 .Append(revision)
                 .ToArray();
-            return binding with { Revisions = revisions };
+            return binding with { Revisions = revisions, RepresentationName = string.IsNullOrWhiteSpace(representationName) ? binding.RepresentationName : representationName.Trim() };
         }).ToList();
         if (!found)
         {
@@ -236,6 +237,7 @@ public sealed class SymbolArchiveApprovalService
             {
                 ComponentId = componentId,
                 RepresentationId = representationId,
+                RepresentationName = string.IsNullOrWhiteSpace(representationName) ? null : representationName.Trim(),
                 Role = role,
                 Revisions = [revision]
             });

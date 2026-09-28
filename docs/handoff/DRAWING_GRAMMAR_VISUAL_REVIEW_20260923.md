@@ -6,6 +6,22 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Human-readable representation labels: archive review now accepts a display name
+separate from the stable RepresentationId. Draft save/reload retains the name;
+new approved revision creation transports it to the binding, and alternate
+representation placement shows the name, stable key, revision and contact count.
+Historical records without a name retain the existing default/key fallback.
+An exact duplicate approval does not rename an existing approved binding.
+TDD: the existing draft round-trip regression first failed compilation for the
+missing property, then passed with name retention and archive transport assertions.
+Fresh full Release: 1104 passed, zero skipped/failed; Desktop Release: zero errors,
+16 warnings. Tests include the preserved older dirty drawing worktree changes.
+Native label entry/placement verification: NOT_RUN. Overall remains PARTIAL;
+AD is an older running candidate and is not evidence for this UI change.
+Remaining priorities are cable-owned endpoints/template authoring, native saved
+multi-page PDF/print proof, and controlled standards-backed identification.
+
+
 Draft gap visibility continuation: F8 / 草稿缺口 opens a read-only page-grouped list
 of missing company template, unapproved representation, unconfirmed anchors and
 each unfinished wire end. Reference/display/model and endpoint labels are used;

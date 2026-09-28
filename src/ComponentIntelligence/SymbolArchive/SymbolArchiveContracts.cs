@@ -52,6 +52,7 @@ public sealed record ComponentSymbolBinding
 {
     public required string ComponentId { get; init; }
     public string RepresentationId { get; init; } = "default";
+    public string? RepresentationName { get; init; }
     public SymbolRole Role { get; init; }
     public IReadOnlyList<SymbolRevisionRecord> Revisions { get; init; } = [];
 }

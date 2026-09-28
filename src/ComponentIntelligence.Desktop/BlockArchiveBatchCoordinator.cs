@@ -34,6 +34,7 @@ public sealed class BlockArchiveReviewRow
 
     public string? SelectedComponentId { get; set; }
     public string RepresentationId { get; set; } = "default";
+    public string? RepresentationName { get; set; }
     public SymbolRole? SelectedRole { get; set; }
     public SymbolSourceType? SelectedSourceType { get; set; }
     public IReadOnlyList<SymbolPortBinding> PortBindings { get; set; } = [];
@@ -107,7 +108,7 @@ public sealed class BlockArchiveBatchCoordinator
     private sealed record ReviewDraft(int Version, IReadOnlyList<ReviewDraftRow> Rows);
     private sealed record ReviewDraftRow(BlockArchiveCandidate Candidate, string? ComponentId,
         SymbolRole? Role, SymbolSourceType? SourceType, IReadOnlyList<SymbolPortBinding> Bindings,
-        IReadOnlyList<string> Diagnostics, string RepresentationId = "default");
+        IReadOnlyList<string> Diagnostics, string RepresentationId = "default", string? RepresentationName = null);
 
     public async Task SaveReviewDraftAsync(IEnumerable<BlockArchiveReviewRow> rows, CancellationToken cancellationToken = default)
     {
@@ -118,7 +119,7 @@ public sealed class BlockArchiveBatchCoordinator
             if (row.Candidate.SourceIntegrityFailed || !string.Equals(hash, row.Candidate.Sha256, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Source changed: {row.Candidate.RelativePath}. Rescan before saving draft.");
             snapshots.Add(new(row.Candidate, row.SelectedComponentId, row.SelectedRole, row.SelectedSourceType,
-                row.PortBindings.ToArray(), row.DeepInspectionDiagnostics.ToArray(), row.RepresentationId));
+                row.PortBindings.ToArray(), row.DeepInspectionDiagnostics.ToArray(), row.RepresentationId, row.RepresentationName));
         }
         if (snapshots.Count == 0) throw new InvalidOperationException("No candidates to save.");
         Directory.CreateDirectory(ArchiveRoot);
@@ -159,6 +160,7 @@ public sealed class BlockArchiveBatchCoordinator
             {
                 SelectedComponentId = saved.ComponentId,
                 RepresentationId = saved.RepresentationId,
+                RepresentationName = saved.RepresentationName,
                 SelectedRole = saved.Role,
                 SelectedSourceType = saved.SourceType,
                 PortBindings = saved.Bindings,
@@ -219,6 +221,7 @@ public sealed class BlockArchiveBatchCoordinator
                 SourcePath = row.Candidate.SourcePath,
                 ComponentId = row.SelectedComponentId!,
                 RepresentationId = row.RepresentationId,
+                RepresentationName = row.RepresentationName,
                 Role = row.SelectedRole!.Value,
                 SourceType = row.SelectedSourceType!.Value,
                 PortBindings = row.PortBindings

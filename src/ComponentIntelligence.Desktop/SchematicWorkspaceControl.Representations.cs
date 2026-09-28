@@ -28,7 +28,7 @@ public partial class SchematicWorkspaceControl
                 .Where(b => b.ComponentId == component.ComponentDefinitionId && b.Role == SymbolRole.Schematic)
                 .SelectMany(b => b.Revisions.Where(r => r.Status == SymbolRevisionStatus.Approved)
                     .Select(r => new RepresentationChoice(b.RepresentationId,
-                        $"{(b.RepresentationId == "default" ? "預設表示" : b.RepresentationId)} / {r.Revision} / {r.PortBindings.Count} 個接點")))
+                        $"{(string.IsNullOrWhiteSpace(b.RepresentationName) ? (b.RepresentationId == "default" ? "預設表示" : b.RepresentationId) : b.RepresentationName)} [{b.RepresentationId}] / {r.Revision} / {r.PortBindings.Count} 個接點")))
                 .ToArray();
             if (choices.Length == 0) { Status.Text = "此元件尚無已核准的接線表示，請先完成圖塊歸檔。"; return; }
             var dialog = new Window { Title = "放置既有元件的另一個表示", Width = 480, Height = 320,

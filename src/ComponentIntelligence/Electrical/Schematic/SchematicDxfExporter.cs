@@ -49,9 +49,23 @@ public sealed class SchematicDxfExporter
                     Line(p, transform?.Invoke(primitive.End) ?? primitive.End, layer, weight); break;
                 case "CIRCLE": Add(new Circle(Point(p), primitive.Radius), layer, weight); break;
                 case "ARC": Add(new Arc(Point(p), primitive.Radius, primitive.StartAngle - rotation, primitive.EndAngle - rotation), layer, weight); break;
-                case "TEXT": case "MTEXT":
-                    Label(primitive.Text, p, layer, Math.Max(.1, primitive.TextHeight), primitive.Rotation + rotation);
-                    if (primitive.Kind == "MTEXT") diagnostics.Add("MTEXT_FORMAT_REVIEW");
+                case "TEXT":
+                    if (!string.IsNullOrWhiteSpace(primitive.Text))
+                        Add(new Text(primitive.Text, Point(p), Math.Max(.1, primitive.TextHeight))
+                            { Alignment = TextAlignment.BaselineLeft, Rotation = -(primitive.Rotation + rotation) }, layer);
+                    break;
+                case "MTEXT":
+                    if (!string.IsNullOrWhiteSpace(primitive.Text))
+                    {
+                        if (!Enum.TryParse<MTextAttachmentPoint>(primitive.TextAttachment ?? "TopLeft", out var attachment) || !Enum.IsDefined(attachment))
+                            throw new InvalidOperationException("Unsupported MText attachment point.");
+                        // The importer retains plain text, not MText control sequences.
+                        var literal = primitive.Text.Replace("\\", "\\\\").Replace("{", "\\{").Replace("}", "\\}")
+                            .Replace("\r\n", "\n").Replace("\n", "\\P");
+                        Add(new MText(literal, Point(p), Math.Max(.1, primitive.TextHeight), primitive.TextWidth)
+                            { AttachmentPoint = attachment, Rotation = -(primitive.Rotation + rotation) }, layer);
+                    }
+                    diagnostics.Add("MTEXT_FORMAT_REVIEW");
                     break;
                 default: throw new InvalidOperationException($"Unsupported schematic primitive: {primitive.Kind}");
             }

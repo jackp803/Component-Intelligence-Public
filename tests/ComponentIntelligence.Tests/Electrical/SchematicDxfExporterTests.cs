@@ -7,6 +7,65 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class SchematicDxfExporterTests
 {
+    [Theory]
+    [InlineData("TopLeft", 0)]
+    [InlineData("MiddleCenter", 90)]
+    [InlineData("BottomRight", 270)]
+    public void MTextExportRetainsWidthAttachmentAndLiteralMultilineContent(string attachment, double rotation)
+    {
+        var service = new SchematicAuthoringService();
+        var project = service.AddPage(new ElectricalProject { ProjectId = "TEST" }, "Multiline");
+        var page = project.Schematic!.Pages[0];
+        var primitive = new SchematicCadPrimitive { Kind = "MTEXT", Start = new(41.125, 62.875),
+            Text = "First {literal} \\P\nSecond", TextHeight = 3.5, TextWidth = 22.75,
+            TextAttachment = attachment, Rotation = rotation };
+        project.Schematic.Pages[0] = page with { TemplateGeometry = new SchematicCadAsset
+            { SourceSha256 = new string('A', 64), Width = page.Width, Height = page.Height, Primitives = [primitive] } };
+        using var stream = new MemoryStream(Assert.Single(new SchematicDxfExporter().Create(project)).Dxf);
+        var exported = Assert.Single(DxfDocument.Load(stream).Entities.MTexts);
+        Assert.Equal(primitive.Text, exported.PlainText().Replace("\r\n", "\n"));
+        Assert.Equal(attachment, exported.AttachmentPoint.ToString());
+        Assert.Equal(primitive.TextWidth, exported.RectangleWidth, 8);
+        Assert.Equal(primitive.Start.X, exported.Position.X, 8);
+        Assert.Equal(page.Height - primitive.Start.Y, exported.Position.Y, 8);
+        Assert.Equal((360 - rotation) % 360, exported.Rotation, 8);
+    }
+
+    [Theory]
+    [InlineData(0, 40, 57)]
+    [InlineData(90, 43, 60)]
+    [InlineData(180, 40, 63)]
+    [InlineData(270, 37, 60)]
+    public void PreviewTextRotationKeepsTheBaselineFixed(double rotation, double x, double y)
+    {
+        var primitive = new SchematicCadPrimitive { Kind = "TEXT", Start = new(40, 60), TextHeight = 3, Rotation = rotation };
+        var origin = primitive.PreviewTextOrigin();
+        Assert.Equal(x, origin.X, 8);
+        Assert.Equal(y, origin.Y, 8);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(90)]
+    [InlineData(180)]
+    [InlineData(270)]
+    public void CadTextRetainsItsBaselineAndRotationInsteadOfBecomingTopAligned(double rotation)
+    {
+        var service = new SchematicAuthoringService();
+        var project = service.AddPage(new ElectricalProject { ProjectId = "TEST" }, "Text");
+        var page = project.Schematic!.Pages[0];
+        var text = new SchematicCadPrimitive { Kind = "TEXT", Start = new(41.125, 62.875),
+            Text = "CAD baseline", TextHeight = 3.5, Rotation = rotation };
+        project.Schematic.Pages[0] = page with { TemplateGeometry = new SchematicCadAsset
+            { SourceSha256 = new string('A', 64), Width = page.Width, Height = page.Height, Primitives = [text] } };
+        using var stream = new MemoryStream(Assert.Single(new SchematicDxfExporter().Create(project)).Dxf);
+        var exported = Assert.Single(DxfDocument.Load(stream).Entities.Texts, t => t.Value == text.Text);
+        Assert.Equal(netDxf.Entities.TextAlignment.BaselineLeft, exported.Alignment);
+        Assert.Equal(text.Start.X, exported.Position.X, 8);
+        Assert.Equal(page.Height - text.Start.Y, exported.Position.Y, 8);
+        Assert.Equal((360 - rotation) % 360, exported.Rotation, 8);
+    }
+
     [Fact]
     public void DraftExportKeepsPageOrderExactGeometryAndProjectUnchanged()
     {

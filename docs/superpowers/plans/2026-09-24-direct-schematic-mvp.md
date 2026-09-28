@@ -44,6 +44,17 @@ preserved and must not be represented as accepted.
 
 ### 2026-09-28 Continuation
 
+- Latest published detail checkpoint: b113df4. Linked cable detail uses existing
+  cable authority, with normal point-to-point Save/Close/new-process Reload and
+  edited-length Cancel proof. Multi-end detail has 1-to-2/1-to-3 automated proof,
+  not native acceptance. Company cable CAD-template appearance remains open.
+- Text fidelity continuation: baseline/rotation and multiline export corrections;
+  full Release 1009 passed and candidate m build passed. Native m NOT_RUN after
+  black capture plus failed window activation. Verified launcher still l.
+- Direct Plan/IR/executor remains open: existing plan uses integer coordinates,
+  authored CAD uses fractional millimetres. Preserve geometry and truthful
+  provenance; no rounding or old-planner regeneration as an acceptance shortcut.
+
 - Product Owner conversation is the current feature authority; do not restart
   Task-013 or let historical coordination handoffs override the agreed editor.
 - Previous direct-authoring checkpoint was published as de7c312. Earlier

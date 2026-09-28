@@ -18,6 +18,14 @@ public sealed record SchematicCadPrimitive
     public double Rotation { get; init; }
     public double TextWidth { get; init; }
     public string? TextAttachment { get; init; }
+
+    // TEXT stores a baseline anchor; rotate its nominal top-left around that anchor.
+    public SchematicPoint PreviewTextOrigin()
+    {
+        if (Kind != "TEXT") return Start;
+        var angle = Rotation * Math.PI / 180;
+        return new(Start.X + TextHeight * Math.Sin(angle), Start.Y - TextHeight * Math.Cos(angle));
+    }
 }
 
 public sealed record SchematicCadContact(string Tag, string Value, SchematicPoint Position, string? SourcePinId = null, string? Direction = null);

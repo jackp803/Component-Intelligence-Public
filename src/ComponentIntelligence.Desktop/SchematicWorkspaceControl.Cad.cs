@@ -38,7 +38,8 @@ public partial class SchematicWorkspaceControl
                 case "TEXT":
                     element = new TextBlock { Text = primitive.Text, FontSize = Math.Max(1, primitive.TextHeight * 3),
                         Foreground = Brushes.Black, RenderTransform = new RotateTransform(primitive.Rotation) };
-                    Canvas.SetLeft(element, primitive.Start.X * 3); Canvas.SetTop(element, (primitive.Start.Y - primitive.TextHeight) * 3);
+                    var origin = primitive.PreviewTextOrigin();
+                    Canvas.SetLeft(element, origin.X * 3); Canvas.SetTop(element, origin.Y * 3);
                     break;
                 case "MTEXT":
                     var text = new TextBlock { Text = primitive.Text, FontSize = Math.Max(1, primitive.TextHeight * 3),

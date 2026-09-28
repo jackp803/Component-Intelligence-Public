@@ -6,6 +6,26 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### CAD Text Coordinate Fidelity
+
+- Exact TEXT baseline/rotation reproduction initially failed all four cardinal
+  rotations: draft DXF used TopLeft while the imported primitive stores a baseline.
+  Export now retains BaselineLeft and fractional insertion coordinates. WPF rotates
+  the nominal text origin around the same baseline, rather than an offset corner.
+- Three failing MTEXT regressions established that multiline text was degraded to
+  single-line TEXT. Export now preserves multiline entity kind, rectangle width,
+  attachment and rotation; plain-text braces/backslashes/newlines are escaped.
+  Font/format review diagnostics remain: this is not full CAD font equivalence.
+- Fresh full Release **1009 PASS / 0 FAIL / 0 SKIP**, Desktop Release candidate m
+  **0 errors / 16 warnings**, evidence `tests/text-fidelity-20260928.trx`.
+  Desktop SHA `2E30CAD3528E4A1C1C06E8BABBC65D0329FCE63A330F955E750F649BF29D62B9`;
+  core SHA `DDBA2469943385E54E364B4DF1162B237457E9E123DF57AD0A2CD1F2F0102B17`.
+- Native m retest **NOT_RUN**: the still-open l window returned black capture;
+  fresh window selection and one activation recovery returned
+  `failed to activate captured window`. Input stopped; owner asked to confirm
+  unlocked desktop. Last normal-UI verified launcher remains l. Do not use its
+  screenshots as evidence for m's text changes. Other implementation can continue.
+
 #### Linked Cable Detail And Native Persistence
 
 - Added optional linked cable-detail pages in the existing schematic document.

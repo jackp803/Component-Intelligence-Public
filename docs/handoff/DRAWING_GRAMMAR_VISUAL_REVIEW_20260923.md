@@ -27,7 +27,10 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
   native move/rotate/Save exercised with corrected leads. Do not substitute i
   screenshots for j acceptance. Local screenshots: `ui-20260928/k7l-native-import-g.png`,
   `k7l-native-wire-saved-g.png`, `k7l-native-rotate-i.png`,
-  `k7l-native-move-rotate-j.png`. All private evidence stays local.
+  `k7l-native-move-rotate-j.png`, `k7l-native-reload-locked-j.png`.
+  Candidate j additionally passed lock/rejected mouse drag/Save/normal window
+  Close/reopen/Load: orientation, route, lock and 8/8 approved contacts persisted.
+  All private evidence stays local.
 - Final fresh full Release regression: **992 PASS, 0 FAIL, 0 SKIP**;
   Desktop Release j: **0 errors, 16 existing warnings**; diff check PASS.
   Desktop DLL SHA: `A547F7B7318320AD88C1BFC8E4873236F160BD73E4DE4D9EDB4C9F309BB19F71`.
@@ -37,8 +40,8 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
   the local build and is not claimed as part of this commit.
 - Fresh protected hashes unchanged: DB E6708879..., workbook 7CD84A26...,
   K7L 217A2AC8..., DWT D5DB332E.... No source approval or production mutation.
-- **PARTIAL**, not whole-MVP acceptance. Native j close/reload after latest edit,
-  broad multi-page editing, cable detail authoring, and direct canvas-to-IR/executor
+- **PARTIAL**, not whole-MVP acceptance. Broad multi-page editing, complete
+  cable detail authoring, and direct canvas-to-IR/executor
   closure remain open. Existing synthetic/service tests are not native acceptance.
   K7L Pin 8 has typed Positive but no typed voltage/type in the saved catalog-derived
   snapshot; neutral preview remains truthful rather than inferring DC from its name.

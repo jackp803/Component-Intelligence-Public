@@ -327,7 +327,7 @@ public partial class SchematicWorkspaceControl : UserControl
         body.RenderTransform = transforms;
         Canvas.SetLeft(body, symbol.Position.X * 3); Canvas.SetTop(body, symbol.Position.Y * 3); Sheet.Children.Add(body);
         if (symbol.Geometry is null) _ = LoadImage(component.ComponentDefinitionId, image, symbol);
-        Text(component.ReferenceDesignator ?? "Reference 未設定", symbol.Position.X, symbol.Position.Y - 6, 11, Brushes.Black);
+        var referenceY = symbol.Position.Y - 6;
         body.MouseLeftButtonDown += (_, e) =>
         {
             if (_wireMode) return;
@@ -348,8 +348,22 @@ public partial class SchematicWorkspaceControl : UserControl
                 e.Handled = true;
             };
             if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
-                Text(anchor.Label ?? anchor.EndpointId, point.X + 2, point.Y - 3.8, 8.5, Brushes.DimGray);
+            {
+                var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
+                var label = new TextBlock { Text = anchor.Label ?? anchor.EndpointId, FontSize = 8.5,
+                    Foreground = Brushes.DimGray, IsHitTestVisible = false };
+                label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                referenceY = Math.Min(referenceY, pose.Top(label.DesiredSize.Width / 3, label.DesiredSize.Height / 3) - 6);
+                var transform = new TransformGroup();
+                if (pose.OppositeCorner)
+                    transform.Children.Add(new TranslateTransform(-label.DesiredSize.Width, -label.DesiredSize.Height));
+                transform.Children.Add(new RotateTransform(pose.Rotation));
+                label.RenderTransform = transform;
+                Canvas.SetLeft(label, pose.Position.X * 3); Canvas.SetTop(label, pose.Position.Y * 3);
+                Sheet.Children.Add(label);
+            }
         }
+        Text(component.ReferenceDesignator ?? "Reference 未設定", symbol.Position.X, referenceY, 11, Brushes.Black);
     }
 
     private readonly Dictionary<string, BitmapImage?> _images = new(StringComparer.Ordinal);

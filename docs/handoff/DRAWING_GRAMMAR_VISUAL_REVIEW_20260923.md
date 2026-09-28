@@ -6,6 +6,54 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Candidate Z: Rotated Pin Labels And Locked Manual Route (Fresh Native Proof)
+
+- Scope remains direct schematic authoring. Owner reconfirmed no AutoCAD project
+  output gate; AutoCAD is auxiliary template/block authoring/import only.
+- Completed the pending x near-pin retest below: a click four displayed pixels
+  beside the first catalog pin bound the exact endpoint. Move -> rotate 90 ->
+  one Undo -> one Redo -> Save -> normal process close/restart -> Load retained
+  the attachment, symbol pose and route. Private anchor-move-x.png,
+  anchor-rotate-redo-x.png and anchor-reload-x.png record the normal UI path.
+  No source-location approval: all four catalog anchors remain unconfirmed.
+- Native x exposed overlapping labels after rotation. Shared label pose now
+  rotates the offset/text with the symbol, reversing the attachment at 180/270
+  so text is not upside down. Existing optional DXF draft uses the same pin-label
+  pose; this is not a CAD execution/output acceptance gate.
+- Native y proved separate labels at 90/180, then found a 270-degree Reference
+  collision. Desktop now measures the displayed labels and places Reference
+  above their top extent. Native z loaded the saved 270-degree symbol and proved
+  the reference/label clearance. Optional DXF Reference clearance is not covered
+  by this measured WPF adjustment; no full export visual-equivalence claim.
+- TDD: missing method, then four actual assertion failures with the original
+  fixed-horizontal pose; corrected pose green. Added four measured-top cases.
+  Fresh full Release: 1062 passed, zero failed/skipped. Desktop Release: zero
+  errors, 16 existing warnings. git diff --check PASS (CRLF advisories only).
+- Native z normal canvas: select pin-bound/free-ended draft -> drag middle
+  horizontal segment -> one Undo -> one Redo. Both ends stayed fixed. Lock ->
+  attempted drag caused no movement; one Undo then undid Lock, proving no extra
+  rejected-drag history entry; Redo restored Lock. Normal Save -> close editor
+  -> reopen editor from main -> Load -> select third page/wire retained the
+  manual geometry and locked state. This z reload was same-process/new-editor;
+  x independently exercised complete process restart. Do not conflate them.
+- Read-only disposable revision inspection confirmed identical WireId and Pin
+  attachment, no ElectricalConnection creation (unfinished draft), seven route
+  points and Locked=true in Save and subsequent reload/sync snapshots.
+- Private z evidence: anchor-label-reference-clearance-z.png,
+  anchor-bound-route-drag-z.png, locked-wire-rejects-drag-z.png,
+  locked-wire-editor-reload-z.png. No screenshots/private assets published.
+- Launcher now pins candidate-20260928-z; Desktop SHA-256
+  5BFEB566592DA28C246A578C4F7AF5C2ED2CFBCED2EF08EC28EB5A547CFF3309;
+  core 08224C3BAF9A106B95AE4A4D78F8FBBDB56D72258500A3C0B947CAF41ADB4A22.
+  Built from b906c74 plus this correction and the seven retained unrelated WIP
+  paths, not a clean commit-only build. Auto executable unchanged/not required.
+- Production DB, workbook, approved K7L and source company DWT fresh hashes/sizes
+  match the protected baseline. No CAD launch, engineering approval or formal
+  data mutation. Overall PARTIAL; this does not approve whole-product usability,
+  approved-asset consumption, cable-detail authoring or owner visual acceptance.
+  Next continue those original normal-UI gates, plus the remaining route/anchor
+  editing checks. Preserve existing WIP and the current isolated test project.
+
 #### Pin Hit Target Correction (Built, Native Retest Pending)
 
 - Native w on company-frame third page: placed IFM PL1514 from normal catalog,

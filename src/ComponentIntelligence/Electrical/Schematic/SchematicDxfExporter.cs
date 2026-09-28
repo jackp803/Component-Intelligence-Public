@@ -71,9 +71,11 @@ public sealed class SchematicDxfExporter
             dxf.Entities.Add(entity);
         }
         void Line(SchematicPoint a, SchematicPoint b, string layer, double weight = .25) => Add(new Line(Point(a), Point(b)), layer, weight);
-        void Label(string? text, SchematicPoint p, string layer, double height = 3, double rotation = 0)
+        void Label(string? text, SchematicPoint p, string layer, double height = 3, double rotation = 0,
+            bool oppositeCorner = false)
         {
-            if (!string.IsNullOrWhiteSpace(text)) Add(new Text(text, Point(p), height) { Alignment = TextAlignment.TopLeft, Rotation = -rotation }, layer);
+            if (!string.IsNullOrWhiteSpace(text)) Add(new Text(text, Point(p), height)
+                { Alignment = oppositeCorner ? TextAlignment.BottomRight : TextAlignment.TopLeft, Rotation = -rotation }, layer);
         }
         void Primitive(SchematicCadPrimitive primitive, string layer, double weight,
             Func<SchematicPoint, SchematicPoint>? transform = null, int rotation = 0)
@@ -203,7 +205,11 @@ public sealed class SchematicDxfExporter
                 var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
                 Add(new Circle(Point(point), 7d / 6), "SCHEMATIC_PIN");
                 if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
-                    Label(anchor.Label ?? anchor.EndpointId, new(point.X + 2, point.Y - 3.8), "SCHEMATIC_LABEL", 8.5 / 3);
+                {
+                    var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
+                    Label(anchor.Label ?? anchor.EndpointId, pose.Position, "SCHEMATIC_LABEL", 8.5 / 3,
+                        pose.Rotation, pose.OppositeCorner);
+                }
                 if (!anchor.Confirmed) diagnostics.Add("UNCONFIRMED_ANCHOR: " + anchor.EndpointId);
             }
         }

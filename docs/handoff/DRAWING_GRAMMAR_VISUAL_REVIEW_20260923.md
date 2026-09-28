@@ -6,6 +6,28 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Draft gap visibility continuation: F8 / 草稿缺口 opens a read-only page-grouped list
+of missing company template, unapproved representation, unconfirmed anchors and
+each unfinished wire end. Reference/display/model and endpoint labels are used;
+normal navigation selects the corresponding sheet/object. Sorting cannot redirect
+navigation by stale row index. The list explicitly does not confer engineering
+approval and is not yet exhaustive for cable internal mapping. Service tests prove
+both free tails remain draft and project bytes are unchanged by inspection.
+Fresh full Release: 1104 passed; Desktop Release zero errors, 16 warnings; diff check
+PASS. Native F8/navigation remains NOT_RUN; running AD is not this build.
+
+Cable-authoring source audit (not implementation completion): CableInstance currently
+has identity/reference/length/construction/core assignments, but no own external
+Port/Pin set or pinned template/mapping revision. SchematicSymbol and authoring
+validation currently require a ComponentInstance; endpoint connection resolution
+enumerates only component pins and terminal points. A physical cable therefore
+cannot be made connectable merely by rendering a CAD asset or creating fake
+ComponentIR. Next work must add cable-owned endpoint authority, extend exact
+endpoint lookup/validation and schematic owner handling, pin template/mapping
+snapshots, then expose normal cable-library placement and instance-only edits.
+Reuse existing archive and CableInstance ownership, preserve old projects, and
+prove material counts and unknown mapping do not imply internal continuity.
+
 Archive draft variant continuation: existing review grid now exposes representation
 identity; review details include that identity. Save/reload preserves it while
 resetting confirmation and retaining Unapproved status. Approval batch preflight

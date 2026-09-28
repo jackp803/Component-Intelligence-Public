@@ -1,0 +1,38 @@
+using ComponentIntelligence.Electrical.Domain;
+
+namespace ComponentIntelligence.Electrical.Schematic;
+
+public sealed record SchematicDraftIssue(string Code, string PageId, string ObjectId, string Description);
+
+public static class SchematicDraftReview
+{
+    // Read-only drafting gaps, not electrical validation or an approval verdict.
+    public static IReadOnlyList<SchematicDraftIssue> Inspect(ElectricalProject project)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        var result = new List<SchematicDraftIssue>();
+        if (project.Schematic is not { } doc) return result;
+        foreach (var page in doc.Pages)
+        {
+            if (page.TemplateGeometry is null)
+                result.Add(new("NO_COMPANY_TEMPLATE", page.PageId, page.PageId, $"{page.Title}：尚未套用公司圖框。"));
+            foreach (var symbol in doc.Symbols.Where(s => s.PageId == page.PageId))
+            {
+                var component = project.Components.SingleOrDefault(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
+                var label = component?.ReferenceDesignator ?? component?.DisplayName ?? component?.ComponentDefinitionId ?? symbol.ComponentInstanceId;
+                if (symbol.AssetRevision is null)
+                    result.Add(new("UNAPPROVED_REPRESENTATION", page.PageId, symbol.SymbolId, $"{label}：目前表示未引用核准圖塊版本。"));
+                foreach (var anchor in symbol.Anchors.Where(a => !a.Confirmed))
+                    result.Add(new("UNCONFIRMED_ANCHOR", page.PageId, symbol.SymbolId, $"{label}／{anchor.Label ?? anchor.EndpointId}：接線位置尚未確認。"));
+            }
+            foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))
+            {
+                if (wire.Start.Kind == SchematicAttachmentKind.Free)
+                    result.Add(new("UNFINISHED_WIRE_END", page.PageId, wire.WireId, "導線起點尚未接完；不是 NC 或接地。"));
+                if (wire.End.Kind == SchematicAttachmentKind.Free)
+                    result.Add(new("UNFINISHED_WIRE_END", page.PageId, wire.WireId, "導線終點尚未接完；不是 NC 或接地。"));
+            }
+        }
+        return result;
+    }
+}

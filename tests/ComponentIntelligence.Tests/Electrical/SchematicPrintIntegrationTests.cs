@@ -14,6 +14,14 @@ public sealed class SchematicPrintIntegrationTests
     }
 
     [Fact]
+    public void DraftGapsAreAccessibleFromNormalEditor()
+    {
+        var xml = XDocument.Load(Path.Combine(ConsolidatedWorkspaceNavigationTests.Desktop(), "SchematicWorkspaceControl.xaml"));
+        Assert.Single(xml.Descendants(), e => (string?)e.Attribute("Click") == "ReviewDraft_Click");
+        Assert.Contains(SchematicShortcutCatalog.All, s => s.Command == "ReviewDraft" && s.Gesture == "F8");
+    }
+
+    [Fact]
     public void NormalEditorExposesPdfAndPrintWithDistinctShortcuts()
     {
         var xml = XDocument.Load(Path.Combine(ConsolidatedWorkspaceNavigationTests.Desktop(), "SchematicWorkspaceControl.xaml"));

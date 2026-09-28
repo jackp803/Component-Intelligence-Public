@@ -20,6 +20,7 @@
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE8A5;" Padding="10,5" Click="CableDetail_Click" ToolTip="線材明細 (Ctrl+D)"/>
    <Button Content="AWG" Padding="12,5" Click="Gauge_Click" ToolTip="導線規格 (G)"/>
    <Button Content="?" Padding="12,5" Click="Shortcuts_Click" ToolTip="快捷鍵 (F1)"/>
+   <Button Content="草稿缺口" Padding="12,5" Click="ReviewDraft_Click" ToolTip="查看草稿缺口 (F8)"/>
    <ToggleButton x:Name="AllPagesTool" Content="所有頁面" Padding="12,5" Click="AllPages_Click" ToolTip="單頁／所有頁面 (F6)"/>
    <Button Content="DXF 草稿" Padding="12,5" Click="ExportDraft_Click" ToolTip="匯出 DXF 草稿 (Ctrl+E)"/>
    <Button Content="PDF 草稿" Padding="12,5" Click="ExportPdf_Click" ToolTip="儲存並匯出多頁 PDF 草稿 (Ctrl+Shift+E)"/>

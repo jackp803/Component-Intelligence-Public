@@ -100,7 +100,7 @@ public sealed class SchematicAuthoringTests
     {
         var legacy = new ElectricalProject { ProjectId = "OLD", SchemaVersion = "0.5" };
         var migrated = ElectricalProjectMigrator.Migrate(legacy);
-        Assert.Equal("0.6", migrated.SchemaVersion);
+        Assert.Equal("0.7", migrated.SchemaVersion);
         Assert.Null(migrated.Schematic);
         Assert.Empty(migrated.Connections);
     }

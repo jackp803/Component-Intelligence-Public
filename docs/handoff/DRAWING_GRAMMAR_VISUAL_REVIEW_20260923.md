@@ -6,6 +6,41 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Archived physical cable domain continuation (not a completed cable-library UI):
+CableInstance now optionally stores a private template snapshot, exact source
+Port/Pin bindings with independent runtime endpoint IDs, pinned template/mapping
+revisions, explicit mapping evidence/status and instance-only mapping overrides.
+External Pin connections resolve without fake ComponentIR and persist through the
+normal temporary-SQLite project repository. Whole cable Ports are not conductive
+endpoints. No internal ElectricalConnection or Net is inferred from the Y shape,
+common ownership or incomplete mapping. Unknown length remains allowed.
+Overrides clone only the selected instance and clear mapping confirmation; the
+original template and other instances remain unchanged. Invalid source bindings
+are rejected by the save/load validation boundary. Missing mapping produces a
+review-required engineering diagnostic, not an automatic READY result.
+
+Ruling: ElectricalProject 0.7 is used because older 0.6 readers would otherwise
+silently omit cable-owned endpoints/template authority when resaving. Migration
+from 0.6 preserves existing objects and leaves legacy ArchivedCable null; no
+production migration was executed. Five fresh failing legacy/current-schema tests
+proved only expected 0.6 vs actual 0.7 differences: CableAssemblyEvidenceTests
+(three cases), SchematicAuthoringTests.LegacyProjectLoadsWithoutInventingPagesOrConnections,
+and DrawingPlanPersistenceAndRevisionTests.NewProjectAndV04Migration. Only their
+current-version assertions changed, not legacy fixtures or engineering checks.
+Six new tests cover independent instances, no inferred mapping, real repository
+round-trip, exact external wiring, instance override isolation, malformed mapping,
+whole-Port rejection, invalid bindings and 0.6 migration. Full Release 1110 PASS;
+Desktop Release zero errors/16 warnings. Older drawing WIP remains included in the
+tested worktree and preserved separately.
+
+Still required: reuse the archive UI/storage to supply these templates and CAD
+contact bindings, add cable-owner representations to the canvas (without abusing
+ComponentInstanceId), normal library add/place/edit/reload UI, material-count
+coverage and actual archived asset path/hash verification. This domain DTO/factory
+does NOT approve an asset, prove a real company mapping, or make the cable-library
+workflow usable yet. Native tests for that workflow remain NOT_RUN.
+
+
 Human-readable representation labels: archive review now accepts a display name
 separate from the stable RepresentationId. Draft save/reload retains the name;
 new approved revision creation transports it to the binding, and alternate

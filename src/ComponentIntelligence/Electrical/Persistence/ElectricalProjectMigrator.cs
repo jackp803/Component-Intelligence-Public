@@ -4,7 +4,7 @@ namespace ComponentIntelligence.Electrical.Persistence;
 
 public static class ElectricalProjectMigrator
 {
-    public const string CurrentSchemaVersion = "0.6";
+    public const string CurrentSchemaVersion = "0.7";
 
     public static ElectricalProject Migrate(ElectricalProject project)
     {
@@ -22,6 +22,7 @@ public static class ElectricalProjectMigrator
             "0.3" => UpgradeFrom04(UpgradeFrom03(project)),
             "0.4" => UpgradeFrom04(project),
             "0.5" => Copy(project, CurrentSchemaVersion, project.DrawingPlan),
+            "0.6" => Copy(project, CurrentSchemaVersion, project.DrawingPlan),
             _ => throw new NotSupportedException($"Electrical project schema '{project.SchemaVersion}' is not supported. Current schema is '{CurrentSchemaVersion}'.")
         };
     }

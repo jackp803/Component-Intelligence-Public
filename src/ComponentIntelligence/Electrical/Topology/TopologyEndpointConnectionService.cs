@@ -78,6 +78,13 @@ public sealed class TopologyEndpointConnectionService
                     TopologyEndpointBranchPolicy.AllowsBranching(port, pin));
         }
 
+        // Cable ports are selectors, not conductive nodes. Only their explicit pins connect.
+        foreach (var port in project.Cables.Where(c => c.ArchivedCable is not null).SelectMany(c => c.ArchivedCable!.Ports))
+        {
+            var pin = port.Pins.SingleOrDefault(p => string.Equals(p.PinId, endpointId, StringComparison.Ordinal));
+            if (pin is not null) return new EndpointInfo(endpointId, EndpointKind.Pin, 1);
+        }
+
         foreach (var block in project.TerminalBlocks)
         foreach (var point in block.Positions
                      .SelectMany(position => position.Levels)

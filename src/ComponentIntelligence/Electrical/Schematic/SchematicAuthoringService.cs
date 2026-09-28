@@ -572,6 +572,7 @@ public sealed class SchematicAuthoringService
 
     public static void Validate(ElectricalProject project)
     {
+        ArchivedCableInstanceFactory.ValidateProject(project);
         var doc = project.Schematic;
         if (doc is null) return;
         if (doc.SchemaVersion != "electrical-schematic.v1") throw new InvalidOperationException("Unsupported schematic document version.");

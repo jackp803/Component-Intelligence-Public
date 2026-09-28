@@ -292,16 +292,28 @@ public partial class SchematicWorkspaceControl : UserControl
     private void RenderSymbol(ElectricalProject project, SchematicSymbol symbol)
     {
         var component = project.Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
-        var body = new Border { Width = symbol.Width * 3, Height = symbol.Height * 3, BorderThickness = new(symbol.SymbolId == _selectionId ? 2 : symbol.Geometry is null ? 1 : 0),
+        var body = new Border { Width = symbol.Width * 3, Height = symbol.Height * 3, BorderThickness = new(0),
             BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray, Background = Brushes.White,
             Cursor = _wireMode ? Cursors.Cross : Cursors.SizeAll };
-        var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        var image = new Image { Height = Math.Min(symbol.Height * 1.3, 75), Stretch = Stretch.Uniform, IsHitTestVisible = false };
-        stack.Children.Add(image);
-        stack.Children.Add(new TextBlock { Text = component.DisplayName ?? component.ComponentDefinitionId, FontSize = 11,
-            TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new(5), IsHitTestVisible = false });
-        body.Child = stack;
+        var content = new Canvas();
+        var image = new Image { Stretch = Stretch.Uniform, IsHitTestVisible = false };
+        content.Children.Add(image);
+        if (symbol.Geometry is null)
+        {
+            var layout = SchematicCatalogSymbolLayout.Create(symbol.Width, symbol.Height, 1, 1);
+            var label = new TextBlock { Text = component.DisplayName ?? component.ComponentDefinitionId, FontSize = 11,
+                Width = layout.LabelWidth * 3, TextWrapping = TextWrapping.Wrap, IsHitTestVisible = false };
+            Canvas.SetLeft(label, layout.LabelTopLeft.X * 3); Canvas.SetTop(label, layout.LabelTopLeft.Y * 3);
+            content.Children.Add(label);
+        }
+        body.Child = content;
         if (SchematicSymbolPresentation.Geometry(symbol, component.ReferenceDesignator) is { } cad) body.Child = CadCanvas(cad);
+        // Selection strokes overlay geometry; their width must not shift the CAD body away from its anchors.
+        var drawing = body.Child; body.Child = null;
+        var layers = new Grid(); layers.Children.Add(drawing);
+        layers.Children.Add(new Border { BorderBrush = body.BorderBrush,
+            BorderThickness = new(symbol.SymbolId == _selectionId ? 2 : symbol.Geometry is null ? 1 : 0), IsHitTestVisible = false });
+        body.Child = layers;
         var transforms = new TransformGroup(); transforms.Children.Add(new RotateTransform(symbol.Rotation));
         transforms.Children.Add(symbol.Rotation switch
         {
@@ -312,7 +324,7 @@ public partial class SchematicWorkspaceControl : UserControl
         });
         body.RenderTransform = transforms;
         Canvas.SetLeft(body, symbol.Position.X * 3); Canvas.SetTop(body, symbol.Position.Y * 3); Sheet.Children.Add(body);
-        if (symbol.Geometry is null) _ = LoadImage(component.ComponentDefinitionId, image);
+        if (symbol.Geometry is null) _ = LoadImage(component.ComponentDefinitionId, image, symbol);
         Text(component.ReferenceDesignator ?? "Reference 未設定", symbol.Position.X, symbol.Position.Y - 6, 11, Brushes.Black);
         body.MouseLeftButtonDown += (_, e) =>
         {
@@ -339,15 +351,25 @@ public partial class SchematicWorkspaceControl : UserControl
     }
 
     private readonly Dictionary<string, BitmapImage?> _images = new(StringComparer.Ordinal);
-    private async Task LoadImage(string id, Image target)
+    private async Task<BitmapImage?> GetImage(string id)
+    {
+        if (_images.TryGetValue(id, out var cached)) return cached;
+        var uri = await _imageResolver(id); BitmapImage? bitmap = null;
+        if (uri is not null) { bitmap = new BitmapImage(); bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad; bitmap.UriSource = uri; bitmap.EndInit(); bitmap.Freeze(); }
+        _images[id] = bitmap;
+        return bitmap;
+    }
+
+    private async Task LoadImage(string id, Image target, SchematicSymbol symbol)
     {
         try
         {
-            if (!_images.TryGetValue(id, out var bitmap))
+            var bitmap = await GetImage(id);
+            if (bitmap is not null)
             {
-                var uri = await _imageResolver(id); bitmap = null;
-                if (uri is not null) { bitmap = new BitmapImage(); bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad; bitmap.UriSource = uri; bitmap.EndInit(); bitmap.Freeze(); }
-                _images[id] = bitmap;
+                var layout = SchematicCatalogSymbolLayout.Create(symbol.Width, symbol.Height, bitmap.PixelWidth, bitmap.PixelHeight);
+                target.Width = layout.ImageWidth * 3; target.Height = layout.ImageHeight * 3;
+                Canvas.SetLeft(target, layout.ImageTopLeft.X * 3); Canvas.SetTop(target, layout.ImageTopLeft.Y * 3);
             }
             target.Source = bitmap;
         }

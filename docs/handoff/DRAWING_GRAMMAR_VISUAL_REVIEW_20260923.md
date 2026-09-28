@@ -6,6 +6,37 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Portable Catalog Pictures And Candidate N Native Export
+
+- Catalog pictures now use a shared preview/DXF layout, including cardinal rotation.
+  The draft ZIP carries decoded preview PNG bytes at content-addressed relative
+  paths, deduplicates images and records SHA-256. Missing images remain diagnostics.
+  Selection highlighting no longer shifts body geometry away from its anchors.
+- TDD covered exact rotated placement, aspect ratio, portable package references,
+  hashes and source immutability. Fresh full Release: **1015 PASS / 0 FAIL / 0 SKIP**,
+  `tests/raster-native-final-20260928.trx`. Candidate n Release build: 0 errors,
+  16 warnings. `git diff --check` PASS.
+- Candidate l closed normally. Candidate n launched through the isolated launcher;
+  visible main-window DB path confirmed disposable before Electrical Design.
+  Normal UI placed a catalog AL1342 and exported a new draft ZIP successfully.
+  Native evidence: `ui-20260928/catalog-raster-native-n.png` and corresponding ZIP,
+  local only. One page DXF plus one 576x576 PNG and manifest; image hash
+  `8DC7E33FA4E23C6E508F4E6D58AA971B8D0CA5455DAE7C703DA08A0294DE5F3C`.
+  Export remained `DRAFT_NOT_VERIFIED`, with unconfirmed anchors/template warnings.
+- Native observation also exposed a remaining usability defect: the default
+  AL1342 pin list extends beyond the visible paper when placed mid-page. Its
+  catalog image is present, but default compact layout is NOT accepted. Do not
+  infer approved physical anchor placement from this fallback. Address the
+  existing placement/layout scope next; preserve all endpoint identities.
+- Candidate n Desktop SHA:
+  `2036A3DDC51265222ACD1BAE81660DE7BBAAC7FA818AF3B4160138AC21E5BD30`;
+  core SHA `0B59EEF3BB4A2A1BAD354B31484DDBC2A128BD7366AE6584E57944881265D342`.
+  Local launcher now pins n, paired Auto remains `eb84bee61d562881d861eb17ce990e44f56aff76`.
+- Production DB, central workbook, approved K7L rev-001 and company DWT SHA-256
+  rechecked unchanged against recorded baselines. No source asset writes.
+  CAD opening of the new raster package: NOT_RUN. Full authored-canvas IR/executor
+  closure, remaining native editor workflows and visual acceptance remain pending.
+
 #### CAD Text Coordinate Fidelity
 
 - Exact TEXT baseline/rotation reproduction initially failed all four cardinal

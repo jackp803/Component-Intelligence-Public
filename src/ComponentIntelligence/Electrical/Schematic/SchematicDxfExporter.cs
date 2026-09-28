@@ -1,4 +1,7 @@
 using ComponentIntelligence.Electrical.Domain;
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text.Json;
 using netDxf;
 using netDxf.Entities;
 using netDxf.Tables;
@@ -6,23 +9,56 @@ using netDxf.Units;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
-public sealed record SchematicDxfSheet(string PageId, string Title, byte[] Dxf, IReadOnlyList<string> Diagnostics);
+public sealed record SchematicDxfSheet(string PageId, string Title, byte[] Dxf, IReadOnlyList<string> Diagnostics)
+{
+    public IReadOnlyList<SchematicRasterAsset> Images { get; init; } = [];
+}
 
 // Draft geometry exchange, not an ACADE project or electrical verification report.
 public sealed class SchematicDxfExporter
 {
-    public IReadOnlyList<SchematicDxfSheet> Create(ElectricalProject project)
+    public void WritePackage(Stream destination, ElectricalProject project, IReadOnlyDictionary<string, SchematicRasterAsset>? images = null)
+    {
+        var pages = Create(project, images);
+        using var zip = new ZipArchive(destination, ZipArchiveMode.Create, leaveOpen: true);
+        for (var i = 0; i < pages.Count; i++)
+        {
+            using var output = zip.CreateEntry($"page-{i + 1:000}.dxf").Open();
+            output.Write(pages[i].Dxf);
+        }
+        var assets = pages.SelectMany(p => p.Images).DistinctBy(i => i.Sha256).ToArray();
+        foreach (var asset in assets)
+        {
+            using var output = zip.CreateEntry(asset.File).Open(); output.Write(asset.Png);
+        }
+        using var report = zip.CreateEntry("manifest.json").Open();
+        JsonSerializer.Serialize(report, new
+        {
+            schemaVersion = "schematic-draft-exchange.v1", status = "DRAFT_NOT_VERIFIED",
+            displayProfile = SchematicWireEvidence.Profile, projectId = project.ProjectId,
+            sourceProjectSha256 = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(project))),
+            sourceSchematicSha256 = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(project.Schematic))),
+            limitations = new[] { "Not an AutoCAD Electrical WDP project.", "Extract the complete package before opening a page; raster images use package-relative paths.", "Font metrics and imported text formatting require visual review." },
+            images = assets.Select(a => new { file = a.File, sha256 = a.Sha256, a.PixelWidth, a.PixelHeight }),
+            pages = pages.Select((p, i) => new { p.PageId, p.Title, file = $"page-{i + 1:000}.dxf",
+                sha256 = Convert.ToHexString(SHA256.HashData(p.Dxf)), p.Diagnostics })
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    public IReadOnlyList<SchematicDxfSheet> Create(ElectricalProject project, IReadOnlyDictionary<string, SchematicRasterAsset>? images = null)
     {
         SchematicAuthoringService.Validate(project);
         var source = project.Schematic ?? throw new InvalidOperationException("No schematic pages.");
-        return source.Pages.Select((page, index) => CreatePage(project, source, page, index + 1)).ToArray();
+        return source.Pages.Select((page, index) => CreatePage(project, source, page, index + 1, images)).ToArray();
     }
 
-    private static SchematicDxfSheet CreatePage(ElectricalProject project, SchematicDocument source, SchematicPage page, int number)
+    private static SchematicDxfSheet CreatePage(ElectricalProject project, SchematicDocument source, SchematicPage page, int number,
+        IReadOnlyDictionary<string, SchematicRasterAsset>? images)
     {
         var dxf = new DxfDocument();
         dxf.DrawingVariables.InsUnits = DrawingUnits.Millimeters;
         var diagnostics = new List<string>();
+        var usedImages = new Dictionary<string, SchematicRasterAsset>(StringComparer.Ordinal);
         AciColor? entityColor = null;
         Vector2 Point(SchematicPoint p) => new(p.X, page.Height - p.Y);
         Layer Layer(string name) => dxf.Layers.Contains(name) ? dxf.Layers[name] : dxf.Layers.Add(new Layer(name));
@@ -136,8 +172,21 @@ public sealed class SchematicDxfExporter
             {
                 SchematicPoint[] box = [new(0, 0), new(symbol.Width, 0), new(symbol.Width, symbol.Height), new(0, symbol.Height), new(0, 0)];
                 for (var i = 1; i < box.Length; i++) Line(Map(box[i - 1]), Map(box[i]), "SCHEMATIC_SYMBOL");
-                Label(component.DisplayName ?? component.ComponentDefinitionId, Map(new(2, symbol.Height / 2)), "SCHEMATIC_SYMBOL", 11d / 3, symbol.Rotation);
-                diagnostics.Add("CATALOG_RASTER_IMAGE_NOT_EMBEDDED: " + symbol.SymbolId);
+                var raster = images is not null && images.TryGetValue(component.ComponentDefinitionId, out var found) ? found : null;
+                var layout = SchematicCatalogSymbolLayout.Create(symbol.Width, symbol.Height, raster?.PixelWidth ?? 1, raster?.PixelHeight ?? 1);
+                if (raster is not null)
+                {
+                    if (raster.Png.Length == 0) throw new InvalidOperationException("Preview image is empty.");
+                    var definition = new netDxf.Objects.ImageDefinition("IMG_" + raster.Sha256, raster.File,
+                        raster.PixelWidth, 96, raster.PixelHeight, 96, ImageResolutionUnits.Inches);
+                    var lowerLeft = Map(new(layout.ImageTopLeft.X, layout.ImageTopLeft.Y + layout.ImageHeight));
+                    Add(new Image(definition, Point(lowerLeft), layout.ImageWidth, layout.ImageHeight)
+                        { Rotation = -symbol.Rotation }, "SCHEMATIC_IMAGE");
+                    usedImages.TryAdd(raster.Sha256, raster);
+                }
+                else diagnostics.Add("CATALOG_RASTER_IMAGE_NOT_EMBEDDED: " + symbol.SymbolId);
+                Primitive(new() { Kind = "MTEXT", Start = layout.LabelTopLeft, Text = component.DisplayName ?? component.ComponentDefinitionId,
+                    TextHeight = 11d / 3, TextWidth = layout.LabelWidth, TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25, Map, symbol.Rotation);
             }
             Label(component.ReferenceDesignator ?? "Reference 未設定", new(symbol.Position.X, symbol.Position.Y - 6), "SCHEMATIC_LABEL", 11d / 3);
             foreach (var anchor in symbol.Anchors)
@@ -159,6 +208,7 @@ public sealed class SchematicDxfExporter
         }
         using var stream = new MemoryStream();
         if (!dxf.Save(stream)) throw new IOException("DXF serialization failed.");
-        return new(page.PageId, page.Title, stream.ToArray(), diagnostics.Distinct(StringComparer.Ordinal).ToArray());
+        return new(page.PageId, page.Title, stream.ToArray(), diagnostics.Distinct(StringComparer.Ordinal).ToArray())
+            { Images = usedImages.Values.ToArray() };
     }
 }

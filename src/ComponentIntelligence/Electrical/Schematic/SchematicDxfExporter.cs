@@ -23,11 +23,13 @@ public sealed class SchematicDxfExporter
         var dxf = new DxfDocument();
         dxf.DrawingVariables.InsUnits = DrawingUnits.Millimeters;
         var diagnostics = new List<string>();
+        AciColor? entityColor = null;
         Vector2 Point(SchematicPoint p) => new(p.X, page.Height - p.Y);
         Layer Layer(string name) => dxf.Layers.Contains(name) ? dxf.Layers[name] : dxf.Layers.Add(new Layer(name));
         void Add(EntityObject entity, string layer, double width = .25)
         {
             entity.Layer = Layer(layer);
+            if (entityColor is not null) entity.Color = entityColor;
             entity.Lineweight = width switch { <= .25 => Lineweight.W25, <= .35 => Lineweight.W35, <= .5 => Lineweight.W50, _ => Lineweight.W70 };
             if (layer == "SCHEMATIC_DRAFT_WIRE") entity.Linetype = Linetype.Dashed;
             dxf.Entities.Add(entity);
@@ -76,11 +78,16 @@ public sealed class SchematicDxfExporter
         var crossings = SchematicCrossingService.Analyze(wires);
         foreach (var wire in wires)
         {
+            var evidence = SchematicWireEvidence.Resolve(project, wire);
+            var rgb = Convert.ToInt32(evidence.ColorHex[1..], 16);
+            entityColor = new AciColor((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
             var weight = SchematicWirePresentation.StrokeWidthMm(wire.Awg);
             var layer = wire.ConnectionId is null ? "SCHEMATIC_DRAFT_WIRE" : "SCHEMATIC_WIRE";
             foreach (var p in SchematicCrossingService.RoutePrimitives(wire, crossings)) Primitive(p, layer, weight);
             if (wire.ConnectionId is null) diagnostics.Add("INCOMPLETE_WIRE: " + wire.WireId);
+            if (evidence.Category == "CONFLICT") diagnostics.Add("ENDPOINT_CLASSIFICATION_CONFLICT: " + wire.WireId);
         }
+        entityColor = null;
         foreach (var p in crossings.Junctions)
             Add(new Hatch(HatchPattern.Solid, [new HatchBoundaryPath(new EntityObject[] { new Circle(Point(p), 5d / 6) })], false), "SCHEMATIC_JUNCTION");
         diagnostics.AddRange(crossings.Conflicts.Select(c => c.Code));

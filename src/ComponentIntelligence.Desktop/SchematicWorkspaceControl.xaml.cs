@@ -135,15 +135,23 @@ public partial class SchematicWorkspaceControl : UserControl
         foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))
         {
             var specification = SchematicWirePresentation.Resolve(project, wire);
+            var evidence = SchematicWireEvidence.Resolve(project, wire);
             var weight = Math.Max(1.5 / Zoom.Value, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
-            var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : Brushes.Black, wire.WireId == _selectionId ? weight + 1 : weight);
+            var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
+            var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
             if (wire.ConnectionId is null) line.StrokeDashArray = new DoubleCollection([5, 3]);
-            line.ToolTip = wire.ConnectionId is null ? "待接續導線" : "已建立工程連線";
+            line.ToolTip = (wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
             line.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) return;
                 _selectionId = wire.WireId; Render(_getProject()); e.Handled = true; Focus();
             };
+            if (evidence.Category == "DC_NEGATIVE" && wire.WireId != _selectionId)
+            {
+                var outline = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
+                    Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, Brushes.DimGray, weight + 2 / Zoom.Value, line.StrokeDashArray);
+                outline.IsHitTestVisible = false; Sheet.Children.Add(outline);
+            }
             if (crossings.Crossovers.Any(c => c.HorizontalWireId == wire.WireId))
             {
                 var geometry = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
@@ -526,6 +534,9 @@ public partial class SchematicWorkspaceControl : UserControl
             var spec = SchematicWirePresentation.Resolve(p, w);
             SelectionState.Text += "\n" + (spec.Awg is int awg ? $"AWG {awg}" : "AWG 未指定");
             if (spec.AreaMm2 is double area) SelectionState.Text += $" / {area:0.###} mm²";
+            var evidence = SchematicWireEvidence.Resolve(p, w);
+            SelectionState.Text += "\n接點額定資料\n" + evidence.Description;
+            if (evidence.Category == "CONFLICT") SelectionState.Text += "\n兩端分類衝突，需確認";
         }
     }
     private void Reference_Click(object sender, RoutedEventArgs e)

@@ -12,6 +12,19 @@ public sealed class SchematicAuthoringTests
     private readonly SchematicAuthoringService _service = new();
 
     [Fact]
+    public void ClearingAwgDoesNotDeleteExistingMetricSpecification()
+    {
+        var p = PlacedProject(); var pages = p.Schematic!.Pages;
+        p = _service.DrawWire(p, pages[0].PageId, Pin("S1", "A"), SchematicAttachment.Free(), [new(60, 40), new(100, 40)]);
+        p = _service.DrawWire(p, pages[1].PageId, SchematicAttachment.Free(), Pin("S2", "B"), [new(20, 40), new(120, 40)]);
+        p = _service.ConnectAcrossPages(p, p.Schematic!.Wires[0].WireId, false, p.Schematic.Wires[1].WireId, true, "S");
+        p.Connections[0].ConductorAreaMm2 = 2.5;
+        var next = _service.SetWireAwg(p, p.Schematic!.Wires[0].WireId, null);
+        Assert.Equal(2.5, next.Connections[0].ConductorAreaMm2);
+        Assert.All(next.Schematic!.Wires, w => Assert.Null(w.Awg));
+    }
+
+    [Fact]
     public void CompletingCrossPageDraftPropagatesExplicitWireSizeAndRejectsConflict()
     {
         var p = PlacedProject(); var pages = p.Schematic!.Pages;

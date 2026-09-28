@@ -6,6 +6,28 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Typed Display Evidence And Metric Preservation
+
+- Continued from published `fe2b48da62a87df7dc64b70bfb48b70b35d66dff`.
+  Exact PinId power evidence now drives a bounded DC display profile and endpoint
+  rating text. Explicit continuation pairs propagate that same evidence across
+  draft sheets. Names, colour and geometry never establish connectivity or voltage.
+  Zero-volt Return is not silently classified as negative or neutral. See
+  `docs/specs/SCHEMATIC_DISPLAY_IDENTIFICATION.md` for scope and standard limitations.
+- Clearing an AWG choice preserves an existing metric conductor area; regression
+  failed before correction and passes afterward. The shared DXF colour projection
+  uses the same resolver; export manifests now also pin the full source project.
+- Fresh full Release tests: **976 PASS, 0 FAIL/SKIP**. Candidate e Release build:
+  **0 errors, 16 existing warnings**. This count includes preserved unrelated WIP.
+- Native candidate d remained open. Two refreshed native captures returned entirely
+  black images although the accessibility tree remained readable. No blind input
+  or old-build-as-new acceptance was performed. Candidate e UI verification is
+  **NOT_RUN / native capture unavailable**, not PASS. The earlier candidate d DXF
+  workflow evidence remains historical and does not verify the new display changes.
+- Fresh protected hashes match the reconciled production DB baseline E6708879...,
+  workbook 7CD84A26..., approved K7L 217A2AC8... and company DWT D5DB332E....
+  No production/source/archive mutation, Auto source change, merge or approval.
+
 #### Draft Exchange And Keyboard Retest
 
 - Continuation of pushed checkpoint d825acd, not a new task. Conversation

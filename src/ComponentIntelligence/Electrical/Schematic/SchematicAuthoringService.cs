@@ -24,8 +24,8 @@ public sealed class SchematicAuthoringService
                 var index = doc.Wires.FindIndex(w => w.WireId == member.WireId);
                 doc.Wires[index] = member with { Awg = awg };
             }
-            if (connection is not null)
-                connection.ConductorAreaMm2 = awg is int value ? Cables.WireSize.AwgToAreaMm2(value) : null;
+            if (connection is not null && awg is int value)
+                connection.ConductorAreaMm2 = Cables.WireSize.AwgToAreaMm2(value);
         });
     }
 

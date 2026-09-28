@@ -11,6 +11,40 @@ public sealed class SchematicAuthoringTests
 {
     private readonly SchematicAuthoringService _service = new();
 
+    [Theory]
+    [InlineData(0, 0, 1)]
+    [InlineData(90, -1, 0)]
+    [InlineData(180, 0, -1)]
+    [InlineData(270, 1, 0)]
+    public void MovingCadContactKeepsAnOutwardLeadIncludingRotation(int rotation, int dx, int dy)
+    {
+        var p = PlacedProject();
+        var symbol = p.Schematic!.Symbols[0];
+        p.Schematic.Symbols[0] = symbol with
+        {
+            Anchors = [new() { EndpointId = "A", Position = new(20, 40), Direction = "Bottom", Confirmed = true }]
+        };
+        p = _service.DrawWire(p, symbol.PageId, Pin("S1", "A"), SchematicAttachment.Free(),
+            [new(40, 60), new(41, 60), new(41, 100)]);
+        var next = _service.TransformSymbol(p, "S1", new(80, 20), rotation);
+        var wire = Assert.Single(next.Schematic!.Wires);
+        var anchor = SchematicAuthoringService.AnchorPoint(next.Schematic.Symbols[0], "A");
+        Assert.Equal(anchor, wire.Points[0]);
+        Assert.Equal(new SchematicPoint(anchor.X + dx * 5, anchor.Y + dy * 5), wire.Points[1]);
+        Assert.Equal(new SchematicPoint(41, 100), wire.Points[^1]);
+        Assert.Equal("A", wire.Start.EndpointId);
+        Assert.Empty(next.Connections);
+        SchematicAuthoringService.Validate(next);
+        next = _service.TransformSymbol(next, "S1", new(110, 10), (rotation + 90) % 360);
+        var route = next.Schematic!.Wires[0].Points;
+        for (var i = 1; i < route.Count - 1; i++)
+        {
+            var a = route[i - 1]; var b = route[i]; var c = route[i + 1];
+            Assert.False(a.X == b.X && b.X == c.X && (b.Y - a.Y) * (c.Y - b.Y) < 0);
+            Assert.False(a.Y == b.Y && b.Y == c.Y && (b.X - a.X) * (c.X - b.X) < 0);
+        }
+    }
+
     [Fact]
     public void ClearingAwgDoesNotDeleteExistingMetricSpecification()
     {

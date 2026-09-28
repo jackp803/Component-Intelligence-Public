@@ -6,6 +6,43 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Native Approved-Asset Editing Retest
+
+- Native capture recovered. Normal candidate g navigation used the disposable
+  workbook/archive and selected existing approved K7L rev-001 through the geometry
+  action. Actual CAD appearance and eight confirmed contacts were visible. A wire
+  started at power Pin 8 and ended freely; normal Save/Close/new-process Load
+  restored it. Independent read-only snapshot inspection confirms zero invented
+  ElectricalConnections, eight bindings and unchanged asset revision/hash.
+- Fresh native testing exposed duplicate contact labels and an anchor lead hidden
+  underneath the moved CAD body. Fixed shared Preview/DXF label projection and
+  directional reanchoring (including orthogonal rotation). The old adjacent bend
+  is replaced rather than retained as a retraced stub; remaining route is retained.
+  Standalone ATTDEF tags are preserved, allowing exact TAG1 instance-reference
+  substitution without altering source geometry. Existing untagged snapshots are
+  not guessed or text-matched. TAG1 rendering has automated proof, not native proof.
+- Candidate h: move/one Undo/one Redo and g-saved project reload exercised.
+  Candidate i: outward lead/rotation/Undo/Redo exercised; retraced-stub defect
+  observed and corrected afterward. Candidate j: fresh process, same project Load,
+  native move/rotate/Save exercised with corrected leads. Do not substitute i
+  screenshots for j acceptance. Local screenshots: `ui-20260928/k7l-native-import-g.png`,
+  `k7l-native-wire-saved-g.png`, `k7l-native-rotate-i.png`,
+  `k7l-native-move-rotate-j.png`. All private evidence stays local.
+- Final fresh full Release regression: **992 PASS, 0 FAIL, 0 SKIP**;
+  Desktop Release j: **0 errors, 16 existing warnings**; diff check PASS.
+  Desktop DLL SHA: `A547F7B7318320AD88C1BFC8E4873236F160BD73E4DE4D9EDB4C9F309BB19F71`.
+  Core DLL SHA: `66E0E91789EB15373570B4479D0956696CE6566F7068C47590BBA260DB8B3F1C`.
+  Local launcher now pins both assemblies and selects candidate j with explicit
+  disposable DB/workbook/archive. Preserved unrelated terminal WIP is still in
+  the local build and is not claimed as part of this commit.
+- Fresh protected hashes unchanged: DB E6708879..., workbook 7CD84A26...,
+  K7L 217A2AC8..., DWT D5DB332E.... No source approval or production mutation.
+- **PARTIAL**, not whole-MVP acceptance. Native j close/reload after latest edit,
+  broad multi-page editing, cable detail authoring, and direct canvas-to-IR/executor
+  closure remain open. Existing synthetic/service tests are not native acceptance.
+  K7L Pin 8 has typed Positive but no typed voltage/type in the saved catalog-derived
+  snapshot; neutral preview remains truthful rather than inferring DC from its name.
+
 #### Approved Asset Import And Standalone Contact Repair
 
 - Existing canvas Image/Geometry action now offers the exact approved Schematic

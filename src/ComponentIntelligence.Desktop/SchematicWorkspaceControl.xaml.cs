@@ -282,7 +282,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void RenderSymbol(ElectricalProject project, SchematicSymbol symbol)
     {
         var component = project.Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
-        var body = new Border { Width = symbol.Width * 3, Height = symbol.Height * 3, BorderThickness = new(symbol.SymbolId == _selectionId ? 2 : 1),
+        var body = new Border { Width = symbol.Width * 3, Height = symbol.Height * 3, BorderThickness = new(symbol.SymbolId == _selectionId ? 2 : symbol.Geometry is null ? 1 : 0),
             BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray, Background = Brushes.White,
             Cursor = _wireMode ? Cursors.Cross : Cursors.SizeAll };
         var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -291,7 +291,7 @@ public partial class SchematicWorkspaceControl : UserControl
         stack.Children.Add(new TextBlock { Text = component.DisplayName ?? component.ComponentDefinitionId, FontSize = 11,
             TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new(5), IsHitTestVisible = false });
         body.Child = stack;
-        if (symbol.Geometry is not null) body.Child = CadCanvas(symbol.Geometry);
+        if (SchematicSymbolPresentation.Geometry(symbol, component.ReferenceDesignator) is { } cad) body.Child = CadCanvas(cad);
         var transforms = new TransformGroup(); transforms.Children.Add(new RotateTransform(symbol.Rotation));
         transforms.Children.Add(symbol.Rotation switch
         {
@@ -323,7 +323,8 @@ public partial class SchematicWorkspaceControl : UserControl
                 else { _selectionId = symbol.SymbolId; UpdateSelection(project); }
                 e.Handled = true;
             };
-            Text(anchor.Label ?? anchor.EndpointId, point.X + 2, point.Y - 3.8, 8.5, Brushes.DimGray);
+            if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
+                Text(anchor.Label ?? anchor.EndpointId, point.X + 2, point.Y - 3.8, 8.5, Brushes.DimGray);
         }
     }
 

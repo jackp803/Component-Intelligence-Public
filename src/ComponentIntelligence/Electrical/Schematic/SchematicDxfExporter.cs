@@ -106,7 +106,7 @@ public sealed class SchematicDxfExporter
                 };
                 return new(symbol.Position.X + local.X, symbol.Position.Y + local.Y);
             }
-            if (symbol.Geometry is { } geometry)
+            if (SchematicSymbolPresentation.Geometry(symbol, component.ReferenceDesignator) is { } geometry)
             {
                 foreach (var p in geometry.Primitives) Primitive(p, "SCHEMATIC_SYMBOL", .25, Map, symbol.Rotation);
                 diagnostics.AddRange(geometry.Diagnostics.Select(d => symbol.SymbolId + ": " + d));
@@ -123,7 +123,8 @@ public sealed class SchematicDxfExporter
             {
                 var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
                 Add(new Circle(Point(point), 7d / 6), "SCHEMATIC_PIN");
-                Label(anchor.Label ?? anchor.EndpointId, new(point.X + 2, point.Y - 3.8), "SCHEMATIC_LABEL", 8.5 / 3);
+                if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
+                    Label(anchor.Label ?? anchor.EndpointId, new(point.X + 2, point.Y - 3.8), "SCHEMATIC_LABEL", 8.5 / 3);
                 if (!anchor.Confirmed) diagnostics.Add("UNCONFIRMED_ANCHOR: " + anchor.EndpointId);
             }
         }

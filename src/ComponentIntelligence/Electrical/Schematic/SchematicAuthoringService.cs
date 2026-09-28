@@ -355,8 +355,8 @@ public sealed class SchematicAuthoringService
         {
             var wire = doc.Wires[i];
             var points = wire.Points.ToList();
-            if (wire.Start.SymbolId == symbolId) points = Reanchor(points, AnchorPoint(next, wire.Start.EndpointId!), true);
-            if (wire.End.SymbolId == symbolId) points = Reanchor(points, AnchorPoint(next, wire.End.EndpointId!), false);
+            if (wire.Start.SymbolId == symbolId) points = ReanchorSymbol(points, next, wire.Start.EndpointId!, true);
+            if (wire.End.SymbolId == symbolId) points = ReanchorSymbol(points, next, wire.End.EndpointId!, false);
             doc.Wires[i] = wire with { Points = points };
         }
     });
@@ -373,6 +373,33 @@ public sealed class SchematicAuthoringService
             _ => throw new InvalidOperationException("Only orthogonal rotations are supported.")
         };
         return new(symbol.Position.X + rotated.X, symbol.Position.Y + rotated.Y);
+    }
+
+    private static List<SchematicPoint> ReanchorSymbol(List<SchematicPoint> points, SchematicSymbol symbol, string endpointId, bool atStart)
+    {
+        var contact = symbol.Anchors.Single(a => a.EndpointId == endpointId);
+        var direction = contact.Direction switch
+        {
+            "Left" => new SchematicPoint(-1, 0), "Right" => new SchematicPoint(1, 0),
+            "Top" => new SchematicPoint(0, -1), "Bottom" => new SchematicPoint(0, 1),
+            _ => new SchematicPoint(0, 0)
+        };
+        if (direction == new SchematicPoint(0, 0)) return Reanchor(points, AnchorPoint(symbol, endpointId), atStart);
+        for (var angle = 0; angle < symbol.Rotation; angle += 90) direction = new(-direction.Y, direction.X);
+        if (!atStart) points.Reverse();
+        var anchor = AnchorPoint(symbol, endpointId);
+        var lead = new SchematicPoint(anchor.X + direction.X * 5, anchor.Y + direction.Y * 5);
+        // The first bend belongs to the old anchor lead; retaining it creates a retraced stub.
+        var tailIndex = Math.Min(2, points.Count - 1);
+        var tail = points[tailIndex];
+        var result = new List<SchematicPoint> { anchor, lead };
+        // Leave the contact outward before rejoining the user's existing intermediate route.
+        if (lead.X != tail.X && lead.Y != tail.Y)
+            result.Add(direction.X == 0 ? new(tail.X, lead.Y) : new(lead.X, tail.Y));
+        result.AddRange(points.Skip(tailIndex));
+        for (var i = result.Count - 1; i > 0; i--) if (result[i] == result[i - 1]) result.RemoveAt(i);
+        if (!atStart) result.Reverse();
+        return result;
     }
 
     public ElectricalProject MoveContinuationMarker(ElectricalProject project, string markerId, SchematicPoint position) => Edit(project, (_, doc) =>

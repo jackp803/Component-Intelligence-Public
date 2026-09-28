@@ -13,6 +13,7 @@ public sealed record SchematicCadPrimitive
     public double StartAngle { get; init; }
     public double EndAngle { get; init; }
     public string? Text { get; init; }
+    public string? AttributeTag { get; init; }
     public double TextHeight { get; init; }
     public double Rotation { get; init; }
     public double TextWidth { get; init; }
@@ -107,7 +108,7 @@ public sealed class SchematicCadImporter
             if (definition.Tag.StartsWith("X", StringComparison.Ordinal) && definition.Tag.Contains("TERM", StringComparison.Ordinal))
                 contacts.Add(new(definition.Tag, definition.Value ?? "", Point(definition.Position), Direction: ContactDirection(definition.Tag)));
             if (!definition.IsVisible || !definition.Layer.IsVisible || definition.Flags.HasFlag(AttributeFlags.Hidden) || string.IsNullOrEmpty(definition.Value)) continue;
-            raw.Add(new() { Kind = "TEXT", Start = Point(definition.Position), Text = definition.Value,
+            raw.Add(new() { Kind = "TEXT", Start = Point(definition.Position), Text = definition.Value, AttributeTag = definition.Tag,
                 TextHeight = definition.Height, Rotation = definition.Rotation });
             if (definition.Alignment != TextAlignment.BaselineLeft || definition.WidthFactor != 1 || definition.ObliqueAngle != 0)
                 diagnostics.Add("Attribute text formatting requires visual review.");

@@ -107,12 +107,27 @@ public partial class SchematicWorkspaceControl
         Apply(p => _service.SetSymbolGeometry(p, symbol.SymbolId, imported.Value.Asset, imported.Value.Path), "已套用圖塊草稿；接點需明確綁定");
     }
 
-    private async void ImportTemplate_Click(object sender, RoutedEventArgs e)
+    private void ImportTemplate_Click(object sender, RoutedEventArgs e)
     {
         var page = _getProject().Schematic?.Pages.SingleOrDefault(p => p.PageId == _pageId); if (page is null) return;
-        var imported = await PickCadAsset(); if (imported is null) return;
-        var dialog = new Window { Title = "公司圖框與格位", Width = 420, Height = 640, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        (SchematicCadAsset Asset, string Path)? imported = null;
+        var dialog = new Window { Title = "公司圖框與格位", Width = 420, Height = 700, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new StackPanel { Margin = new(16) };
+        var sourceLabel = new TextBlock { Text = page.TemplatePath is null ? "尚未套用公司模板" : System.IO.Path.GetFileName(page.TemplatePath), TextWrapping = TextWrapping.Wrap };
+        panel.Children.Add(sourceLabel);
+        var replace = new Button { Content = "選擇／更換模板", Margin = new(0, 4, 0, 12), Padding = new(8) };
+        panel.Children.Add(replace);
+        replace.Click += async (_, _) =>
+        {
+            dialog.IsEnabled = false;
+            try
+            {
+                var candidate = await PickCadAsset(owner: dialog);
+                if (candidate is null) return;
+                imported = candidate; sourceLabel.Text = System.IO.Path.GetFileName(candidate.Value.Path);
+            }
+            finally { dialog.IsEnabled = true; }
+        };
         TextBox Field(string label, string value)
         {
             panel.Children.Add(new TextBlock { Text = label }); var box = new TextBox { Text = value, Margin = new(0, 3, 0, 8) }; panel.Children.Add(box); return box;
@@ -143,21 +158,24 @@ public partial class SchematicWorkspaceControl
                 { MessageBox.Show(dialog, "請輸入有效格位範圍"); return; }
                 bounds = new(x, y, gw, gh);
             }
-            if (Apply(p => _service.SetPageTemplate(p, page.PageId, imported.Value.Asset, imported.Value.Path, w, h, m, c, r, bounds), "已套用公司圖框與明確格位")) dialog.DialogResult = true;
+            if (Apply(p => imported is { } candidate
+                ? _service.SetPageTemplate(p, page.PageId, candidate.Asset, candidate.Path, w, h, m, c, r, bounds)
+                : _service.SetPageSettings(p, page.PageId, w, h, m, c, r, bounds), "已更新圖框／頁面設定")) dialog.DialogResult = true;
         };
         dialog.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; dialog.ShowDialog();
     }
 
-    private async Task<(SchematicCadAsset Asset, string Path)?> PickCadAsset(string? approvedPath = null)
+    private async Task<(SchematicCadAsset Asset, string Path)?> PickCadAsset(string? approvedPath = null, Window? owner = null)
     {
+        owner ??= Window.GetWindow(this);
         var path = approvedPath;
         if (path is null)
         {
             var picker = new Microsoft.Win32.OpenFileDialog { Filter = "CAD 圖面|*.dxf;*.dwg;*.dwt", CheckFileExists = true };
-            if (picker.ShowDialog(Window.GetWindow(this)) != true) return null;
+            if (picker.ShowDialog(owner) != true) return null;
             path = picker.FileName;
         }
-        var dialog = new Window { Title = "CAD 匯入單位", Width = 360, Height = 170, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var dialog = new Window { Title = "CAD 匯入單位", Width = 360, Height = 170, Owner = owner, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new StackPanel { Margin = new(16) }; var scale = new TextBox { Text = "1", Margin = new(0, 8, 0, 8) };
         panel.Children.Add(new TextBlock { Text = "每 CAD 單位對應毫米數（1 = mm）" }); panel.Children.Add(scale);
         var ok = new Button { Content = "讀取副本", Padding = new(8) }; ok.Click += (_, _) => dialog.DialogResult = true;
@@ -169,7 +187,7 @@ public partial class SchematicWorkspaceControl
             IsEnabled = false; Status.Text = "讀取 CAD 副本…";
             var asset = await new SchematicCadFileLoader().ReadAsync(path, factor);
             if (!asset.Complete)
-                MessageBox.Show(Window.GetWindow(this), string.Join("\n", asset.Diagnostics), "匯入有未支援項目；不可視為完整工程圖", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(owner, string.Join("\n", asset.Diagnostics), "匯入有未支援項目；不可視為完整工程圖", MessageBoxButton.OK, MessageBoxImage.Warning);
             return (asset, path);
         }
         catch (Exception error) { Status.Text = "匯入失敗：" + error.Message; return null; }

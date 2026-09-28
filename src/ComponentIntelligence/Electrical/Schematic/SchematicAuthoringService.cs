@@ -131,6 +131,15 @@ public sealed class SchematicAuthoringService
             Anchors = symbol.Anchors.Select(a => a with { Confirmed = false }).ToList() };
     });
 
+    public ElectricalProject SetPageSettings(ElectricalProject project, string pageId,
+        double width, double height, double margin, int columns, int rows, SchematicGridBounds? coordinateGrid) => Edit(project, (_, doc) =>
+    {
+        var index = doc.Pages.FindIndex(p => p.PageId == pageId);
+        if (index < 0) throw new InvalidOperationException("Select a sheet.");
+        doc.Pages[index] = doc.Pages[index] with { Width = width, Height = height, Margin = margin,
+            GridColumns = columns, GridRows = rows, CoordinateGrid = coordinateGrid };
+    });
+
     public ElectricalProject SetPageTemplate(ElectricalProject project, string pageId, SchematicCadAsset asset, string sourcePath,
         double width, double height, double margin, int columns, int rows, SchematicGridBounds? coordinateGrid = null) => Edit(project, (_, doc) =>
     {

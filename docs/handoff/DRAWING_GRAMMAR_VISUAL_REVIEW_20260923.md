@@ -6,6 +6,23 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Page Settings Without Reimport (Candidate R, Native NOT_RUN)
+
+- Frame/page action now opens settings directly. Explicit Choose/Replace
+  Template invokes the existing CAD picker; pending geometry is applied only
+  with the settings Apply action. Closing the dialog leaves the project intact.
+  Conversion blocks concurrent settings input. Nested import dialogs use the
+  settings window as owner rather than competing with the main window.
+- Added transactional SetPageSettings retaining embedded geometry, source path
+  and hash even when the original file is unavailable. Regression demonstrates
+  original project immutability and unchanged template geometry; TDD missing
+  method RED then GREEN. Full Release 1026 passed, zero failed/skipped; candidate
+  r Desktop Release 0 errors, 16 warnings. Native r is NOT_RUN. Do not use p's
+  successful reload as proof of these newer dialog changes.
+- Next native candidate should be r (includes q grid work). Verify settings
+  edit/Cancel, explicit bounds Apply, Save/new-process Reload, and replacement
+  picker Cancel. Verified launcher remains p until r hashes are pinned.
+
 #### Explicit Company Coordinate Grid (Candidate Q, Native NOT_RUN)
 
 - Added optional page CoordinateGrid X/Y/Width/Height in sheet millimetres.

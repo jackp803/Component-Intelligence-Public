@@ -455,7 +455,7 @@ public partial class SchematicWorkspaceControl : UserControl
     {
         CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;
         _wireMode = false; _placementPreview = null; SelectTool.IsChecked = true; WireTool.IsChecked = false;
-        _selectionId = null; Render(_getProject());
+        _selectionId = null; Render(_getProject()); Status.Text = "已取消目前操作";
     }
     private void Select_Click(object sender, RoutedEventArgs e) { if (!FinishPendingDraft()) return; CancelCommand(); Focus(); }
     private void Wire_Click(object sender, RoutedEventArgs e) { _pairMode = false; _pairFirst = null; _placeMode = false; _wireMode = true; SelectTool.IsChecked = false; WireTool.IsChecked = true; Focus(); }

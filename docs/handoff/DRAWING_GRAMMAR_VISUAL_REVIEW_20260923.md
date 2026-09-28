@@ -6,6 +6,38 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Draft Exchange And Keyboard Retest
+
+- Continuation of pushed checkpoint d825acd, not a new task. Conversation
+  requirements remain the current product authority; unrelated terminal WIP is preserved.
+- Diagnostic native WPF retest confirmed Chinese-IME W/G dispatch and P placement
+  preview followed by Escape cancellation. UIA's reported focused textbox was stale;
+  temporary WPF focus logging established actual canvas focus. Diagnostic hooks were
+  removed from the source and the following candidate build. This bounded retest is
+  not a claim that every shortcut/route gesture passed.
+- Added a separate explicitly labeled **DXF draft exchange** action (Ctrl+E).
+  It projects existing sheet order, millimetre coordinates, rotation, confirmed
+  anchor positions, continuation captions and the shared crossing primitives without
+  invoking the automatic planner. It does not create WDP, ACADE electrical authority,
+  or an APPLIED/VERIFIED execution result. Incomplete wires, missing templates,
+  unconfirmed anchors, catalog raster images not embedded and imported text limitations
+  remain explicit diagnostics. This is NOT completion of the direct Plan/IR executor gate.
+- Candidate d Desktop DLL SHA-256:
+  `25443E9B091683035A731587881BE8F95FD131A9A812877CC3D59BD0A80A3E4F`.
+  Native UI: loaded the same saved two-page disposable project, invoked DXF draft,
+  observed diagnostics, chose a new isolated local ZIP and saved successfully.
+  Local `native-draft-export.zip` has two ordered DXFs and a manifest containing
+  source schematic hash and each DXF hash. No formal folder/source file was written.
+- TDD: exporter tests initially failed because the exporter did not exist; all three
+  passed after implementation (coordinates/order/no mutation, nonconnecting arc,
+  cross-page label). Fresh combined-worktree full Release: **972 PASS, 0 FAIL/SKIP**.
+  Release Desktop build: 0 errors, 17 existing warnings. Older terminal WIP tests are
+  included in the combined-worktree count, not represented as committed here.
+- Production SQLite fresh SHA remains `E67088796366875E9DEF97B307D9D44D8AE5DE8084CAD327E50159F7A30E63F1`.
+  No new approved asset or Auto runtime change. Overall still PARTIAL; direct final
+  output, automatic catalog presentation, native connected-pin/cable workflow and
+  visual acceptance are not claimed complete.
+
 The 2026-09-24 source checkpoint was pushed as de7c312. This continuation adds
 ordered all-pages viewing, pairing two existing draft wires across pages,
 shortcut dispatch, placement preview and explicit AWG. Exact CableDefinitionId

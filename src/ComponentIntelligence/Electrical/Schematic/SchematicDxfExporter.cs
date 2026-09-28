@@ -199,7 +199,8 @@ public sealed class SchematicDxfExporter
                 Primitive(new() { Kind = "MTEXT", Start = layout.LabelTopLeft, Text = component.DisplayName ?? component.ComponentDefinitionId,
                     TextHeight = 11d / 3, TextWidth = layout.LabelWidth, TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25, Map, symbol.Rotation);
             }
-            Label(component.ReferenceDesignator ?? "Reference 未設定", new(symbol.Position.X, symbol.Position.Y - 6), "SCHEMATIC_LABEL", 11d / 3);
+            if (SchematicSymbolPresentation.ShowReferenceLabel(symbol))
+                Label(component.ReferenceDesignator ?? "Reference 未設定", new(symbol.Position.X, symbol.Position.Y - 6), "SCHEMATIC_LABEL", 11d / 3);
             foreach (var anchor in symbol.Anchors)
             {
                 var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);

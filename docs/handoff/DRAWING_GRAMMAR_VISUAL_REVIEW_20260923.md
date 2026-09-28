@@ -6,6 +6,47 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Candidate AB: Approved K7L Native Consumption And Selection Safety
+
+- Normal WPF on the existing disposable project: add company-frame page ->
+  place catalog K7L -> choose existing approved Schematic rev-001 -> read isolated
+  CAD copy -> 8/8 confirmed contacts. No new approval or archive revision.
+  Exact asset SHA-256 remains
+  217A2AC8BDA3418D4E77D1A4D51015AAD7FC93FE819420EF0279EEFFFFBF3828.
+- Set instance Reference, draw from approved OUTPUT_5 to a free endpoint, move,
+  rotate 90, Save, normal process close/restart and Load. Candidate AA and AB
+  both reopened the same geometry, revision and eight explicit source PinIds.
+  This is a pin-bound unfinished draft, not a complete ElectricalConnection;
+  no false claim of complete circuit validation.
+- Native Z exposed duplicate Reference (CAD TAG1 plus external label). Shared
+  presentation now omits the external label only for rendered TEXT/MTEXT TAG1.
+  Catalog/unmapped/unsupported primitives retain the label. Source CAD untouched.
+  Regression red: two assertion failures; green: all five cases.
+- Native AA exposed a selection bug: focusing the sheet scrolls its origin,
+  and a plain click could become a movement with an unwanted Undo entry.
+  AB gates dragging on viewport pointer movement using Windows drag thresholds.
+  Fresh native AB: same load/page/zoom/click sequence leaves Undo at the prior
+  synchronization operation; actual drag moves symbol and attached route;
+  one Undo restores both. Lock -> attempted drag leaves geometry/history intact.
+  Save succeeded. This WPF-specific fix was reproduced and verified natively.
+- Private screenshots: k7l-approved-eight-anchors-z.png,
+  k7l-approved-bound-wire-move-z.png, k7l-approved-bound-wire-rotate-z.png,
+  k7l-single-reference-restart-aa.png, k7l-click-no-undo-ab.png,
+  k7l-locked-rejects-drag-ab.png. No private images/assets uploaded.
+- Candidate AB Desktop SHA-256:
+  1A88CDAB05395568D6C8C2D06B8D795389B3D4E6E59B95144469B36C55208A49;
+  core: 34C89202DBAF279334304A2789E61B74417E7A01409A630FF756E30F505147DC.
+  Existing private launcher pins these hashes and the isolated DB/workbook.
+  Build includes the seven preserved older WIP paths; not a clean-commit build.
+- Fresh full Release regression: 1067 passed, zero failed/skipped. Desktop
+  Release: zero errors, 16 existing warnings. Diff check PASS (CRLF advisories).
+  Protected production DB, workbook, source K7L and company DWT match the
+  previously recorded SHA-256 and sizes. Auto runtime unchanged, no CAD output.
+- Overall remains PARTIAL. Multi-end cable-detail native workflow/company
+  appearance, remaining editing/route-quality gates and owner visual acceptance
+  remain open. The small route spur observed while drafting near grid/anchor
+  alignment still needs investigation; no whole-product READY claim.
+
 #### Candidate Z: Rotated Pin Labels And Locked Manual Route (Fresh Native Proof)
 
 - Scope remains direct schematic authoring. Owner reconfirmed no AutoCAD project

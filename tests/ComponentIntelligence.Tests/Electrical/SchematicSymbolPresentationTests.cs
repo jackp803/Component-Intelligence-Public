@@ -5,6 +5,21 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicSymbolPresentationTests
 {
     [Theory]
+    [InlineData("TEXT", "TAG1", false)]
+    [InlineData("MTEXT", "TAG1", false)]
+    [InlineData("LINE", "TAG1", true)]
+    [InlineData("TEXT", "TAG2", true)]
+    [InlineData("TEXT", null, true)]
+    public void ExternalReferenceIsOmittedOnlyWhenCadRendersExplicitReference(string kind, string? tag, bool expected)
+    {
+        var symbol = Symbol();
+        symbol = symbol with { Geometry = symbol.Geometry! with
+            { Primitives = [new() { Kind = kind, Start = new(1, 1), AttributeTag = tag, Text = "K1" }] } };
+        Assert.Equal(expected, SchematicSymbolPresentation.ShowReferenceLabel(symbol));
+        Assert.True(SchematicSymbolPresentation.ShowReferenceLabel(symbol with { Geometry = null }));
+    }
+
+    [Theory]
     [InlineData(0, 152, 82.2, 0, false)]
     [InlineData(90, 127.8, 132, 90, false)]
     [InlineData(180, 98, 107.8, 0, true)]

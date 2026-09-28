@@ -8,6 +8,9 @@ public sealed record SchematicAnchorLabel(SchematicPoint Position, int Rotation,
 
 public static class SchematicSymbolPresentation
 {
+    public static bool ShowReferenceLabel(SchematicSymbol symbol) =>
+        symbol.Geometry?.Primitives.Any(p => p.AttributeTag == "TAG1" && p.Kind is "TEXT" or "MTEXT") != true;
+
     public static SchematicAnchorLabel AnchorLabel(SchematicSymbol symbol, SchematicAnchor anchor)
     {
         var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);

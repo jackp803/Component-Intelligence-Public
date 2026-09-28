@@ -30,6 +30,8 @@ public partial class SchematicWorkspaceControl : UserControl
     private SchematicPoint? _pointer;
     private ElectricalProject? _gestureStart, _gesturePreview;
     private SchematicPoint? _dragStart;
+    private Point _dragViewportStart;
+    private bool _dragActivated;
     private string? _dragSymbol;
     private int? _dragVertex;
     private int? _dragSegment;
@@ -363,7 +365,8 @@ public partial class SchematicWorkspaceControl : UserControl
                 Sheet.Children.Add(label);
             }
         }
-        Text(component.ReferenceDesignator ?? "Reference 未設定", symbol.Position.X, referenceY, 11, Brushes.Black);
+        if (SchematicSymbolPresentation.ShowReferenceLabel(symbol))
+            Text(component.ReferenceDesignator ?? "Reference 未設定", symbol.Position.X, referenceY, 11, Brushes.Black);
     }
 
     private readonly Dictionary<string, BitmapImage?> _images = new(StringComparer.Ordinal);
@@ -473,6 +476,8 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void BeginGesture(MouseButtonEventArgs e)
     {
+        _dragViewportStart = e.GetPosition(PageScroll);
+        _dragActivated = false;
         Keyboard.Focus(Sheet); _gestureStart = _getProject(); _gesturePreview = null; _dragStart = Snap(e.GetPosition(Sheet)); Sheet.CaptureMouse();
     }
     private void Sheet_Move(object sender, MouseEventArgs e)
@@ -481,6 +486,11 @@ public partial class SchematicWorkspaceControl : UserControl
         _pointer = Snap(e.GetPosition(Sheet));
         if (_gestureStart is not null && _dragStart is not null && e.LeftButton == MouseButtonState.Pressed)
         {
+            // Focus can scroll the sheet without pointer movement. A click must remain selection-only.
+            var viewportDelta = e.GetPosition(PageScroll) - _dragViewportStart;
+            if (!_dragActivated && Math.Abs(viewportDelta.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(viewportDelta.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+            _dragActivated = true;
             try
             {
                 if (_dragSymbol is not null)
@@ -522,7 +532,7 @@ public partial class SchematicWorkspaceControl : UserControl
         Keyboard.Focus(Sheet);
     }
     private void CancelGesture()
-    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragSymbol = null; _dragVertex = null; _dragSegment = null; _dragMarker = null; Sheet.ReleaseMouseCapture(); }
+    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragVertex = null; _dragSegment = null; _dragMarker = null; Sheet.ReleaseMouseCapture(); }
     private void CancelCommand()
     {
         CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;

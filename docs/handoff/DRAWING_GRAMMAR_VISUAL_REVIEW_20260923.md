@@ -6,6 +6,31 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Candidate V: Native Wire / Cross-Page / New-Process Reload
+
+- Fresh normal WPF test on existing disposable company-frame project: Wire
+  tool -> first point -> bend -> double-click end created an orthogonal L route.
+  One Undo removed the complete route; one Redo restored it. No API mutation.
+- Added second page and drew a straight open wire. Cross-page tool -> select
+  second-page wire -> switch page -> select first-page wire -> enter explicitly
+  synthetic UI-TEST-SIGNAL -> confirm produced a paired continuation. The wires
+  remain unfinished at their outer ends, truthfully marked pending connection.
+  This is interaction evidence, not confirmed real-project electrical wiring.
+- Select arrow -> Go To Other End navigated to page 2. Page Up reordered page 2
+  to position 1 and changed its reference from 1/B5 to 2/B5. Save -> normal close
+  editor/main -> relaunch identical hash-pinned v -> visibly verify isolated DB
+  -> Load retained both routes, new page order, template and both references
+  (plain page points to 2/B5; company-frame page points to 1/B5).
+- Private screenshots: wire-crosspage-reordered-v.png,
+  wire-crosspage-new-process-reload-v.png,
+  wire-company-frame-new-process-reload-v.png. No production writes or CAD launch.
+- Remaining usability gap observed: Add Page uses a generic frame instead of
+  carrying the active page's company template/settings. Next bounded correction:
+  reuse the active page format for new empty pages, not its symbols/wires/IDs;
+  cover source independence and default blank-project behavior, then native test.
+  Full anchor-bound route editing, company-block readiness and overall visual
+  acceptance remain separate pending gates. Do not claim the entire MVP READY.
+
 #### Company Template Symbol Display (Candidate V)
 
 - Owner reconfirmed: this application is the final schematic editing surface;

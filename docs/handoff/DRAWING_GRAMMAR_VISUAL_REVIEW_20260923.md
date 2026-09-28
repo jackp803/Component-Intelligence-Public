@@ -25,6 +25,15 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 #### Fresh Native Template Import (Candidate O)
 
+- Follow-up correction: WPF and retained optional DXF exchange now omit generic
+  frame labels/footer when imported template geometry exists. Default blank
+  pages retain their labels. Grid metadata and engineering identities are not
+  changed. Regression first failed for imported template, then passed; fresh
+  full Release 1018 passed, zero failed/skipped. Candidate p Release build:
+  zero errors, 17 warnings. Native p verification remains NOT_RUN; candidate o
+  screenshots above/below do not verify the correction. Company grid mapping,
+  imported title-field editing and Hatch remain separate open work.
+
 - Normal WPF file picker selected an isolated byte-for-byte company DWT copy;
   source/copy SHA-256 both D5DB332E88F16F18ED82FB3A2982EF2E4970F2438F09522DDEEE51E9F17A03DF.
   CAD conversion was import-only, not project generation. Units 1 mm, test page

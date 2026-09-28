@@ -118,11 +118,14 @@ public sealed class SchematicDxfExporter
             for (var i = 1; i < frame.Length; i++) Line(frame[i - 1], frame[i], "SCHEMATIC_FRAME");
             diagnostics.Add("COMPANY_TEMPLATE_NOT_SET");
         }
-        for (var col = 0; col < page.GridColumns; col++)
-            Label((col + 1).ToString(), new(page.Margin + (col + .5) * (page.Width - 2 * page.Margin) / page.GridColumns, 3), "SCHEMATIC_FRAME", 10d / 3);
-        for (var row = 0; row < page.GridRows; row++)
-            Label(((char)('A' + row)).ToString(), new(3, page.Margin + (row + .5) * (page.Height - 2 * page.Margin) / page.GridRows), "SCHEMATIC_FRAME", 10d / 3);
-        Label($"{project.Name}   |   {page.Title}   |   {number}", new(page.Margin + 2, page.Height - page.Margin - 8), "SCHEMATIC_FRAME", 4);
+        if (page.TemplateGeometry is null)
+        {
+            for (var col = 0; col < page.GridColumns; col++)
+                Label((col + 1).ToString(), new(page.Margin + (col + .5) * (page.Width - 2 * page.Margin) / page.GridColumns, 3), "SCHEMATIC_FRAME", 10d / 3);
+            for (var row = 0; row < page.GridRows; row++)
+                Label(((char)('A' + row)).ToString(), new(3, page.Margin + (row + .5) * (page.Height - 2 * page.Margin) / page.GridRows), "SCHEMATIC_FRAME", 10d / 3);
+            Label($"{project.Name}   |   {page.Title}   |   {number}", new(page.Margin + 2, page.Height - page.Margin - 8), "SCHEMATIC_FRAME", 4);
+        }
 
         if (page.CableDetail is not null)
         {

@@ -277,6 +277,8 @@ public partial class SchematicWorkspaceControl : UserControl
 
     private void DrawFrame(SchematicPage page, int number, string? name)
     {
+        // Imported frames own their visible labels; grid metadata remains available for references.
+        if (page.TemplateGeometry is not null) return;
         var border = new Rectangle { Width = (page.Width - 2 * page.Margin) * 3, Height = (page.Height - 2 * page.Margin) * 3,
             Stroke = Brushes.DimGray, StrokeThickness = 1, IsHitTestVisible = false };
         Canvas.SetLeft(border, page.Margin * 3); Canvas.SetTop(border, page.Margin * 3);

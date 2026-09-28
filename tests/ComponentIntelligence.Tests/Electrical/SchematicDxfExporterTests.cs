@@ -8,6 +8,25 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicDxfExporterTests
 {
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CompanyTemplateOwnsFrameLabelsWithoutGeneratedOverlay(bool imported)
+    {
+        var project = new SchematicAuthoringService().AddPage(new ElectricalProject { ProjectId = "TEST" }, "Sheet");
+        var page = project.Schematic!.Pages[0];
+        if (imported)
+            project.Schematic.Pages[0] = page with { TemplateGeometry = new SchematicCadAsset
+            { SourceSha256 = new string('A', 64), Width = 420, Height = 297,
+                Primitives = [new() { Kind = "TEXT", Text = "COMPANY", Start = new(20, 280), TextHeight = 3 }] } };
+        var before = JsonSerializer.Serialize(project);
+        using var stream = new MemoryStream(Assert.Single(new SchematicDxfExporter().Create(project)).Dxf);
+        var labels = DxfDocument.Load(stream).Entities.Texts.Where(t => t.Layer.Name == "SCHEMATIC_FRAME").ToArray();
+        if (imported) Assert.Empty(labels);
+        else Assert.Equal(page.GridColumns + page.GridRows + 1, labels.Length);
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+    }
+
+    [Theory]
     [InlineData("TopLeft", 0)]
     [InlineData("MiddleCenter", 90)]
     [InlineData("BottomRight", 270)]

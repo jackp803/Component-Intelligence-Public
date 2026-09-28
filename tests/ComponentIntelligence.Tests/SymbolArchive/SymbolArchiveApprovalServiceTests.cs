@@ -115,6 +115,59 @@ public sealed class SymbolArchiveApprovalServiceTests : IDisposable
         Assert.Single(Assert.Single(new SymbolArchiveRepository(_root).Load().Bindings).Revisions);
     }
 
+    [Fact]
+    public async Task ExplicitRepresentationsKeepIndependentApprovalAndResolution()
+    {
+        var source = Source("appearance.dwg", "same geometry, distinct confirmed use");
+        var service = Service();
+        var original = await service.ApproveAsync(Request(source));
+        var coil = await service.ApproveAsync(Request(source) with { RepresentationId = "coil" });
+        var contact = await service.ApproveAsync(Request(source) with { RepresentationId = "contact" });
+        Assert.Equal("rev-001", coil.Revision);
+        Assert.Equal("rev-001", contact.Revision);
+        Assert.NotEqual(original.AssetPath, coil.AssetPath);
+        Assert.NotEqual(coil.AssetPath, contact.AssetPath);
+        await service.ApproveAsync(Request(Source("coil2.dwg", "new coil")) with { RepresentationId = "coil" });
+        var repository = new SymbolArchiveRepository(_root);
+        var bindings = repository.Load().Bindings;
+        Assert.Equal("ci-symbol-archive.v2", repository.Load().SchemaVersion);
+        Assert.Equal(3, bindings.Count);
+        Assert.All(bindings, b => Assert.Single(b.Revisions, r => r.Status == SymbolRevisionStatus.Approved));
+        var resolver = new SymbolResolver(repository, [Component()]);
+        Assert.Equal(original.AssetPath, (await resolver.ResolveAsync("C1", SymbolRole.Schematic)).AssetPath);
+        Assert.Equal("rev-002", (await resolver.ResolveAsync("C1", SymbolRole.Schematic, representationId: "coil")).Revision);
+        Assert.Equal(contact.AssetPath, (await resolver.ResolveAsync("C1", SymbolRole.Schematic, representationId: "contact")).AssetPath);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.ResolveAsync("C1", SymbolRole.Schematic, representationId: "unknown"));
+        Assert.True(File.Exists(repository.ResolveArchivePath(original.AssetPath)));
+    }
+
+    [Theory]
+    [InlineData("../coil")]
+    [InlineData("coil/contact")]
+    [InlineData("")]
+    [InlineData("Coil")]
+    public async Task InvalidRepresentationIdentityCannotWrite(string representationId)
+    {
+        await Assert.ThrowsAsync<InvalidDataException>(() => Service().ApproveAsync(
+            Request(Source("bad.dwg", "unchanged")) with { RepresentationId = representationId }));
+        Assert.False(File.Exists(Path.Combine(_root, SymbolArchiveRepository.FileName)));
+    }
+
+    [Fact]
+    public async Task HistoricalManifestWithoutRepresentationStillResolvesDefault()
+    {
+        var approved = await Service().ApproveAsync(Request(Source("old.dwg", "historical")));
+        var repository = new SymbolArchiveRepository(_root);
+        var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(repository.ArchivePath))!;
+        foreach (var binding in json["bindings"]!.AsArray()) binding!.AsObject().Remove("representationId");
+        File.WriteAllText(repository.ArchivePath, json.ToJsonString());
+        var before = File.ReadAllBytes(repository.ArchivePath);
+        Assert.Equal("default", Assert.Single(repository.Load().Bindings).RepresentationId);
+        Assert.Equal("ci-symbol-archive.v1", repository.Load().SchemaVersion);
+        Assert.Equal(approved.AssetPath, (await new SymbolResolver(repository, [Component()]).ResolveAsync("C1", SymbolRole.Schematic)).AssetPath);
+        Assert.Equal(before, File.ReadAllBytes(repository.ArchivePath));
+    }
+
     public void Dispose() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
 
     private SymbolArchiveApprovalService Service() => new(new SymbolArchiveRepository(_root), [Component()]);

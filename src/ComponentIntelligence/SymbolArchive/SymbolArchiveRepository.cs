@@ -7,6 +7,7 @@ namespace ComponentIntelligence.SymbolArchive;
 public sealed class SymbolArchiveRepository
 {
     public const string SchemaVersion = "ci-symbol-archive.v1";
+    public const string MultiRepresentationSchemaVersion = "ci-symbol-archive.v2";
     public const string FileName = "SymbolArchive.json";
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -74,7 +75,7 @@ public sealed class SymbolArchiveRepository
 
     public SymbolArchiveDocument ValidateAndNormalize(SymbolArchiveDocument document)
     {
-        if (!string.Equals(document.SchemaVersion, SchemaVersion, StringComparison.Ordinal))
+        if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion)
             throw new InvalidDataException($"Unsupported Symbol Archive schema '{document.SchemaVersion}'.");
 
         var bindingKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -84,7 +85,8 @@ public sealed class SymbolArchiveRepository
             if (string.IsNullOrWhiteSpace(binding.ComponentId))
                 throw new InvalidDataException("Every symbol binding requires ComponentId.");
             var componentId = binding.ComponentId.Trim();
-            var key = $"{componentId}\u001f{binding.Role}";
+            var representationId = NormalizeRepresentationId(binding.RepresentationId);
+            var key = $"{componentId}\u001f{binding.Role}\u001f{representationId}";
             if (!bindingKeys.Add(key))
                 throw new InvalidDataException($"Duplicate ComponentId + SymbolRole binding: {componentId} / {binding.Role}.");
 
@@ -128,16 +130,20 @@ public sealed class SymbolArchiveRepository
             bindings.Add(binding with
             {
                 ComponentId = componentId,
+                RepresentationId = representationId,
                 Revisions = revisions.OrderBy(item => item.Revision, StringComparer.Ordinal).ToArray()
             });
         }
 
         return document with
         {
-            SchemaVersion = SchemaVersion,
+            // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
+            SchemaVersion = document.SchemaVersion == MultiRepresentationSchemaVersion || bindings.Any(b => b.RepresentationId != "default")
+                ? MultiRepresentationSchemaVersion : SchemaVersion,
             Bindings = bindings
                 .OrderBy(item => item.ComponentId, StringComparer.Ordinal)
                 .ThenBy(item => item.Role)
+                .ThenBy(item => item.RepresentationId, StringComparer.Ordinal)
                 .ToArray()
         };
     }
@@ -148,6 +154,13 @@ public sealed class SymbolArchiveRepository
         var candidate = Path.GetFullPath(Path.Combine(_archiveRoot, normalized.Replace('/', Path.DirectorySeparatorChar)));
         AssertContained(candidate);
         return candidate;
+    }
+
+    public static string NormalizeRepresentationId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !Regex.IsMatch(value, "^[a-z0-9][a-z0-9_-]{0,63}$", RegexOptions.CultureInvariant))
+            throw new InvalidDataException("RepresentationId must be an explicit lowercase stable key (1-64 letters, digits, underscore or hyphen).");
+        return value;
     }
 
     public static string NormalizeSha256(string value)

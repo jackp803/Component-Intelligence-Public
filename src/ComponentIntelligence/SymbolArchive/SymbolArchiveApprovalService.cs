@@ -5,6 +5,7 @@ namespace ComponentIntelligence.SymbolArchive;
 
 public sealed record ApproveSymbolRequest
 {
+    public string RepresentationId { get; init; } = "default";
     public required string SourcePath { get; init; }
     public required string ComponentId { get; init; }
     public required SymbolRole Role { get; init; }
@@ -55,7 +56,7 @@ public sealed class SymbolArchiveApprovalService
         var sourceShaBefore = await HashService.Sha256FileAsync(sourcePath, cancellationToken);
         var document = _repository.Load();
         var binding = document.Bindings.SingleOrDefault(item =>
-            string.Equals(item.ComponentId, request.ComponentId, StringComparison.Ordinal) && item.Role == request.Role);
+            string.Equals(item.ComponentId, request.ComponentId, StringComparison.Ordinal) && item.Role == request.Role && item.RepresentationId == request.RepresentationId);
         var existingSameHash = binding?.Revisions.FirstOrDefault(revision =>
             string.Equals(revision.AssetHashSha256, sourceShaBefore, StringComparison.OrdinalIgnoreCase) &&
             revision.SourceType == request.SourceType &&
@@ -74,14 +75,14 @@ public sealed class SymbolArchiveApprovalService
                 return new SymbolApprovalResult(SymbolApprovalDisposition.ExactDuplicate, request.ComponentId, request.Role,
                     existingSameHash.Revision, existingSameHash.AssetPath, sourceShaBefore);
 
-            var rebound = SetApproved(document, request.ComponentId, request.Role, existingSameHash.Revision);
+            var rebound = SetApproved(document, request.ComponentId, request.Role, existingSameHash.Revision, request.RepresentationId);
             _repository.Save(rebound);
             return new SymbolApprovalResult(SymbolApprovalDisposition.ReapprovedExisting, request.ComponentId, request.Role,
                 existingSameHash.Revision, existingSameHash.AssetPath, sourceShaBefore);
         }
 
         var revision = NextRevision(binding);
-        var relativePath = BuildRelativeAssetPath(component, request.Role, revision, extension);
+        var relativePath = BuildRelativeAssetPath(component, request.Role, revision, extension, request.RepresentationId);
         var destination = _repository.ResolveArchivePath(relativePath);
         var revisionDirectory = Path.GetDirectoryName(destination)!;
         if (Directory.Exists(revisionDirectory))
@@ -117,7 +118,7 @@ public sealed class SymbolArchiveApprovalService
                     .OrderBy(item => item.EngineeringEndpointId, StringComparer.Ordinal)
                     .ToArray()
             };
-            var updated = AddApprovedRevision(document, request.ComponentId, request.Role, revisionRecord);
+            var updated = AddApprovedRevision(document, request.ComponentId, request.Role, revisionRecord, request.RepresentationId);
             try
             {
                 _repository.Save(updated);
@@ -143,6 +144,7 @@ public sealed class SymbolArchiveApprovalService
     private void ValidateRequest(ApproveSymbolRequest request, out ComponentIR component)
     {
         if (!request.UserConfirmed) throw new InvalidOperationException("Explicit user confirmation is required before archive writes.");
+        SymbolArchiveRepository.NormalizeRepresentationId(request.RepresentationId);
         if (request.SourceType == SymbolSourceType.GeneratedGeneric)
             throw new InvalidOperationException("GeneratedGeneric is virtual resolver output and cannot be imported from a file.");
         if (string.IsNullOrWhiteSpace(request.ComponentId) || !_components.TryGetValue(request.ComponentId.Trim(), out var found))
@@ -184,11 +186,12 @@ public sealed class SymbolArchiveApprovalService
         return $"rev-{maximum + 1:000}";
     }
 
-    private static string BuildRelativeAssetPath(ComponentIR component, SymbolRole role, string revision, string extension)
+    private static string BuildRelativeAssetPath(ComponentIR component, SymbolRole role, string revision, string extension, string representationId)
     {
         var manufacturer = SafePathSegment(component.Identity.Manufacturer);
         var model = SafePathSegment(component.Identity.Model);
-        return $"Documents/{manufacturer}/{model}/autocad/{RoleFolder(role)}/{revision}/symbol{extension}";
+        var variant = representationId == "default" ? "" : $"representations/{representationId}/";
+        return $"Documents/{manufacturer}/{model}/autocad/{RoleFolder(role)}/{variant}{revision}/symbol{extension}";
     }
 
     private static string SafePathSegment(string value)
@@ -211,12 +214,13 @@ public sealed class SymbolArchiveApprovalService
         SymbolArchiveDocument document,
         string componentId,
         SymbolRole role,
-        SymbolRevisionRecord revision)
+        SymbolRevisionRecord revision,
+        string representationId)
     {
         var found = false;
         var bindings = document.Bindings.Select(binding =>
         {
-            if (!string.Equals(binding.ComponentId, componentId, StringComparison.Ordinal) || binding.Role != role) return binding;
+            if (!string.Equals(binding.ComponentId, componentId, StringComparison.Ordinal) || binding.Role != role || binding.RepresentationId != representationId) return binding;
             found = true;
             var revisions = binding.Revisions
                 .Select(existing => existing.Status == SymbolRevisionStatus.Approved
@@ -231,6 +235,7 @@ public sealed class SymbolArchiveApprovalService
             bindings.Add(new ComponentSymbolBinding
             {
                 ComponentId = componentId,
+                RepresentationId = representationId,
                 Role = role,
                 Revisions = [revision]
             });
@@ -238,12 +243,12 @@ public sealed class SymbolArchiveApprovalService
         return document with { Bindings = bindings };
     }
 
-    private static SymbolArchiveDocument SetApproved(SymbolArchiveDocument document, string componentId, SymbolRole role, string revision)
+    private static SymbolArchiveDocument SetApproved(SymbolArchiveDocument document, string componentId, SymbolRole role, string revision, string representationId)
     {
         return document with
         {
             Bindings = document.Bindings.Select(binding =>
-                string.Equals(binding.ComponentId, componentId, StringComparison.Ordinal) && binding.Role == role
+                string.Equals(binding.ComponentId, componentId, StringComparison.Ordinal) && binding.Role == role && binding.RepresentationId == representationId
                     ? binding with
                     {
                         Revisions = binding.Revisions.Select(item => item with

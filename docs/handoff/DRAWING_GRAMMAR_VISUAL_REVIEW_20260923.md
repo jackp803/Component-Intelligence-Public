@@ -6,6 +6,30 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Multi-representation authority continuation: archive bindings now have an explicit
+RepresentationId (legacy default = `default`). Approval/reapproval and resolver
+selection are scoped to ComponentId + Role + RepresentationId. Nondefault assets
+use separate immutable representation folders; updating coil does not supersede
+contact/default. Missing explicit variants never fall back to GeneratedGeneric.
+No actual company approval or production manifest write was performed.
+
+Compatibility: old manifests without the field remain v1/default and read without
+rewriting bytes. Saving nondefault variants uses ci-symbol-archive.v2 so old readers
+reject rather than misinterpret a coil-only archive as a default symbol. Electrical
+project and Drawing IR schema versions are unchanged. New representation keys are
+explicit lowercase stable identifiers, not inferred from model/filename/geometry.
+Tests observed missing API failure, then isolated-revision/resolver PASS; explicit
+schema-boundary assertion failed before the v2 guard and passed after correction.
+Six added cases cover independent revisions, unknown selection, historical input,
+and invalid/path-like keys. Fresh full Release: 1097 passed, zero failed/skipped;
+Desktop Release: zero errors, 16 warnings.
+
+This is service-layer progress ONLY. Remaining: archive draft/editor variant fields,
+human-readable variant selection, propagation through approved schematic geometry
+authority, normal placement of another representation, saved-document reload and
+native UI verification. Do not mark the owner's multiple-representation workflow
+complete. Running AD remains unchanged with the owner-assisted PDF dialog pending.
+
 Latest PDF continuation (local WIP, supersedes the earlier NOT_IMPLEMENTED
 checkpoint below): schematic PDF/print commands are now connected to awaited
 normal project Save/Revision and repository reload, then the same RenderPage

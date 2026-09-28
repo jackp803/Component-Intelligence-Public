@@ -47,10 +47,17 @@ public partial class SchematicWorkspaceControl
                     element = new System.Windows.Shapes.Path { Data = new PathGeometry([figure]), Stroke = Brushes.Black, StrokeThickness = 1 };
                     break;
                 case "TEXT":
-                    element = new TextBlock { Text = primitive.Text, FontSize = Math.Max(1, primitive.TextHeight * 3),
-                        Foreground = Brushes.Black, RenderTransform = new RotateTransform(primitive.Rotation) };
-                    var origin = primitive.PreviewTextOrigin();
-                    Canvas.SetLeft(element, origin.X * 3); Canvas.SetTop(element, origin.Y * 3);
+                    var singleLine = new TextBlock { Text = primitive.Text, FontSize = Math.Max(1, primitive.TextHeight * 3),
+                        Foreground = Brushes.Black };
+                    singleLine.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                    var offset = primitive.TextAnchorOffset(singleLine.DesiredSize.Width, singleLine.DesiredSize.Height, singleLine.BaselineOffset);
+                    var textTransform = new TransformGroup();
+                    textTransform.Children.Add(new ScaleTransform(primitive.TextWidthFactor, 1));
+                    textTransform.Children.Add(new TranslateTransform(offset.X * primitive.TextWidthFactor, offset.Y));
+                    textTransform.Children.Add(new RotateTransform(primitive.Rotation));
+                    singleLine.RenderTransform = textTransform;
+                    Canvas.SetLeft(singleLine, primitive.Start.X * 3); Canvas.SetTop(singleLine, primitive.Start.Y * 3);
+                    element = singleLine;
                     break;
                 case "MTEXT":
                     var text = new TextBlock { Text = primitive.Text, FontSize = Math.Max(1, primitive.TextHeight * 3),

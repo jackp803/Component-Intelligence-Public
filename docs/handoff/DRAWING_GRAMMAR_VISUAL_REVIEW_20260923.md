@@ -6,6 +6,37 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Company Template Text And Hidden Attributes (Candidate U)
+
+- Read-only source inspection found company grid labels use MiddleCenter and
+  hidden INSERT attributes carry internal CAD configuration outside the frame.
+  netDxf Explode copies IsVisible but loses the independent Hidden attribute flag.
+  Import now suppresses those hidden glyphs before explosion, excludes unrelated
+  attribute positions from bounds, and retains hidden X?TERM inventory without
+  guessing catalog bindings. TDD reproduced incorrect width 1030 instead of 30;
+  fixed regression also proves visible text, contact inventory and source bytes.
+- Single-line text/ATTDEF now retains alignment and width factor. WPF measures
+  text and applies local alignment, width scale, then rotation at the original
+  anchor. Legacy missing alignment defaults to BaselineLeft and width factor 1.
+  New alignment/offset tests RED (missing members) then GREEN. This is not SHX
+  font fidelity, Fit/Aligned support, or CAD control-code interpretation; those
+  and MTEXT rich formatting remain explicit visual gaps.
+- Native u: closed t normally, launched hash-pinned u, visibly verified disposable
+  DB, loaded same test project, replaced template via normal DWT picker/unit1,
+  acknowledged text-format limitations, Apply -> Save -> Load. The bottom-edge
+  internal configuration text disappeared; logo retained and grid-label alignment
+  visibly changed. Same-process reload PASS; u new-process reload NOT_RUN.
+  Local screenshots company-template-text-native-u.png and
+  company-template-text-load-native-u.png remain private.
+- Fresh full Release: 1039 passed, zero failed/skipped; Desktop build 0 errors,
+  16 existing warnings; diff check PASS. Protected DB/workbook/K7L/source DWT
+  hashes and sizes unchanged. Earlier unrelated WIP remains uncommitted.
+- Launcher now selects u, Desktop SHA-256
+  A79B7363AA7D6661E7A823FB609295C919D7DC943F193D80138055C9803A3F3D,
+  core 9D5E5FCDB647377630D882652FA0BBDF3C6556C2B1F4EDD02430F8530CF5BAA3.
+  Next: supported CAD text symbols/font fidelity and full page editing on the
+  company frame, using the existing remaining checklist. Overall still PARTIAL.
+
 #### Company Template Closure Repair (Candidate T, Native Save/Reopen PASS)
 
 - Supersedes the hatch root-cause uncertainty below, not the remaining MVP list.

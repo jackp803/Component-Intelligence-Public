@@ -7,6 +7,70 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class SchematicCadImportTests
 {
+    [Theory]
+    [InlineData(TextAlignment.MiddleCenter)]
+    [InlineData(TextAlignment.TopRight)]
+    [InlineData(TextAlignment.BaselineRight)]
+    public void SingleLineTextRetainsAlignmentAndWidthFactor(TextAlignment alignment)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"cad-{Guid.NewGuid():N}.dxf");
+        try
+        {
+            var doc = new DxfDocument();
+            doc.Entities.Add(new Line(Vector2.Zero, new Vector2(100, 100)));
+            doc.Entities.Add(new Text("Grid", new Vector2(50, 50), 3)
+                { Alignment = alignment, WidthFactor = 0.8, Rotation = 90 });
+            doc.Save(path);
+            var text = Assert.Single(new SchematicCadImporter().ReadDxf(path, 1).Primitives, p => p.Kind == "TEXT");
+            Assert.Equal(alignment.ToString(), text.TextAttachment);
+            Assert.Equal(0.8, text.TextWidthFactor, 8);
+            Assert.Equal(-90, text.Rotation, 8);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("TopRight", -20, 0)]
+    [InlineData("MiddleCenter", -10, -5)]
+    [InlineData("BottomLeft", 0, -10)]
+    [InlineData("BaselineRight", -20, -8)]
+    [InlineData(null, 0, -8)]
+    public void TextAnchorOffsetUsesMeasuredGeometry(string? alignment, double x, double y)
+    {
+        var text = new SchematicCadPrimitive { Kind = "TEXT", Start = new(0, 0), TextAttachment = alignment };
+        Assert.Equal(new SchematicPoint(x, y), text.TextAnchorOffset(20, 10, 8));
+    }
+
+    [Fact]
+    public void InsertHiddenAttributesRemainInventoryWithoutVisibleTextOrMetadataBounds()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"cad-{Guid.NewGuid():N}.dxf");
+        try
+        {
+            var block = new netDxf.Blocks.Block("HiddenAttributes");
+            block.Entities.Add(new Line(Vector2.Zero, new Vector2(30, 20)));
+            block.AttributeDefinitions.Add(new AttributeDefinition("CONFIG")
+                { Position = new Vector3(-1000, -1000, 0), Flags = AttributeFlags.Hidden, Value = "PRIVATE_CONFIG" });
+            block.AttributeDefinitions.Add(new AttributeDefinition("X1TERM01")
+                { Position = new Vector3(5, 10, 0), Flags = AttributeFlags.Hidden, Value = "1" });
+            block.AttributeDefinitions.Add(new AttributeDefinition("TAG1")
+                { Position = new Vector3(10, 10, 0), Value = "DEVICE" });
+            var doc = new DxfDocument();
+            doc.Entities.Add(new Insert(block, Vector2.Zero));
+            doc.Save(path);
+            var before = File.ReadAllBytes(path);
+            var asset = new SchematicCadImporter().ReadDxf(path, 1);
+            Assert.Equal(30, asset.Width);
+            Assert.Equal(20, asset.Height);
+            Assert.DoesNotContain(asset.Primitives, p => p.Text == "PRIVATE_CONFIG" || p.Text == "1");
+            Assert.Contains(asset.Primitives, p => p.Text == "DEVICE");
+            Assert.Equal("X1TERM01", Assert.Single(asset.ConnectionPoints).Tag);
+            Assert.Null(asset.ConnectionPoints[0].SourcePinId);
+            Assert.Equal(before, File.ReadAllBytes(path));
+        }
+        finally { File.Delete(path); }
+    }
+
     [Fact]
     public void StandaloneSymbolReadsHiddenModelSpaceContactDefinitionsWithoutGuessingPinIdentity()
     {

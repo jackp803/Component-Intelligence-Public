@@ -17,8 +17,20 @@ public sealed record SchematicCadPrimitive
     public double TextHeight { get; init; }
     public double Rotation { get; init; }
     public double TextWidth { get; init; }
+    public double TextWidthFactor { get; init; } = 1;
     public string? TextAttachment { get; init; }
     public IReadOnlyList<IReadOnlyList<SchematicPoint>> Contours { get; init; } = [];
+
+    public SchematicPoint TextAnchorOffset(double width, double height, double baseline)
+    {
+        var alignment = TextAttachment ?? "BaselineLeft";
+        var x = alignment.EndsWith("Right", StringComparison.Ordinal) ? -width :
+            alignment.EndsWith("Center", StringComparison.Ordinal) || alignment == "Middle" ? -width / 2 : 0;
+        var y = alignment.StartsWith("Top", StringComparison.Ordinal) ? 0 :
+            alignment.StartsWith("Middle", StringComparison.Ordinal) ? -height / 2 :
+            alignment.StartsWith("Bottom", StringComparison.Ordinal) ? -height : -baseline;
+        return new(x, y);
+    }
 
     // TEXT stores a baseline anchor; rotate its nominal top-left around that anchor.
     public SchematicPoint PreviewTextOrigin()
@@ -91,9 +103,10 @@ public sealed class SchematicCadImporter
                 case Insert insert:
                     foreach (var attribute in insert.Attributes)
                     {
-                        var p = Point(attribute.Position);
                         if (attribute.Tag.StartsWith("X", StringComparison.Ordinal) && attribute.Tag.Contains("TERM", StringComparison.Ordinal))
-                            contacts.Add(new(attribute.Tag, attribute.Value ?? "", p));
+                            contacts.Add(new(attribute.Tag, attribute.Value ?? "", Point(attribute.Position)));
+                        // Explode copies IsVisible, but not the separate Hidden attribute flag.
+                        if (attribute.Flags.HasFlag(AttributeFlags.Hidden)) attribute.IsVisible = false;
                     }
                     foreach (var child in insert.Explode()) Read(child, depth + 1);
                     break;
@@ -115,7 +128,8 @@ public sealed class SchematicCadImporter
                     bounds.Add(new(arc.Center.X + arc.Radius, arc.Center.Y + arc.Radius));
                     break;
                 case Text text:
-                    raw.Add(new() { Kind = "TEXT", Start = Point(text.Position), Text = text.Value, TextHeight = text.Height, Rotation = text.Rotation });
+                    raw.Add(new() { Kind = "TEXT", Start = Point(text.Position), Text = text.Value, TextHeight = text.Height, Rotation = text.Rotation,
+                        TextAttachment = text.Alignment.ToString(), TextWidthFactor = text.WidthFactor });
                     if (text.Alignment != TextAlignment.BaselineLeft || text.IsBackward || text.IsUpsideDown || text.ObliqueAngle != 0 || text.WidthFactor != 1)
                         diagnostics.Add("Text formatting requires visual review.");
                     break;
@@ -138,7 +152,8 @@ public sealed class SchematicCadImporter
                 contacts.Add(new(definition.Tag, definition.Value ?? "", Point(definition.Position), Direction: ContactDirection(definition.Tag)));
             if (!definition.IsVisible || !definition.Layer.IsVisible || definition.Flags.HasFlag(AttributeFlags.Hidden) || string.IsNullOrEmpty(definition.Value)) continue;
             raw.Add(new() { Kind = "TEXT", Start = Point(definition.Position), Text = definition.Value, AttributeTag = definition.Tag,
-                TextHeight = definition.Height, Rotation = definition.Rotation });
+                TextHeight = definition.Height, Rotation = definition.Rotation,
+                TextAttachment = definition.Alignment.ToString(), TextWidthFactor = definition.WidthFactor });
             if (definition.Alignment != TextAlignment.BaselineLeft || definition.WidthFactor != 1 || definition.ObliqueAngle != 0)
                 diagnostics.Add("Attribute text formatting requires visual review.");
         }

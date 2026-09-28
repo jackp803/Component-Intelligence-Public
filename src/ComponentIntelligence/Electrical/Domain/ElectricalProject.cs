@@ -160,6 +160,7 @@ public sealed class CableCoreDefinition
 public sealed class CableInstance
 {
     public ArchivedCableBinding? ArchivedCable { get; set; }
+    public string? Specification { get; set; }
     public required string CableInstanceId { get; init; }
     public required string CableDefinitionId { get; set; }
     public string? DisplayName { get; set; }

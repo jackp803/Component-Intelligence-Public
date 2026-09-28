@@ -15,6 +15,24 @@ public partial class SchematicWorkspaceControl
         CableConstructionType Construction, CableArchiveResolver Resolver);
     private PendingCable? _pendingCable;
     private bool _placingCable;
+    private string? _pendingCableRepresentation;
+
+    private void BeginAnotherCableRepresentation(SchematicSymbol source)
+    {
+        if (_pageId is null || !FinishPendingDraft()) return;
+        CancelCommand();
+        _placementPreview = _service.PlaceExistingRepresentation(_getProject(), source.SymbolId, _pageId, new(20, 20));
+        _pendingCableRepresentation = source.SymbolId; _placeMode = true;
+        Status.Text = "同一條線材的另一個表示待放置；不增加實體數量。";
+        Focus(); Render(_getProject());
+    }
+
+    private void PlaceAnotherCableRepresentation(SchematicPoint point)
+    {
+        if (_pendingCableRepresentation is not { } source || _pageId is null) return;
+        if (Apply(p => _service.PlaceExistingRepresentation(p, source, _pageId, point), "已放置同一條線材的另一個表示"))
+        { _pendingCableRepresentation = null; _placeMode = false; _placementPreview = null; Render(_getProject()); }
+    }
 
     private async void CableLibrary_Click(object sender, RoutedEventArgs e)
     {

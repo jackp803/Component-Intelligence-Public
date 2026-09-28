@@ -132,6 +132,10 @@ public sealed class ArchivedCableInstanceTests
         Assert.Equal(geometry.SourceSha256, symbol.Geometry!.SourceSha256);
         p = service.PlaceCableRepresentation(p, cable.CableInstanceId, geometry, contacts, page, new(150, 20));
         Assert.Single(p.Cables); Assert.Equal(2, p.Schematic!.Symbols.Count);
+        var extra = service.PlaceExistingRepresentation(p, symbol.SymbolId, page, new(220, 80));
+        Assert.Single(extra.Cables); Assert.Equal(3, extra.Schematic!.Symbols.Count);
+        Assert.Equal(symbol.Anchors, extra.Schematic.Symbols[2].Anchors);
+        Assert.NotEqual(symbol.SymbolId, extra.Schematic.Symbols[2].SymbolId);
         p = service.SetSymbolDetails(p, symbol.SymbolId, "W-Y1", symbol.Anchors);
         Assert.All(p.Schematic!.Symbols, s => Assert.Equal("W-Y1", SchematicSymbolOwner.Resolve(p, s).Reference));
         p = service.DrawWire(p, page, SchematicAttachment.Pin(symbol.SymbolId, symbol.Anchors[0].EndpointId), SchematicAttachment.Free(),
@@ -171,5 +175,29 @@ public sealed class ArchivedCableInstanceTests
         var symbol = draft.Schematic.Symbols[0];
         draft.Schematic.Symbols[0] = symbol with { ComponentInstanceId = "fake" };
         Assert.Throws<InvalidOperationException>(() => SchematicAuthoringService.Validate(draft));
+    }
+
+    [Fact]
+    public void CablePropertyDraftEditsOnlyOneInstanceAndPreservesUntouchedLengthProvenance()
+    {
+        var first = ArchivedCableInstanceFactory.Create(Template(true), CableConstructionType.Custom);
+        var second = ArchivedCableInstanceFactory.Create(Template(true), CableConstructionType.Custom);
+        first.ProvidedLengthMm = 1200; first.LengthSource = CableLengthSource.Imported;
+        var p = new ElectricalProject { ProjectId = "edit", Cables = [first, second] };
+        var before = JsonSerializer.Serialize(p); var service = new SchematicAuthoringService();
+        var unchangedMapping = service.SetArchivedCableDetails(p, first.CableInstanceId, "W1", 1200, "AWG 22, 3 cores",
+            CableConstructionType.Custom, first.ArchivedCable!.Mapping);
+        Assert.Equal(CableLengthSource.Imported, unchangedMapping.Cables[0].LengthSource);
+        Assert.True(unchangedMapping.Cables[0].ArchivedCable!.MappingConfirmed);
+        var changed = service.SetArchivedCableDetails(p, first.CableInstanceId, "W2", 1300, "custom spec",
+            CableConstructionType.Custom, [new("common-5", "b-1")]);
+        Assert.Equal(CableLengthSource.User, changed.Cables[0].LengthSource);
+        Assert.Equal("custom spec", changed.Cables[0].Specification);
+        Assert.False(changed.Cables[0].ArchivedCable!.MappingConfirmed);
+        Assert.Equal(JsonSerializer.Serialize(second), JsonSerializer.Serialize(changed.Cables[1]));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+        Assert.Throws<InvalidOperationException>(() => service.SetArchivedCableDetails(p, first.CableInstanceId, null, -1, null,
+            CableConstructionType.Custom, first.ArchivedCable.Mapping));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
     }
 }

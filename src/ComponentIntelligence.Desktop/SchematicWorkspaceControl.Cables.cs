@@ -11,6 +11,7 @@ public partial class SchematicWorkspaceControl
     private void CableDetail_Click(object sender, RoutedEventArgs e)
     {
         if (!FinishPendingDraft()) return;
+        if (TryEditSelectedArchivedCable()) return;
         var current = _getProject();
         var selected = current.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId)?.ConnectionId;
         if (selected is null)
@@ -38,6 +39,7 @@ public partial class SchematicWorkspaceControl
     private void CableSettings_Click(object sender, RoutedEventArgs e)
     {
         if (!FinishPendingDraft()) return;
+        if (TryEditSelectedArchivedCable()) return;
         var current = _getProject();
         var selected = current.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId)?.ConnectionId;
         if (selected is null && current.Schematic?.Pages.SingleOrDefault(p => p.PageId == _pageId)?.CableDetail is { } detail)

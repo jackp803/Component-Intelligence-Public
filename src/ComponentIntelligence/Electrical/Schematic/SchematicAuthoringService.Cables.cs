@@ -4,6 +4,35 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed partial class SchematicAuthoringService
 {
+    public ElectricalProject PlaceExistingRepresentation(ElectricalProject project, string symbolId,
+        string pageId, SchematicPoint position) => Edit(project, (_, doc) =>
+    {
+        var source = doc.Symbols.Single(s => s.SymbolId == symbolId);
+        doc.Symbols.Add(source with { SymbolId = "symbol-" + Guid.NewGuid().ToString("N"), PageId = pageId,
+            Position = position, Locked = false, Anchors = source.Anchors.ToList() });
+    });
+
+    public ElectricalProject SetArchivedCableDetails(ElectricalProject project, string cableId, string? reference,
+        double? lengthMm, string? specification, CableConstructionType construction, IReadOnlyList<CablePinMapping> mapping) =>
+        Edit(project, (draft, _) =>
+        {
+            if (lengthMm.HasValue && (!double.IsFinite(lengthMm.Value) || lengthMm <= 0))
+                throw new InvalidOperationException("線材長度必須為正數，或留空待確認。");
+            if (!Enum.IsDefined(construction)) throw new InvalidOperationException("Unknown cable construction classification.");
+            var index = draft.Cables.FindIndex(c => c.CableInstanceId == cableId);
+            if (index < 0 || draft.Cables[index].ArchivedCable is null)
+                throw new InvalidOperationException("Select an archived physical cable.");
+            var cable = draft.Cables[index];
+            if (!cable.ArchivedCable!.Mapping.SequenceEqual(mapping))
+                cable = ArchivedCableInstanceFactory.WithMappingOverride(cable, mapping);
+            cable.ReferenceDesignator = string.IsNullOrWhiteSpace(reference) ? null : reference.Trim();
+            cable.Specification = string.IsNullOrWhiteSpace(specification) ? null : specification.Trim();
+            cable.CableConstructionType = construction;
+            if (cable.ProvidedLengthMm != lengthMm)
+            { cable.ProvidedLengthMm = lengthMm; cable.LengthSource = lengthMm is null ? CableLengthSource.Unknown : CableLengthSource.User; }
+            draft.Cables[index] = cable;
+        });
+
     public ElectricalProject AddArchivedCable(ElectricalProject project, ArchivedCableTemplate template,
         CableConstructionType construction, SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts,
         string pageId, SchematicPoint position, string? assetPath = null, bool assetApproved = false) => Edit(project, (draft, doc) =>

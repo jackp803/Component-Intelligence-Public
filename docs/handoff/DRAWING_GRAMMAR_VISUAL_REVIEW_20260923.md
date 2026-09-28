@@ -6,6 +6,28 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Archived cable instance editor continuation: selecting a cable-owned CAD symbol
+and invoking Cable Settings (C) or Cable Detail now opens a direct physical-cable
+draft editor, not the historical conductor picker. Reference, nullable length,
+specification, construction and exact source-Pin mapping are editable. Pin choices
+show Port/name/number context, not IDs alone. Mapping rows begin without endpoint
+preselection. Invalid/self/duplicate mapping is rejected by the domain factory.
+Changing mapping marks only that instance pending; the shared archive is untouched.
+Unchanged length preserves Imported/Mechanical provenance; changed length becomes
+User, empty length remains Unknown. Cancel has no Apply call; unchanged Apply does
+not add an Undo operation. These are code/service guarantees pending native proof.
+
+Shift+P on a cable now places another representation of the same physical cable,
+including its saved CAD geometry/contact bindings, with a new representation ID
+and unchanged cable count. The placement is cancellable and uses normal Apply.
+Fresh tests include same-cable representation identity and instance edit isolation.
+Full Release 1114 PASS; Desktop Release zero errors/16 warnings; diff check PASS.
+Native Cable Settings / mapping / Cancel / another-representation operation chains
+remain NOT_RUN, not PASS. Remaining: omitted-contact binding UI, geometry text
+field presentation for cable length/spec, material accounting and native full
+workflow/PDF/print checks. Existing AD is not the current tested build.
+
+
 Normal cable-library entry is now wired (native verification NOT_RUN): toolbar
 線材庫 / Ctrl+Shift+C reads CableTemplates in the existing SymbolArchive.json.
 The archive becomes ci-symbol-archive.v3 only for cable-template content (or an

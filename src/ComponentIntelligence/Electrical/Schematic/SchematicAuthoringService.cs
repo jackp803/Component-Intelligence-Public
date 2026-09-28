@@ -65,16 +65,21 @@ public sealed class SchematicAuthoringService
     public static SchematicSymbol CreateSymbol(ComponentInstance component, string pageId, SchematicPoint position)
     {
         var pins = component.Ports.SelectMany(p => p.Pins.Select(pin => (Port: p, Pin: pin))).ToArray();
-        var height = Math.Max(30, (pins.Length + 1) * 5);
+        var leftCount = pins.Count(p => p.Port.PhysicalLocation?.Side == "Left");
+        var height = Math.Max(30, (Math.Max(leftCount, pins.Length - leftCount) + 1) * 5);
+        var rows = new Dictionary<string, int> { ["Left"] = 0, ["Right"] = 0 };
         return new() { SymbolId = $"symbol-{Guid.NewGuid():N}", ComponentInstanceId = component.ComponentInstanceId,
             PageId = pageId, Position = position, Width = 50, Height = height,
-            Anchors = pins.Select((p, i) => new SchematicAnchor
+            Anchors = pins.Select(p =>
             {
+                var side = p.Port.PhysicalLocation?.Side == "Left" ? "Left" : "Right";
+                return new SchematicAnchor {
                 EndpointId = p.Pin.PinId, SourcePinId = p.Pin.SourcePinId, SourcePortId = p.Port.SourcePortId,
                 Label = $"{p.Port.Name} / {p.Pin.PinNumber} {p.Pin.PinName}",
-                Position = new(p.Port.PhysicalLocation?.Side == "Left" ? 0 : 50, (i + 1) * 5),
-                Direction = p.Port.PhysicalLocation?.Side == "Left" ? "Left" : "Right",
+                Position = new(side == "Left" ? 0 : 50, ++rows[side] * 5),
+                Direction = side,
                 Confirmed = false
+                };
             }).ToList() };
     }
 

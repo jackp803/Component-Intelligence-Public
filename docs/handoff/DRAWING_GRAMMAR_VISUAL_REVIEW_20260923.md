@@ -6,6 +6,22 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Catalog Fallback Row Correction
+
+- Native n evidence led to a specific root cause: generic left/right anchors used
+  one global row index and total pin count for body height. The left side started
+  below all right-side pins. New representations now number rows independently
+  on each side and size to the larger side. Existing saved representations are
+  not relaid out; all endpoint/source IDs and unconfirmed flags are preserved.
+- Regression first failed expected 165 versus actual 245 mm for 32 right plus
+  16 left contacts, then passed. Fresh full Release **1016 PASS / 0 FAIL / 0 SKIP**,
+  `tests/catalog-rows-20260928.trx`; candidate o Release build **0 errors / 16 warnings**.
+- Native o placement retest: **NOT_RUN** at this checkpoint. Launcher remains n.
+  This correction alone does not prove arbitrary page fit, approved physical
+  contact positions or final module presentation quality. Next native step:
+  close disposable n normally, pin launcher to o hashes, place the same catalog
+  module on a new test page and compare both columns without editing saved data.
+
 #### Portable Catalog Pictures And Candidate N Native Export
 
 - Catalog pictures now use a shared preview/DXF layout, including cardinal rotation.

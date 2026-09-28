@@ -11,6 +11,25 @@ public sealed class SchematicAuthoringTests
 {
     private readonly SchematicAuthoringService _service = new();
 
+    [Fact]
+    public void CatalogFallbackRowsAreIndependentOnEachSideAndRemainUnconfirmed()
+    {
+        var component = new ComponentInstance { ComponentInstanceId = "module", ComponentDefinitionId = "catalog", TypeKey = "IO" };
+        foreach (var (side, count) in new[] { ("Right", 32), ("Left", 16) })
+            component.Ports.Add(new ComponentPort { PortId = side, SourcePortId = "source-" + side, Name = side,
+                PhysicalLocation = new PhysicalPortLocation { Side = side },
+                Pins = Enumerable.Range(1, count).Select(i => new ComponentPin {
+                    PinId = side + i, SourcePinId = "source-" + side + i, PinNumber = i.ToString() }).ToList() });
+        var before = JsonSerializer.Serialize(component);
+        var symbol = SchematicAuthoringService.CreateSymbol(component, "page", new(30, 80));
+        Assert.Equal(165, symbol.Height);
+        Assert.Equal(new SchematicPoint(0, 5), symbol.Anchors.Single(a => a.EndpointId == "Left1").Position);
+        Assert.Equal(new SchematicPoint(50, 5), symbol.Anchors.Single(a => a.EndpointId == "Right1").Position);
+        Assert.Equal(48, symbol.Anchors.Count);
+        Assert.All(symbol.Anchors, a => { Assert.False(a.Confirmed); Assert.Equal("source-" + a.EndpointId, a.SourcePinId); });
+        Assert.Equal(before, JsonSerializer.Serialize(component));
+    }
+
     [Theory]
     [InlineData(0, 0, 1)]
     [InlineData(90, -1, 0)]

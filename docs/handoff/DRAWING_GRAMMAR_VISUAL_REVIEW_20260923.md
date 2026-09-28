@@ -6,6 +6,42 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Linked Cable Detail And Native Persistence
+
+- Added optional linked cable-detail pages in the existing schematic document.
+  They reference the existing physical cable/assembly, not duplicated engineering
+  entities. Preview and DXF consume the same presentation. Physical sheath/split
+  primitives are separate from electrical wires; the mapping table preserves the
+  original conductor endpoints, including daisy-chain multi-end graphs.
+- Validates ownership, exact endpoint groups, branch indexes, missing sources,
+  conflicting AWG and paper overflow. Unknown length/core/construction stays
+  unknown. Ordinary Wire does not acquire cable authority. Legacy assemblies
+  without explicit physical topology remain blocked rather than guessed.
+- TDD: missing service/type RED, then six focused regressions GREEN, including
+  1-to-2/1-to-3, noncontiguous branch indexes, JSON reload, shared DXF projection,
+  ordinary-Wire rejection, missing source and overflow. Fresh full Release:
+  **998 PASS / 0 FAIL / 0 SKIP**. Desktop Release l: **0 errors / 16 warnings**.
+- Native candidate l: loaded the existing representative disposable project,
+  selected CBL-020 through the normal detail picker, created the linked page,
+  saved, closed both app windows, restarted the same candidate, and loaded the
+  same page successfully. The original 180 connections, 28 cables and two
+  assemblies retained identical serialized hashes across the detail operation.
+  Normal Cable Settings reopened the original Custom cable. Entered test length
+  999, clicked Cancel, then saved: length remained null and all three engineering
+  collections retained their hashes. No injected database writes were used.
+- Local evidence: `ui-20260928/cable-detail-native-l.png`,
+  `cable-detail-reload-l.png`, `cable-detail-cancel-before-l.png`,
+  `cable-detail-cancel-after-l.png`; `tests/cable-detail-20260928.trx`.
+  Desktop SHA `BCF957EC7706332B98E405DCC7CDDCC56FDAF5F14BEA335BD1ADBEB5766F5A20`;
+  core SHA `B6C63CC62211AD7C838859F216E038357153EC3942A2A712D68C06856652935A`.
+  Local launcher now pins l. Auto remains `eb84bee61d562881d861eb17ce990e44f56aff76`.
+- Protected DB/workbook/K7L/DWT hashes rechecked unchanged; diff check PASS.
+  No production edits, archive approval or Auto execution in this checkpoint.
+- This is a generic, truthful detail representation, NOT company CAD cable
+  template acceptance. Native multi-end detail, complete CAD template authoring,
+  direct authored-canvas IR/executor closure and broader multi-page UI acceptance
+  remain open. Overall **PARTIAL**, owner visual acceptance **PENDING**.
+
 #### Native Approved-Asset Editing Retest
 
 - Native capture recovered. Normal candidate g navigation used the disposable

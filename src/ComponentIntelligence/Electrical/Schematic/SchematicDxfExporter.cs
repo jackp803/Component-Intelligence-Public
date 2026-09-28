@@ -74,6 +74,13 @@ public sealed class SchematicDxfExporter
             Label(((char)('A' + row)).ToString(), new(3, page.Margin + (row + .5) * (page.Height - 2 * page.Margin) / page.GridRows), "SCHEMATIC_FRAME", 10d / 3);
         Label($"{project.Name}   |   {page.Title}   |   {number}", new(page.Margin + 2, page.Height - page.Margin - 8), "SCHEMATIC_FRAME", 4);
 
+        if (page.CableDetail is not null)
+        {
+            var detail = new SchematicCableDetailService().Build(project, page);
+            foreach (var primitive in detail.Primitives) Primitive(primitive, "SCHEMATIC_CABLE_DETAIL", .25);
+            diagnostics.AddRange(detail.Diagnostics);
+        }
+
         var wires = source.Wires.Where(w => w.PageId == page.PageId).ToArray();
         var crossings = SchematicCrossingService.Analyze(wires);
         foreach (var wire in wires)

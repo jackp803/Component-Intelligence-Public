@@ -8,11 +8,40 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class SchematicWorkspaceControl
 {
+    private void CableDetail_Click(object sender, RoutedEventArgs e)
+    {
+        if (!FinishPendingDraft()) return;
+        var current = _getProject();
+        var selected = current.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId)?.ConnectionId;
+        if (selected is null)
+        {
+            var picker = new MultiEndConductorPickerDialog(current, [], minimumConnections: 1)
+                { Owner = Window.GetWindow(this), Title = "選取要查看明細的線材導體" };
+            if (picker.ShowDialog() != true) return;
+            var ids = picker.SelectedIds.ToArray();
+            var cableIds = current.Connections.Where(c => ids.Contains(c.ConnectionId, StringComparer.Ordinal))
+                .Select(c => c.CableInstanceId).Distinct(StringComparer.Ordinal).ToArray();
+            if (cableIds.Length != 1 || cableIds[0] is null) { Status.Text = "請選取同一條實體線材；普通 Wire 不建立線材明細。"; return; }
+            selected = ids[0];
+        }
+        try
+        {
+            var next = new SchematicCableDetailService().AddPage(current, selected, _pageId);
+            var cableId = current.Connections.Single(c => c.ConnectionId == selected).CableInstanceId;
+            var target = next.Schematic!.Pages.Single(p => p.CableDetail?.CableInstanceId == cableId);
+            if (Apply(_ => next, "已開啟線材明細；接線資料保持不變"))
+            { _pageId = target.PageId; _selectionId = null; RefreshWorkspace(); Sheet.BringIntoView(); }
+        }
+        catch (Exception error) { Status.Text = "線材明細未建立：" + error.Message; }
+    }
+
     private void CableSettings_Click(object sender, RoutedEventArgs e)
     {
         if (!FinishPendingDraft()) return;
         var current = _getProject();
         var selected = current.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId)?.ConnectionId;
+        if (selected is null && current.Schematic?.Pages.SingleOrDefault(p => p.PageId == _pageId)?.CableDetail is { } detail)
+            selected = current.Connections.FirstOrDefault(c => c.CableInstanceId == detail.CableInstanceId)?.ConnectionId;
         var picker = new MultiEndConductorPickerDialog(current, selected is null ? [] : [selected], minimumConnections: 1)
             { Owner = Window.GetWindow(this), Title = "選取實體線材的導體" };
         if (picker.ShowDialog() != true) return;

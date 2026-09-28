@@ -24,7 +24,10 @@ public sealed record SchematicPage
     public string? TemplatePath { get; init; }
     public string? TemplateSha256 { get; init; }
     public SchematicCadAsset? TemplateGeometry { get; init; }
+    public SchematicCableDetailBinding? CableDetail { get; init; }
 }
+
+public sealed record SchematicCableDetailBinding(string CableInstanceId, string? CableAssemblyId);
 
 public sealed record SchematicSymbol
 {

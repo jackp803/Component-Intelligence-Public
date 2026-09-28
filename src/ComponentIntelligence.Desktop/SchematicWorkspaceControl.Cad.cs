@@ -111,7 +111,7 @@ public partial class SchematicWorkspaceControl
     {
         var page = _getProject().Schematic?.Pages.SingleOrDefault(p => p.PageId == _pageId); if (page is null) return;
         var imported = await PickCadAsset(); if (imported is null) return;
-        var dialog = new Window { Title = "公司圖框與格位", Width = 380, Height = 410, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var dialog = new Window { Title = "公司圖框與格位", Width = 420, Height = 640, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new StackPanel { Margin = new(16) };
         TextBox Field(string label, string value)
         {
@@ -121,14 +121,31 @@ public partial class SchematicWorkspaceControl
         var height = Field("紙張高度 mm", page.Height.ToString(CultureInfo.InvariantCulture));
         var margin = Field("格位內框邊距 mm", page.Margin.ToString(CultureInfo.InvariantCulture));
         var columns = Field("格位欄數", page.GridColumns.ToString()); var rows = Field("格位列數", page.GridRows.ToString());
+        var customGrid = new CheckBox { Content = "獨立格位範圍（mm，左上為原點）", IsChecked = page.CoordinateGrid is not null, Margin = new(0, 4, 0, 8) };
+        panel.Children.Add(customGrid);
+        var grid = page.EffectiveGrid();
+        var gridX = Field("格位左邊 X", grid.X.ToString(CultureInfo.InvariantCulture));
+        var gridY = Field("格位上邊 Y", grid.Y.ToString(CultureInfo.InvariantCulture));
+        var gridWidth = Field("格位範圍寬", grid.Width.ToString(CultureInfo.InvariantCulture));
+        var gridHeight = Field("格位範圍高", grid.Height.ToString(CultureInfo.InvariantCulture));
+        void RefreshGridFields() { foreach (var box in new[] { gridX, gridY, gridWidth, gridHeight }) box.IsEnabled = customGrid.IsChecked == true; }
+        customGrid.Checked += (_, _) => RefreshGridFields(); customGrid.Unchecked += (_, _) => RefreshGridFields(); RefreshGridFields();
         var ok = new Button { Content = "套用", Padding = new(8) }; panel.Children.Add(ok);
         ok.Click += (_, _) =>
         {
             if (!double.TryParse(width.Text, out var w) || !double.TryParse(height.Text, out var h) || !double.TryParse(margin.Text, out var m) ||
                 !int.TryParse(columns.Text, out var c) || !int.TryParse(rows.Text, out var r)) { MessageBox.Show(dialog, "請輸入有效尺寸與格位數"); return; }
-            if (Apply(p => _service.SetPageTemplate(p, page.PageId, imported.Value.Asset, imported.Value.Path, w, h, m, c, r), "已套用公司圖框與明確格位")) dialog.DialogResult = true;
+            SchematicGridBounds? bounds = null;
+            if (customGrid.IsChecked == true)
+            {
+                if (!double.TryParse(gridX.Text, out var x) || !double.TryParse(gridY.Text, out var y) ||
+                    !double.TryParse(gridWidth.Text, out var gw) || !double.TryParse(gridHeight.Text, out var gh))
+                { MessageBox.Show(dialog, "請輸入有效格位範圍"); return; }
+                bounds = new(x, y, gw, gh);
+            }
+            if (Apply(p => _service.SetPageTemplate(p, page.PageId, imported.Value.Asset, imported.Value.Path, w, h, m, c, r, bounds), "已套用公司圖框與明確格位")) dialog.DialogResult = true;
         };
-        dialog.Content = panel; dialog.ShowDialog();
+        dialog.Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; dialog.ShowDialog();
     }
 
     private async Task<(SchematicCadAsset Asset, string Path)?> PickCadAsset(string? approvedPath = null)

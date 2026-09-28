@@ -11,6 +11,7 @@ public sealed class SchematicDocument
 }
 
 public sealed record SchematicPoint(double X, double Y);
+public sealed record SchematicGridBounds(double X, double Y, double Width, double Height);
 
 public sealed record SchematicPage
 {
@@ -21,6 +22,15 @@ public sealed record SchematicPage
     public double Margin { get; init; } = 10;
     public int GridColumns { get; init; } = 8;
     public int GridRows { get; init; } = 5;
+    public SchematicGridBounds? CoordinateGrid { get; init; }
+    public SchematicGridBounds EffectiveGrid() => CoordinateGrid ?? new(Margin, Margin, Width - 2 * Margin, Height - 2 * Margin);
+    public string GridCell(SchematicPoint point)
+    {
+        var grid = EffectiveGrid();
+        var column = Math.Clamp((int)Math.Floor((point.X - grid.X) / grid.Width * GridColumns), 0, GridColumns - 1);
+        var row = Math.Clamp((int)Math.Floor((point.Y - grid.Y) / grid.Height * GridRows), 0, GridRows - 1);
+        return $"{(char)('A' + row)}{column + 1}";
+    }
     public string? TemplatePath { get; init; }
     public string? TemplateSha256 { get; init; }
     public SchematicCadAsset? TemplateGeometry { get; init; }

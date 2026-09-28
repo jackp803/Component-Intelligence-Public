@@ -132,12 +132,13 @@ public sealed class SchematicAuthoringService
     });
 
     public ElectricalProject SetPageTemplate(ElectricalProject project, string pageId, SchematicCadAsset asset, string sourcePath,
-        double width, double height, double margin, int columns, int rows) => Edit(project, (_, doc) =>
+        double width, double height, double margin, int columns, int rows, SchematicGridBounds? coordinateGrid = null) => Edit(project, (_, doc) =>
     {
         var index = doc.Pages.FindIndex(p => p.PageId == pageId);
         if (index < 0) throw new InvalidOperationException("Select a sheet.");
         doc.Pages[index] = doc.Pages[index] with { TemplateGeometry = asset, TemplatePath = sourcePath,
-            TemplateSha256 = asset.SourceSha256, Width = width, Height = height, Margin = margin, GridColumns = columns, GridRows = rows };
+            TemplateSha256 = asset.SourceSha256, Width = width, Height = height, Margin = margin, GridColumns = columns, GridRows = rows,
+            CoordinateGrid = coordinateGrid };
     });
 
     public ElectricalProject SetApprovedSymbolGeometry(ElectricalProject project, string symbolId, string componentId,
@@ -514,9 +515,7 @@ public sealed class SchematicAuthoringService
         var remote = pair.Source.MarkerId == markerId ? pair.Destination : pair.Source;
         var pageIndex = doc.Pages.FindIndex(p => p.PageId == remote.PageId);
         var page = doc.Pages[pageIndex];
-        var column = Math.Clamp((int)((remote.Position.X - page.Margin) / (page.Width - 2 * page.Margin) * page.GridColumns), 0, page.GridColumns - 1);
-        var row = Math.Clamp((int)((remote.Position.Y - page.Margin) / (page.Height - 2 * page.Margin) * page.GridRows), 0, page.GridRows - 1);
-        return $"{pair.Signal}  {pageIndex + 1} / {(char)('A' + row)}{column + 1}";
+        return $"{pair.Signal}  {pageIndex + 1} / {page.GridCell(remote.Position)}";
     }
 
     public string ReferenceFor(ElectricalProject project, string markerId)
@@ -545,10 +544,17 @@ public sealed class SchematicAuthoringService
             doc.Wires.Select(w => w.WireId).Distinct(StringComparer.Ordinal).Count() != doc.Wires.Count)
             throw new InvalidOperationException("Schematic identities must be unique.");
         foreach (var page in doc.Pages)
+        {
             if (!double.IsFinite(page.Width) || !double.IsFinite(page.Height) || !double.IsFinite(page.Margin) ||
                 page.Margin < 0 || page.Width <= 2 * page.Margin || page.Height <= 2 * page.Margin ||
                 page.GridColumns is < 1 or > 100 || page.GridRows is < 1 or > 26)
                 throw new InvalidOperationException("Invalid sheet dimensions or coordinate grid.");
+            var grid = page.EffectiveGrid();
+            if (!double.IsFinite(grid.X) || !double.IsFinite(grid.Y) || !double.IsFinite(grid.Width) || !double.IsFinite(grid.Height) ||
+                grid.X < 0 || grid.Y < 0 || grid.Width <= 0 || grid.Height <= 0 ||
+                grid.X + grid.Width > page.Width || grid.Y + grid.Height > page.Height)
+                throw new InvalidOperationException("Coordinate grid must be a finite positive rectangle inside the sheet.");
+        }
         foreach (var symbol in doc.Symbols)
         {
             RequirePage(doc, symbol.PageId); RequirePoint(symbol.Position);

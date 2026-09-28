@@ -6,6 +6,21 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Explicit Company Coordinate Grid (Candidate Q, Native NOT_RUN)
+
+- Added optional page CoordinateGrid X/Y/Width/Height in sheet millimetres.
+  Legacy pages retain the original margin-derived rectangle. ReferenceFor now
+  uses the explicit bounds; no net, pin or connection identity is changed.
+- Template dialog exposes an opt-in independent grid rectangle with disabled
+  fields when not selected and scrolling for small displays. Invalid/nonfinite,
+  zero or out-of-sheet rectangles fail validation. No company grid values were
+  inferred or approved; the currently saved test page remains unchanged.
+- TDD: seven tests for bounds, legacy defaults, exact grid cells, serialization
+  and invalid rectangles. Fresh full Release 1025 passed, zero failed/skipped.
+  Candidate q Release build: zero errors, 16 warnings. Native q NOT_RUN;
+  launcher remains verified p. Next: normal dialog edit/cancel/save/reload and
+  paired continuation grid verification, before claiming coordinate acceptance.
+
 #### Owner Scope Correction: Editor Is The Product
 
 - AutoCAD now serves only as the external block/template authoring tool. WDP/DWG

@@ -21,6 +21,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private readonly Func<string, Task<Uri?>> _imageResolver;
     private readonly Action _undo;
     private readonly Action _redo;
+    private readonly string? _archiveRoot;
     private IReadOnlyList<ComponentIR> _catalog = [];
     private string? _pageId, _selectionId;
     private bool _refreshing, _wireMode, _placeMode;
@@ -46,10 +47,11 @@ public partial class SchematicWorkspaceControl : UserControl
 
     public SchematicWorkspaceControl(Func<ElectricalProject> getProject, Action<ElectricalProject, string> commit,
         Func<Task<IReadOnlyList<ComponentIR>>> catalogProvider, Func<string, Task<Uri?>> imageResolver,
-        Action undo, Action redo)
+        Action undo, Action redo, string? archiveRoot = null)
     {
         _getProject = getProject; _commit = commit; _catalogProvider = catalogProvider; _imageResolver = imageResolver;
         _undo = undo; _redo = redo;
+        _archiveRoot = archiveRoot;
         InitializeComponent();
         Loaded += async (_, _) =>
         {

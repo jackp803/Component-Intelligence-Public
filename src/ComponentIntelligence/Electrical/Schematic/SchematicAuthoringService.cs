@@ -89,7 +89,8 @@ public sealed class SchematicAuthoringService
         component.ReferenceDesignator = string.IsNullOrWhiteSpace(reference) ? null : reference.Trim();
         component.ReferenceSource = Domain.ReferenceSource.Manual;
         component.ReferenceLocked = component.ReferenceDesignator is not null;
-        var next = symbol with { Anchors = anchors.ToList() };
+        var next = symbol with { Anchors = anchors.ToList(),
+            AssetRevision = symbol.Anchors.SequenceEqual(anchors) ? symbol.AssetRevision : null };
         foreach (var wire in doc.Wires.Where(w => w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId))
             if (wire.Locked && new[] { wire.Start, wire.End }.Where(a => a.SymbolId == symbolId)
                 .Any(a => AnchorPoint(symbol, a.EndpointId!) != AnchorPoint(next, a.EndpointId!)))
@@ -132,6 +133,42 @@ public sealed class SchematicAuthoringService
         if (index < 0) throw new InvalidOperationException("Select a sheet.");
         doc.Pages[index] = doc.Pages[index] with { TemplateGeometry = asset, TemplatePath = sourcePath,
             TemplateSha256 = asset.SourceSha256, Width = width, Height = height, Margin = margin, GridColumns = columns, GridRows = rows };
+    });
+
+    public ElectricalProject SetApprovedSymbolGeometry(ElectricalProject project, string symbolId, string componentId,
+        Drawing.DrawingAssetResolution approved, SchematicCadAsset geometry) => Edit(project, (draft, doc) =>
+    {
+        var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
+        if (index < 0) throw new InvalidOperationException("Select a component representation.");
+        var symbol = doc.Symbols[index];
+        var component = draft.Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
+        if (component.ComponentDefinitionId != componentId || symbol.Role != "Schematic")
+            throw new InvalidOperationException("Approved asset component/role does not match the selected representation.");
+        if (approved.SourceType is not ("ApprovedCustom" or "Manufacturer" or "LibraryStandard") ||
+            string.IsNullOrWhiteSpace(approved.Revision) || approved.AssetHashSha256.Length != 64 ||
+            !string.Equals(approved.AssetHashSha256, geometry.SourceSha256, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Approved asset identity/hash is invalid.");
+        if (symbol.Locked || doc.Wires.Any(w => w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId))
+            throw new InvalidOperationException("Apply the approved asset before wiring; wired/locked geometry needs explicit reconciliation.");
+        if (approved.PortBindings.Count == 0 || approved.PortBindings.GroupBy(b => b.EngineeringEndpointId, StringComparer.Ordinal).Any(g => g.Count() != 1))
+            throw new InvalidOperationException("Approved asset needs unique explicit endpoint bindings.");
+        var anchors = symbol.Anchors.Select(a => a with { Confirmed = false }).ToList();
+        foreach (var binding in approved.PortBindings)
+        {
+            var pins = component.Ports.SelectMany(p => p.Pins.Select(pin => (Port: p, Pin: pin)))
+                .Where(p => p.Pin.SourcePinId == binding.EngineeringEndpointId).ToArray();
+            var contacts = geometry.ConnectionPoints.Where(c => c.Tag == binding.ConnectionPointId).ToArray();
+            if (pins.Length != 1 || contacts.Length != 1)
+                throw new InvalidOperationException($"Exact source Pin / CAD contact binding unresolved: {binding.EngineeringEndpointId} / {binding.ConnectionPointId}");
+            var anchorIndex = anchors.FindIndex(a => a.EndpointId == pins[0].Pin.PinId);
+            if (anchorIndex < 0) throw new InvalidOperationException("The selected representation has no matching runtime Pin anchor.");
+            anchors[anchorIndex] = anchors[anchorIndex] with { SourcePinId = pins[0].Pin.SourcePinId,
+                SourcePortId = pins[0].Port.SourcePortId, Position = contacts[0].Position,
+                Direction = contacts[0].Direction ?? anchors[anchorIndex].Direction, Confirmed = true };
+        }
+        doc.Symbols[index] = symbol with { Geometry = geometry, AssetPath = approved.AssetPath,
+            AssetSha256 = approved.AssetHashSha256, AssetRevision = approved.Revision,
+            Width = geometry.Width, Height = geometry.Height, Anchors = anchors };
     });
 
     private static ElectricalProject Edit(ElectricalProject project, Action<ElectricalProject, SchematicDocument> change)

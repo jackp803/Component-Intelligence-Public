@@ -27,7 +27,7 @@ public partial class ElectricalWorkspaceWindow
         }, async () => System.IO.File.Exists(_centralWorkbookPath)
             ? await new WorkbookComponentKnowledgeStore(_centralWorkbookPath!).ListAsync()
             : await new ComponentIrCatalogReader(_databasePath).ListAsync(),
-            ResolveComponentImageAsync, () => Undo_Click(this, new RoutedEventArgs()), () => Redo_Click(this, new RoutedEventArgs()));
+            ResolveComponentImageAsync, () => Undo_Click(this, new RoutedEventArgs()), () => Redo_Click(this, new RoutedEventArgs()), _centralWorkbookPath);
         SchematicTab.Content = _schematicWorkspace;
         _schematicWorkspace.SaveRequested += (_, _) => SaveProject_Click(this, new RoutedEventArgs());
         _cabinetLayoutWorkspace = new CabinetLayoutWorkspaceControl(

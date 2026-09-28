@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using ComponentIntelligence.Electrical.Schematic;
+using ComponentIntelligence.Electrical.Drawing;
+using ComponentIntelligence.SymbolArchive;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -72,6 +74,34 @@ public partial class SchematicWorkspaceControl
     {
         var symbol = _getProject().Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
         if (symbol is null) { Status.Text = "請先選取元件"; return; }
+        try
+        {
+            var componentId = _getProject().Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId).ComponentDefinitionId;
+            if (!string.IsNullOrWhiteSpace(_archiveRoot) && !string.IsNullOrWhiteSpace(componentId))
+            {
+                var repository = new SymbolArchiveRepository(_archiveRoot);
+                var resolver = new Cp3aDrawingAssetResolver(new SymbolResolver(repository, _catalog), repository);
+                var approved = resolver.Resolve(componentId, DrawingRepresentationRole.Schematic);
+                if (approved is not null)
+                {
+                    var choice = MessageBox.Show(Window.GetWindow(this),
+                        $"已核准圖塊：{componentId}\n{approved.SourceType} / {approved.Revision}\nSHA-256: {approved.AssetHashSha256}\n\n是：套用此版本及明確接點綁定\n否：另選未核准外觀草稿\n取消：保持原圖",
+                        "使用既有核准圖塊", MessageBoxButton.YesNoCancel, MessageBoxImage.Question, MessageBoxResult.Cancel);
+                    if (choice == MessageBoxResult.Cancel) return;
+                    if (choice == MessageBoxResult.Yes)
+                    {
+                        var loaded = await PickCadAsset(approved.AssetPath); if (loaded is null) return;
+                        var current = resolver.Resolve(componentId, DrawingRepresentationRole.Schematic);
+                        if (current is null || current.Revision != approved.Revision || current.AssetHashSha256 != approved.AssetHashSha256 || current.AssetPath != approved.AssetPath)
+                            throw new InvalidOperationException("讀取期間核准版本已變更，請重新選取。");
+                        Apply(p => _service.SetApprovedSymbolGeometry(p, symbol.SymbolId, componentId, current, loaded.Value.Asset),
+                            $"已套用核准 {current.Revision}；未綁定接點仍待確認");
+                        return;
+                    }
+                }
+            }
+        }
+        catch (Exception error) { Status.Text = "核准圖塊未套用：" + error.Message; return; }
         var imported = await PickCadAsset(); if (imported is null) return;
         Apply(p => _service.SetSymbolGeometry(p, symbol.SymbolId, imported.Value.Asset, imported.Value.Path), "已套用圖塊草稿；接點需明確綁定");
     }
@@ -100,10 +130,15 @@ public partial class SchematicWorkspaceControl
         dialog.Content = panel; dialog.ShowDialog();
     }
 
-    private async Task<(SchematicCadAsset Asset, string Path)?> PickCadAsset()
+    private async Task<(SchematicCadAsset Asset, string Path)?> PickCadAsset(string? approvedPath = null)
     {
-        var picker = new Microsoft.Win32.OpenFileDialog { Filter = "CAD 圖面|*.dxf;*.dwg;*.dwt", CheckFileExists = true };
-        if (picker.ShowDialog(Window.GetWindow(this)) != true) return null;
+        var path = approvedPath;
+        if (path is null)
+        {
+            var picker = new Microsoft.Win32.OpenFileDialog { Filter = "CAD 圖面|*.dxf;*.dwg;*.dwt", CheckFileExists = true };
+            if (picker.ShowDialog(Window.GetWindow(this)) != true) return null;
+            path = picker.FileName;
+        }
         var dialog = new Window { Title = "CAD 匯入單位", Width = 360, Height = 170, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new StackPanel { Margin = new(16) }; var scale = new TextBox { Text = "1", Margin = new(0, 8, 0, 8) };
         panel.Children.Add(new TextBlock { Text = "每 CAD 單位對應毫米數（1 = mm）" }); panel.Children.Add(scale);
@@ -114,10 +149,10 @@ public partial class SchematicWorkspaceControl
         try
         {
             IsEnabled = false; Status.Text = "讀取 CAD 副本…";
-            var asset = await new SchematicCadFileLoader().ReadAsync(picker.FileName, factor);
+            var asset = await new SchematicCadFileLoader().ReadAsync(path, factor);
             if (!asset.Complete)
                 MessageBox.Show(Window.GetWindow(this), string.Join("\n", asset.Diagnostics), "匯入有未支援項目；不可視為完整工程圖", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return (asset, picker.FileName);
+            return (asset, path);
         }
         catch (Exception error) { Status.Text = "匯入失敗：" + error.Message; return null; }
         finally { IsEnabled = true; }

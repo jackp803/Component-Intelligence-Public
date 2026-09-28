@@ -6,6 +6,38 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Approved Asset Import And Standalone Contact Repair
+
+- Existing canvas Image/Geometry action now offers the exact approved Schematic
+  revision through the existing CP3-A resolver. It verifies path confinement and
+  source SHA, asks for explicit CAD unit scale, then maps exact catalog SourcePinId
+  to runtime PinId and exact approved contact tag to imported contact coordinates.
+  No list-index, number/name or geometry-based identity fallback. Missing/duplicate
+  bindings fail without replacing the original drawing. Wired/locked replacements
+  remain blocked pending explicit reconciliation.
+- Manual anchor overrides retire the approved binding revision claim; Reference-only
+  edits keep it. Source file hashes remain as provenance. No archive record is edited.
+- A real isolated K7L conversion exposed zero contacts despite eight source ATTDEFs.
+  Added model-space ATTDEF ingestion, including invisible electrical contacts and
+  visible default attribute text. The original failing conversion is retained locally.
+  Fresh corrected conversion: 55 primitives, 8 contacts, original SHA unchanged.
+- Existing approved K7L rev-001 and a disposable catalog/asset copy: **8/8 explicit
+  bindings** survived new instance -> import -> JSON save/reload -> validation.
+  ElectricalConnections stayed empty. Exact X1/X2/X4/X8 attribute orientation follows
+  [Autodesk connection orientation documentation](https://help.autodesk.com/cloudhelp/2023/ENU/AutoCAD-Electrical/files/GUID-B6609B09-1850-48B4-BA44-BFE987B6889D.htm).
+  This parses geometry direction only, never electrical identity. Nested INSERT
+  orientation handling remains limited; the exercised K7L is a standalone definition.
+- This is **SERVICE_IMPORT_AND_SERIALIZATION_ONLY_NOT_NATIVE_UI**. It is not new
+  approval, visual acceptance, project execution or a completed native UI chain.
+- Fresh Release regression: **986 PASS, zero failed/skipped**. Candidate g Desktop
+  Release build: **0 errors, 16 existing warnings**. DLL SHA-256:
+  `83773C6B294826E96C2482F00CAE78F9B71423DC4323CCB633C7B9108695E812`.
+  Candidate g includes preserved unrelated terminal WIP; do not identify that WIP
+  as part of this commit. Native retest still blocked by black window captures.
+- Local evidence aliases: `k7l-import-20260928` (original failure),
+  `k7l-import-20260928-final` (conversion and binding proof), `ui-20260928`
+  (disposable DB/workbook/Documents/archive registry). Private assets stay local.
+
 #### Typed Display Evidence And Metric Preservation
 
 - Continued from published `fe2b48da62a87df7dc64b70bfb48b70b35d66dff`.

@@ -19,7 +19,7 @@ public sealed record SchematicCadPrimitive
     public string? TextAttachment { get; init; }
 }
 
-public sealed record SchematicCadContact(string Tag, string Value, SchematicPoint Position, string? SourcePinId = null);
+public sealed record SchematicCadContact(string Tag, string Value, SchematicPoint Position, string? SourcePinId = null, string? Direction = null);
 
 public sealed record SchematicCadAsset
 {
@@ -101,6 +101,17 @@ public sealed class SchematicCadImporter
             }
         }
         foreach (var entity in doc.Entities.All) Read(entity, 0);
+        // Standalone ACADE symbols store contacts as model-space ATTDEFs, not INSERT attributes.
+        foreach (var definition in doc.Blocks[netDxf.Blocks.Block.DefaultModelSpaceName].AttributeDefinitions.Values)
+        {
+            if (definition.Tag.StartsWith("X", StringComparison.Ordinal) && definition.Tag.Contains("TERM", StringComparison.Ordinal))
+                contacts.Add(new(definition.Tag, definition.Value ?? "", Point(definition.Position), Direction: ContactDirection(definition.Tag)));
+            if (!definition.IsVisible || !definition.Layer.IsVisible || definition.Flags.HasFlag(AttributeFlags.Hidden) || string.IsNullOrEmpty(definition.Value)) continue;
+            raw.Add(new() { Kind = "TEXT", Start = Point(definition.Position), Text = definition.Value,
+                TextHeight = definition.Height, Rotation = definition.Rotation });
+            if (definition.Alignment != TextAlignment.BaselineLeft || definition.WidthFactor != 1 || definition.ObliqueAngle != 0)
+                diagnostics.Add("Attribute text formatting requires visual review.");
+        }
         if (raw.Count == 0 || bounds.Count == 0) throw new InvalidDataException("No supported visible geometry in model space.");
         var minX = bounds.Min(p => p.X); var maxX = bounds.Max(p => p.X);
         var minY = bounds.Min(p => p.Y); var maxY = bounds.Max(p => p.Y);
@@ -116,4 +127,8 @@ public sealed class SchematicCadImporter
             Diagnostics = diagnostics.Distinct(StringComparer.Ordinal).ToArray()
         };
     }
+
+    // ACADE connection-attribute orientation, not a catalog endpoint identity rule.
+    private static string? ContactDirection(string tag) => tag.Length > 2 && tag[2..].StartsWith("TERM", StringComparison.Ordinal)
+        ? tag[..2] switch { "X1" => "Right", "X2" => "Top", "X4" => "Left", "X8" => "Bottom", _ => null } : null;
 }

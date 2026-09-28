@@ -8,6 +8,30 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicCadImportTests
 {
     [Fact]
+    public void StandaloneSymbolReadsHiddenModelSpaceContactDefinitionsWithoutGuessingPinIdentity()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"cad-{Guid.NewGuid():N}.dxf");
+        try
+        {
+            var doc = new DxfDocument();
+            doc.Entities.Add(new Line(new Vector2(0, 0), new Vector2(30, 20)));
+            doc.Blocks[netDxf.Blocks.Block.DefaultModelSpaceName].AttributeDefinitions.Add(
+                new AttributeDefinition("X4TERM05") { Position = new Vector3(0, 10, 0), Flags = AttributeFlags.Hidden });
+            doc.Blocks[netDxf.Blocks.Block.DefaultModelSpaceName].AttributeDefinitions.Add(
+                new AttributeDefinition("TERM05") { Position = new Vector3(5, 10, 0), Value = "OUT-", Height = 2 });
+            doc.Save(path);
+            var asset = new SchematicCadImporter().ReadDxf(path, 1);
+            var point = Assert.Single(asset.ConnectionPoints);
+            Assert.Equal("X4TERM05", point.Tag); Assert.Null(point.SourcePinId);
+            Assert.Equal("Left", point.Direction);
+            Assert.Equal(new SchematicPoint(0, 10), point.Position);
+            Assert.Contains(asset.Primitives, p => p.Kind == "TEXT" && p.Text == "OUT-");
+            Assert.DoesNotContain(asset.Primitives, p => p.Text == "X4TERM05");
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     public void MultilineTextRemainsVisibleWithExplicitFormattingLimitation()
     {
         var path = Path.Combine(Path.GetTempPath(), $"cad-{Guid.NewGuid():N}.dxf");

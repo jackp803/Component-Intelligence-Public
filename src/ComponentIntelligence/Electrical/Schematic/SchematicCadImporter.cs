@@ -18,6 +18,7 @@ public sealed record SchematicCadPrimitive
     public double Rotation { get; init; }
     public double TextWidth { get; init; }
     public string? TextAttachment { get; init; }
+    public IReadOnlyList<IReadOnlyList<SchematicPoint>> Contours { get; init; } = [];
 
     // TEXT stores a baseline anchor; rotate its nominal top-left around that anchor.
     public SchematicPoint PreviewTextOrigin()
@@ -67,6 +68,19 @@ public sealed class SchematicCadImporter
             if (e.Normal != Vector3.UnitZ) { diagnostics.Add($"Unsupported normal: {e.Type}"); return; }
             switch (e)
             {
+                case Hatch hatch when hatch.Pattern.Name == "SOLID" && hatch.Pattern.Style.ToString() == "Normal":
+                    var loops = new List<IReadOnlyList<SchematicPoint>>();
+                    foreach (var path in hatch.BoundaryPaths)
+                    {
+                        var lines = path.Edges.OfType<HatchBoundaryPath.Line>().ToArray();
+                        if (lines.Length != path.Edges.Count || lines.Length < 3 ||
+                            lines.Where((line, i) => (line.End - lines[(i + 1) % lines.Length].Start).Modulus() > 0.000001).Any())
+                        { loops.Clear(); break; }
+                        loops.Add(lines.Select(line => Point(new Vector3(line.Start.X, line.Start.Y, hatch.Elevation))).ToArray());
+                    }
+                    if (loops.Count == 0) diagnostics.Add("Unsupported Hatch boundary; no partial fill imported.");
+                    else raw.Add(new() { Kind = "SOLID_HATCH", Start = loops[0][0], Contours = loops });
+                    break;
                 case Insert insert:
                     foreach (var attribute in insert.Attributes)
                     {
@@ -130,6 +144,7 @@ public sealed class SchematicCadImporter
             SourceSha256 = Convert.ToHexString(SHA256.HashData(bytes)), MillimetresPerUnit = millimetresPerUnit,
             Width = Math.Max(0.1, (maxX - minX) * millimetresPerUnit), Height = Math.Max(0.1, (maxY - minY) * millimetresPerUnit),
             Primitives = raw.Select(p => p with { Start = Map(p.Start), End = p.End is null ? null : Map(p.End),
+                Contours = p.Contours.Select(loop => (IReadOnlyList<SchematicPoint>)loop.Select(Map).ToArray()).ToArray(),
                 Radius = p.Radius * millimetresPerUnit, TextHeight = p.TextHeight * millimetresPerUnit,
                 TextWidth = p.TextWidth * millimetresPerUnit, Rotation = -p.Rotation }).ToArray(),
             ConnectionPoints = contacts.Select(c => c with { Position = Map(c.Position) }).ToArray(),

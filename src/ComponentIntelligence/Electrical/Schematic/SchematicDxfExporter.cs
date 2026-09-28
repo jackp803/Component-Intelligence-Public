@@ -81,6 +81,12 @@ public sealed class SchematicDxfExporter
             var p = transform?.Invoke(primitive.Start) ?? primitive.Start;
             switch (primitive.Kind)
             {
+                case "SOLID_HATCH":
+                    var paths = primitive.Contours.Select(loop => new HatchBoundaryPath(loop.Select((a, i) =>
+                        (EntityObject)new Line(Point(transform?.Invoke(a) ?? a),
+                            Point(transform?.Invoke(loop[(i + 1) % loop.Count]) ?? loop[(i + 1) % loop.Count]))).ToArray())).ToArray();
+                    if (paths.Length > 0) Add(new Hatch(HatchPattern.Solid, paths, false), layer, weight);
+                    break;
                 case "LINE" when primitive.End is not null:
                     Line(p, transform?.Invoke(primitive.End) ?? primitive.End, layer, weight); break;
                 case "CIRCLE": Add(new Circle(Point(p), primitive.Radius), layer, weight); break;

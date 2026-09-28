@@ -19,6 +19,17 @@ public partial class SchematicWorkspaceControl
             FrameworkElement element;
             switch (primitive.Kind)
             {
+                case "SOLID_HATCH":
+                    var fill = new StreamGeometry { FillRule = FillRule.EvenOdd };
+                    using (var context = fill.Open())
+                        foreach (var loop in primitive.Contours.Where(loop => loop.Count >= 3))
+                        {
+                            context.BeginFigure(new Point(loop[0].X * 3, loop[0].Y * 3), true, true);
+                            context.PolyLineTo(loop.Skip(1).Select(p => new Point(p.X * 3, p.Y * 3)).ToArray(), true, false);
+                        }
+                    fill.Freeze();
+                    element = new System.Windows.Shapes.Path { Data = fill, Fill = stroke ?? Brushes.Black, StrokeThickness = 0 };
+                    break;
                 case "LINE" when primitive.End is not null:
                     element = new Line { X1 = primitive.Start.X * 3, Y1 = primitive.Start.Y * 3,
                         X2 = primitive.End.X * 3, Y2 = primitive.End.Y * 3, Stroke = Brushes.Black, StrokeThickness = 1 };
@@ -60,7 +71,7 @@ public partial class SchematicWorkspaceControl
                     break;
                 default: continue;
             }
-            if (element is Shape shape)
+            if (element is Shape shape && primitive.Kind != "SOLID_HATCH")
             {
                 shape.Stroke = stroke ?? Brushes.Black;
                 shape.StrokeThickness = thickness;

@@ -6,6 +6,24 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Solid Hatch Investigation (Candidate S, Incomplete)
+
+- Actual disposable company template DXF contains one SOLID/Normal Hatch with
+  19 linear paths. Read-only netDxf inspection found continuous interior edges,
+  but all closing edges have endpoint gaps, approximately 0.0076 to 0.1316 mm.
+  Local inspection source/output remains private. No source asset was repaired.
+- Added exact closed-linear-loop SOLID Hatch primitives with separate contours,
+  even-odd WPF fill (holes preserved) and optional draft DXF representation.
+  Unsupported styles/curves/open boundaries remain diagnostics, not silently
+  dropped partial fills. New synthetic closed outer/hole test passed; fresh
+  full Release 1027 passed, zero failed/skipped. Candidate s build 0 errors,
+  16 warnings, native NOT_RUN; launcher remains r.
+- Actual company fill is STILL NOT IMPORTED because the closure check rejects
+  those gaps. This is not a company-template Hatch fix or visual acceptance.
+  Next: verify authoritative CAD hatch boundary closure semantics before any
+  implicit closing rule; retain final edge endpoints and diagnostics. Do not
+  simply increase tolerance or claim the synthetic fixture proves this asset.
+
 #### Candidate R Native Settings Checkpoint
 
 - Fresh r launched after p editor/main closed normally. Disposable SQLite path

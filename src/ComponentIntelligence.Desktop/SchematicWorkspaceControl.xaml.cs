@@ -509,7 +509,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void AddPage_Click(object sender, RoutedEventArgs e)
     {
         if (!FinishPendingDraft()) return;
-        Apply(p => _service.AddPage(p, $"工程圖 {(p.Schematic?.Pages.Count ?? 0) + 1}"), "已新增頁面");
+        Apply(p => _service.AddPage(p, $"工程圖 {(p.Schematic?.Pages.Count ?? 0) + 1}", _pageId), "已新增頁面");
         _pageId = _getProject().Schematic?.Pages.LastOrDefault()?.PageId; _selectionId = null; RefreshWorkspace();
     }
     private void Page_Selected(object sender, SelectionChangedEventArgs e)

@@ -6,6 +6,30 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Latest Continuation: 2026-09-28 (PARTIAL)
 
+#### Candidate W: New Page Inherits Active Format
+
+- Fixed the native v usability gap below. AddPage accepts an explicit source
+  page, clones the project, reuses its format with a new page identity/title and
+  clears CableDetail. It does not duplicate any symbols/wires/continuations.
+  Desktop passes the active page. No source specified retains default first-page
+  behavior; a missing explicit source fails closed instead of silently defaulting.
+- TDD RED: missing overload; then one assertion incorrectly compared nested
+  collection object identities after JSON cloning. Corrected to serialized asset
+  content equality without weakening format/source independence checks.
+  Fresh full Release 1049 passed, zero failed/skipped. Desktop Release zero errors,
+  16 existing warnings. Existing unrelated WIP is retained.
+- Native w: closed v normally, verified isolated DB on w main window, loaded the
+  existing test project, selected company-frame page, clicked Add Page. New third
+  page visibly retained frame/logo and had no duplicated device or wires. Normal
+  Save -> Load retained the empty company-format page. Same-process reload PASS;
+  w new-process reload NOT_RUN. Screenshots new-page-company-format-w.png and
+  new-page-company-format-reload-w.png remain private.
+- Launcher selects w; Desktop SHA-256
+  A79B09252BCBDC6D2BD168D9698F002B9677D0D442D49E8659D26C79B93A9DC1;
+  core 708C27FABD95A96E0370A3F5DD1E5E8819A96C0D41AFB93DB98E05E14D3DC784.
+  Next continue anchor-bound routing/editing and archived block consumption
+  gates. Overall PARTIAL; no whole-product readiness or visual acceptance claim.
+
 #### Candidate V: Native Wire / Cross-Page / New-Process Reload
 
 - Fresh normal WPF test on existing disposable company-frame project: Wire

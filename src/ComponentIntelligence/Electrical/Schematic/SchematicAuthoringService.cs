@@ -195,10 +195,14 @@ public sealed class SchematicAuthoringService
         return draft;
     }
 
-    public ElectricalProject AddPage(ElectricalProject project, string title) => Edit(project, (_, doc) =>
+    public ElectricalProject AddPage(ElectricalProject project, string title, string? templatePageId = null) => Edit(project, (_, doc) =>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        doc.Pages.Add(new() { PageId = $"sheet-{Guid.NewGuid():N}", Title = title.Trim() });
+        var format = templatePageId is null ? new SchematicPage { PageId = "", Title = "" } :
+            doc.Pages.SingleOrDefault(p => p.PageId == templatePageId)
+            ?? throw new InvalidOperationException("Source page format no longer exists.");
+        // Edit cloned the document; reuse only its format, never a cable-detail binding.
+        doc.Pages.Add(format with { PageId = $"sheet-{Guid.NewGuid():N}", Title = title.Trim(), CableDetail = null });
     });
 
     public ElectricalProject ReorderPages(ElectricalProject project, IReadOnlyList<string> pageIds) => Edit(project, (_, doc) =>

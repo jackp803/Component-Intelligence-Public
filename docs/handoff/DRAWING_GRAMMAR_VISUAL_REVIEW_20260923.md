@@ -25,6 +25,22 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 #### Fresh Native Template Import (Candidate O)
 
+- Candidate p native follow-up: PASS for the narrow frame-overlay correction
+  and normal new-process Reload of the previously saved template/placed module.
+  Candidate o editor and main window closed normally. Candidate p launched with
+  the disposable DB/workbook/archive, visible SQLite path checked before opening
+  Electrical Design. Normal Project ID entry and Load restored the template and
+  module; generated grid/footer overlay is absent. Local evidence:
+  company-template-reload-native-p.png. This supersedes p NOT_RUN below only for
+  this specific flow, not full authoring or company grid/title-block acceptance.
+- Candidate p Desktop SHA-256:
+  567EEE597CBAA1FF555FEE2B72F934AD210739CEC3F226F10BA15A81D68B07A9;
+  core: 525272EB1D76E820D1102E35C44BAD51F921D80CCFBE28EA7D64977DE3C01BF6.
+  Local hash-guarded launcher now selects p (implementation e20653c).
+- Production DB, central workbook, source company DWT and K7L rev-001 SHA-256
+  were rechecked after native reload and match the previously recorded protected
+  baselines. No source-template modification or new approval was performed.
+
 - Follow-up correction: WPF and retained optional DXF exchange now omit generic
   frame labels/footer when imported template geometry exists. Default blank
   pages retain their labels. Grid metadata and engineering identities are not

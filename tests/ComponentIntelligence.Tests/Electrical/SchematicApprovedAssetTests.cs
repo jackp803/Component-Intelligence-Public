@@ -52,6 +52,25 @@ public sealed class SchematicApprovedAssetTests
     }
 
     [Fact]
+    public void AnotherApprovedRepresentationSharesPhysicalIdentityAndPersistsExactVariant()
+    {
+        var project = Project();
+        var before = JsonSerializer.Serialize(project);
+        var next = _service.PlaceApprovedRepresentation(project, "C", project.Schematic!.Pages[0].PageId,
+            new(100, 100), Asset() with { ArchiveRepresentationId = "coil" }, Geometry());
+        Assert.Single(next.Components);
+        Assert.Equal(2, next.Schematic!.Symbols.Count);
+        var placed = next.Schematic.Symbols.Single(s => s.SymbolId != "S");
+        Assert.Equal("C", placed.ComponentInstanceId);
+        Assert.Equal("coil", placed.ArchiveRepresentationId);
+        Assert.All(placed.Anchors, a => Assert.True(a.Confirmed));
+        Assert.Empty(next.Connections);
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+        var reload = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(next))!;
+        Assert.Equal("coil", reload.Schematic!.Symbols.Single(s => s.SymbolId == placed.SymbolId).ArchiveRepresentationId);
+    }
+
+    [Fact]
     public void ManualAnchorOverrideRetiresApprovedBindingClaimButReferenceChangeDoesNot()
     {
         var project = _service.SetApprovedSymbolGeometry(Project(), "S", "CAT", Asset(), Geometry());

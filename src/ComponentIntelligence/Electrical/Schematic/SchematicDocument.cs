@@ -53,6 +53,7 @@ public sealed record SchematicSymbol
     public string? AssetPath { get; init; }
     public string? AssetSha256 { get; init; }
     public string? AssetRevision { get; init; }
+    public string ArchiveRepresentationId { get; init; } = "default";
     public SchematicCadAsset? Geometry { get; init; }
     public List<SchematicAnchor> Anchors { get; init; } = [];
 }

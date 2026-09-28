@@ -154,6 +154,15 @@ public sealed class SymbolArchiveApprovalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DrawingBridgeDoesNotMistakeVariantForDefault()
+    {
+        await Service().ApproveAsync(Request(Source("coil.dwg", "coil")) with { RepresentationId = "coil" });
+        var repository = new SymbolArchiveRepository(_root);
+        var bridge = new ComponentIntelligence.Electrical.Drawing.Cp3aDrawingAssetResolver(new SymbolResolver(repository, [Component()]), repository);
+        Assert.Null(bridge.Resolve("C1", ComponentIntelligence.Electrical.Drawing.DrawingRepresentationRole.Schematic));
+    }
+
+    [Fact]
     public async Task HistoricalManifestWithoutRepresentationStillResolvesDefault()
     {
         var approved = await Service().ApproveAsync(Request(Source("old.dwg", "historical")));

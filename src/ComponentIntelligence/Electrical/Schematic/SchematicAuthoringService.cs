@@ -160,6 +160,17 @@ public sealed class SchematicAuthoringService
             CoordinateGrid = coordinateGrid };
     });
 
+    public ElectricalProject PlaceApprovedRepresentation(ElectricalProject project, string componentInstanceId,
+        string pageId, SchematicPoint position, Drawing.DrawingAssetResolution approved, SchematicCadAsset geometry)
+    {
+        var component = project.Components.Single(c => c.ComponentInstanceId == componentInstanceId);
+        var symbol = CreateSymbol(component, pageId, position);
+        var endpoints = approved.PortBindings.Select(b => b.EngineeringEndpointId).ToHashSet(StringComparer.Ordinal);
+        symbol = symbol with { Anchors = symbol.Anchors.Where(a => a.SourcePinId is not null && endpoints.Contains(a.SourcePinId)).ToList() };
+        var draft = PlaceSymbol(project, symbol);
+        return SetApprovedSymbolGeometry(draft, symbol.SymbolId, component.ComponentDefinitionId!, approved, geometry);
+    }
+
     public ElectricalProject SetApprovedSymbolGeometry(ElectricalProject project, string symbolId, string componentId,
         Drawing.DrawingAssetResolution approved, SchematicCadAsset geometry) => Edit(project, (draft, doc) =>
     {
@@ -167,6 +178,7 @@ public sealed class SchematicAuthoringService
         if (index < 0) throw new InvalidOperationException("Select a component representation.");
         var symbol = doc.Symbols[index];
         var component = draft.Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
+        SymbolArchive.SymbolArchiveRepository.NormalizeRepresentationId(approved.ArchiveRepresentationId);
         if (component.ComponentDefinitionId != componentId || symbol.Role != "Schematic")
             throw new InvalidOperationException("Approved asset component/role does not match the selected representation.");
         if (approved.SourceType is not ("ApprovedCustom" or "Manufacturer" or "LibraryStandard") ||
@@ -193,6 +205,7 @@ public sealed class SchematicAuthoringService
         }
         doc.Symbols[index] = symbol with { Geometry = geometry, AssetPath = approved.AssetPath,
             AssetSha256 = approved.AssetHashSha256, AssetRevision = approved.Revision,
+            ArchiveRepresentationId = approved.ArchiveRepresentationId,
             Width = geometry.Width, Height = geometry.Height, Anchors = anchors };
     });
 

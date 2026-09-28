@@ -31,6 +31,7 @@ public partial class SchematicWorkspaceControl
             case "Wire": Wire_Click(this, args); break;
             case "Finish": FinishWire_Click(this, args); break;
             case "Place": Place_Click(this, args); break;
+            case "AnotherRepresentation": AnotherRepresentation_Click(this, args); break;
             case "Continuation": Continuation_Click(this, args); break;
             case "Bindings": Bindings_Click(this, args); break;
             case "Import": ImportSymbol_Click(this, args); break;

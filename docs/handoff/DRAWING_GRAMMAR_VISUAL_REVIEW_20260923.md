@@ -6,6 +6,25 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Another-representation placement continuation: the direct editor now has a separate
+selection-panel action and Shift+P. It requires a selected existing physical
+component and explicitly selected Approved archive representation (no preselection).
+The existing CAD import path loads geometry; placement preview is a cloned project.
+Click commits one representation through the normal Apply/Undo path; Escape clears
+the pending object. Before commit, the resolver rechecks exact representation,
+revision/path/hash/bindings. The new service retains the physical instance and
+exposes only pins included in that approved representation's explicit mapping.
+ArchiveRepresentationId persists with schematic symbol revision/hash/geometry.
+
+The default Drawing asset bridge was corrected after a failing regression: a
+coil-only archive must not count as an available default asset. Explicit variant
+resolution is separate. Fresh full Release: 1100 passed, no failed/skipped;
+Desktop Release: zero errors, 17 warnings (includes the existing core nullable
+warning on this build); diff check PASS. Native selection/placement/Escape/Undo/
+save-reload remains NOT_RUN. Running AD has not been replaced, PDF assistance is
+still pending, and the requested output file remains absent. Archive draft UI
+variant naming/selection and remaining cable authoring are still incomplete.
+
 Multi-representation authority continuation: archive bindings now have an explicit
 RepresentationId (legacy default = `default`). Approval/reapproval and resolver
 selection are scoped to ComponentId + Role + RepresentationId. Nondefault assets

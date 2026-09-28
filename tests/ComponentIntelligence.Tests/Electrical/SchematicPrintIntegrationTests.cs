@@ -6,6 +6,14 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicPrintIntegrationTests
 {
     [Fact]
+    public void AnotherRepresentationHasSeparateNormalActionAndShortcut()
+    {
+        var xml = XDocument.Load(Path.Combine(ConsolidatedWorkspaceNavigationTests.Desktop(), "SchematicWorkspaceControl.xaml"));
+        Assert.Single(xml.Descendants(), e => (string?)e.Attribute("Click") == "AnotherRepresentation_Click");
+        Assert.Contains(SchematicShortcutCatalog.All, s => s.Command == "AnotherRepresentation" && s.Gesture == "Shift+P");
+    }
+
+    [Fact]
     public void NormalEditorExposesPdfAndPrintWithDistinctShortcuts()
     {
         var xml = XDocument.Load(Path.Combine(ConsolidatedWorkspaceNavigationTests.Desktop(), "SchematicWorkspaceControl.xaml"));

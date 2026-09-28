@@ -456,6 +456,10 @@ public partial class SchematicWorkspaceControl : UserControl
     private void Sheet_Down(object sender, MouseButtonEventArgs e)
     {
         FocusCanvas(); var point = Snap(e.GetPosition(Sheet));
+        if (_placeMode && _pendingRepresentation is not null && _pageId is not null)
+        {
+            PlacePendingRepresentation(point); e.Handled = true; return;
+        }
         if (_placeMode && CatalogList.SelectedItem is CatalogItem item && _pageId is not null)
         {
             Apply(p => _service.AddCatalogComponent(p, item.Component, _pageId, point), "已放置元件；接點位置待確認");
@@ -539,6 +543,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void CancelCommand()
     {
         CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;
+        _pendingRepresentation = null;
         _wireMode = false; _placementPreview = null; SelectTool.IsChecked = true; WireTool.IsChecked = false;
         _selectionId = null; Render(_getProject()); Status.Text = "已取消目前操作";
     }

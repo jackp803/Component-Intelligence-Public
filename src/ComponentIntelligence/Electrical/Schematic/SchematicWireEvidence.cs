@@ -5,8 +5,8 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed record SchematicWireEvidence(string Category, string ColorHex, string Description)
 {
-    // A bounded display profile, not physical core colour or installation certification.
-    public const string Profile = "IEC60445-2021-DC-PREVIEW";
+    // Product display only; standards applicability and clauses are not yet verified.
+    public const string Profile = "PRODUCT-SCHEMATIC-PREVIEW-V1";
 
     public static SchematicWireEvidence Resolve(ElectricalProject project, SchematicWire wire)
     {

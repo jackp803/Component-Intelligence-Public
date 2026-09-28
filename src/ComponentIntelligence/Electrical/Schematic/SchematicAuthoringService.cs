@@ -8,6 +8,16 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed class SchematicAuthoringService
 {
+    public ElectricalProject DeleteRepresentation(ElectricalProject project, string symbolId) => Edit(project, (_, doc) =>
+    {
+        var symbol = doc.Symbols.SingleOrDefault(s => s.SymbolId == symbolId)
+            ?? throw new InvalidOperationException("Unknown representation.");
+        if (symbol.Locked) throw new InvalidOperationException("The representation is locked.");
+        if (doc.Wires.Any(w => w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId))
+            throw new InvalidOperationException("The representation still has attached wires. Resolve those connections explicitly before removing it.");
+        doc.Symbols.Remove(symbol);
+    });
+
     public ElectricalProject SetWireAwg(ElectricalProject project, string wireId, int? awg)
     {
         if (awg is < 0 or > 40) throw new ArgumentOutOfRangeException(nameof(awg));

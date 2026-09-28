@@ -6,6 +6,12 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicWireEvidenceTests
 {
     [Fact]
+    public void DisplayProfileDoesNotClaimUnverifiedStandardsAuthority()
+    {
+        Assert.Equal("PRODUCT-SCHEMATIC-PREVIEW-V1", SchematicWireEvidence.Profile);
+    }
+
+    [Fact]
     public void UsesOnlyExactTypedEndpointAndPreservesZeroVoltReturn()
     {
         var (p, w) = Fixture(Polarity.Positive, 24);

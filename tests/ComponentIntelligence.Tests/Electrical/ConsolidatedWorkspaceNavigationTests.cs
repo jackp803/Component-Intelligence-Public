@@ -4,6 +4,14 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class ConsolidatedWorkspaceNavigationTests
 {
+    [Fact]
+    public void WorkspaceAlwaysStartsInSchematicWithoutLegacyTopologyFallback()
+    {
+        var source = File.ReadAllText(Path.Combine(Desktop(), "ElectricalWorkspaceWindow.WorkspaceTabs.cs"));
+        Assert.Contains("WorkspaceTabs.SelectedItem = SchematicTab;", source);
+        Assert.DoesNotContain("_project.Schematic is null ? TopologyTab", source);
+    }
+
     internal static string Desktop()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);

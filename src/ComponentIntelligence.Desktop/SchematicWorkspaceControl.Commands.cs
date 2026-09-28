@@ -59,7 +59,7 @@ public partial class SchematicWorkspaceControl
             case "ZoomOut": Zoom.Value = Math.Max(Zoom.Minimum, Zoom.Value - .1); break;
             case "Help": Shortcuts_Click(this, args); break;
             case "Cancel": CancelCommand(); break;
-            case "Delete": DeleteSelectedWire(); break;
+            case "Delete": DeleteSelectedObject(); break;
         }
         e.Handled = true;
     }
@@ -71,8 +71,21 @@ public partial class SchematicWorkspaceControl
         Sheet.BringIntoView();
     }
 
-    private void DeleteSelectedWire()
+    private void DeleteSelectedObject()
     {
+        var doc = _getProject().Schematic;
+        var symbol = doc?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
+        if (symbol is not null)
+        {
+            if (symbol.Locked) { Status.Text = "請先解鎖此圖面表示。"; return; }
+            if (doc!.Wires.Any(w => w.Start.SymbolId == symbol.SymbolId || w.End.SymbolId == symbol.SymbolId))
+            { Status.Text = "此表示仍有接線，請先明確處理接線；未刪除任何資料。"; return; }
+            if (MessageBox.Show(Window.GetWindow(this), "只刪除此圖面表示？實體元件、Reference 與其他表示會保留。",
+                "刪除圖面表示", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            if (Apply(p => _service.DeleteRepresentation(p, symbol.SymbolId), "已刪除圖面表示；實體元件保留，可復原"))
+            { _selectionId = null; RefreshWorkspace(); }
+            return;
+        }
         if (_getProject().Schematic?.Wires.Any(w => w.WireId == _selectionId) != true) return;
         if (MessageBox.Show(Window.GetWindow(this), "刪除此導線及對應工程連線？", "刪除導線",
             MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;

@@ -44,7 +44,7 @@ public partial class ElectricalWorkspaceWindow
             else if (ReferenceEquals(WorkspaceTabs.SelectedItem, SchematicTab)) _schematicWorkspace.RefreshWorkspace();
             else if (ReferenceEquals(WorkspaceTabs.SelectedItem, TopologyTab)) TopologyCanvas.SetProject(_project);
         };
-        WorkspaceTabs.SelectedItem = _project.Schematic is null ? TopologyTab : SchematicTab;
+        WorkspaceTabs.SelectedItem = SchematicTab;
         TopologyCanvas.RefreshCanvas();
     }
 }

@@ -7,6 +7,44 @@ preserved and must not be represented as accepted.
 
 ## Confirmed Scope
 
+### Owner Decisions: 2026-09-29 (Supersede Earlier Proposals)
+
+- Primary authoring is the schematic, not Topology or a second Planner. Do not
+  immediately delete existing AutoCAD output code: retire old entries separately
+  after the new workflow is usable. AutoCAD execution is not an MVP gate.
+- Add from the cable library creates one physical cable instance with independent
+  identity, Reference, length, specification and connections. Another representation
+  references the same instance and does not duplicate cable/member material counts.
+  Unknown length/specification does not prevent draft creation. Imported cable
+  geometry must expose selectable external contacts, not a generic box or flat image.
+- Pin mapping is separate from appearance. Pin exact template and mapping versions.
+  Appearance-only drafts allow known external wiring but visibly retain unconfirmed
+  internal mapping; no inferred continuity. Instance mapping edits affect only that
+  instance, require confirmation, and never alter approved/shared revisions.
+- Free wire ends remain unfinished, never inferred NC/ground. Real contacts bind
+  exact Pin identity; multi-Pin Ports are selectors, not conducting nodes. Branch
+  creation requires explicit wire snap/intent; crossings and geometry moves never
+  create connectivity. Continuations require explicit pairing, not matching text.
+  Rewiring and geometry editing are separate commands.
+- First release supports multiple archived, confirmed representations of one
+  component, without arbitrary block decomposition. Shared Reference updates all
+  representations; representation deletion must not silently delete the physical
+  instance or attached engineering connections. No implicit internal conduction.
+- Owner terminal statement: a branch from the same wire is shown with a circular
+  terminal mark and needs no special counting. Pending precise clarification:
+  whether this is presentation-only without automatically creating terminal/BOM
+  authority. Do not infer a terminal model or rewrite existing terminal identity.
+- Save editable instances, exact asset/mapping versions, bindings, pages, routes,
+  text, continuations and confirmation state. Print and complete multipage PDF use
+  the same saved drawing, company frame, page totals, grid and references; no second
+  layout. Unfinished projects remain saveable/exportable as clearly marked drafts
+  with inspectable issues, never automatically engineering-approved.
+- No arbitrary user wire colours or earlier voltage palette. Research standard
+  number, edition, scope and clause authority without paid access. Separate physical
+  conductor identification, schematic presentation and interaction highlighting.
+  Use labels, destinations, patterns, spacing and tracking for distinguishability,
+  including monochrome PDF. Unverified rules remain product rules or pending.
+
 - 2026-09-28 owner clarification supersedes the historical execution-output
   requirements below: this application is the primary schematic editor.
   AutoCAD is an auxiliary authoring tool for imported blocks/templates only.

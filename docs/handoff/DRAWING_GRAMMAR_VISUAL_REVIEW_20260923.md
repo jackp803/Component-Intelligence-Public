@@ -4,7 +4,101 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ## Direct Schematic MVP WIP Checkpoint (2026-09-24)
 
+### Owner Decision Update: 2026-09-29
+
+Fresh regression checkpoint: full Release initially 1078 passed / 1 failed in
+ConsolidationRebindsExistingDetailPagesWithoutDeletingPagesOrElectricalTruth.
+Root cause: the historical consolidation service removed old CableInstances but
+left detail-page bindings pointing at those retired IDs. It now rebinds only pages
+whose cable is actually retired, preserving page identity/title and connection
+truth. This is legacy compatibility, not adoption of generated cable appearance
+as the new authoring workflow. Focused multi-end tests: 21 passed. Fresh full
+Release after repair: 1079 passed, zero failed/skipped. No native UI acceptance
+is claimed. Earlier unresolved-regression notes below are historical, superseded
+by this checkpoint; remaining user-workflow gaps are not superseded.
+
+Multi-representation baseline audit:
+- Added DeleteRepresentation command and Delete-key dispatch for selected symbols.
+  Confirmation explicitly retains the physical instance and other representations.
+  Locked symbols or any attached draft/connected wire prevent deletion before
+  mutation; native status explains the need to resolve attachments first.
+  Service regression covers original-project immutability and retained identities.
+  Tests initially could not compile because the command did not exist; after
+  implementation, all 34 SchematicAuthoringTests passed. Desktop Release build:
+  zero errors, 16 warnings. Native deletion/Cancel/Undo verification NOT_RUN;
+  this remains local WIP, not a published or UI-accepted candidate.
+- Existing PlaceSymbol can reference one physical ComponentInstance from two
+  pages using distinct confirmed Pin subsets. New regression verifies shared
+  Reference after JSON round-trip, unchanged physical component count, no added
+  Connections/Nets and unchanged input project. This is existing service behavior,
+  not a newly completed user workflow or approved-asset consumption proof.
+- Current normal palette placement still calls AddCatalogComponent, creating a
+  new physical instance. It does not yet expose the required distinct action to
+  place another archived representation of an existing instance. That UI/archive
+  selection gap is open; do not present the passing service test as native PASS.
+
+Standards discovery (official public metadata only, no purchase):
+- IEC 60445:2021, edition 7.0, conductor/terminal identification:
+  https://webstore.iec.ch/en/publication/66712
+- Its official consolidated successor is IEC 60445:2021+AMD1:2026 CSV,
+  edition 7.1, published 2026-01-28:
+  https://webstore.iec.ch/en/publication/111816
+- Machinery-specific scope: IEC 60204-1:2016 and AMD1:2021:
+  https://webstore.iec.ch/en/publication/26037 and
+  https://webstore.iec.ch/en/publication/66124
+- Diagram/document presentation: IEC 61082-1:2014:
+  https://webstore.iec.ch/en/publication/4469
+Exact colour clauses and amendment effects are NOT_VERIFIED from these public
+catalogue pages. No installation compliance or normative palette is claimed.
+The misleading IEC60445-2021-DC-PREVIEW identifier was replaced by
+PRODUCT-SCHEMATIC-PREVIEW-V1; existing colours and electrical data are unchanged.
+Regression observed RED before the identifier correction. This does not complete
+the controlled identification rules or monochrome readability acceptance.
+
+The six owner answers now supersede the unanswered proposals recorded below.
+Full requirements are preserved in the existing direct-schematic MVP plan's
+2026-09-29 section. Cable instances versus representations, mapping-version
+authority, explicit wire/continuation semantics, shared component representations,
+and editable project plus draft-capable multipage PDF/print are required scope.
+Terminal branch circles need one narrow clarification about presentation versus
+automatic physical terminal creation. No new implementation or native acceptance
+is claimed by this requirements checkpoint. Existing WIP remains preserved.
+
 ### Latest Continuation: 2026-09-28 (PARTIAL)
+
+#### Owner Workflow Correction And Unanswered Decisions
+
+- Bounded navigation correction: startup now always selects SchematicTab, even
+  when historical projects have no Schematic document. No automatic topology
+  conversion or electrical-data mutation was introduced. Source-level regression
+  observed RED (missing unconditional selection), then navigation suite GREEN
+  (4 tests). Native startup verification is NOT_RUN for this edit. Legacy tabs
+  are still present pending decoupling; this is not complete UI consolidation.
+- Owner explicitly requires direct electrical schematic authoring only: no
+  Topology authoring workflow and no second Planner rearranging the user's work.
+  Internal engineering connectivity and historical data remain preserved.
+- Custom cable appearance comes from owner-authored, archived CAD blocks. The
+  conductor ownership picker and generated generic Y illustration are not the
+  required primary authoring experience. Do not continue expanding that path as
+  though it satisfied this requirement. AutoCAD remains auxiliary asset authoring,
+  not a required project output/execution gate.
+- Pending questions are proposals, NOT approved requirements: physical identity
+  on each cable-block insertion; reusable versus per-instance mapping; explicit
+  branch creation when terminating on an existing wire; multiple representations
+  of one physical component; terminal insertion interaction; initial print/PDF
+  delivery behavior. Do not silently implement the assistant's suggested answers.
+- Current HEAD rechecked: ae85c6dd8f0606cb5a9e1d66a95cb6db570dbeb3.
+  Uncommitted draft-route helper/UI changes and the consolidation/detail-page
+  regression remain local WIP, along with seven older preserved WIP paths.
+  They are not represented as published branch functionality.
+- Fresh focused Release check: SchematicDraftRouteTests, 6 passed, zero failed
+  or skipped. This covers draft orthogonal tail/retrace behavior only, not native
+  interaction or product readiness. No fresh full-suite/build/UI claim here.
+- The added consolidation/detail-page regression is still unresolved; earlier
+  full-suite PASS records below do not establish current full-suite PASS.
+- Native input remains stopped after the owner's conductor-picker clarification.
+  No additional UI operation, production mutation, or asset approval occurred in
+  this checkpoint. Overall PARTIAL; owner visual acceptance remains PENDING.
 
 #### Candidate AB: Approved K7L Native Consumption And Selection Safety
 

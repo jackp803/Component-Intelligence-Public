@@ -459,6 +459,59 @@ public sealed class SchematicAuthoringTests
         Assert.Equal(before, JsonSerializer.Serialize(p));
     }
 
+    [Fact]
+    public void SeparateRepresentationsSharePhysicalIdentityAndReferenceWithoutInferringConnections()
+    {
+        var p = PlacedProject();
+        p.Components[0].Ports[0].Pins.Add(new() { PinId = "A2", PinNumber = "2" });
+        var before = JsonSerializer.Serialize(p);
+        var next = _service.PlaceSymbol(p, new SchematicSymbol
+        {
+            SymbolId = "S1-other", ComponentInstanceId = "C1",
+            PageId = p.Schematic!.Pages[1].PageId, Position = new(30, 90),
+            Width = 40, Height = 30,
+            Anchors = [new() { EndpointId = "A2", Position = new(0, 15), Confirmed = true }]
+        });
+        next = _service.SetSymbolDetails(next, "S1", "K1", next.Schematic!.Symbols[0].Anchors);
+        var restored = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(next))!;
+        var representations = restored.Schematic!.Symbols.Where(s => s.ComponentInstanceId == "C1").ToArray();
+        Assert.Equal(2, representations.Length);
+        Assert.Equal(2, restored.Components.Count);
+        Assert.All(representations, s => Assert.Equal("K1",
+            restored.Components.Single(c => c.ComponentInstanceId == s.ComponentInstanceId).ReferenceDesignator));
+        Assert.Equal(new[] { "A", "A2" }, representations.SelectMany(s => s.Anchors).Select(a => a.EndpointId));
+        Assert.Empty(restored.Connections);
+        Assert.Empty(restored.Nets);
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    [Fact]
+    public void DeleteRepresentationPreservesPhysicalInstanceAndOtherRepresentations()
+    {
+        var p = PlacedProject();
+        p = _service.PlaceSymbol(p, p.Schematic!.Symbols[0] with { SymbolId = "S1-copy", PageId = p.Schematic.Pages[1].PageId });
+        var before = JsonSerializer.Serialize(p);
+        var next = _service.DeleteRepresentation(p, "S1");
+        Assert.Equal(p.Components.Select(c => c.ComponentInstanceId), next.Components.Select(c => c.ComponentInstanceId));
+        Assert.DoesNotContain(next.Schematic!.Symbols, s => s.SymbolId == "S1");
+        Assert.Contains(next.Schematic.Symbols, s => s.SymbolId == "S1-copy");
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    [Fact]
+    public void DeleteRepresentationRejectsAttachedDraftWireOrLockWithoutMutation()
+    {
+        var p = PlacedProject();
+        var locked = _service.SetLocked(p, "S1", true);
+        var lockedBefore = JsonSerializer.Serialize(locked);
+        Assert.Throws<InvalidOperationException>(() => _service.DeleteRepresentation(locked, "S1"));
+        Assert.Equal(lockedBefore, JsonSerializer.Serialize(locked));
+        p = _service.DrawWire(p, p.Schematic!.Pages[0].PageId, Pin("S1", "A"), SchematicAttachment.Free(), [new(60, 40), new(90, 40)]);
+        var before = JsonSerializer.Serialize(p);
+        Assert.Throws<InvalidOperationException>(() => _service.DeleteRepresentation(p, "S1"));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
     private ElectricalProject PlacedProject()
     {
         var p = _service.AddPage(_service.AddPage(Project(), "One"), "Two");

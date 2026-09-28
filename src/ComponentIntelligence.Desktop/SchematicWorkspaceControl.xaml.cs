@@ -422,7 +422,7 @@ public partial class SchematicWorkspaceControl : UserControl
         if (_wireStart is null) { _wireStart = attachment; _wirePoints = [point]; }
         else
         {
-            AppendOrthogonal(_wirePoints, point);
+            _wirePoints = SchematicDraftRoute.Append(_wirePoints, point);
             if (attachment.Kind != SchematicAttachmentKind.Free || finish)
             {
                 var start = _wireStart; var points = _wirePoints.ToArray(); var page = _pageId;
@@ -447,7 +447,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void RenderWirePreview()
     {
         if (_wireStart is null) return;
-        var points = _wirePoints.ToList(); if (_pointer is not null) AppendOrthogonal(points, _pointer);
+        var points = _pointer is null ? _wirePoints.ToList() : SchematicDraftRoute.Append(_wirePoints, _pointer);
         var preview = Path(points, Brushes.DarkCyan, 1.5); preview.IsHitTestVisible = false; Sheet.Children.Add(preview);
     }
     private void Sheet_Down(object sender, MouseButtonEventArgs e)

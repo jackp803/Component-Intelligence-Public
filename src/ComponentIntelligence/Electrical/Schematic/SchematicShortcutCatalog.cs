@@ -16,6 +16,7 @@ public static class SchematicShortcutCatalog
         new("Rename", "F2", "重新命名頁面"), new("ApplyReference", "Ctrl+Enter", "套用 Reference"),
         new("Search", "Ctrl+F", "搜尋元件"), new("Save", "Ctrl+S", "儲存專案"),
         new("ExportDraft", "Ctrl+E", "匯出 DXF 草稿"),
+        new("ExportPdf", "Ctrl+Shift+E", "儲存並匯出 PDF 草稿"), new("Print", "Ctrl+P", "儲存並列印草稿"),
         new("CableDetail", "Ctrl+D", "開啟線材明細"),
         new("Undo", "Ctrl+Z", "復原"), new("Redo", "Ctrl+Y", "重做"),
         new("ZoomIn", "Ctrl+Add", "放大"), new("ZoomOut", "Ctrl+Subtract", "縮小"),

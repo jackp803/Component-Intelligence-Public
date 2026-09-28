@@ -68,6 +68,28 @@ preserved and must not be represented as accepted.
 
 ## Execution Order / Durable Ledger
 
+### Remaining Owner-Required Integration (2026-09-29 Source Audit)
+
+- Archive representation identity must distinguish confirmed coil/contact variants
+  under one ComponentId and role. Current ComponentSymbolBinding has only
+  ComponentId + Role, and repository validation allows one approved revision per
+  pair. Do not treat another revision of the same binding as a simultaneously
+  approved variant, fake a ComponentId, or overwrite K7L approval. Extend the
+  existing archive/resolver with explicit representation identity and compatibility
+  tests before wiring existing-instance variant selection into the palette.
+- Add a separate normal user action for another representation of an existing
+  physical instance. Selection must show Reference/model and exact archived
+  variant/version/bindings; no automatic split of arbitrary geometry. Reuse the
+  existing PlaceSymbol identity behavior, not AddCatalogComponent.
+- Cable assets additionally require physical cable authority and separately pinned
+  mapping versions. Do not reuse component-only approval by inventing ComponentIR.
+- Print/multipage PDF is still a missing direct-authoring delivery path, not proven
+  by the existing ExportDraft command. Share saved page geometry and ordering with
+  the editor, retain page dimensions/grid/frame, and visibly mark incomplete output.
+  Verify every page, reference, editable reload and monochrome readability.
+- All these entries remain implementation work, not completed features. Existing
+  service-level identity tests do not establish the archive or UI workflows.
+
 1. Preserve current WIP and record the failed terminal-page visual result.
 2. Add versioned direct-authoring page/symbol/wire state, transactional commands,
    draft persistence, exact endpoint checks and migration tests.

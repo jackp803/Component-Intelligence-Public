@@ -57,7 +57,9 @@ public sealed class SymbolArchiveApprovalService
         var binding = document.Bindings.SingleOrDefault(item =>
             string.Equals(item.ComponentId, request.ComponentId, StringComparison.Ordinal) && item.Role == request.Role);
         var existingSameHash = binding?.Revisions.FirstOrDefault(revision =>
-            string.Equals(revision.AssetHashSha256, sourceShaBefore, StringComparison.OrdinalIgnoreCase));
+            string.Equals(revision.AssetHashSha256, sourceShaBefore, StringComparison.OrdinalIgnoreCase) &&
+            revision.SourceType == request.SourceType &&
+            SameBindings(revision.PortBindings, request.PortBindings));
 
         if (existingSameHash is not null)
         {
@@ -161,6 +163,14 @@ public sealed class SymbolArchiveApprovalService
             if (string.IsNullOrWhiteSpace(binding.ConnectionPointId))
                 throw new InvalidOperationException("ConnectionPointId must be explicit and nonblank.");
         }
+    }
+
+    private static bool SameBindings(IReadOnlyList<SymbolPortBinding> first, IReadOnlyList<SymbolPortBinding> second)
+    {
+        static IEnumerable<(string Endpoint, string Contact)> Normalize(IReadOnlyList<SymbolPortBinding> bindings) =>
+            bindings.Select(b => (Endpoint: b.EngineeringEndpointId.Trim(), Contact: b.ConnectionPointId.Trim()))
+                .OrderBy(b => b.Endpoint, StringComparer.Ordinal).ThenBy(b => b.Contact, StringComparer.Ordinal);
+        return Normalize(first).SequenceEqual(Normalize(second));
     }
 
     private static string NextRevision(ComponentSymbolBinding? binding)

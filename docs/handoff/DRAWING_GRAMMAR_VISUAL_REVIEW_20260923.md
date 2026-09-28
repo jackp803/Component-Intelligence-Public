@@ -6,6 +6,73 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Latest PDF continuation (local WIP, supersedes the earlier NOT_IMPLEMENTED
+checkpoint below): schematic PDF/print commands are now connected to awaited
+normal project Save/Revision and repository reload, then the same RenderPage
+implementation used by the canvas. Output retains saved page order and dimensions,
+suppresses editing handles, and carries a draft/incomplete footer. Current PDF
+implementation uses 300-DPI raster pages, not selectable-text/vector output.
+Physical printer margin compatibility and complete missing-evidence reporting
+remain open; neither print nor PDF has native PASS yet.
+
+Subsequent print-margin correction: query oriented media and imageable area from
+the selected print ticket. Require matching actual-size paper/orientation, then
+check rendered ink outside the imageable bounds instead of rejecting blank paper
+margins. Missing capabilities or any clipped content fail before PrintDocument;
+no automatic scaling/cropping. Seven new raster safety tests cover all margins,
+white/transparent pixels, stride padding, and invalid inputs. Initial missing-helper
+compile failure was followed by seven passing tests. Full Release now 1091 passed,
+zero failed/skipped; Desktop Release zero errors, 16 warnings. This correction is
+NOT in the running AD copy and has no native printer PASS. Do not replace AD while
+the owner is assisting its pending PDF dialog.
+Production DB, central workbook, approved K7L source, and company DWT SHA256 values
+were rechecked and match the recorded protected baseline. Output file was absent
+at last check; native PDF remains pending, not completed.
+
+Candidate AD was launched against a fresh disposable copy, not production.
+Desktop DLL SHA256: A9EAE96293A095ACAE8111316797D8F1F6F472D5D53264DFC8976BFB1043DECB.
+Core DLL SHA256: 64A60A6E03F877EB35BA5B0EBF647924FD87E3368492092444E2AD4426AAE37A.
+These identify a dirty-worktree build based on dc779da; they are not a clean remote
+commit identity. The pre-existing launcher still points at AC, not AD.
+
+Normal Desktop Load successfully opened the existing four-page disposable test
+project, followed by the PDF Save dialog. Native automation then reported
+`element 249 is not available in cached app state`; a refreshed coordinate focus
+attempt still reported the search field rather than the filename field. Input
+was stopped and the owner was asked to enter the isolated output filename and
+press Save once. Pending assistance/output verification: NOT_RUN, not PASS.
+If completed by the owner, record the export interaction as HUMAN_ASSISTED.
+No direct database/API substitution for this native export test is permitted.
+
+Fresh narrow tests after the latest shared-footer build: 13 passed, zero failed
+or skipped (print integration, approval service, navigation filters).
+git diff --check: PASS (checkout line-ending notices only). Earlier full Release
+gate: 1084 passed; Desktop Release build: zero errors, 16 warnings. These are
+automated evidence, not native PDF/print or overall engineering acceptance.
+
+PDF prerequisite (local WIP): normal SaveProject_Click now awaits a shared
+Task<bool> SaveProjectAsync, returning false for unfinished gesture refusal or
+caught save failure and true only after the existing save/revision path finishes.
+No PDF command is connected yet. Source-boundary test observed RED then GREEN;
+navigation suite 5 passed; Desktop Release build zero errors, 16 warnings.
+This is not runtime failure-injection proof or completed PDF/print behavior.
+
+Archive mapping identity correction (local WIP): identical file hash alone is
+no longer an exact duplicate approval. Source type and normalized explicit
+endpoint/contact pairs must also match. An explicitly confirmed different mapping
+uses the existing new-revision path; prior asset bytes and binding records remain
+unchanged (normal approval-status supersession still applies). Synthetic temporary
+archive regression observed RED with old behavior, then verified distinct mapping
+revision and exact-repeat reuse. This does not approve any company asset, implement
+cable instance overrides, or solve simultaneous coil/contact representation variants.
+Additional regression verifies reordered identical bindings reuse authority without
+rewriting the manifest, and unconfirmed changed mappings leave manifest bytes and
+revision count unchanged. Fresh SymbolArchive suite: 37 passed, zero failed/skipped.
+PDF dependency audit: Desktop already references PDFsharp-WPF 6.2.4; no new paid
+dependency is necessary. Existing TopologyPdfExporter is not the new schematic
+output and must not be used to regenerate topology layout. Multipage schematic
+PDF/print remains NOT_IMPLEMENTED, not satisfied by this dependency discovery.
+
 Fresh regression checkpoint: full Release initially 1078 passed / 1 failed in
 ConsolidationRebindsExistingDetailPagesWithoutDeletingPagesOrElectricalTruth.
 Root cause: the historical consolidation service removed old CableInstances but

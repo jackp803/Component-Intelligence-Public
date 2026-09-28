@@ -30,6 +30,16 @@ public partial class ElectricalWorkspaceWindow
             ResolveComponentImageAsync, () => Undo_Click(this, new RoutedEventArgs()), () => Redo_Click(this, new RoutedEventArgs()), _centralWorkbookPath);
         SchematicTab.Content = _schematicWorkspace;
         _schematicWorkspace.SaveRequested += (_, _) => SaveProject_Click(this, new RoutedEventArgs());
+        _schematicWorkspace.SaveOutputSnapshotAsync = async () =>
+        {
+            IsEnabled = false;
+            try
+            {
+                if (!await SaveProjectAsync()) return null;
+                return await _repository.GetAsync(_project.ProjectId);
+            }
+            finally { IsEnabled = true; }
+        };
         _cabinetLayoutWorkspace = new CabinetLayoutWorkspaceControl(
             () => _project, RecordMutation, UpdateHistoryButtons,
             status => WorkspaceStatusText.Text = status, ResolveComponentImageAsync);

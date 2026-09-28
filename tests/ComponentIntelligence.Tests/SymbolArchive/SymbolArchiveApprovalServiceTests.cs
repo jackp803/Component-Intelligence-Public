@@ -68,6 +68,53 @@ public sealed class SymbolArchiveApprovalServiceTests : IDisposable
         Assert.Equal("rev-001", binding.Revisions.Single(item => item.Status == SymbolRevisionStatus.Approved).Revision);
     }
 
+    [Fact]
+    public async Task SameAppearanceWithDifferentMappingCreatesExplicitNewRevision()
+    {
+        var source = Source("same.dwg", "unchanged appearance");
+        var service = Service();
+        var first = await service.ApproveAsync(Request(source));
+        var second = await service.ApproveAsync(Request(source) with
+        {
+            PortBindings = [new() { EngineeringEndpointId = "PIN-A", ConnectionPointId = "TERM01" }]
+        });
+        Assert.Equal(SymbolApprovalDisposition.CreatedRevision, second.Disposition);
+        Assert.Equal("rev-002", second.Revision);
+        Assert.Equal(first.Sha256, second.Sha256);
+        var revisions = Assert.Single(new SymbolArchiveRepository(_root).Load().Bindings).Revisions;
+        Assert.Equal("P1", Assert.Single(revisions.Single(r => r.Revision == "rev-001").PortBindings).EngineeringEndpointId);
+        Assert.Equal("PIN-A", Assert.Single(revisions.Single(r => r.Revision == "rev-002").PortBindings).EngineeringEndpointId);
+        var duplicate = await service.ApproveAsync(Request(source) with
+        {
+            PortBindings = [new() { EngineeringEndpointId = "PIN-A", ConnectionPointId = "TERM01" }]
+        });
+        Assert.Equal(SymbolApprovalDisposition.ExactDuplicate, duplicate.Disposition);
+        Assert.Equal("rev-002", duplicate.Revision);
+    }
+
+    [Fact]
+    public async Task BindingOrderDoesNotCreateRevisionAndUnconfirmedChangeCannotWrite()
+    {
+        var source = Source("same.dwg", "same");
+        var request = Request(source) with { PortBindings =
+        [new() { EngineeringEndpointId = "P1", ConnectionPointId = "TERM01" },
+         new() { EngineeringEndpointId = "PIN-A", ConnectionPointId = "TERM02" }] };
+        var service = Service();
+        await service.ApproveAsync(request);
+        var manifest = Path.Combine(_root, SymbolArchiveRepository.FileName);
+        var before = File.ReadAllBytes(manifest);
+        var duplicate = await service.ApproveAsync(request with { PortBindings = request.PortBindings.Reverse().ToArray() });
+        Assert.Equal(SymbolApprovalDisposition.ExactDuplicate, duplicate.Disposition);
+        Assert.Equal(before, File.ReadAllBytes(manifest));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApproveAsync(request with
+        {
+            UserConfirmed = false,
+            PortBindings = [new() { EngineeringEndpointId = "PIN-A", ConnectionPointId = "TERM03" }]
+        }));
+        Assert.Equal(before, File.ReadAllBytes(manifest));
+        Assert.Single(Assert.Single(new SymbolArchiveRepository(_root).Load().Bindings).Revisions);
+    }
+
     public void Dispose() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
 
     private SymbolArchiveApprovalService Service() => new(new SymbolArchiveRepository(_root), [Component()]);

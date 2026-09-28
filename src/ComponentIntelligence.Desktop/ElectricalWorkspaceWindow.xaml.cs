@@ -85,7 +85,12 @@ public partial class ElectricalWorkspaceWindow : Window
 
     private async void SaveProject_Click(object sender, RoutedEventArgs e)
     {
-        if (_schematicWorkspace?.FinishPendingDraft() == false) return;
+        await SaveProjectAsync();
+    }
+
+    private async Task<bool> SaveProjectAsync()
+    {
+        if (_schematicWorkspace?.FinishPendingDraft() == false) return false;
         var newName = ProjectNameText.Text?.Trim();
         if (!string.Equals(_project.Name, newName, StringComparison.Ordinal))
         {
@@ -113,10 +118,12 @@ public partial class ElectricalWorkspaceWindow : Window
             RefreshAll();
             await RefreshSavedProjectChoicesAsync();
             WorkspaceStatusText.Text = $"已儲存 Project {_project.ProjectId} 到 SQLite。Schema={_project.SchemaVersion}";
+            return true;
         }
         catch (Exception exception)
         {
             MessageBox.Show(this, App.FormatException(exception), "儲存失敗", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
         }
     }
 

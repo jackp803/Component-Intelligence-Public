@@ -150,7 +150,8 @@ public partial class SchematicWorkspaceControl : UserControl
         {
             var specification = SchematicWirePresentation.Resolve(project, wire);
             var evidence = SchematicWireEvidence.Resolve(project, wire);
-            var weight = Math.Max(1.5 / Zoom.Value, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
+            var zoom = _renderingOutput ? 1 : Zoom.Value;
+            var weight = Math.Max(1.5 / zoom, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
             var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
             var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
             if (wire.ConnectionId is null) line.StrokeDashArray = new DoubleCollection([5, 3]);
@@ -163,7 +164,7 @@ public partial class SchematicWorkspaceControl : UserControl
             if (evidence.Category == "DC_NEGATIVE" && wire.WireId != _selectionId)
             {
                 var outline = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
-                    Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, Brushes.DimGray, weight + 2 / Zoom.Value, line.StrokeDashArray);
+                    Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, Brushes.DimGray, weight + 2 / zoom, line.StrokeDashArray);
                 outline.IsHitTestVisible = false; Sheet.Children.Add(outline);
             }
             if (crossings.Crossovers.Any(c => c.HorizontalWireId == wire.WireId))
@@ -173,7 +174,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 Sheet.Children.Add(geometry);
             }
             else Sheet.Children.Add(line);
-            if (!_wireMode)
+            if (!_wireMode && !_renderingOutput)
             for (var segment = 0; segment < wire.Points.Count - 1; segment++)
             {
                 var index = segment;
@@ -205,7 +206,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 };
                 menu.Items.Add(delete); hit.ContextMenu = menu; Sheet.Children.Add(hit);
             }
-            if (wire.ConnectionId is null)
+            if (wire.ConnectionId is null && !_renderingOutput)
             foreach (var atStart in new[] { true, false })
             {
                 var attachment = atStart ? wire.Start : wire.End;
@@ -263,7 +264,7 @@ public partial class SchematicWorkspaceControl : UserControl
             Sheet.Children.Add(arrow);
             Text(_service.ReferenceFor(project, marker.MarkerId), point.X + 2, point.Y - 5, 10, Brushes.Black);
         }
-        if (page.PageId == _pageId)
+        if (page.PageId == _pageId && !_renderingOutput)
         {
             RenderWirePreview();
             if (_placeMode && _pointer is not null && _placementPreview?.Schematic?.Symbols.LastOrDefault() is SchematicSymbol ghost)
@@ -274,7 +275,9 @@ public partial class SchematicWorkspaceControl : UserControl
                 { element.IsHitTestVisible = false; element.Opacity = .55; }
             }
         }
-        UpdateSelection(project);
+        Text($"草稿／未完成  |  {doc.Pages.IndexOf(page) + 1} / {doc.Pages.Count}",
+            page.Margin, page.Height - 5, 9, Brushes.Black);
+        if (!_renderingOutput) UpdateSelection(project);
     }
 
     private void DrawFrame(SchematicPage page, int number, string? name)

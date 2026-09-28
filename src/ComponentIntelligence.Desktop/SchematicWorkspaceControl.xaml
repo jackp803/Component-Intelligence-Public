@@ -22,6 +22,8 @@
    <Button Content="?" Padding="12,5" Click="Shortcuts_Click" ToolTip="快捷鍵 (F1)"/>
    <ToggleButton x:Name="AllPagesTool" Content="所有頁面" Padding="12,5" Click="AllPages_Click" ToolTip="單頁／所有頁面 (F6)"/>
    <Button Content="DXF 草稿" Padding="12,5" Click="ExportDraft_Click" ToolTip="匯出 DXF 草稿 (Ctrl+E)"/>
+   <Button Content="PDF 草稿" Padding="12,5" Click="ExportPdf_Click" ToolTip="儲存並匯出多頁 PDF 草稿 (Ctrl+Shift+E)"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE749;" Padding="10,5" Click="Print_Click" ToolTip="儲存並列印草稿 (Ctrl+P)"/>
    <Slider x:Name="Zoom" Minimum="0.25" Maximum="2" Value="0.65" Width="110" Margin="12,0" ToolTip="縮放" ValueChanged="Zoom_Changed"/>
   </WrapPanel>
   <Grid Grid.Row="1">

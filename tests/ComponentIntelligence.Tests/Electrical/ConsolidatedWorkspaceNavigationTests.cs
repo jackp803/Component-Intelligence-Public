@@ -5,6 +5,15 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class ConsolidatedWorkspaceNavigationTests
 {
     [Fact]
+    public void WorkspaceSaveHasAwaitableSuccessBoundaryForDocumentOutput()
+    {
+        var source = File.ReadAllText(Path.Combine(Desktop(), "ElectricalWorkspaceWindow.xaml.cs"));
+        Assert.Contains("private async Task<bool> SaveProjectAsync()", source);
+        Assert.Contains("await SaveProjectAsync();", source);
+        Assert.Contains("FinishPendingDraft() == false) return false;", source);
+    }
+
+    [Fact]
     public void WorkspaceAlwaysStartsInSchematicWithoutLegacyTopologyFallback()
     {
         var source = File.ReadAllText(Path.Combine(Desktop(), "ElectricalWorkspaceWindow.WorkspaceTabs.cs"));

@@ -43,6 +43,8 @@ public partial class SchematicWorkspaceControl
             case "CableDetail": CableDetail_Click(this, args); break;
             case "Gauge": Gauge_Click(this, args); break;
             case "ExportDraft": ExportDraft_Click(this, args); break;
+            case "ExportPdf": ExportPdf_Click(this, args); break;
+            case "Print": Print_Click(this, args); break;
             case "AllPages": AllPagesTool.IsChecked = !AllPagesTool.IsChecked; AllPages_Click(this, args); break;
             case "AddPage": AddPage_Click(this, args); break;
             case "PagePrevious": SelectAdjacentPage(-1); break;

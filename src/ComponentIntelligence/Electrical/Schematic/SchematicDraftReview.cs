@@ -18,8 +18,15 @@ public static class SchematicDraftReview
                 result.Add(new("NO_COMPANY_TEMPLATE", page.PageId, page.PageId, $"{page.Title}：尚未套用公司圖框。"));
             foreach (var symbol in doc.Symbols.Where(s => s.PageId == page.PageId))
             {
-                var component = project.Components.SingleOrDefault(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
-                var label = component?.ReferenceDesignator ?? component?.DisplayName ?? component?.ComponentDefinitionId ?? symbol.ComponentInstanceId;
+                var owner = SchematicSymbolOwner.Resolve(project, symbol);
+                var label = owner.Reference ?? owner.DisplayName;
+                if (owner.Cable?.ArchivedCable is { } binding)
+                {
+                    if (!binding.MappingConfirmed)
+                        result.Add(new("UNCONFIRMED_CABLE_MAPPING", page.PageId, symbol.SymbolId, $"{label}：內部接法未確認。"));
+                    foreach (var pin in binding.Ports.SelectMany(p => p.Pins).Where(p => !symbol.Anchors.Any(a => a.EndpointId == p.PinId)))
+                        result.Add(new("MISSING_CABLE_CONTACT", page.PageId, symbol.SymbolId, $"{label}／{pin.PinNumber} {pin.PinName}：尚未綁定 CAD 接點。"));
+                }
                 if (symbol.AssetRevision is null)
                     result.Add(new("UNAPPROVED_REPRESENTATION", page.PageId, symbol.SymbolId, $"{label}：目前表示未引用核准圖塊版本。"));
                 foreach (var anchor in symbol.Anchors.Where(a => !a.Confirmed))

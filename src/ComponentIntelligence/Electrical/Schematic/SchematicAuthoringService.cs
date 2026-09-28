@@ -6,7 +6,7 @@ using ComponentIntelligence.Electrical.Bridging;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
-public sealed class SchematicAuthoringService
+public sealed partial class SchematicAuthoringService
 {
     public ElectricalProject DeleteRepresentation(ElectricalProject project, string symbolId) => Edit(project, (_, doc) =>
     {
@@ -100,11 +100,10 @@ public sealed class SchematicAuthoringService
         if (i < 0) throw new InvalidOperationException("Unknown representation.");
         var symbol = doc.Symbols[i];
         if (symbol.Locked) throw new InvalidOperationException("The representation is locked.");
-        var component = draft.Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
-        component.ReferenceDesignator = string.IsNullOrWhiteSpace(reference) ? null : reference.Trim();
-        component.ReferenceSource = Domain.ReferenceSource.Manual;
-        component.ReferenceLocked = component.ReferenceDesignator is not null;
-        var next = symbol with { Anchors = anchors.ToList(),
+        SchematicSymbolOwner.Resolve(draft, symbol).SetReference(reference);
+        var next = symbol with { Anchors = anchors.Select(a =>
+            symbol.Anchors.Any(old => old.EndpointId == a.EndpointId && old.CadContactId == a.CadContactId && old.Position != a.Position)
+                ? a with { CadContactId = null } : a).ToList(),
             AssetRevision = symbol.Anchors.SequenceEqual(anchors) ? symbol.AssetRevision : null };
         foreach (var wire in doc.Wires.Where(w => w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId))
             if (wire.Locked && new[] { wire.Start, wire.End }.Where(a => a.SymbolId == symbolId)
@@ -138,7 +137,7 @@ public sealed class SchematicAuthoringService
             throw new InvalidOperationException("Import geometry before wiring; a wired or locked representation requires explicit asset reconciliation.");
         doc.Symbols[index] = symbol with { Geometry = asset, AssetPath = sourcePath, AssetSha256 = asset.SourceSha256,
             AssetRevision = null, Width = asset.Width, Height = asset.Height,
-            Anchors = symbol.Anchors.Select(a => a with { Confirmed = false }).ToList() };
+            Anchors = symbol.Anchors.Select(a => a with { Confirmed = false, CadContactId = null }).ToList() };
     });
 
     public ElectricalProject SetPageSettings(ElectricalProject project, string pageId,
@@ -199,7 +198,7 @@ public sealed class SchematicAuthoringService
                 throw new InvalidOperationException($"Exact source Pin / CAD contact binding unresolved: {binding.EngineeringEndpointId} / {binding.ConnectionPointId}");
             var anchorIndex = anchors.FindIndex(a => a.EndpointId == pins[0].Pin.PinId);
             if (anchorIndex < 0) throw new InvalidOperationException("The selected representation has no matching runtime Pin anchor.");
-            anchors[anchorIndex] = anchors[anchorIndex] with { SourcePinId = pins[0].Pin.SourcePinId,
+            anchors[anchorIndex] = anchors[anchorIndex] with { CadContactId = binding.ConnectionPointId, SourcePinId = pins[0].Pin.SourcePinId,
                 SourcePortId = pins[0].Port.SourcePortId, Position = contacts[0].Position,
                 Direction = contacts[0].Direction ?? anchors[anchorIndex].Direction, Confirmed = true };
         }
@@ -239,8 +238,7 @@ public sealed class SchematicAuthoringService
 
     public ElectricalProject PlaceSymbol(ElectricalProject project, SchematicSymbol symbol) => Edit(project, (draft, doc) =>
     {
-        if (!draft.Components.Any(c => c.ComponentInstanceId == symbol.ComponentInstanceId))
-            throw new InvalidOperationException("Select an existing project component before placing its representation.");
+        SchematicSymbolOwner.Resolve(draft, symbol);
         if (doc.Symbols.Any(s => s.SymbolId == symbol.SymbolId)) throw new InvalidOperationException("Duplicate representation identity.");
         doc.Symbols.Add(symbol with { Anchors = symbol.Anchors.ToList() });
     });
@@ -564,10 +562,10 @@ public sealed class SchematicAuthoringService
         var prefix = ReferenceFor(doc, markerId);
         if (endpoint is null) return prefix + "  對端待接續";
         var symbol = doc.Symbols.Single(s => s.SymbolId == endpoint.SymbolId);
-        var component = project.Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
-        var port = component.Ports.Single(p => p.Pins.Any(pin => pin.PinId == endpoint.EndpointId));
+        var owner = SchematicSymbolOwner.Resolve(project, symbol);
+        var port = owner.Ports.Single(p => p.Pins.Any(pin => pin.PinId == endpoint.EndpointId));
         var pin = port.Pins.Single(p => p.PinId == endpoint.EndpointId);
-        return $"{prefix}  {component.ReferenceDesignator ?? component.DisplayName ?? component.ComponentDefinitionId} / {port.Name} / {pin.PinNumber} {pin.PinName}".Trim();
+        return $"{prefix}  {owner.Reference ?? owner.DisplayName} / {port.Name} / {pin.PinNumber} {pin.PinName}".Trim();
     }
 
     public static void Validate(ElectricalProject project)
@@ -597,16 +595,24 @@ public sealed class SchematicAuthoringService
             RequirePage(doc, symbol.PageId); RequirePoint(symbol.Position);
             if (symbol.Width <= 0 || symbol.Height <= 0 || !double.IsFinite(symbol.Width) || !double.IsFinite(symbol.Height) || symbol.Rotation is not (0 or 90 or 180 or 270))
                 throw new InvalidOperationException("Invalid symbol size or orientation.");
-            var component = project.Components.SingleOrDefault(c => c.ComponentInstanceId == symbol.ComponentInstanceId)
-                ?? throw new InvalidOperationException("Unknown component representation.");
-            var pins = component.Ports.SelectMany(p => p.Pins).Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
+            var owner = SchematicSymbolOwner.Resolve(project, symbol);
+            if (owner.Cable?.ArchivedCable is { } cableBinding && (symbol.Geometry is null ||
+                !string.Equals(symbol.Geometry.SourceSha256, cableBinding.Template.AssetSha256, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("Cable representation requires its pinned CAD geometry, not a generic box.");
+            var pins = owner.Ports.SelectMany(p => p.Pins).Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
             if (symbol.Anchors.Select(a => a.EndpointId).Distinct(StringComparer.Ordinal).Count() != symbol.Anchors.Count)
                 throw new InvalidOperationException("Duplicate pin binding in representation.");
             foreach (var anchor in symbol.Anchors)
             {
                 RequirePoint(anchor.Position);
+                if (anchor.CadContactId is { } cadId)
+                {
+                    var contacts = symbol.Geometry?.ConnectionPoints.Where(c => c.Tag == cadId).ToArray() ?? [];
+                    if (contacts.Length != 1 || contacts[0].Position != anchor.Position)
+                        throw new InvalidOperationException("CAD contact binding must retain its exact geometry position.");
+                }
                 if (!pins.Contains(anchor.EndpointId)) throw new InvalidOperationException("Anchor must bind an exact existing component PinId.");
-                var port = component.Ports.Single(p => p.Pins.Any(pin => pin.PinId == anchor.EndpointId));
+                var port = owner.Ports.Single(p => p.Pins.Any(pin => pin.PinId == anchor.EndpointId));
                 var pin = port.Pins.Single(p => p.PinId == anchor.EndpointId);
                 if ((anchor.SourcePortId is not null && anchor.SourcePortId != port.SourcePortId) ||
                     (anchor.SourcePinId is not null && anchor.SourcePinId != pin.SourcePinId))

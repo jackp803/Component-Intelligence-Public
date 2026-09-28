@@ -113,4 +113,63 @@ public sealed class ArchivedCableInstanceTests
         Assert.Throws<InvalidOperationException>(() => ArchivedCableInstanceFactory.Create(
             Template() with { Mapping = [new("common-5", "a-1"), new("a-1", "common-5")] }, CableConstructionType.Custom));
     }
+
+    [Fact]
+    public async Task CableCadPlacementAndAnotherRepresentationShareOnePhysicalCable()
+    {
+        var service = new SchematicAuthoringService();
+        var p = service.AddPage(new ElectricalProject { ProjectId = "drawing" }, "Cable");
+        var page = p.Schematic!.Pages[0].PageId;
+        var geometry = new SchematicCadAsset { SourceSha256 = new string('A', 64), Width = 80, Height = 40, MillimetresPerUnit = 1,
+            Primitives = [new() { Kind = "LINE", Start = new(0, 20), End = new(80, 20) }],
+            ConnectionPoints = [new("common", "", new(0, 20), Direction: "Left"), new("a", "", new(80, 10), Direction: "Right"), new("b", "", new(80, 30), Direction: "Right")] };
+        var contacts = new Dictionary<string, string> { ["common-5"] = "common", ["a-1"] = "a", ["b-1"] = "b" };
+        p = service.AddArchivedCable(p, Template(), CableConstructionType.Custom, geometry, contacts, page, new(20, 20));
+        var cable = Assert.Single(p.Cables); var symbol = Assert.Single(p.Schematic!.Symbols);
+        Assert.Empty(p.Components); Assert.Equal(cable.CableInstanceId, symbol.CableInstanceId);
+        Assert.Equal("", symbol.ComponentInstanceId); Assert.Equal(3, symbol.Anchors.Count);
+        Assert.Equal("common", symbol.Anchors[0].CadContactId);
+        Assert.Equal(geometry.SourceSha256, symbol.Geometry!.SourceSha256);
+        p = service.PlaceCableRepresentation(p, cable.CableInstanceId, geometry, contacts, page, new(150, 20));
+        Assert.Single(p.Cables); Assert.Equal(2, p.Schematic!.Symbols.Count);
+        p = service.SetSymbolDetails(p, symbol.SymbolId, "W-Y1", symbol.Anchors);
+        Assert.All(p.Schematic!.Symbols, s => Assert.Equal("W-Y1", SchematicSymbolOwner.Resolve(p, s).Reference));
+        p = service.DrawWire(p, page, SchematicAttachment.Pin(symbol.SymbolId, symbol.Anchors[0].EndpointId), SchematicAttachment.Free(),
+            [new(20, 40), new(10, 40), new(10, 70)]);
+        p = service.TransformSymbol(p, symbol.SymbolId, new(40, 40), 90);
+        Assert.Equal(SchematicAuthoringService.AnchorPoint(p.Schematic!.Symbols[0], symbol.Anchors[0].EndpointId), p.Schematic.Wires[0].Points[0]);
+        Assert.Empty(p.Connections);
+        Assert.Throws<InvalidOperationException>(() => service.DeleteRepresentation(p, symbol.SymbolId));
+        p = service.DeleteRepresentation(p, p.Schematic.Symbols[1].SymbolId);
+        Assert.Single(p.Cables); Assert.Single(p.Schematic!.Symbols);
+        Assert.Contains(SchematicDraftReview.Inspect(p), i => i.Code == "UNCONFIRMED_CABLE_MAPPING");
+        var path = Path.Combine(Path.GetTempPath(), "cable-canvas-test-" + Guid.NewGuid().ToString("N") + ".db");
+        try {
+            var repo = new ElectricalProjectRepository(new SqliteConnectionFactory(), path);
+            await repo.SaveAsync(p); var loaded = (await repo.GetAsync(p.ProjectId))!;
+            Assert.Equal(JsonSerializer.Serialize(p.Schematic), JsonSerializer.Serialize(loaded.Schematic));
+            Assert.Single(loaded.Cables); Assert.Empty(loaded.Components);
+        } finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); File.Delete(path); }
+    }
+
+    [Fact]
+    public void CablePlacementRejectsWrongAssetWithoutMutatingProjectAndAllowsIncompleteDraftContacts()
+    {
+        var service = new SchematicAuthoringService();
+        var p = service.AddPage(new ElectricalProject { ProjectId = "draft" }, "sheet");
+        var before = JsonSerializer.Serialize(p); var page = p.Schematic!.Pages[0].PageId;
+        var geometry = new SchematicCadAsset { SourceSha256 = new string('B', 64), Width = 30, Height = 20, MillimetresPerUnit = 1 };
+        Assert.Throws<InvalidOperationException>(() => service.AddArchivedCable(p, Template(), CableConstructionType.Custom,
+            geometry, new Dictionary<string, string>(), page, new(30, 30)));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+        var draft = service.AddArchivedCable(p, Template(), CableConstructionType.Custom,
+            geometry with { SourceSha256 = new string('A', 64) }, new Dictionary<string, string>(), page, new(30, 30));
+        Assert.Equal(3, SchematicDraftReview.Inspect(draft).Count(i => i.Code == "MISSING_CABLE_CONTACT"));
+        Assert.Empty(draft.Schematic!.Symbols[0].Anchors);
+        Assert.Empty(draft.Components); Assert.Empty(draft.Connections);
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+        var symbol = draft.Schematic.Symbols[0];
+        draft.Schematic.Symbols[0] = symbol with { ComponentInstanceId = "fake" };
+        Assert.Throws<InvalidOperationException>(() => SchematicAuthoringService.Validate(draft));
+    }
 }

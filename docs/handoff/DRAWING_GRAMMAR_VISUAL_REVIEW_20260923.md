@@ -6,6 +6,29 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Cable-owned CAD representation continuation: SchematicSymbol can now reference
+exactly one existing ComponentInstance or archived CableInstance. Shared owner
+resolution supports Reference, labels, pins, validation, continuation text, WPF
+rendering and saved print/DXF rendering without fake components. AddArchivedCable
+is one cloned-project operation; PlaceCableRepresentation references the existing
+cable without adding material quantity. Missing CAD contacts remain visible draft
+issues rather than invented positions; cable symbols require pinned CAD geometry,
+not a generic box. CAD contact tags are persisted alongside runtime/source Pin IDs.
+Manual anchor relocation clears its obsolete contact-tag claim and approval claim;
+geometry reimport clears stale contact identities. Existing component tests remain
+green, including manual anchor override behavior.
+
+Tests cover same-cable multiple representations/shared Reference, rotation with
+wire anchor following, attached-representation deletion rejection, deleting another
+representation without deleting the cable, full schematic SQLite reload, wrong
+asset hash/dual-owner rejection, incomplete contact drafts and input-project
+immutability. Fresh full Release 1112 PASS; Desktop Release zero errors/16 warnings.
+Native cable placement remains NOT_RUN: the normal cable-library picker and archive
+template consumption are still required. Component-only archive actions explicitly
+decline cable selection instead of treating a cable as ComponentIR. This is an
+integration checkpoint, not a usable cable-library delivery or final acceptance.
+
+
 Archived physical cable domain continuation (not a completed cable-library UI):
 CableInstance now optionally stores a private template snapshot, exact source
 Port/Pin bindings with independent runtime endpoint IDs, pinned template/mapping

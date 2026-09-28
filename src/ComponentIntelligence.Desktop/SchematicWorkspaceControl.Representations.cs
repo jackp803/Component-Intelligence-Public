@@ -18,6 +18,7 @@ public partial class SchematicWorkspaceControl
         var project = _getProject();
         var selected = project.Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
         if (selected is null || _pageId is null) { Status.Text = "請先選取既有元件。"; return; }
+        if (selected.CableInstanceId is not null) { Status.Text = "此選單只列元件表示；線材表示由線材庫管理。"; return; }
         if (string.IsNullOrWhiteSpace(_archiveRoot)) { Status.Text = "尚未設定圖塊歸檔來源。"; return; }
         if (!FinishPendingDraft()) return;
         try

@@ -93,6 +93,7 @@ public partial class SchematicWorkspaceControl
     {
         var symbol = _getProject().Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
         if (symbol is null) { Status.Text = "請先選取元件"; return; }
+        if (symbol.CableInstanceId is not null) { Status.Text = "線材外觀綁定歸檔模板版本，請由線材庫選用修訂版本。"; return; }
         try
         {
             var componentId = _getProject().Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId).ComponentDefinitionId;

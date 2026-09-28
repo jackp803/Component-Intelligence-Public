@@ -26,7 +26,7 @@ public partial class SchematicWorkspaceControl
         SchematicAuthoringService.Validate(project);
         if (project.Schematic?.Pages.Count is not > 0) throw new InvalidOperationException("尚無可輸出的頁面。");
         foreach (var id in project.Schematic.Symbols.Where(s => s.Geometry is null)
-            .Select(s => project.Components.Single(c => c.ComponentInstanceId == s.ComponentInstanceId).ComponentDefinitionId)
+            .Select(s => SchematicSymbolOwner.Resolve(project, s).DefinitionId)
             .Distinct(StringComparer.Ordinal))
             await GetImage(id);
         return project;

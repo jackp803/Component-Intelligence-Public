@@ -162,7 +162,7 @@ public sealed class SchematicDxfExporter
 
         foreach (var symbol in source.Symbols.Where(s => s.PageId == page.PageId))
         {
-            var component = project.Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
+            var owner = SchematicSymbolOwner.Resolve(project, symbol);
             SchematicPoint Map(SchematicPoint p)
             {
                 var local = symbol.Rotation switch
@@ -174,7 +174,7 @@ public sealed class SchematicDxfExporter
                 };
                 return new(symbol.Position.X + local.X, symbol.Position.Y + local.Y);
             }
-            if (SchematicSymbolPresentation.Geometry(symbol, component.ReferenceDesignator) is { } geometry)
+            if (SchematicSymbolPresentation.Geometry(symbol, owner.Reference) is { } geometry)
             {
                 foreach (var p in geometry.Primitives) Primitive(p, "SCHEMATIC_SYMBOL", .25, Map, symbol.Rotation);
                 diagnostics.AddRange(geometry.Diagnostics.Select(d => symbol.SymbolId + ": " + d));
@@ -183,7 +183,7 @@ public sealed class SchematicDxfExporter
             {
                 SchematicPoint[] box = [new(0, 0), new(symbol.Width, 0), new(symbol.Width, symbol.Height), new(0, symbol.Height), new(0, 0)];
                 for (var i = 1; i < box.Length; i++) Line(Map(box[i - 1]), Map(box[i]), "SCHEMATIC_SYMBOL");
-                var raster = images is not null && images.TryGetValue(component.ComponentDefinitionId, out var found) ? found : null;
+                var raster = images is not null && images.TryGetValue(owner.DefinitionId, out var found) ? found : null;
                 var layout = SchematicCatalogSymbolLayout.Create(symbol.Width, symbol.Height, raster?.PixelWidth ?? 1, raster?.PixelHeight ?? 1);
                 if (raster is not null)
                 {
@@ -196,11 +196,11 @@ public sealed class SchematicDxfExporter
                     usedImages.TryAdd(raster.Sha256, raster);
                 }
                 else diagnostics.Add("CATALOG_RASTER_IMAGE_NOT_EMBEDDED: " + symbol.SymbolId);
-                Primitive(new() { Kind = "MTEXT", Start = layout.LabelTopLeft, Text = component.DisplayName ?? component.ComponentDefinitionId,
+                Primitive(new() { Kind = "MTEXT", Start = layout.LabelTopLeft, Text = owner.DisplayName,
                     TextHeight = 11d / 3, TextWidth = layout.LabelWidth, TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25, Map, symbol.Rotation);
             }
             if (SchematicSymbolPresentation.ShowReferenceLabel(symbol))
-                Label(component.ReferenceDesignator ?? "Reference 未設定", new(symbol.Position.X, symbol.Position.Y - 6), "SCHEMATIC_LABEL", 11d / 3);
+                Label(owner.Reference ?? "Reference 未設定", new(symbol.Position.X, symbol.Position.Y - 6), "SCHEMATIC_LABEL", 11d / 3);
             foreach (var anchor in symbol.Anchors)
             {
                 var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);

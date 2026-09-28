@@ -19,7 +19,7 @@ public partial class SchematicWorkspaceControl
             var project = EngineeringReviewService.Clone(_getProject());
             var images = new Dictionary<string, SchematicRasterAsset>(StringComparer.Ordinal);
             var definitions = project.Schematic?.Symbols.Where(s => s.Geometry is null)
-                .Select(s => project.Components.Single(c => c.ComponentInstanceId == s.ComponentInstanceId).ComponentDefinitionId)
+                .Select(s => SchematicSymbolOwner.Resolve(project, s).DefinitionId)
                 .Distinct(StringComparer.Ordinal).ToArray() ?? [];
             foreach (var id in definitions)
             {

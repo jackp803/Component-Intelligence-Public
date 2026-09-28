@@ -42,7 +42,8 @@ public sealed record SchematicCableDetailBinding(string CableInstanceId, string?
 public sealed record SchematicSymbol
 {
     public required string SymbolId { get; init; }
-    public required string ComponentInstanceId { get; init; }
+    public string ComponentInstanceId { get; init; } = "";
+    public string? CableInstanceId { get; init; }
     public required string PageId { get; init; }
     public string Role { get; init; } = "Schematic";
     public SchematicPoint Position { get; init; } = new(20, 20);
@@ -61,6 +62,7 @@ public sealed record SchematicSymbol
 public sealed record SchematicAnchor
 {
     public required string EndpointId { get; init; }
+    public string? CadContactId { get; init; }
     public string? SourcePortId { get; init; }
     public string? SourcePinId { get; init; }
     public string? Label { get; init; }

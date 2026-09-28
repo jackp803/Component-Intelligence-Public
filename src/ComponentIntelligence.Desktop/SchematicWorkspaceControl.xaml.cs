@@ -298,7 +298,7 @@ public partial class SchematicWorkspaceControl : UserControl
 
     private void RenderSymbol(ElectricalProject project, SchematicSymbol symbol)
     {
-        var component = project.Components.Single(c => c.ComponentInstanceId == symbol.ComponentInstanceId);
+        var owner = SchematicSymbolOwner.Resolve(project, symbol);
         var body = new Border { Width = symbol.Width * 3, Height = symbol.Height * 3, BorderThickness = new(0),
             BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray, Background = Brushes.White,
             Cursor = _wireMode ? Cursors.Cross : Cursors.SizeAll };
@@ -308,13 +308,13 @@ public partial class SchematicWorkspaceControl : UserControl
         if (symbol.Geometry is null)
         {
             var layout = SchematicCatalogSymbolLayout.Create(symbol.Width, symbol.Height, 1, 1);
-            var label = new TextBlock { Text = component.DisplayName ?? component.ComponentDefinitionId, FontSize = 11,
+            var label = new TextBlock { Text = owner.DisplayName, FontSize = 11,
                 Width = layout.LabelWidth * 3, TextWrapping = TextWrapping.Wrap, IsHitTestVisible = false };
             Canvas.SetLeft(label, layout.LabelTopLeft.X * 3); Canvas.SetTop(label, layout.LabelTopLeft.Y * 3);
             content.Children.Add(label);
         }
         body.Child = content;
-        if (SchematicSymbolPresentation.Geometry(symbol, component.ReferenceDesignator) is { } cad) body.Child = CadCanvas(cad);
+        if (SchematicSymbolPresentation.Geometry(symbol, owner.Reference) is { } cad) body.Child = CadCanvas(cad);
         // Selection strokes overlay geometry; their width must not shift the CAD body away from its anchors.
         var drawing = body.Child; body.Child = null;
         var layers = new Grid(); layers.Children.Add(drawing);
@@ -331,7 +331,7 @@ public partial class SchematicWorkspaceControl : UserControl
         });
         body.RenderTransform = transforms;
         Canvas.SetLeft(body, symbol.Position.X * 3); Canvas.SetTop(body, symbol.Position.Y * 3); Sheet.Children.Add(body);
-        if (symbol.Geometry is null) _ = LoadImage(component.ComponentDefinitionId, image, symbol);
+        if (symbol.Geometry is null) _ = LoadImage(owner.DefinitionId, image, symbol);
         var referenceY = symbol.Position.Y - 6;
         body.MouseLeftButtonDown += (_, e) =>
         {
@@ -369,7 +369,7 @@ public partial class SchematicWorkspaceControl : UserControl
             }
         }
         if (SchematicSymbolPresentation.ShowReferenceLabel(symbol))
-            Text(component.ReferenceDesignator ?? "Reference 未設定", symbol.Position.X, referenceY, 11, Brushes.Black);
+            Text(owner.Reference ?? "Reference 未設定", symbol.Position.X, referenceY, 11, Brushes.Black);
     }
 
     private readonly Dictionary<string, BitmapImage?> _images = new(StringComparer.Ordinal);
@@ -603,14 +603,17 @@ public partial class SchematicWorkspaceControl : UserControl
     private void UpdateSelection(ElectricalProject p)
     {
         var s = p.Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
-        var component = p.Components.SingleOrDefault(c => c.ComponentInstanceId == s?.ComponentInstanceId);
+        var owner = s is null ? null : SchematicSymbolOwner.Resolve(p, s);
         var w = p.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
-        SelectionLabel.Text = component?.DisplayName ?? (w is not null ? "導線" : "");
-        ReferenceText.Text = component?.ReferenceDesignator ?? "";
+        SelectionLabel.Text = owner?.DisplayName ?? (w is not null ? "導線" : "");
+        ReferenceText.Text = owner?.Reference ?? "";
         SelectionState.Text = s is not null ? $"{(s.Locked ? "已鎖定" : "可編輯")}\n接點位置：{s.Anchors.Count(a => a.Confirmed)} / {s.Anchors.Count} 已確認" :
             w is not null ? $"{(w.Locked ? "已鎖定" : "可編輯")}\n{(w.ConnectionId is null ? "待接續" : "工程連線已建立")}" : "";
         if (s?.Geometry is not null)
             SelectionState.Text += "\n" + (s.AssetRevision is null ? "圖塊草稿／未核准" : s.AssetRevision) + "\n" + string.Join("\n", s.Geometry.Diagnostics);
+        if (owner?.Cable?.ArchivedCable is { } cable)
+            SelectionState.Text += "\n" + (cable.MappingConfirmed ? "內部接法有確認來源" : "內部接法未確認") +
+                $"\n模板：{cable.Template.TemplateRevision} / mapping：{cable.Template.MappingRevision ?? "未確認"}";
         if (w is not null)
         {
             var spec = SchematicWirePresentation.Resolve(p, w);
@@ -722,8 +725,10 @@ public partial class SchematicWorkspaceControl : UserControl
         panel.Children.Add(grid); ok.Click += (_, _) => { if (grid.CommitEdit(DataGridEditingUnit.Cell, true) && grid.CommitEdit(DataGridEditingUnit.Row, true)) dialog.DialogResult = true; };
         dialog.Content = panel;
         if (dialog.ShowDialog() == true)
-            Apply(current => _service.SetSymbolDetails(current, s.SymbolId, p.Components.Single(c => c.ComponentInstanceId == s.ComponentInstanceId).ReferenceDesignator,
-                rows.Select(r => r.Anchor with { Position = new(r.X, r.Y), Confirmed = r.Confirmed }).ToArray()), "已更新接點位置");
+            Apply(current => _service.SetSymbolDetails(current, s.SymbolId, SchematicSymbolOwner.Resolve(p, s).Reference,
+                rows.Select(r => r.Anchor with { Position = new(r.X, r.Y), Confirmed = r.Confirmed,
+                    CadContactId = r.CadContact is { } contact && contact.Position == new SchematicPoint(r.X, r.Y) ? contact.Tag :
+                        r.CadContact is null && r.Anchor.Position == new SchematicPoint(r.X, r.Y) ? r.Anchor.CadContactId : null }).ToArray()), "已更新接點位置");
     }
     private sealed record PageItem(string Id, string Label);
     private sealed record CatalogItem(ComponentIR Component, string Label);

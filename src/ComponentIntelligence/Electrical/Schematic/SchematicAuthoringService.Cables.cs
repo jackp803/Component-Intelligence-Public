@@ -6,11 +6,12 @@ public sealed partial class SchematicAuthoringService
 {
     public ElectricalProject AddArchivedCable(ElectricalProject project, ArchivedCableTemplate template,
         CableConstructionType construction, SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts,
-        string pageId, SchematicPoint position) => Edit(project, (draft, doc) =>
+        string pageId, SchematicPoint position, string? assetPath = null, bool assetApproved = false) => Edit(project, (draft, doc) =>
     {
         var cable = ArchivedCableInstanceFactory.Create(template, construction);
         draft.Cables.Add(cable);
-        doc.Symbols.Add(CreateCableSymbol(cable, geometry, contacts, pageId, position));
+        doc.Symbols.Add(CreateCableSymbol(cable, geometry, contacts, pageId, position) with {
+            AssetPath = assetPath, AssetRevision = assetApproved ? template.TemplateRevision : null });
     });
 
     public ElectricalProject PlaceCableRepresentation(ElectricalProject project, string cableId,

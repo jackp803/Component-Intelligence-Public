@@ -42,6 +42,7 @@ public partial class SchematicWorkspaceControl
             case "Peer": Navigate_Click(this, args); break;
             case "MovePage": MoveSymbolPage_Click(this, args); break;
             case "Cable": CableSettings_Click(this, args); break;
+            case "CableLibrary": CableLibrary_Click(this, args); break;
             case "CableDetail": CableDetail_Click(this, args); break;
             case "Gauge": Gauge_Click(this, args); break;
             case "ExportDraft": ExportDraft_Click(this, args); break;

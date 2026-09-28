@@ -8,6 +8,7 @@ public sealed class SymbolArchiveRepository
 {
     public const string SchemaVersion = "ci-symbol-archive.v1";
     public const string MultiRepresentationSchemaVersion = "ci-symbol-archive.v2";
+    public const string CableTemplateSchemaVersion = "ci-symbol-archive.v3";
     public const string FileName = "SymbolArchive.json";
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -75,7 +76,7 @@ public sealed class SymbolArchiveRepository
 
     public SymbolArchiveDocument ValidateAndNormalize(SymbolArchiveDocument document)
     {
-        if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion)
+        if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion && document.SchemaVersion != CableTemplateSchemaVersion)
             throw new InvalidDataException($"Unsupported Symbol Archive schema '{document.SchemaVersion}'.");
 
         var bindingKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -135,11 +136,33 @@ public sealed class SymbolArchiveRepository
             });
         }
 
+        var cableKeys = new HashSet<(string, string)>();
+        var cables = (document.CableTemplates ?? []).Select(entry =>
+        {
+            Electrical.Schematic.ArchivedCableInstanceFactory.ValidateTemplate(entry.Template);
+            if (!cableKeys.Add((entry.Template.TemplateId, entry.Template.TemplateRevision)))
+                throw new InvalidDataException("Duplicate cable template revision.");
+            if (!double.IsFinite(entry.MillimetresPerUnit) || entry.MillimetresPerUnit <= 0 || !Enum.IsDefined(entry.Status) || !Enum.IsDefined(entry.ConstructionType))
+                throw new InvalidDataException("Cable template requires valid units, status and construction classification.");
+            if (entry.ConstructionType != Electrical.Domain.CableConstructionType.Unknown && string.IsNullOrWhiteSpace(entry.ConstructionEvidence))
+                throw new InvalidDataException("Cable construction classification requires explicit source evidence.");
+            var pins = entry.Template.Ports.SelectMany(p => p.Pins).Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
+            var bindingsByPin = new HashSet<string>(StringComparer.Ordinal);
+            var contacts = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var binding in entry.ContactBindings)
+                if (!pins.Contains(binding.EngineeringEndpointId) || !bindingsByPin.Add(binding.EngineeringEndpointId) ||
+                    string.IsNullOrWhiteSpace(binding.ConnectionPointId) || !contacts.Add(binding.ConnectionPointId))
+                    throw new InvalidDataException("Cable CAD binding must identify unique exact source pins and contacts.");
+            return entry with { AssetPath = NormalizeArchiveRelativePath(entry.AssetPath) };
+        }).OrderBy(e => e.Template.TemplateId, StringComparer.Ordinal).ThenBy(e => e.Template.TemplateRevision, StringComparer.Ordinal).ToArray();
+
         return document with
         {
             // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
-            SchemaVersion = document.SchemaVersion == MultiRepresentationSchemaVersion || bindings.Any(b => b.RepresentationId != "default")
+            SchemaVersion = document.SchemaVersion == CableTemplateSchemaVersion || cables.Length > 0 ? CableTemplateSchemaVersion :
+                document.SchemaVersion == MultiRepresentationSchemaVersion || bindings.Any(b => b.RepresentationId != "default")
                 ? MultiRepresentationSchemaVersion : SchemaVersion,
+            CableTemplates = cables,
             Bindings = bindings
                 .OrderBy(item => item.ComponentId, StringComparer.Ordinal)
                 .ThenBy(item => item.Role)

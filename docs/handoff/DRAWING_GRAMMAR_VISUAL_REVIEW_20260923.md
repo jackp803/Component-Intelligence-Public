@@ -6,6 +6,35 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Normal cable-library entry is now wired (native verification NOT_RUN): toolbar
+線材庫 / Ctrl+Shift+C reads CableTemplates in the existing SymbolArchive.json.
+The archive becomes ci-symbol-archive.v3 only for cable-template content (or an
+already-v3 document); v1/v2 histories and component bindings remain supported.
+Each entry carries an ArchivedCableTemplate, archive-relative AssetPath, explicit
+MillimetresPerUnit, Candidate/Approved status, explicit construction authority with
+source evidence, and exact source-Pin-to-CAD-contact bindings. This is NOT a second
+archive or an approval action. No production archive was upgraded or populated.
+
+Read-only consumption rejects missing/changed assets, root escape and linked
+descendants; selection and placement both check the pinned revision/hash and
+manifest content. Rejected/Superseded entries cannot create new instances. The
+picker has no template preselection; Unknown remains an allowed draft choice,
+while explicit sourced Purchased/Custom is reused without another conductor-level
+decision. Imported geometry is previewed before canvas placement. Cancel clears
+pending placement; no physical instance is added until the normal Apply operation.
+Asynchronous placement is guarded against duplicate clicks, cancellation and page
+changes. Approved asset revision/path is carried into the symbol; Candidate stays
+unapproved. Internal mapping confirmation remains separate.
+
+Fresh full Release 1113 PASS; Desktop Release zero errors/16 warnings; diff check
+PASS. Resolver regression checks read-only manifest bytes, source hash mismatch,
+path escape and duplicate template revisions. Still required before delivery:
+disposable native library placement/Escape/Undo/save/reload proof; normal archived
+cable property/mapping editing and another-representation UI; connection-binding
+editing for omitted contacts; material accounting; native PDF/print verification.
+Existing candidate AD does not contain these changes. Overall PARTIAL.
+
+
 Cable-owned CAD representation continuation: SchematicSymbol can now reference
 exactly one existing ComponentInstance or archived CableInstance. Shared owner
 resolution supports Reference, labels, pins, validation, continuation text, WPF

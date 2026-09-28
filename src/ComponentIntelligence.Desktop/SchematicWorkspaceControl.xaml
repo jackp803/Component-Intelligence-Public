@@ -17,6 +17,7 @@
    <Button Content="前往對端" Padding="12,5" Margin="4,0" Click="Navigate_Click" ToolTip="前往對端 (J)"/>
    <Button Content="搬到其他頁" Padding="12,5" Click="MoveSymbolPage_Click" ToolTip="搬到其他頁 (Ctrl+M)"/>
    <Button Content="線材設定" Padding="12,5" Margin="4,0" Click="CableSettings_Click" ToolTip="線材設定 (C)"/>
+   <Button Content="線材庫" Padding="12,5" Margin="4,0" Click="CableLibrary_Click" ToolTip="新增一條實體線材 (Ctrl+Shift+C)"/>
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE8A5;" Padding="10,5" Click="CableDetail_Click" ToolTip="線材明細 (Ctrl+D)"/>
    <Button Content="AWG" Padding="12,5" Click="Gauge_Click" ToolTip="導線規格 (G)"/>
    <Button Content="?" Padding="12,5" Click="Shortcuts_Click" ToolTip="快捷鍵 (F1)"/>

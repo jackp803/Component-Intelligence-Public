@@ -61,6 +61,18 @@ public sealed record SymbolArchiveDocument
 {
     public string SchemaVersion { get; init; } = SymbolArchiveRepository.SchemaVersion;
     public IReadOnlyList<ComponentSymbolBinding> Bindings { get; init; } = [];
+    public IReadOnlyList<CableArchiveEntry> CableTemplates { get; init; } = [];
+}
+
+public sealed record CableArchiveEntry
+{
+    public required Electrical.Domain.ArchivedCableTemplate Template { get; init; }
+    public required string AssetPath { get; init; }
+    public required double MillimetresPerUnit { get; init; }
+    public SymbolRevisionStatus Status { get; init; } = SymbolRevisionStatus.Candidate;
+    public Electrical.Domain.CableConstructionType ConstructionType { get; init; }
+    public string? ConstructionEvidence { get; init; }
+    public IReadOnlyList<SymbolPortBinding> ContactBindings { get; init; } = [];
 }
 
 public sealed record SymbolBoundingBox(

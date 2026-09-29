@@ -440,7 +440,7 @@ public partial class SchematicWorkspaceControl : UserControl
         {
             var collapsed = SchematicPortPresentation.IsPortCollapsed(symbol, port);
             var portRoute = SchematicPortPresentation.HasPortRoute(project.Schematic!, symbol, port.PortId);
-            if (!portEditing && !collapsed && !portRoute) continue;
+            if ((_renderingOutput || _wireMode) && !portEditing && !collapsed && !portRoute) continue;
             var points = symbol.Anchors.Where(a => port.Pins.Any(p => p.PinId == a.EndpointId))
                 .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
             var center = points.Length == 0 ? symbol.Position :
@@ -497,6 +497,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 else if (portEditing && !symbol.Locked)
                 {
                     BeginGesture(e); _dragPortSymbol = symbol.SymbolId; _dragPortId = port.PortId;
+                    _dragPortHasPins = points.Length > 0;
                     UpdateSelection(project);
                 }
                 else { Render(project); if (symbol.Locked) Status.Text = "模塊已鎖定，請先解鎖。"; }
@@ -738,7 +739,7 @@ public partial class SchematicWorkspaceControl : UserControl
         _wireMode = false; _placeMode = false; WireTool.IsChecked = false;
         SelectTool.IsChecked = !_editModuleMode;
         Render(_getProject());
-        Status.Text = _editModuleMode ? "選取模塊；拖動 Port 到四邊，雙擊 Port 展開或收合 Pin。移動後接點位置待確認。" : "已退出編輯模塊";
+        Status.Text = _editModuleMode ? "選取模塊；拖動 Port 到四邊，點一下 Port 展開或收合 Pin。移動後接點位置待確認。" : "已退出編輯模塊";
         FocusCanvas();
     }
     private void FinishWire_Click(object sender, RoutedEventArgs e)

@@ -15,9 +15,9 @@ public static class SchematicPortPresentation
         var visible = symbol.Anchors.Where(a => !IsCollapsedPin(doc, symbol, owner, a)).ToArray();
         var groups = owner.Ports.Where(p => IsRepresented(symbol, p) && IsPortCollapsed(symbol, p)).ToArray();
         var horizontal = new[] { "Top", "Bottom" }.Max(side =>
-            groups.Count(p => PortSide(symbol, p) == side) * GroupPitch(groups.Where(p => PortSide(symbol, p) == side)) + 10);
+            groups.Count(p => PortSide(symbol, p) == side) * GroupPitch + 10);
         var vertical = new[] { "Left", "Right" }.Max(side =>
-            groups.Count(p => PortSide(symbol, p) == side) * GroupPitch(groups.Where(p => PortSide(symbol, p) == side)) + 10);
+            groups.Count(p => PortSide(symbol, p) == side) * GroupPitch + 10);
         var offsets = visible.Select(a => AnchorOffset(symbol, a)).ToArray();
         var width = Math.Max(30, Math.Max(horizontal,
             offsets.Length == 0 ? 0 : offsets.Max(p => p.X) - offsets.Min(p => p.X) + 12));
@@ -27,6 +27,26 @@ public static class SchematicPortPresentation
             Math.Clamp((offsets.Min(p => p.X) + offsets.Max(p => p.X) - width) / 2, 0, original.Width - width);
         var y = offsets.Length == 0 || height >= original.Height ? 0 :
             Math.Clamp((offsets.Min(p => p.Y) + offsets.Max(p => p.Y) - height) / 2, 0, original.Height - height);
+        var displayed = visible.Select(anchor => (Side: RotatedSide(anchor.Direction, symbol.Rotation),
+            Point: SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId))).ToArray();
+        var left = displayed.Where(a => a.Side == "Left").Select(a => a.Point.X).ToArray();
+        var right = displayed.Where(a => a.Side == "Right").Select(a => a.Point.X).ToArray();
+        var top = displayed.Where(a => a.Side == "Top").Select(a => a.Point.Y).ToArray();
+        var bottom = displayed.Where(a => a.Side == "Bottom").Select(a => a.Point.Y).ToArray();
+        if (left.Length > 0 && right.Length > 0 && right.Max() > left.Min())
+        {
+            x = left.Min() - original.X;
+            width = right.Max() - left.Min();
+        }
+        else if (left.Length > 0) x = left.Min() - original.X;
+        else if (right.Length > 0) x = right.Max() - original.X - width;
+        if (top.Length > 0 && bottom.Length > 0 && bottom.Max() > top.Min())
+        {
+            y = top.Min() - original.Y;
+            height = bottom.Max() - top.Min();
+        }
+        else if (top.Length > 0) y = top.Min() - original.Y;
+        else if (bottom.Length > 0) y = bottom.Max() - original.Y - height;
         return new(original.X + x, original.Y + y, width, height);
     }
 
@@ -50,12 +70,23 @@ public static class SchematicPortPresentation
         var fraction = !hasPosition || originalExtent <= 0
             ? (index + 1d) / (sameSide.Length + 1d)
             : Math.Clamp((coordinate - originalStart) / originalExtent, 0.025, 0.975);
+        var extent = side is "Top" or "Bottom" ? body.Width : body.Height;
+        var margin = Math.Min(3, extent / 4);
+        var minimum = sameSide.Length < 2 ? 0 : Math.Min(7, (extent - 2 * margin) / (sameSide.Length - 1));
+        var coordinates = sameSide.Select(p => GroupCoordinate(symbol, p, side)).ToArray();
+        var span = coordinates[^1] - coordinates[0];
+        var preferred = sameSide.Length > 1 && span > 0
+            ? extent / 2 + (coordinate - (coordinates[0] + coordinates[^1]) / 2) *
+                Math.Min(1, (extent - 2 * margin) / span)
+            : fraction * extent;
+        var distance = Math.Clamp(preferred, margin + index * minimum,
+            extent - margin - (sameSide.Length - index - 1) * minimum);
         var position = side switch
         {
-            "Left" => new SchematicPoint(body.X, body.Y + body.Height * fraction),
-            "Top" => new SchematicPoint(body.X + body.Width * fraction, body.Y),
-            "Bottom" => new SchematicPoint(body.X + body.Width * fraction, body.Y + body.Height),
-            _ => new SchematicPoint(body.X + body.Width, body.Y + body.Height * fraction)
+            "Left" => new SchematicPoint(body.X, body.Y + distance),
+            "Top" => new SchematicPoint(body.X + distance, body.Y),
+            "Bottom" => new SchematicPoint(body.X + distance, body.Y + body.Height),
+            _ => new SchematicPoint(body.X + body.Width, body.Y + distance)
         };
         return (position, side);
     }
@@ -92,8 +123,14 @@ public static class SchematicPortPresentation
         port.Pins.Count == 0 ? symbol.SectionIndex == 1 :
             port.Pins.All(pin => symbol.Anchors.Any(anchor => anchor.EndpointId == pin.PinId));
 
-    private static double GroupPitch(IEnumerable<ComponentPort> ports) =>
-        Math.Max(16, ports.Select(p => p.Name.Length * 1.9 + 6).DefaultIfEmpty(0).Max());
+    private const double GroupPitch = 16;
+
+    private static string RotatedSide(string side, int rotation)
+    {
+        for (var i = 0; i < rotation; i += 90) side = side switch
+        { "Left" => "Top", "Top" => "Right", "Right" => "Bottom", _ => "Left" };
+        return side;
+    }
 
     private static double GroupCoordinate(SchematicSymbol symbol, ComponentPort port, string side)
     {
@@ -134,9 +171,7 @@ public static class SchematicPortPresentation
         var direction = symbol.PortPlacements.FirstOrDefault(p => p.PortId == port.PortId)?.Side ??
             symbol.Anchors.FirstOrDefault(a => pinIds.Contains(a.EndpointId))?.Direction ??
             (port.PhysicalLocation?.Side is "Left" or "Right" or "Top" or "Bottom" ? port.PhysicalLocation.Side : "Right");
-        for (var i = 0; i < symbol.Rotation; i += 90) direction = direction switch
-        { "Left" => "Top", "Top" => "Right", "Right" => "Bottom", _ => "Left" };
-        return direction;
+        return RotatedSide(direction, symbol.Rotation);
     }
     public static bool IsCollapsedPin(SchematicDocument doc, SchematicSymbol symbol,
         SchematicSymbolOwner owner, SchematicAnchor anchor) =>

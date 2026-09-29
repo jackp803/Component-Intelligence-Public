@@ -222,6 +222,73 @@ public sealed class SchematicPortEditorTests
         Assert.Equal(12, symbol.Anchors.Count);
     }
 
+    [Fact]
+    public void LongPortNamesDoNotStretchTheModuleHeight()
+    {
+        var project = Project();
+        var component = project.Components.Single();
+        component.Ports.Clear();
+        component.Ports.AddRange(Enumerable.Range(1, 4).Select(i => new ComponentPort
+        {
+            PortId = $"RS485_{i}", Name = $"RS485_{i}_VERY_LONG_DESTINATION_NAME",
+            Pins = [new ComponentPin { PinId = $"RS485_{i}_PIN", PinNumber = "1" }]
+        }));
+        var symbol = SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40)) with
+        { Height = 200 };
+        project.Schematic!.Symbols[0] = symbol;
+        var owner = SchematicSymbolOwner.Resolve(project, symbol);
+
+        var body = SchematicPortPresentation.GenericBodyBounds(project.Schematic, symbol, owner);
+
+        Assert.InRange(body.Height, 60, 90);
+        var contacts = component.Ports.Select(port =>
+            SchematicPortPresentation.GroupContact(project.Schematic, symbol, owner, port, body).Position).ToArray();
+        Assert.Equal(contacts.Length, contacts.Distinct().Count());
+        Assert.InRange(contacts.Average(point => point.Y), body.Y + body.Height / 2 - 1,
+            body.Y + body.Height / 2 + 1);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(90)]
+    [InlineData(180)]
+    [InlineData(270)]
+    public void ExpandedPinsStayOnCompactBodyBorderAfterRotation(int rotation)
+    {
+        var project = Project();
+        var component = project.Components.Single();
+        component.Ports.Add(new ComponentPort { PortId = "BOTTOM", Name = "Bottom",
+            Pins = [new ComponentPin { PinId = "BOTTOM_1", PinNumber = "1" },
+                new ComponentPin { PinId = "BOTTOM_2", PinNumber = "2" }] });
+        var original = SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40));
+        var symbol = original with
+        {
+            Height = 160,
+            Rotation = rotation,
+            Anchors = [.. original.Anchors
+                .Select(anchor => anchor.EndpointId.StartsWith("BOTTOM", StringComparison.Ordinal)
+                    ? anchor with { Position = new(anchor.Position.X, 80), Direction = "Bottom" } : anchor)],
+            CollapsedPortIds = ["P"]
+        };
+        project.Schematic!.Symbols[0] = symbol;
+        var owner = SchematicSymbolOwner.Resolve(project, symbol);
+
+        var body = SchematicPortPresentation.GenericBodyBounds(project.Schematic, symbol, owner);
+
+        foreach (var anchor in symbol.Anchors.Where(a => a.Direction == "Bottom"))
+        {
+            var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
+            var edge = rotation switch
+            {
+                0 => body.Y + body.Height,
+                90 => body.X,
+                180 => body.Y,
+                _ => body.X + body.Width
+            };
+            Assert.Equal(rotation is 0 or 180 ? point.Y : point.X, edge, 6);
+        }
+    }
+
     [Theory]
     [InlineData(0, "Top")]
     [InlineData(90, "Left")]

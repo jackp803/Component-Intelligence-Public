@@ -6,6 +6,20 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+AH native direction retest (d1985a9 plus preserved WIP): AG overlap reproduction
+was saved through normal UI before normal process close. AH uses a fresh isolated
+copy; DB/workbook paths were visibly verified. In a new synthetic project, normal
+Cable Library import/place -> common Pin -> bend -> double-click free end -> select
+and drag cable now leaves the common contact outward, without the previously
+observed inward/body-hidden lead. R rotation to 90 degrees kept the attached lead
+outward above the rotated cable. Normal Save completed with schema 0.7. Local
+screenshots ah-outward-route-after-move.png and ah-outward-route-after-rotation.png
+are fresh AH evidence, not AF/AG images. This bounded synthetic geometry retest is
+PASS; independent saved endpoint readback, complete route/alternate-representation
+workflow, company-template PDF/print and overall product acceptance remain open.
+AH is the currently running candidate; its saved synthetic project is recorded in
+the private checkpoint. No company asset or mapping approval was made.
+
 AG continuation (416128d plus preserved WIP): AF was normally closed, then AG was
 launched with a fresh disposable copy and visibly verified isolated DB/workbook.
 The old two-bound-contact project now shows 2/3 in the normal selection sidebar;

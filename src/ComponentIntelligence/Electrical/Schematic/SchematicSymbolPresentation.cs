@@ -7,12 +7,19 @@ public enum SchematicLabelSide { Left, Right, Top, Bottom }
 
 public sealed record SchematicAnchorLabel(SchematicPoint Position, SchematicLabelSide Side)
 {
+    public int TextRotation => Side switch
+    {
+        SchematicLabelSide.Top => -90,
+        SchematicLabelSide.Bottom => 90,
+        _ => 0
+    };
+
     public (double Left, double Top, double Right, double Bottom) Bounds(double width, double height) => Side switch
     {
         SchematicLabelSide.Left => (Position.X - width, Position.Y - height / 2, Position.X, Position.Y + height / 2),
         SchematicLabelSide.Right => (Position.X, Position.Y - height / 2, Position.X + width, Position.Y + height / 2),
-        SchematicLabelSide.Top => (Position.X - width / 2, Position.Y - height, Position.X + width / 2, Position.Y),
-        _ => (Position.X - width / 2, Position.Y, Position.X + width / 2, Position.Y + height)
+        SchematicLabelSide.Top => (Position.X - height - 1, Position.Y - width, Position.X - 1, Position.Y),
+        _ => (Position.X - height - 1, Position.Y, Position.X - 1, Position.Y + width)
     };
 }
 

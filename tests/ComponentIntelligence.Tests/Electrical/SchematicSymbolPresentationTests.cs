@@ -76,6 +76,11 @@ public sealed class SchematicSymbolPresentationTests
         Assert.All(labels, l => Assert.Equal(SchematicLabelSide.Bottom, l.Side));
         for (var i = 1; i < labels.Length; i++)
             Assert.Equal(6, labels[i - 1].Position.X - labels[i].Position.X, 8);
+        Assert.All(labels, label => Assert.Equal(90, label.TextRotation));
+        var boxes = labels.Select(label => label.Bounds(35, 3)).ToArray();
+        for (var i = 0; i < boxes.Length; i++) Assert.True(boxes[i].Right < labels[i].Position.X);
+        for (var i = 1; i < boxes.Length; i++)
+            Assert.False(boxes[i - 1].Left < boxes[i].Right && boxes[i - 1].Right > boxes[i].Left);
     }
 
     [Fact]

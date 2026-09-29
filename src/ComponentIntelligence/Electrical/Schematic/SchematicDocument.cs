@@ -23,14 +23,28 @@ public sealed record SchematicPage
     public int GridColumns { get; init; } = 8;
     public int GridRows { get; init; } = 5;
     public SchematicGridBounds? CoordinateGrid { get; init; }
-    public SchematicGridBounds EffectiveGrid() => CoordinateGrid ?? new(Margin, Margin, Width - 2 * Margin, Height - 2 * Margin);
+    public SchematicGridBounds EffectiveGrid()
+    {
+        var fallback = new SchematicGridBounds(Margin, Margin, Width - 2 * Margin, Height - 2 * Margin);
+        var isFallback = HasDefaultGrid(fallback);
+        return isFallback && TemplateGeometry is { } template
+            ? SchematicTemplateGrid.TryDetect(template, Width, Height, GridColumns, GridRows) ?? CoordinateGrid ?? fallback
+            : CoordinateGrid ?? fallback;
+    }
     public string GridCell(SchematicPoint point)
     {
+        var fallback = new SchematicGridBounds(Margin, Margin, Width - 2 * Margin, Height - 2 * Margin);
+        if (TemplateGeometry is { } template && HasDefaultGrid(fallback) &&
+            SchematicTemplateGrid.TryDetect(template, Width, Height, GridColumns, GridRows) is null)
+            return "格位待校準";
         var grid = EffectiveGrid();
         var column = Math.Clamp((int)Math.Floor((point.X - grid.X) / grid.Width * GridColumns), 0, GridColumns - 1);
         var row = Math.Clamp((int)Math.Floor((point.Y - grid.Y) / grid.Height * GridRows), 0, GridRows - 1);
         return $"{(char)('A' + row)}{column + 1}";
     }
+    private bool HasDefaultGrid(SchematicGridBounds fallback) => CoordinateGrid is null ||
+        Math.Abs(CoordinateGrid.X - fallback.X) < .01 && Math.Abs(CoordinateGrid.Y - fallback.Y) < .01 &&
+        Math.Abs(CoordinateGrid.Width - fallback.Width) < .01 && Math.Abs(CoordinateGrid.Height - fallback.Height) < .01;
     public string? TemplatePath { get; init; }
     public string? TemplateSha256 { get; init; }
     public SchematicCadAsset? TemplateGeometry { get; init; }

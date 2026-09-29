@@ -90,6 +90,53 @@ public sealed class SchematicPortEditorTests
         Assert.InRange(target.Coordinate, 0, expectedLocalSide is "Left" or "Right" ? 30 : 50);
     }
 
+    [Theory]
+    [InlineData(0, "Right")]
+    [InlineData(90, "Bottom")]
+    public void CollapsedGenericPortsBecomeDistinctSingleVisualContactsAndCompactBody(int rotation, string side)
+    {
+        var project = Project();
+        var component = project.Components.Single();
+        component.Ports.AddRange(Enumerable.Range(1, 5).Select(i => new ComponentPort
+        {
+            PortId = "ETH" + i, Name = "ETH" + i,
+            Pins = [new ComponentPin { PinId = "ETH" + i + "-1", PinNumber = "1" },
+                new ComponentPin { PinId = "ETH" + i + "-2", PinNumber = "2" }]
+        }));
+        var symbol = project.Schematic!.Symbols.Single();
+        project.Schematic.Symbols[0] = symbol with { Height = 140, Rotation = rotation,
+            Anchors = symbol.Anchors.Concat(component.Ports.Skip(1).SelectMany((port, i) => port.Pins.Select((pin, j) =>
+                new SchematicAnchor { EndpointId = pin.PinId, Position = new(50, 20 + i * 25 + j * 5), Direction = "Right" }))).ToList(),
+            CollapsedPortIds = component.Ports.Skip(1).Select(port => port.PortId).ToList() };
+        symbol = project.Schematic.Symbols.Single();
+        var owner = SchematicSymbolOwner.Resolve(project, symbol);
+        var body = SchematicPortPresentation.GenericBodyBounds(project.Schematic, symbol, owner);
+        Assert.True(rotation == 0 ? body.Height < 70 : body.Width < 70);
+        Assert.Equal(5, symbol.CollapsedPortIds.Count);
+        var contacts = component.Ports.Skip(1).Select(port => SchematicPortPresentation.GroupContact(symbol, port, body)).ToArray();
+        Assert.All(contacts, contact => Assert.Equal(side, contact.Side));
+        Assert.Equal(5, contacts.Select(contact => contact.Position).Distinct().Count());
+        Assert.All(symbol.Anchors.Where(a => a.EndpointId.StartsWith("ETH", StringComparison.Ordinal)),
+            a => Assert.True(SchematicPortPresentation.IsCollapsedPin(project.Schematic, symbol, owner, a)));
+        Assert.Equal(12, symbol.Anchors.Count);
+    }
+
+    [Theory]
+    [InlineData(0, "Top")]
+    [InlineData(90, "Left")]
+    public void CollapsedBodyEdgeDragMapsBackToOriginalLocalEdge(int rotation, string expectedSide)
+    {
+        var project = Project();
+        var symbol = project.Schematic!.Symbols.Single() with { Rotation = rotation, Height = 140,
+            CollapsedPortIds = ["P"] };
+        project.Schematic.Symbols[0] = symbol;
+        var owner = SchematicSymbolOwner.Resolve(project, symbol);
+        var body = SchematicPortPresentation.GenericBodyBounds(project.Schematic, symbol, owner);
+        var target = SchematicPortPresentation.DropTarget(symbol,
+            new(body.X + body.Width / 2, body.Y), body);
+        Assert.Equal(expectedSide, target.Side);
+    }
+
     private static ElectricalProject Project()
     {
         var component = new ComponentInstance { ComponentInstanceId = "C", ComponentDefinitionId = "module", TypeKey = "MODULE",

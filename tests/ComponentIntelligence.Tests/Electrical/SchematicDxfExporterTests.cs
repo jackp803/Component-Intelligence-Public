@@ -103,6 +103,7 @@ public sealed class SchematicDxfExporterTests
         var dxf = DxfDocument.Load(stream);
         var lines = dxf.Entities.Lines.Where(l => l.Layer.Name == "SCHEMATIC_DRAFT_WIRE").ToArray();
         Assert.Equal(2, lines.Length);
+        Assert.All(lines, line => Assert.NotEqual(netDxf.Tables.Linetype.Dashed.Name, line.Linetype.Name));
         Assert.Contains(lines, l => l.StartPoint.X == 20 && l.StartPoint.Y == page.Height - 30 && l.EndPoint.X == 50);
         Assert.Equal(before, JsonSerializer.Serialize(project));
     }

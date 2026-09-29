@@ -155,7 +155,6 @@ public partial class SchematicWorkspaceControl : UserControl
             var weight = Math.Max(1.5 / zoom, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
             var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
             var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
-            if (wire.ConnectionId is null) line.StrokeDashArray = new DoubleCollection([5, 3]);
             line.ToolTip = (wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
             line.MouseLeftButtonDown += (_, e) =>
             {
@@ -311,7 +310,10 @@ public partial class SchematicWorkspaceControl : UserControl
     {
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
         var portEditing = _editModuleMode && !_renderingOutput;
-        var body = new Border { Width = symbol.Width * 3, Height = symbol.Height * 3, BorderThickness = new(0),
+        var compact = SchematicPortPresentation.GenericBodyBounds(project.Schematic!, symbol, owner);
+        var compacted = symbol.Geometry is null && symbol.CollapsedPortIds.Count > 0;
+        var body = new Border { Width = (compacted ? compact.Width : symbol.Width) * 3,
+            Height = (compacted ? compact.Height : symbol.Height) * 3, BorderThickness = new(0),
             BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray, Background = Brushes.White,
             Cursor = _wireMode ? Cursors.Cross : portEditing ? Cursors.Arrow : Cursors.SizeAll };
         var content = new Canvas();
@@ -326,31 +328,36 @@ public partial class SchematicWorkspaceControl : UserControl
         layers.Children.Add(new Border { BorderBrush = body.BorderBrush,
             BorderThickness = new(symbol.SymbolId == _selectionId ? 2 : symbol.Geometry is null ? 1 : 0), IsHitTestVisible = false });
         body.Child = layers;
-        var transforms = new TransformGroup(); transforms.Children.Add(new RotateTransform(symbol.Rotation));
-        transforms.Children.Add(symbol.Rotation switch
+        if (!compacted)
         {
-            90 => new TranslateTransform(symbol.Height * 3, 0),
-            180 => new TranslateTransform(symbol.Width * 3, symbol.Height * 3),
-            270 => new TranslateTransform(0, symbol.Width * 3),
-            _ => new TranslateTransform()
-        });
-        body.RenderTransform = transforms;
-        Canvas.SetLeft(body, symbol.Position.X * 3); Canvas.SetTop(body, symbol.Position.Y * 3); Sheet.Children.Add(body);
-        if (symbol.Geometry is null) _ = LoadImage(owner.DefinitionId, image, symbol);
+            var transforms = new TransformGroup(); transforms.Children.Add(new RotateTransform(symbol.Rotation));
+            transforms.Children.Add(symbol.Rotation switch
+            {
+                90 => new TranslateTransform(symbol.Height * 3, 0),
+                180 => new TranslateTransform(symbol.Width * 3, symbol.Height * 3),
+                270 => new TranslateTransform(0, symbol.Width * 3),
+                _ => new TranslateTransform()
+            });
+            body.RenderTransform = transforms;
+        }
+        else { image.RenderTransform = new RotateTransform(symbol.Rotation); image.RenderTransformOrigin = new(.5, .5); }
+        Canvas.SetLeft(body, compact.X * 3); Canvas.SetTop(body, compact.Y * 3); Sheet.Children.Add(body);
+        if (symbol.Geometry is null) _ = LoadImage(owner.DefinitionId, image,
+            compacted ? compact.Width : symbol.Width, compacted ? compact.Height : symbol.Height,
+            compacted ? symbol.Rotation : 0);
         else
         {
             var upright = SchematicSymbolPresentation.UprightCadText(symbol, cad!);
             var labels = CadCanvas(upright with { Width = Sheet.Width / 3, Height = Sheet.Height / 3 });
             Sheet.Children.Add(labels);
         }
-        var visibleHeight = symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width;
-        var visibleWidth = symbol.Rotation % 180 == 0 ? symbol.Width : symbol.Height;
         if (symbol.Geometry is null)
         {
-            var label = new TextBlock { Text = owner.DisplayName, FontSize = 11, Width = visibleWidth * 3,
-                TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Black, IsHitTestVisible = false };
-            Canvas.SetLeft(label, symbol.Position.X * 3);
-            Canvas.SetTop(label, (symbol.Position.Y + visibleHeight + 2) * 3);
+            var label = new TextBlock { Text = owner.DisplayName, FontSize = 9, Width = (compact.Width - 4) * 3,
+                Height = 9 * 3, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis,
+                Foreground = Brushes.Black, IsHitTestVisible = false };
+            Canvas.SetLeft(label, (compact.X + 2) * 3);
+            Canvas.SetTop(label, (compact.Y + compact.Height - 10) * 3);
             Sheet.Children.Add(label);
         }
         var referenceY = symbol.Position.Y - 6;
@@ -365,7 +372,7 @@ public partial class SchematicWorkspaceControl : UserControl
         var placedLabels = new List<(double Left, double Top, double Right, double Bottom)>();
         foreach (var anchor in symbol.Anchors)
         {
-            if (SchematicPortPresentation.IsCollapsedPin(project.Schematic!, symbol, owner, anchor) && !(_wireMode && !_renderingOutput)) continue;
+            if (SchematicPortPresentation.IsCollapsedPin(project.Schematic!, symbol, owner, anchor)) continue;
             var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
             var pin = Marker(point, anchor.Confirmed ? Brushes.White : Brushes.LightGoldenrodYellow, Brushes.Black, 7);
             pin.ToolTip = $"{anchor.Label}\n{(anchor.Confirmed ? "接點位置已確認" : "接點位置待設定")}";
@@ -394,6 +401,7 @@ public partial class SchematicWorkspaceControl : UserControl
                     };
                 placedLabels.Add(box);
                 referenceY = Math.Min(referenceY, box.Top - 6);
+                if (pose.TextRotation != 0) label.LayoutTransform = new RotateTransform(pose.TextRotation);
                 Canvas.SetLeft(label, box.Left * 3); Canvas.SetTop(label, box.Top * 3);
                 Sheet.Children.Add(label);
             }
@@ -405,6 +413,33 @@ public partial class SchematicWorkspaceControl : UserControl
                 .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
             var center = new SchematicPoint(points.Average(p => p.X), points.Average(p => p.Y));
             var collapsed = symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal);
+            if (collapsed)
+            {
+                var contact = SchematicPortPresentation.GroupContact(symbol, port, compact);
+                center = contact.Position;
+                var point = Marker(center, Brushes.White, Brushes.Black, 9);
+                point.ToolTip = $"{port.Name}: 雙擊展開；接線時先選確切 Pin，不合併導體";
+                point.Cursor = portEditing ? Cursors.SizeAll : Cursors.Hand;
+                point.MouseLeftButtonDown += (_, e) =>
+                {
+                    _selectionId = symbol.SymbolId;
+                    if (_wireMode && !_renderingOutput)
+                    {
+                        if (Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已展開 Port，請選確切 Pin"))
+                            Status.Text = "請點選已展開的確切 Pin；Port 圓點不代表導體。";
+                    }
+                    else if (e.ClickCount >= 2)
+                        Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已展開 Port Pin");
+                    else if (portEditing && !symbol.Locked)
+                    {
+                        BeginGesture(e); _dragPortSymbol = symbol.SymbolId; _dragPortId = port.PortId;
+                    }
+                    else UpdateSelection(project);
+                    e.Handled = true;
+                };
+                Text(port.Name, center.X + (contact.Side == "Left" ? -13 : 2), center.Y - 5, 9, Brushes.DimGray);
+                continue;
+            }
             var handle = new Border { Padding = new(3, 1, 3, 1), Background = Brushes.White,
                 BorderBrush = portEditing ? Brushes.DarkCyan : Brushes.DimGray, BorderThickness = new(1),
                 Cursor = portEditing ? Cursors.SizeAll : Cursors.Hand,
@@ -451,14 +486,14 @@ public partial class SchematicWorkspaceControl : UserControl
         return bitmap;
     }
 
-    private async Task LoadImage(string id, Image target, SchematicSymbol symbol)
+    private async Task LoadImage(string id, Image target, double width, double height, int rotation)
     {
         try
         {
             var bitmap = await GetImage(id);
             if (bitmap is not null)
             {
-                var layout = SchematicCatalogSymbolLayout.Create(symbol.Width, symbol.Height, bitmap.PixelWidth, bitmap.PixelHeight);
+                var layout = SchematicCatalogSymbolLayout.Create(width, height, bitmap.PixelWidth, bitmap.PixelHeight, rotation);
                 target.Width = layout.ImageWidth * 3; target.Height = layout.ImageHeight * 3;
                 Canvas.SetLeft(target, layout.ImageTopLeft.X * 3); Canvas.SetTop(target, layout.ImageTopLeft.Y * 3);
             }
@@ -578,7 +613,11 @@ public partial class SchematicWorkspaceControl : UserControl
                 if (_dragPortSymbol is not null && _dragPortId is not null)
                 {
                     var s = _gestureStart.Schematic!.Symbols.Single(s => s.SymbolId == _dragPortSymbol);
-                    var target = SchematicPortPresentation.DropTarget(s, _pointer);
+                    var owner = SchematicSymbolOwner.Resolve(_gestureStart, s);
+                    var bounds = SchematicPortPresentation.GenericBodyBounds(_gestureStart.Schematic, s, owner);
+                    var target = s.Geometry is null && s.CollapsedPortIds.Count > 0
+                        ? SchematicPortPresentation.DropTarget(s, _pointer, bounds)
+                        : SchematicPortPresentation.DropTarget(s, _pointer);
                     _gesturePreview = _service.MovePortToEdge(_gestureStart, s.SymbolId, _dragPortId, target.Side, target.Coordinate);
                 }
                 else if (_dragSymbol is not null)

@@ -67,7 +67,6 @@ public sealed class SchematicDxfExporter
             entity.Layer = Layer(layer);
             if (entityColor is not null) entity.Color = entityColor;
             entity.Lineweight = width switch { <= .25 => Lineweight.W25, <= .35 => Lineweight.W35, <= .5 => Lineweight.W50, _ => Lineweight.W70 };
-            if (layer == "SCHEMATIC_DRAFT_WIRE") entity.Linetype = Linetype.Dashed;
             dxf.Entities.Add(entity);
         }
         void Line(SchematicPoint a, SchematicPoint b, string layer, double weight = .25) => Add(new Line(Point(a), Point(b)), layer, weight);
@@ -163,6 +162,7 @@ public sealed class SchematicDxfExporter
         foreach (var symbol in source.Symbols.Where(s => s.PageId == page.PageId))
         {
             var owner = SchematicSymbolOwner.Resolve(project, symbol);
+            var body = SchematicPortPresentation.GenericBodyBounds(source, symbol, owner);
             SchematicPoint Map(SchematicPoint p)
             {
                 var local = symbol.Rotation switch
@@ -184,25 +184,51 @@ public sealed class SchematicDxfExporter
             }
             else
             {
-                SchematicPoint[] box = [new(0, 0), new(symbol.Width, 0), new(symbol.Width, symbol.Height), new(0, symbol.Height), new(0, 0)];
-                for (var i = 1; i < box.Length; i++) Line(Map(box[i - 1]), Map(box[i]), "SCHEMATIC_SYMBOL");
+                var compacted = symbol.CollapsedPortIds.Count > 0;
+                if (compacted)
+                {
+                    SchematicPoint[] box = [new(body.X, body.Y), new(body.X + body.Width, body.Y),
+                        new(body.X + body.Width, body.Y + body.Height), new(body.X, body.Y + body.Height), new(body.X, body.Y)];
+                    for (var i = 1; i < box.Length; i++) Line(box[i - 1], box[i], "SCHEMATIC_SYMBOL");
+                }
+                else
+                {
+                    SchematicPoint[] box = [new(0, 0), new(symbol.Width, 0), new(symbol.Width, symbol.Height), new(0, symbol.Height), new(0, 0)];
+                    for (var i = 1; i < box.Length; i++) Line(Map(box[i - 1]), Map(box[i]), "SCHEMATIC_SYMBOL");
+                }
                 var raster = images is not null && images.TryGetValue(owner.DefinitionId, out var found) ? found : null;
-                var layout = SchematicCatalogSymbolLayout.Create(symbol.Width, symbol.Height, raster?.PixelWidth ?? 1, raster?.PixelHeight ?? 1);
+                var layout = SchematicCatalogSymbolLayout.Create(compacted ? body.Width : symbol.Width,
+                    compacted ? body.Height : symbol.Height, raster?.PixelWidth ?? 1, raster?.PixelHeight ?? 1,
+                    compacted ? symbol.Rotation : 0);
                 if (raster is not null)
                 {
                     if (raster.Png.Length == 0) throw new InvalidOperationException("Preview image is empty.");
                     var definition = new netDxf.Objects.ImageDefinition("IMG_" + raster.Sha256, raster.File,
                         raster.PixelWidth, 96, raster.PixelHeight, 96, ImageResolutionUnits.Inches);
-                    var lowerLeft = Map(new(layout.ImageTopLeft.X, layout.ImageTopLeft.Y + layout.ImageHeight));
-                    Add(new Image(definition, Point(lowerLeft), layout.ImageWidth, layout.ImageHeight)
+                    SchematicPoint insertion;
+                    if (!compacted)
+                        insertion = Map(new(layout.ImageTopLeft.X, layout.ImageTopLeft.Y + layout.ImageHeight));
+                    else
+                    {
+                        var quarterTurn = symbol.Rotation % 180 != 0;
+                        var imageLeft = body.X + (body.Width - (quarterTurn ? layout.ImageHeight : layout.ImageWidth)) / 2;
+                        var imageTop = body.Y + 2 + (body.Height - 14 - (quarterTurn ? layout.ImageWidth : layout.ImageHeight)) / 2;
+                        insertion = symbol.Rotation switch
+                        {
+                            90 => new SchematicPoint(imageLeft + layout.ImageHeight, imageTop),
+                            180 => new SchematicPoint(imageLeft + layout.ImageWidth, imageTop),
+                            270 => new SchematicPoint(imageLeft, imageTop + layout.ImageWidth),
+                            _ => new SchematicPoint(imageLeft, imageTop + layout.ImageHeight)
+                        };
+                    }
+                    Add(new Image(definition, Point(insertion), layout.ImageWidth, layout.ImageHeight)
                         { Rotation = -symbol.Rotation }, "SCHEMATIC_IMAGE");
                     usedImages.TryAdd(raster.Sha256, raster);
                 }
                 else diagnostics.Add("CATALOG_RASTER_IMAGE_NOT_EMBEDDED: " + symbol.SymbolId);
-                Primitive(new() { Kind = "MTEXT", Start = new(symbol.Position.X,
-                        symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2),
-                    Text = owner.DisplayName, TextHeight = 11d / 3,
-                    TextWidth = symbol.Rotation % 180 == 0 ? symbol.Width : symbol.Height,
+                Primitive(new() { Kind = "MTEXT", Start = new(body.X + 2, body.Y + body.Height - 10),
+                    Text = owner.DisplayName, TextHeight = 9d / 3,
+                    TextWidth = body.Width - 4,
                     TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25);
             }
             if (SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
@@ -223,7 +249,9 @@ public sealed class SchematicDxfExporter
                     var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
                     var text = anchor.Label ?? anchor.EndpointId;
                     var box = pose.Bounds(text.Length * (8.5 / 3) * .55, 8.5 / 3);
-                    Label(text, new(box.Left, box.Top), "SCHEMATIC_LABEL", 8.5 / 3);
+                    Label(text, pose.TextRotation == 0 ? new(box.Left, box.Top) :
+                        pose.Side == SchematicLabelSide.Top ? new(box.Right, box.Bottom) : new(box.Left, box.Top),
+                        "SCHEMATIC_LABEL", 8.5 / 3, pose.TextRotation);
                 }
             }
             foreach (var port in owner.Ports.Where(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal)))
@@ -231,7 +259,9 @@ public sealed class SchematicDxfExporter
                 var points = symbol.Anchors.Where(a => port.Pins.Any(p => p.PinId == a.EndpointId))
                     .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
                 if (points.Length == 0) continue;
-                Label(port.Name + " >", new(points.Average(p => p.X), points.Average(p => p.Y) - 6),
+                var contact = SchematicPortPresentation.GroupContact(symbol, port, body);
+                Add(new Circle(Point(contact.Position), 1.5), "SCHEMATIC_PORT_GROUP");
+                Label(port.Name, new(contact.Position.X + (contact.Side == "Left" ? -13 : 2), contact.Position.Y - 5),
                     "SCHEMATIC_LABEL", 9d / 3);
             }
         }

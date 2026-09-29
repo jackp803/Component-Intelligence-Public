@@ -218,6 +218,29 @@ public sealed class SchematicAuthoringTests
     }
 
     [Fact]
+    public void MovingBottomPinRecalculatesOutwardRoutePastItsLabelWithoutChangingIdentity()
+    {
+        var project = PlacedProject();
+        var symbol = project.Schematic!.Symbols.Single(s => s.SymbolId == "S1");
+        project.Schematic.Symbols[0] = symbol with { Anchors = [new SchematicAnchor
+        { EndpointId = "A", Position = new(25, 30), Direction = "Bottom", Label = "OUTPUT / 2 DC OUTPUT +V" }] };
+        project = _service.DrawWire(project, symbol.PageId, Pin("S1", "A"), SchematicAttachment.Free(),
+            [new(45, 50), new(45, 60), new(130, 60)]);
+        var before = JsonSerializer.Serialize(project);
+        var original = project.Schematic!.Wires.Single();
+        var moved = _service.TransformSymbol(project, "S1", new(60, 35), 0);
+        var wire = Assert.Single(moved.Schematic!.Wires);
+        Assert.Equal(original.WireId, wire.WireId);
+        Assert.Equal(original.Start, wire.Start);
+        Assert.Equal(original.End, wire.End);
+        Assert.Equal(new SchematicPoint(85, 65), wire.Points[0]);
+        Assert.True(wire.Points[1].Y >= wire.Points[0].Y + 35);
+        Assert.All(wire.Points.Zip(wire.Points.Skip(1)), pair =>
+            Assert.True(pair.First.X == pair.Second.X || pair.First.Y == pair.Second.Y));
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+    }
+
+    [Fact]
     public void LockedIncidentRouteRejectsMoveAtomically()
     {
         var p = PlacedProject();

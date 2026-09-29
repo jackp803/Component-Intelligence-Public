@@ -428,7 +428,11 @@ public sealed partial class SchematicAuthoringService
         for (var angle = 0; angle < symbol.Rotation; angle += 90) direction = new(-direction.Y, direction.X);
         if (!atStart) points.Reverse();
         var anchor = AnchorPoint(symbol, endpointId);
-        var lead = new SchematicPoint(anchor.X + direction.X * 5, anchor.Y + direction.Y * 5);
+        var labelClearance = SchematicSymbolPresentation.ShowAnchorLabel(symbol, contact) &&
+            !string.IsNullOrWhiteSpace(contact.Label)
+            ? Math.Clamp(contact.Label.Length * 1.55 + 6, 5, 60) : 5;
+        var lead = new SchematicPoint(anchor.X + direction.X * labelClearance,
+            anchor.Y + direction.Y * labelClearance);
         // The first bend belongs to the old anchor lead; retaining it creates a retraced stub.
         var tailIndex = Math.Min(2, points.Count - 1);
         var tail = points[tailIndex];

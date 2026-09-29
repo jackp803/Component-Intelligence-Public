@@ -5,7 +5,8 @@ public sealed record SchematicShortcut(string Command, string Gesture, string La
 public static class SchematicShortcutCatalog
 {
     public static IReadOnlyList<SchematicShortcut> All { get; } = Array.AsReadOnly<SchematicShortcut>([
-        new("Select", "V", "選取"), new("Wire", "W", "導線"), new("Finish", "Enter", "完成線段"),
+        new("Select", "V", "選取"), new("EditModule", "E", "編輯模塊接點位置"),
+        new("Wire", "W", "導線"), new("Finish", "Enter", "完成線段"),
         new("Place", "P", "放置元件"), new("Continuation", "X", "連接兩頁導線"),
         new("AnotherRepresentation", "Shift+P", "放置此元件的另一個表示"),
         new("ReviewDraft", "F8", "查看草稿缺口"),

@@ -39,12 +39,12 @@ public sealed class SchematicSymbolPresentationTests
     }
 
     [Theory]
-    [InlineData(0, 152, 82.2, 0, false)]
-    [InlineData(90, 127.8, 132, 90, false)]
-    [InlineData(180, 98, 107.8, 0, true)]
-    [InlineData(270, 102.2, 78, 90, true)]
-    public void PinLabelFollowsRotationWithoutUpsideDownText(int rotation, double x, double y,
-        int textRotation, bool oppositeCorner)
+    [InlineData(0, 152, 86, SchematicLabelSide.Right)]
+    [InlineData(90, 124, 132, SchematicLabelSide.Bottom)]
+    [InlineData(180, 98, 104, SchematicLabelSide.Left)]
+    [InlineData(270, 106, 78, SchematicLabelSide.Top)]
+    public void PinLabelStaysHorizontalAndOutsideRotatedBody(int rotation, double x, double y,
+        SchematicLabelSide side)
     {
         var anchor = new SchematicAnchor { EndpointId = "pin", Position = new(50, 6), Label = "1 L+" };
         var symbol = Symbol() with { Position = new(100, 80), Width = 50, Height = 30,
@@ -53,32 +53,41 @@ public sealed class SchematicSymbolPresentationTests
         var label = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
         Assert.Equal(x, label.Position.X, 8);
         Assert.Equal(y, label.Position.Y, 8);
-        Assert.Equal(textRotation, label.Rotation);
-        Assert.Equal(oppositeCorner, label.OppositeCorner);
+        Assert.Equal(side, label.Side);
+        var box = label.Bounds(18, 3);
+        Assert.True(side switch
+        {
+            SchematicLabelSide.Left => box.Right < 100,
+            SchematicLabelSide.Right => box.Left > 150,
+            SchematicLabelSide.Top => box.Bottom < 80,
+            SchematicLabelSide.Bottom => box.Top > 130,
+            _ => false
+        });
         Assert.Equal(before, System.Text.Json.JsonSerializer.Serialize(symbol));
     }
 
     [Fact]
-    public void RotatedFourPinLabelsUseSeparateColumnsRatherThanOneHorizontalRow()
+    public void RotatedFourPinLabelsRemainOnSeparateOutsidePositions()
     {
         var anchors = Enumerable.Range(1, 4).Select(n => new SchematicAnchor
             { EndpointId = $"pin-{n}", Position = new(50, 6 * n), Label = $"{n} long function" }).ToList();
         var symbol = Symbol() with { Rotation = 90, Width = 50, Height = 30, Anchors = anchors };
         var labels = anchors.Select(a => SchematicSymbolPresentation.AnchorLabel(symbol, a)).ToArray();
-        Assert.All(labels, l => Assert.Equal(90, l.Rotation));
+        Assert.All(labels, l => Assert.Equal(SchematicLabelSide.Bottom, l.Side));
         for (var i = 1; i < labels.Length; i++)
             Assert.Equal(6, labels[i - 1].Position.X - labels[i].Position.X, 8);
     }
 
-    [Theory]
-    [InlineData(0, false, 80)]
-    [InlineData(90, false, 80)]
-    [InlineData(0, true, 76)]
-    [InlineData(90, true, 60)]
-    public void LabelTopUsesMeasuredExtentForReferenceClearance(int rotation, bool oppositeCorner, double expected)
+    [Fact]
+    public void ImportedCadTextUsesWorldPositionWithoutRotatingSourceText()
     {
-        var pose = new SchematicAnchorLabel(new(100, 80), rotation, oppositeCorner);
-        Assert.Equal(expected, pose.Top(20, 4));
+        var symbol = Symbol() with { Position = new(100, 80), Width = 30, Height = 20, Rotation = 90 };
+        var view = SchematicSymbolPresentation.UprightCadText(symbol, SchematicSymbolPresentation.Geometry(symbol, "K1")!);
+        Assert.Equal(2, view.Primitives.Count);
+        Assert.Equal(new SchematicPoint(119, 81), view.Primitives[0].Start);
+        Assert.All(view.Primitives, primitive => Assert.Equal(0, primitive.Rotation));
+        Assert.Equal("K1", view.Primitives[0].Text);
+        Assert.Equal("LSA", symbol.Geometry!.Primitives[0].Text);
     }
 
     [Fact]

@@ -176,7 +176,10 @@ public sealed class SchematicDxfExporter
             }
             if (SchematicSymbolPresentation.GeometryForOwner(symbol, owner) is { } geometry)
             {
-                foreach (var p in geometry.Primitives) Primitive(p, "SCHEMATIC_SYMBOL", .25, Map, symbol.Rotation);
+                foreach (var p in SchematicSymbolPresentation.BodyGeometry(geometry).Primitives)
+                    Primitive(p, "SCHEMATIC_SYMBOL", .25, Map, symbol.Rotation);
+                foreach (var p in SchematicSymbolPresentation.UprightCadText(symbol, geometry).Primitives)
+                    Primitive(p, "SCHEMATIC_LABEL", .25);
                 diagnostics.AddRange(geometry.Diagnostics.Select(d => symbol.SymbolId + ": " + d));
             }
             else
@@ -196,8 +199,11 @@ public sealed class SchematicDxfExporter
                     usedImages.TryAdd(raster.Sha256, raster);
                 }
                 else diagnostics.Add("CATALOG_RASTER_IMAGE_NOT_EMBEDDED: " + symbol.SymbolId);
-                Primitive(new() { Kind = "MTEXT", Start = layout.LabelTopLeft, Text = owner.DisplayName,
-                    TextHeight = 11d / 3, TextWidth = layout.LabelWidth, TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25, Map, symbol.Rotation);
+                Primitive(new() { Kind = "MTEXT", Start = new(symbol.Position.X,
+                        symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2),
+                    Text = owner.DisplayName, TextHeight = 11d / 3,
+                    TextWidth = symbol.Rotation % 180 == 0 ? symbol.Width : symbol.Height,
+                    TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25);
             }
             if (SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
                 Label(owner.Reference ?? "Reference 未設定", new(symbol.Position.X, symbol.Position.Y - 6), "SCHEMATIC_LABEL", 11d / 3);
@@ -208,15 +214,25 @@ public sealed class SchematicDxfExporter
                     Start = new(symbol.Position.X, symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2) }, "SCHEMATIC_LABEL", .25);
             foreach (var anchor in symbol.Anchors)
             {
+                if (!anchor.Confirmed) diagnostics.Add("UNCONFIRMED_ANCHOR: " + anchor.EndpointId);
+                if (SchematicPortPresentation.IsCollapsedPin(source, symbol, owner, anchor)) continue;
                 var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
                 Add(new Circle(Point(point), 7d / 6), "SCHEMATIC_PIN");
                 if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
                 {
                     var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
-                    Label(anchor.Label ?? anchor.EndpointId, pose.Position, "SCHEMATIC_LABEL", 8.5 / 3,
-                        pose.Rotation, pose.OppositeCorner);
+                    var text = anchor.Label ?? anchor.EndpointId;
+                    var box = pose.Bounds(text.Length * (8.5 / 3) * .55, 8.5 / 3);
+                    Label(text, new(box.Left, box.Top), "SCHEMATIC_LABEL", 8.5 / 3);
                 }
-                if (!anchor.Confirmed) diagnostics.Add("UNCONFIRMED_ANCHOR: " + anchor.EndpointId);
+            }
+            foreach (var port in owner.Ports.Where(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal)))
+            {
+                var points = symbol.Anchors.Where(a => port.Pins.Any(p => p.PinId == a.EndpointId))
+                    .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
+                if (points.Length == 0) continue;
+                Label(port.Name + " >", new(points.Average(p => p.X), points.Average(p => p.Y) - 6),
+                    "SCHEMATIC_LABEL", 9d / 3);
             }
         }
         var service = new SchematicAuthoringService();

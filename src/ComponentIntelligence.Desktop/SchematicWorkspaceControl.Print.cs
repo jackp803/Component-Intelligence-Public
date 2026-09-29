@@ -87,6 +87,20 @@ public partial class SchematicWorkspaceControl
                 using var graphics = XGraphics.FromPdfPage(page);
                 graphics.DrawImage(image, 0, 0, page.Width.Point, page.Height.Point);
             }
+            foreach (var sheet in project.Schematic.Pages.Select((value, index) => (value, index)))
+            foreach (var link in SchematicContinuationNavigation.Links(project, sheet.value.PageId))
+            {
+                var source = document.Pages[sheet.index];
+                var target = project.Schematic.Pages[link.DestinationPageIndex];
+                var mm = 72d / 25.4;
+                var left = link.LinkTopLeft.X * mm;
+                var right = (link.LinkTopLeft.X + link.LinkWidth) * mm;
+                var bottom = (sheet.value.Height - link.LinkTopLeft.Y - link.LinkHeight) * mm;
+                var top = (sheet.value.Height - link.LinkTopLeft.Y) * mm;
+                source.AddDocumentLink(new PdfRectangle(new XPoint(left, bottom), new XPoint(right, top)),
+                    link.DestinationPageIndex + 1,
+                    new XPoint(link.Destination.X * mm, (target.Height - link.Destination.Y) * mm));
+            }
             temporary = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dialog.FileName)!, $".schematic-{Guid.NewGuid():N}.pdf");
             document.Save(temporary);
             File.Move(temporary, dialog.FileName, overwrite: false);

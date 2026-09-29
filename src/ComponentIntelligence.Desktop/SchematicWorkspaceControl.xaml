@@ -6,6 +6,7 @@
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <WrapPanel Margin="0,0,0,8">
    <ToggleButton x:Name="SelectTool" Content="選取" IsChecked="True" Padding="12,5" Click="Select_Click" ToolTip="選取 (V)"/>
+   <ToggleButton x:Name="EditModuleTool" Content="編輯模塊" Padding="12,5" Margin="4,0" Click="EditModule_Click" ToolTip="編輯模塊接點位置；拖動 Port 到四邊、雙擊展開／收合 (E)"/>
    <ToggleButton x:Name="WireTool" Content="導線" Padding="12,5" Margin="4,0" Click="Wire_Click" ToolTip="導線 (W)"/>
    <Button Content="完成線段" Padding="12,5" Click="FinishWire_Click" ToolTip="完成線段 (Enter／雙擊)"/>
    <Button Content="跨頁符號" Padding="12,5" Margin="4,0" Click="Continuation_Click" ToolTip="跨頁符號 (X)"/>

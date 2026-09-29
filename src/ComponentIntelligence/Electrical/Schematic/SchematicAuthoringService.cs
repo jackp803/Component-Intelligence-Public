@@ -549,7 +549,7 @@ public sealed partial class SchematicAuthoringService
         var remote = pair.Source.MarkerId == markerId ? pair.Destination : pair.Source;
         var pageIndex = doc.Pages.FindIndex(p => p.PageId == remote.PageId);
         var page = doc.Pages[pageIndex];
-        return $"{pair.Signal}  {pageIndex + 1} / {page.GridCell(remote.Position)}";
+        return $"{pair.Signal}  → 第 {pageIndex + 1} 頁 / {page.GridCell(remote.Position)}";
     }
 
     public string ReferenceFor(ElectricalProject project, string markerId)
@@ -596,6 +596,9 @@ public sealed partial class SchematicAuthoringService
             if (symbol.Width <= 0 || symbol.Height <= 0 || !double.IsFinite(symbol.Width) || !double.IsFinite(symbol.Height) || symbol.Rotation is not (0 or 90 or 180 or 270))
                 throw new InvalidOperationException("Invalid symbol size or orientation.");
             var owner = SchematicSymbolOwner.Resolve(project, symbol);
+            if (symbol.CollapsedPortIds.Distinct(StringComparer.Ordinal).Count() != symbol.CollapsedPortIds.Count ||
+                symbol.CollapsedPortIds.Any(id => !owner.Ports.Any(p => p.PortId == id)))
+                throw new InvalidOperationException("Collapsed port must belong to this representation owner.");
             if (owner.Cable?.ArchivedCable is { } cableBinding && (symbol.Geometry is null ||
                 !string.Equals(symbol.Geometry.SourceSha256, cableBinding.Template.AssetSha256, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException("Cable representation requires its pinned CAD geometry, not a generic box.");

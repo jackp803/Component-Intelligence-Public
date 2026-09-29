@@ -24,7 +24,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private readonly string? _archiveRoot;
     private IReadOnlyList<ComponentIR> _catalog = [];
     private string? _pageId, _selectionId;
-    private bool _refreshing, _wireMode, _placeMode;
+    private bool _refreshing, _wireMode, _placeMode, _editModuleMode;
     private SchematicAttachment? _wireStart;
     private List<SchematicPoint> _wirePoints = [];
     private SchematicPoint? _pointer;
@@ -33,6 +33,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private Point _dragViewportStart;
     private bool _dragActivated;
     private string? _dragSymbol;
+    private string? _dragPortSymbol, _dragPortId;
     private int? _dragVertex;
     private int? _dragSegment;
     private string? _dragMarker;
@@ -258,11 +259,21 @@ public partial class SchematicWorkspaceControl : UserControl
             arrow.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) WireAt(SchematicAttachment.Marker(marker.MarkerId), point, false);
+                else if (e.ClickCount >= 2) NavigateToMarker(marker.MarkerId);
                 else { _selectionId = marker.MarkerId; BeginGesture(e); _dragMarker = marker.MarkerId; UpdateSelection(_getProject()); }
                 e.Handled = true;
             };
             Sheet.Children.Add(arrow);
-            Text(_service.ReferenceFor(project, marker.MarkerId), point.X + 2, point.Y - 5, 10, Brushes.Black);
+            var caption = new TextBlock { Text = _service.ReferenceFor(project, marker.MarkerId), FontSize = 10,
+                Foreground = Brushes.Black, Cursor = Cursors.Hand, ToolTip = "雙擊前往對端" };
+            Canvas.SetLeft(caption, (point.X + 2) * 3); Canvas.SetTop(caption, (point.Y - 5) * 3);
+            if (!_renderingOutput) caption.MouseLeftButtonDown += (_, e) =>
+            {
+                if (e.ClickCount >= 2) NavigateToMarker(marker.MarkerId);
+                else { _selectionId = marker.MarkerId; UpdateSelection(_getProject()); }
+                e.Handled = true;
+            };
+            Sheet.Children.Add(caption);
         }
         if (page.PageId == _pageId && !_renderingOutput)
         {
@@ -299,22 +310,16 @@ public partial class SchematicWorkspaceControl : UserControl
     private void RenderSymbol(ElectricalProject project, SchematicSymbol symbol)
     {
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
+        var portEditing = _editModuleMode && !_renderingOutput;
         var body = new Border { Width = symbol.Width * 3, Height = symbol.Height * 3, BorderThickness = new(0),
             BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray, Background = Brushes.White,
-            Cursor = _wireMode ? Cursors.Cross : Cursors.SizeAll };
+            Cursor = _wireMode ? Cursors.Cross : portEditing ? Cursors.Arrow : Cursors.SizeAll };
         var content = new Canvas();
         var image = new Image { Stretch = Stretch.Uniform, IsHitTestVisible = false };
         content.Children.Add(image);
-        if (symbol.Geometry is null)
-        {
-            var layout = SchematicCatalogSymbolLayout.Create(symbol.Width, symbol.Height, 1, 1);
-            var label = new TextBlock { Text = owner.DisplayName, FontSize = 11,
-                Width = layout.LabelWidth * 3, TextWrapping = TextWrapping.Wrap, IsHitTestVisible = false };
-            Canvas.SetLeft(label, layout.LabelTopLeft.X * 3); Canvas.SetTop(label, layout.LabelTopLeft.Y * 3);
-            content.Children.Add(label);
-        }
         body.Child = content;
-        if (SchematicSymbolPresentation.GeometryForOwner(symbol, owner) is { } cad) body.Child = CadCanvas(cad);
+        var cad = SchematicSymbolPresentation.GeometryForOwner(symbol, owner);
+        if (cad is not null) body.Child = CadCanvas(SchematicSymbolPresentation.BodyGeometry(cad));
         // Selection strokes overlay geometry; their width must not shift the CAD body away from its anchors.
         var drawing = body.Child; body.Child = null;
         var layers = new Grid(); layers.Children.Add(drawing);
@@ -332,16 +337,35 @@ public partial class SchematicWorkspaceControl : UserControl
         body.RenderTransform = transforms;
         Canvas.SetLeft(body, symbol.Position.X * 3); Canvas.SetTop(body, symbol.Position.Y * 3); Sheet.Children.Add(body);
         if (symbol.Geometry is null) _ = LoadImage(owner.DefinitionId, image, symbol);
+        else
+        {
+            var upright = SchematicSymbolPresentation.UprightCadText(symbol, cad!);
+            var labels = CadCanvas(upright with { Width = Sheet.Width / 3, Height = Sheet.Height / 3 });
+            Sheet.Children.Add(labels);
+        }
+        var visibleHeight = symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width;
+        var visibleWidth = symbol.Rotation % 180 == 0 ? symbol.Width : symbol.Height;
+        if (symbol.Geometry is null)
+        {
+            var label = new TextBlock { Text = owner.DisplayName, FontSize = 11, Width = visibleWidth * 3,
+                TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Black, IsHitTestVisible = false };
+            Canvas.SetLeft(label, symbol.Position.X * 3);
+            Canvas.SetTop(label, (symbol.Position.Y + visibleHeight + 2) * 3);
+            Sheet.Children.Add(label);
+        }
         var referenceY = symbol.Position.Y - 6;
         body.MouseLeftButtonDown += (_, e) =>
         {
             if (_wireMode) return;
             _selectionId = symbol.SymbolId;
+            if (portEditing) { Render(project); e.Handled = true; return; }
             if (symbol.Locked) { Render(project); e.Handled = true; return; }
             BeginGesture(e); _dragSymbol = symbol.SymbolId; e.Handled = true; UpdateSelection(project);
         };
+        var placedLabels = new List<(double Left, double Top, double Right, double Bottom)>();
         foreach (var anchor in symbol.Anchors)
         {
+            if (SchematicPortPresentation.IsCollapsedPin(project.Schematic!, symbol, owner, anchor) && !(_wireMode && !_renderingOutput)) continue;
             var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
             var pin = Marker(point, anchor.Confirmed ? Brushes.White : Brushes.LightGoldenrodYellow, Brushes.Black, 7);
             pin.ToolTip = $"{anchor.Label}\n{(anchor.Confirmed ? "接點位置已確認" : "接點位置待設定")}";
@@ -358,15 +382,51 @@ public partial class SchematicWorkspaceControl : UserControl
                 var label = new TextBlock { Text = anchor.Label ?? anchor.EndpointId, FontSize = 8.5,
                     Foreground = Brushes.DimGray, IsHitTestVisible = false };
                 label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                referenceY = Math.Min(referenceY, pose.Top(label.DesiredSize.Width / 3, label.DesiredSize.Height / 3) - 6);
-                var transform = new TransformGroup();
-                if (pose.OppositeCorner)
-                    transform.Children.Add(new TranslateTransform(-label.DesiredSize.Width, -label.DesiredSize.Height));
-                transform.Children.Add(new RotateTransform(pose.Rotation));
-                label.RenderTransform = transform;
-                Canvas.SetLeft(label, pose.Position.X * 3); Canvas.SetTop(label, pose.Position.Y * 3);
+                var box = pose.Bounds(label.DesiredSize.Width / 3, label.DesiredSize.Height / 3);
+                var step = label.DesiredSize.Height / 3 + 1;
+                for (var n = 0; n < 12 && placedLabels.Any(r => box.Left < r.Right && box.Right > r.Left && box.Top < r.Bottom && box.Bottom > r.Top); n++)
+                    box = pose.Side switch
+                    {
+                        SchematicLabelSide.Left => (box.Left - step, box.Top, box.Right - step, box.Bottom),
+                        SchematicLabelSide.Right => (box.Left + step, box.Top, box.Right + step, box.Bottom),
+                        SchematicLabelSide.Top => (box.Left, box.Top - step, box.Right, box.Bottom - step),
+                        _ => (box.Left, box.Top + step, box.Right, box.Bottom + step)
+                    };
+                placedLabels.Add(box);
+                referenceY = Math.Min(referenceY, box.Top - 6);
+                Canvas.SetLeft(label, box.Left * 3); Canvas.SetTop(label, box.Top * 3);
                 Sheet.Children.Add(label);
             }
+        }
+        foreach (var port in owner.Ports.Where(port => symbol.Anchors.Any(a => port.Pins.Any(p => p.PinId == a.EndpointId))))
+        {
+            if (!portEditing && !symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal)) continue;
+            var points = symbol.Anchors.Where(a => port.Pins.Any(p => p.PinId == a.EndpointId))
+                .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
+            var center = new SchematicPoint(points.Average(p => p.X), points.Average(p => p.Y));
+            var collapsed = symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal);
+            var handle = new Border { Padding = new(3, 1, 3, 1), Background = Brushes.White,
+                BorderBrush = portEditing ? Brushes.DarkCyan : Brushes.DimGray, BorderThickness = new(1),
+                Cursor = portEditing ? Cursors.SizeAll : Cursors.Hand,
+                Child = new TextBlock { Text = $"{port.Name} {(collapsed ? "▸" : "▾")}", FontSize = 9 },
+                ToolTip = portEditing ? "拖到模塊四邊；雙擊展開／收合 Pin" : "雙擊展開 Pin；此 Port 不是導電接點" };
+            Canvas.SetLeft(handle, center.X * 3 - 8); Canvas.SetTop(handle, center.Y * 3 - 18);
+            handle.MouseLeftButtonDown += (_, e) =>
+            {
+                _selectionId = symbol.SymbolId;
+                if (e.ClickCount >= 2)
+                {
+                    CancelGesture(); Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已切換 Port 接點顯示");
+                }
+                else if (portEditing && !symbol.Locked)
+                {
+                    BeginGesture(e); _dragPortSymbol = symbol.SymbolId; _dragPortId = port.PortId;
+                    UpdateSelection(project);
+                }
+                else { Render(project); if (symbol.Locked) Status.Text = "模塊已鎖定，請先解鎖。"; }
+                e.Handled = true;
+            };
+            Sheet.Children.Add(handle);
         }
         if (SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
             Text(owner.Reference ?? "Reference 未設定", symbol.Position.X, referenceY, 11, Brushes.Black);
@@ -515,7 +575,13 @@ public partial class SchematicWorkspaceControl : UserControl
             _dragActivated = true;
             try
             {
-                if (_dragSymbol is not null)
+                if (_dragPortSymbol is not null && _dragPortId is not null)
+                {
+                    var s = _gestureStart.Schematic!.Symbols.Single(s => s.SymbolId == _dragPortSymbol);
+                    var target = SchematicPortPresentation.DropTarget(s, _pointer);
+                    _gesturePreview = _service.MovePortToEdge(_gestureStart, s.SymbolId, _dragPortId, target.Side, target.Coordinate);
+                }
+                else if (_dragSymbol is not null)
                 {
                     var s = _gestureStart.Schematic!.Symbols.Single(s => s.SymbolId == _dragSymbol);
                     _gesturePreview = _service.TransformSymbol(_gestureStart, s.SymbolId,
@@ -554,18 +620,29 @@ public partial class SchematicWorkspaceControl : UserControl
         Keyboard.Focus(Sheet);
     }
     private void CancelGesture()
-    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragVertex = null; _dragSegment = null; _dragMarker = null; Sheet.ReleaseMouseCapture(); }
+    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragPortSymbol = null; _dragPortId = null; _dragVertex = null; _dragSegment = null; _dragMarker = null; Sheet.ReleaseMouseCapture(); }
     private void CancelCommand()
     {
         CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;
         _pendingRepresentation = null;
         _pendingCable = null;
         _pendingCableRepresentation = null;
-        _wireMode = false; _placementPreview = null; SelectTool.IsChecked = true; WireTool.IsChecked = false;
+        _wireMode = false; _editModuleMode = false; _placementPreview = null;
+        SelectTool.IsChecked = true; WireTool.IsChecked = false; EditModuleTool.IsChecked = false;
         _selectionId = null; Render(_getProject()); Status.Text = "已取消目前操作";
     }
     private void Select_Click(object sender, RoutedEventArgs e) { if (!FinishPendingDraft()) return; CancelCommand(); Focus(); }
-    private void Wire_Click(object sender, RoutedEventArgs e) { _pairMode = false; _pairFirst = null; _placeMode = false; _wireMode = true; SelectTool.IsChecked = false; WireTool.IsChecked = true; Focus(); }
+    private void Wire_Click(object sender, RoutedEventArgs e) { _pairMode = false; _pairFirst = null; _placeMode = false; _editModuleMode = false; EditModuleTool.IsChecked = false; _wireMode = true; SelectTool.IsChecked = false; WireTool.IsChecked = true; Render(_getProject()); Focus(); }
+    private void EditModule_Click(object sender, RoutedEventArgs e)
+    {
+        if (!FinishPendingDraft()) { EditModuleTool.IsChecked = _editModuleMode; return; }
+        CancelGesture(); _editModuleMode = EditModuleTool.IsChecked == true;
+        _wireMode = false; _placeMode = false; WireTool.IsChecked = false;
+        SelectTool.IsChecked = !_editModuleMode;
+        Render(_getProject());
+        Status.Text = _editModuleMode ? "選取模塊；拖動 Port 到四邊，雙擊 Port 展開或收合 Pin。移動後接點位置待確認。" : "已退出編輯模塊";
+        FocusCanvas();
+    }
     private void FinishWire_Click(object sender, RoutedEventArgs e)
     { if (_wireStart is not null && _wirePoints.Count > 1) WireAt(SchematicAttachment.Free(), _wirePoints[^1], true); }
     private void AddPage_Click(object sender, RoutedEventArgs e)
@@ -651,8 +728,13 @@ public partial class SchematicWorkspaceControl : UserControl
     { if (SheetZoom is not null) { SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue; Render(_getProject()); } }
     private void Navigate_Click(object sender, RoutedEventArgs e)
     {
-        var pair = _getProject().Schematic?.Continuations.SingleOrDefault(c => c.Source.MarkerId == _selectionId || c.Destination.MarkerId == _selectionId);
-        if (pair is null || !FinishPendingDraft()) return; var other = pair.Source.MarkerId == _selectionId ? pair.Destination : pair.Source;
+        if (_selectionId is not null) NavigateToMarker(_selectionId);
+    }
+
+    private void NavigateToMarker(string markerId)
+    {
+        var pair = _getProject().Schematic?.Continuations.SingleOrDefault(c => c.Source.MarkerId == markerId || c.Destination.MarkerId == markerId);
+        if (pair is null || !FinishPendingDraft()) return; var other = pair.Source.MarkerId == markerId ? pair.Destination : pair.Source;
         _pageId = other.PageId; _selectionId = other.MarkerId; RefreshWorkspace(); Sheet.BringIntoView(new Rect(other.Position.X * 3, other.Position.Y * 3, 100, 40));
     }
     private void Continuation_Click(object sender, RoutedEventArgs e)

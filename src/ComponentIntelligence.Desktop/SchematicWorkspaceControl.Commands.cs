@@ -28,6 +28,7 @@ public partial class SchematicWorkspaceControl
         switch (command)
         {
             case "Select": Select_Click(this, args); break;
+            case "EditModule": EditModuleTool.IsChecked = !EditModuleTool.IsChecked; EditModule_Click(this, args); break;
             case "Wire": Wire_Click(this, args); break;
             case "Finish": FinishWire_Click(this, args); break;
             case "Place": Place_Click(this, args); break;

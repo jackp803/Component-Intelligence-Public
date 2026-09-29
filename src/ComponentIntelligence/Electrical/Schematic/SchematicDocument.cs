@@ -57,6 +57,7 @@ public sealed record SchematicSymbol
     public string ArchiveRepresentationId { get; init; } = "default";
     public SchematicCadAsset? Geometry { get; init; }
     public List<SchematicAnchor> Anchors { get; init; } = [];
+    public List<string> CollapsedPortIds { get; init; } = [];
 }
 
 public sealed record SchematicAnchor

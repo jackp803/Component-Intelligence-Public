@@ -3,10 +3,17 @@ using ComponentIntelligence.Electrical.Domain;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
-public sealed record SchematicAnchorLabel(SchematicPoint Position, int Rotation, bool OppositeCorner)
+public enum SchematicLabelSide { Left, Right, Top, Bottom }
+
+public sealed record SchematicAnchorLabel(SchematicPoint Position, SchematicLabelSide Side)
 {
-    public double Top(double measuredWidth, double measuredHeight) =>
-        Position.Y - (OppositeCorner ? Rotation == 90 ? measuredWidth : measuredHeight : 0);
+    public (double Left, double Top, double Right, double Bottom) Bounds(double width, double height) => Side switch
+    {
+        SchematicLabelSide.Left => (Position.X - width, Position.Y - height / 2, Position.X, Position.Y + height / 2),
+        SchematicLabelSide.Right => (Position.X, Position.Y - height / 2, Position.X + width, Position.Y + height / 2),
+        SchematicLabelSide.Top => (Position.X - width / 2, Position.Y - height, Position.X + width / 2, Position.Y),
+        _ => (Position.X - width / 2, Position.Y, Position.X + width / 2, Position.Y + height)
+    };
 }
 
 public static class SchematicSymbolPresentation
@@ -28,6 +35,30 @@ public static class SchematicSymbolPresentation
         return asset with { Primitives = asset.Primitives.Select(p => p.Kind is "TEXT" or "MTEXT" &&
             p.AttributeTag is not null && fields.TryGetValue(p.AttributeTag, out var field)
                 ? p with { Text = CableFieldValue(owner.Cable, field) } : p).ToArray() };
+    }
+
+    public static SchematicCadAsset BodyGeometry(SchematicCadAsset asset) => asset with
+    {
+        Primitives = asset.Primitives.Where(p => p.Kind is not ("TEXT" or "MTEXT")).ToArray()
+    };
+
+    public static SchematicCadAsset UprightCadText(SchematicSymbol symbol, SchematicCadAsset asset) => asset with
+    {
+        Primitives = asset.Primitives.Where(p => p.Kind is "TEXT" or "MTEXT")
+            .Select(p => p with { Start = WorldPoint(symbol, p.Start), Rotation = 0 }).ToArray()
+    };
+
+    public static SchematicPoint WorldPoint(SchematicSymbol symbol, SchematicPoint point)
+    {
+        var local = symbol.Rotation switch
+        {
+            0 => point,
+            90 => new SchematicPoint(symbol.Height - point.Y, point.X),
+            180 => new SchematicPoint(symbol.Width - point.X, symbol.Height - point.Y),
+            270 => new SchematicPoint(point.Y, symbol.Width - point.X),
+            _ => throw new InvalidOperationException("Only orthogonal rotations are supported.")
+        };
+        return new(symbol.Position.X + local.X, symbol.Position.Y + local.Y);
     }
 
     public static bool ShowReferenceForOwner(SchematicSymbol symbol, SchematicSymbolOwner owner) =>
@@ -58,16 +89,28 @@ public static class SchematicSymbolPresentation
     public static SchematicAnchorLabel AnchorLabel(SchematicSymbol symbol, SchematicAnchor anchor)
     {
         var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
-        var offset = symbol.Rotation switch
+        var side = anchor.Direction switch
         {
-            0 => new SchematicPoint(2, -3.8),
-            90 => new SchematicPoint(3.8, 2),
-            180 => new SchematicPoint(-2, 3.8),
-            270 => new SchematicPoint(-3.8, -2),
-            _ => throw new InvalidOperationException("Only orthogonal rotations are supported.")
+            "Left" => SchematicLabelSide.Left,
+            "Top" => SchematicLabelSide.Top,
+            "Bottom" => SchematicLabelSide.Bottom,
+            _ => SchematicLabelSide.Right
         };
-        // Keep the rotated text rectangle, but reverse its attachment instead of reading upside down.
-        return new(new(point.X + offset.X, point.Y + offset.Y), symbol.Rotation % 180, symbol.Rotation >= 180);
+        for (var i = 0; i < symbol.Rotation; i += 90) side = side switch
+        {
+            SchematicLabelSide.Left => SchematicLabelSide.Top,
+            SchematicLabelSide.Top => SchematicLabelSide.Right,
+            SchematicLabelSide.Right => SchematicLabelSide.Bottom,
+            _ => SchematicLabelSide.Left
+        };
+        var offset = side switch
+        {
+            SchematicLabelSide.Left => new SchematicPoint(-2, 0),
+            SchematicLabelSide.Right => new SchematicPoint(2, 0),
+            SchematicLabelSide.Top => new SchematicPoint(0, -2),
+            _ => new SchematicPoint(0, 2)
+        };
+        return new(new(point.X + offset.X, point.Y + offset.Y), side);
     }
 
     public static bool ShowAnchorLabel(SchematicSymbol symbol, SchematicAnchor anchor) =>

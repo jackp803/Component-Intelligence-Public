@@ -624,7 +624,8 @@ public partial class SchematicWorkspaceControl : UserControl
         var w = p.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
         SelectionLabel.Text = owner?.DisplayName ?? (w is not null ? "導線" : "");
         ReferenceText.Text = owner?.Reference ?? "";
-        SelectionState.Text = s is not null ? $"{(s.Locked ? "已鎖定" : "可編輯")}\n接點位置：{s.Anchors.Count(a => a.Confirmed)} / {s.Anchors.Count} 已確認" :
+        var coverage = s is null ? default : SchematicSymbolPresentation.ContactCoverage(s, owner!);
+        SelectionState.Text = s is not null ? $"{(s.Locked ? "已鎖定" : "可編輯")}\n接點位置：{coverage.Confirmed} / {coverage.Total} 已確認" :
             w is not null ? $"{(w.Locked ? "已鎖定" : "可編輯")}\n{(w.ConnectionId is null ? "待接續" : "工程連線已建立")}" : "";
         if (s?.Geometry is not null)
             SelectionState.Text += "\n" + (s.AssetRevision is null ? "圖塊草稿／未核准" : s.AssetRevision) + "\n" + string.Join("\n", s.Geometry.Diagnostics);

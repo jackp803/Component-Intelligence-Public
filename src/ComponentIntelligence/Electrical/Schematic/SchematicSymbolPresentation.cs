@@ -11,6 +11,15 @@ public sealed record SchematicAnchorLabel(SchematicPoint Position, int Rotation,
 
 public static class SchematicSymbolPresentation
 {
+    public static (int Confirmed, int Total) ContactCoverage(SchematicSymbol symbol, SchematicSymbolOwner owner)
+    {
+        if (owner.Cable?.ArchivedCable is null)
+            return (symbol.Anchors.Count(a => a.Confirmed), symbol.Anchors.Count);
+        var pins = owner.Ports.SelectMany(p => p.Pins).Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
+        return (symbol.Anchors.Where(a => a.Confirmed && pins.Contains(a.EndpointId))
+            .Select(a => a.EndpointId).Distinct(StringComparer.Ordinal).Count(), pins.Count);
+    }
+
     public static SchematicCadAsset? GeometryForOwner(SchematicSymbol symbol, SchematicSymbolOwner owner)
     {
         var asset = Geometry(symbol, owner.Reference);

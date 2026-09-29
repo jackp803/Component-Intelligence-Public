@@ -6,6 +6,30 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Native AF (71bc1ca plus preserved Drawing WIP) supersedes the pending cable
+text/contact checks below only. The owner handed back the isolated window. Normal
+UI set Reference, length and specification, saved, and loaded the synthetic project.
+The imported tagged CAD text displayed the saved values instead of template text.
+Selecting the omitted third contact then Cancel left it unbound on dialog reopen,
+with no Undo entry. Explicit binding Apply added the third contact; one Undo removed
+it and exhausted the Undo stack, one Redo restored it. Save -> close editor -> reopen
+from the main window -> load the same project retained all three contacts and text.
+Internal mapping remained unconfirmed and the asset remained unapproved. Local
+screenshots: af-three-contacts-applied.png and af-close-reopen-loaded.png in the AF
+private evidence directory. This is editor close/reopen, not process restart proof.
+
+The same native check exposed misleading 2/2 contact coverage for a three-Pin cable.
+After extracting the existing summary calculation, a regression failed with expected
+(2,3), actual (2,2). Cable coverage now counts all external instance PinIds and only
+distinct confirmed matching anchors; missing/foreign/duplicate anchors cannot inflate
+coverage. Component partial-representation coverage is unchanged. Fresh full Release:
+1117 PASS, zero failed/skipped; Desktop Release zero errors/16 warnings; diff check
+PASS. This summary fix is newer than AF and still needs candidate UI verification.
+Production DB/workbook/K7L/company DWT hashes match recorded protection baselines.
+Overall PARTIAL: native cable wire attachment/alternate representation, process
+restart, complete company-template PDF/print and contained-material inventory remain
+open. No Auto execution, new asset approval, merge, release or visual acceptance.
+
 Native AE continuation: owner closed AD and explicitly handed back the test
 window. AE visibly used isolated DB/workbook. Normal Cable Library showed the
 synthetic unapproved Y fixture without preselection, 2/3 contact bindings and

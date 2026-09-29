@@ -5,6 +5,24 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class SchematicSymbolPresentationTests
 {
+    [Fact]
+    public void CableContactCoverageIncludesMissingPinsWithoutCountingDuplicateOrForeignAnchors()
+    {
+        var cable = new CableInstance { CableInstanceId = "W", CableDefinitionId = "c", ArchivedCable = new() {
+            Template = new() { TemplateId = "c", TemplateRevision = "r1", AssetSha256 = new string('A', 64) },
+            Ports = [new() { PortId = "port", Name = "end", Pins = Enumerable.Range(1, 3)
+                .Select(i => new ComponentPin { PinId = $"pin-{i}", PinNumber = i.ToString() }).ToList() }] } };
+        var owner = new SchematicSymbolOwner(null, cable);
+        var symbol = Symbol() with { ComponentInstanceId = "", CableInstanceId = "W", Anchors = [
+            new() { EndpointId = "pin-1", Confirmed = true }, new() { EndpointId = "pin-2", Confirmed = true }] };
+        Assert.Equal((2, 3), SchematicSymbolPresentation.ContactCoverage(symbol, owner));
+        symbol.Anchors.Add(new() { EndpointId = "pin-1", Confirmed = true });
+        symbol.Anchors.Add(new() { EndpointId = "foreign-pin", Confirmed = true });
+        Assert.Equal((2, 3), SchematicSymbolPresentation.ContactCoverage(symbol, owner));
+        symbol.Anchors.Add(new() { EndpointId = "pin-3", Confirmed = false });
+        Assert.Equal((2, 3), SchematicSymbolPresentation.ContactCoverage(symbol, owner));
+    }
+
     [Theory]
     [InlineData("TEXT", "TAG1", false)]
     [InlineData("MTEXT", "TAG1", false)]

@@ -49,7 +49,7 @@ public sealed partial class SchematicAuthoringService
                 Height = height, SectionIndex = part + 1, SectionCount = targetPageIds.Count,
                 Anchors = assigned,
                 CollapsedPortIds = owner.Ports.Where(port => source.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal) &&
-                    port.Pins.Any(pin => pinIds.Contains(pin.PinId))).Select(port => port.PortId).ToList()
+                    port.Pins.Count > 0 && port.Pins.All(pin => pinIds.Contains(pin.PinId))).Select(port => port.PortId).ToList()
             });
         }
         doc.Symbols.RemoveAt(index);

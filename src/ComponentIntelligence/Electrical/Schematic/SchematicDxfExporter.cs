@@ -184,7 +184,8 @@ public sealed class SchematicDxfExporter
             }
             else
             {
-                var compacted = symbol.CollapsedPortIds.Count > 0;
+                var compacted = owner.Ports.Any(port => SchematicPortPresentation.IsRepresented(symbol, port) &&
+                    SchematicPortPresentation.IsPortCollapsed(symbol, port));
                 if (compacted)
                 {
                     SchematicPoint[] box = [new(body.X, body.Y), new(body.X + body.Width, body.Y),
@@ -254,12 +255,13 @@ public sealed class SchematicDxfExporter
                         "SCHEMATIC_LABEL", 8.5 / 3, pose.TextRotation);
                 }
             }
-            foreach (var port in owner.Ports.Where(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal)))
+            foreach (var port in owner.Ports.Where(p => SchematicPortPresentation.IsRepresented(symbol, p) &&
+                (SchematicPortPresentation.IsPortCollapsed(symbol, p) ||
+                SchematicPortPresentation.HasPortRoute(source, symbol, p.PortId))))
             {
                 var points = symbol.Anchors.Where(a => port.Pins.Any(p => p.PinId == a.EndpointId))
                     .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
-                if (points.Length == 0) continue;
-                var contact = SchematicPortPresentation.GroupContact(symbol, owner, port, body);
+                var contact = SchematicPortPresentation.GroupContact(source, symbol, owner, port, body);
                 Add(new Circle(Point(contact.Position), 1.5), "SCHEMATIC_PORT_GROUP");
                 Label(port.Name, new(contact.Position.X + (contact.Side == "Left" ? -13 : 2), contact.Position.Y - 5),
                     "SCHEMATIC_LABEL", 9d / 3);

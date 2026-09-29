@@ -122,7 +122,7 @@ public sealed partial class SchematicAuthoringService
         var rows = new Dictionary<string, int> { ["Left"] = 0, ["Right"] = 0 };
         return new() { SymbolId = $"symbol-{Guid.NewGuid():N}", ComponentInstanceId = component.ComponentInstanceId,
             PageId = pageId, Position = position, Width = 50, Height = height,
-            CollapsedPortIds = component.Ports.Where(port => port.Pins.Count > 0).Select(port => port.PortId).ToList(),
+            CollapsedPortIds = component.Ports.Select(port => port.PortId).ToList(),
             Anchors = pins.Select(p =>
             {
                 var side = p.Port.PhysicalLocation?.Side == "Left" ? "Left" : "Right";
@@ -150,14 +150,14 @@ public sealed partial class SchematicAuthoringService
             AssetRevision = symbol.Anchors.SequenceEqual(anchors) ? symbol.AssetRevision : null };
         foreach (var wire in doc.Wires.Where(w => w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId))
             if (wire.Locked && new[] { wire.Start, wire.End }.Where(a => a.SymbolId == symbolId)
-                .Any(a => AnchorPoint(symbol, a.EndpointId!) != AnchorPoint(next, a.EndpointId!)))
+                .Any(a => SymbolAttachmentPoint(draft, symbol, a) != SymbolAttachmentPoint(draft, next, a)))
                 throw new InvalidOperationException("A locked wire prevents this anchor change.");
         doc.Symbols[i] = next;
         for (var w = 0; w < doc.Wires.Count; w++)
         {
             var wire = doc.Wires[w]; var points = wire.Points.ToList();
-            if (wire.Start.SymbolId == symbolId) points = Reanchor(points, AnchorPoint(next, wire.Start.EndpointId!), true);
-            if (wire.End.SymbolId == symbolId) points = Reanchor(points, AnchorPoint(next, wire.End.EndpointId!), false);
+            if (wire.Start.SymbolId == symbolId) points = Reanchor(points, SymbolAttachmentPoint(draft, next, wire.Start), true);
+            if (wire.End.SymbolId == symbolId) points = Reanchor(points, SymbolAttachmentPoint(draft, next, wire.End), false);
             doc.Wires[w] = wire with { Points = points };
             ReanchorDependentJunctions(doc, wire.WireId);
         }
@@ -426,7 +426,7 @@ public sealed partial class SchematicAuthoringService
         return points;
     }
 
-    public ElectricalProject TransformSymbol(ElectricalProject project, string symbolId, SchematicPoint position, int rotation) => Edit(project, (_, doc) =>
+    public ElectricalProject TransformSymbol(ElectricalProject project, string symbolId, SchematicPoint position, int rotation) => Edit(project, (draft, doc) =>
     {
         var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (index < 0) throw new InvalidOperationException("The representation no longer exists.");
@@ -440,8 +440,8 @@ public sealed partial class SchematicAuthoringService
         {
             var wire = doc.Wires[i];
             var points = wire.Points.ToList();
-            if (wire.Start.SymbolId == symbolId) points = ReanchorSymbol(points, next, wire.Start.EndpointId!, true);
-            if (wire.End.SymbolId == symbolId) points = ReanchorSymbol(points, next, wire.End.EndpointId!, false);
+            if (wire.Start.SymbolId == symbolId) points = ReanchorSymbol(points, draft, next, wire.Start, true);
+            if (wire.End.SymbolId == symbolId) points = ReanchorSymbol(points, draft, next, wire.End, false);
             doc.Wires[i] = wire with { Points = points };
             ReanchorDependentJunctions(doc, wire.WireId);
         }
@@ -461,8 +461,17 @@ public sealed partial class SchematicAuthoringService
         return new(symbol.Position.X + rotated.X, symbol.Position.Y + rotated.Y);
     }
 
-    private static List<SchematicPoint> ReanchorSymbol(List<SchematicPoint> points, SchematicSymbol symbol, string endpointId, bool atStart)
+    private static SchematicPoint SymbolAttachmentPoint(ElectricalProject project, SchematicSymbol symbol,
+        SchematicAttachment attachment) => attachment.Kind == SchematicAttachmentKind.Port
+            ? SchematicPortPresentation.ConnectionPoint(project, symbol, attachment.EndpointId!)
+            : AnchorPoint(symbol, attachment.EndpointId!);
+
+    private static List<SchematicPoint> ReanchorSymbol(List<SchematicPoint> points, ElectricalProject project,
+        SchematicSymbol symbol, SchematicAttachment attachment, bool atStart)
     {
+        if (attachment.Kind == SchematicAttachmentKind.Port)
+            return Reanchor(points, SymbolAttachmentPoint(project, symbol, attachment), atStart);
+        var endpointId = attachment.EndpointId!;
         var contact = symbol.Anchors.Single(a => a.EndpointId == endpointId);
         var direction = contact.Direction switch
         {
@@ -523,7 +532,7 @@ public sealed partial class SchematicAuthoringService
             throw new InvalidOperationException("Unlock selected representations and incident routes before moving sheets.");
         for (var i = 0; i < doc.Symbols.Count; i++)
             if (ids.Contains(doc.Symbols[i].SymbolId)) doc.Symbols[i] = doc.Symbols[i] with { PageId = destinationPage };
-        string? PinPage(SchematicAttachment a) => a.Kind == SchematicAttachmentKind.Pin
+        string? PinPage(SchematicAttachment a) => a.Kind is SchematicAttachmentKind.Pin or SchematicAttachmentKind.Port
             ? doc.Symbols.Single(s => s.SymbolId == a.SymbolId).PageId : null;
         void RelocateMarker(string markerId, string page)
         {
@@ -609,12 +618,15 @@ public sealed partial class SchematicAuthoringService
         var pair = doc.Continuations.Single(c => c.Source.MarkerId == markerId || c.Destination.MarkerId == markerId);
         var remote = pair.Source.MarkerId == markerId ? pair.Destination : pair.Source;
         var route = doc.Wires.SingleOrDefault(w => w.Start.MarkerId == remote.MarkerId || w.End.MarkerId == remote.MarkerId);
-        var endpoint = route?.Start.Kind == SchematicAttachmentKind.Pin ? route.Start : route?.End.Kind == SchematicAttachmentKind.Pin ? route.End : null;
+        var endpoint = route?.Start.Kind is SchematicAttachmentKind.Pin or SchematicAttachmentKind.Port ? route.Start
+            : route?.End.Kind is SchematicAttachmentKind.Pin or SchematicAttachmentKind.Port ? route.End : null;
         var prefix = ReferenceFor(doc, markerId);
         if (endpoint is null) return prefix + "  對端待接續";
         var symbol = doc.Symbols.Single(s => s.SymbolId == endpoint.SymbolId);
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
-        var port = owner.Ports.Single(p => p.Pins.Any(pin => pin.PinId == endpoint.EndpointId));
+        var port = owner.Ports.Single(p => p.PortId == endpoint.EndpointId || p.Pins.Any(pin => pin.PinId == endpoint.EndpointId));
+        if (endpoint.Kind == SchematicAttachmentKind.Port)
+            return $"{prefix}  {owner.Reference ?? owner.DisplayName} / {port.Name} / Pin 待指定".Trim();
         var pin = port.Pins.Single(p => p.PinId == endpoint.EndpointId);
         return $"{prefix}  {owner.Reference ?? owner.DisplayName} / {port.Name} / {pin.PinNumber} {pin.PinName}".Trim();
     }
@@ -692,8 +704,8 @@ public sealed partial class SchematicAuthoringService
             foreach (var p in wire.Points) RequirePoint(p);
             foreach (var (a, b) in wire.Points.Zip(wire.Points.Skip(1)))
                 if (a == b || a.X != b.X && a.Y != b.Y) throw new InvalidOperationException("Wire segments must be nonzero and orthogonal.");
-            ValidateAttachment(doc, wire, wire.Start, wire.Points[0]);
-            ValidateAttachment(doc, wire, wire.End, wire.Points[^1]);
+            ValidateAttachment(project, doc, wire, wire.Start, wire.Points[0]);
+            ValidateAttachment(project, doc, wire, wire.End, wire.Points[^1]);
             if (wire.ConnectionId is not null && !project.Connections.Any(c => c.ConnectionId == wire.ConnectionId))
                 throw new InvalidOperationException("Wire references an unknown electrical connection.");
         }
@@ -707,7 +719,7 @@ public sealed partial class SchematicAuthoringService
             var members = group.ToArray();
             var ends = members.SelectMany(w => new[] { w.Start, w.End }).Where(a => a.Kind != SchematicAttachmentKind.Continuation).ToArray();
             var connection = project.Connections.Single(c => c.ConnectionId == group.Key);
-            if (ends.Length != 2 || ends.Any(a => a.Kind != SchematicAttachmentKind.Pin) ||
+            if (ends.Length != 2 || ends.Any(a => a.Kind is not (SchematicAttachmentKind.Pin or SchematicAttachmentKind.Port)) ||
                 !(ends[0].EndpointId == connection.FromEndpointId && ends[1].EndpointId == connection.ToEndpointId ||
                   ends[1].EndpointId == connection.FromEndpointId && ends[0].EndpointId == connection.ToEndpointId))
                 throw new InvalidOperationException("Completed schematic routes must match both exact electrical endpoints.");
@@ -728,7 +740,7 @@ public sealed partial class SchematicAuthoringService
         }
     }
 
-    private static void ValidateAttachment(SchematicDocument doc, SchematicWire wire,
+    private static void ValidateAttachment(ElectricalProject project, SchematicDocument doc, SchematicWire wire,
         SchematicAttachment attachment, SchematicPoint point)
     {
         if (attachment.Kind == SchematicAttachmentKind.Free) return;
@@ -738,6 +750,12 @@ public sealed partial class SchematicAuthoringService
             var anchor = symbol?.Anchors.SingleOrDefault(a => a.EndpointId == attachment.EndpointId);
             if (symbol is null || anchor is null || AnchorPoint(symbol, anchor.EndpointId) != point)
                 throw new InvalidOperationException("Wire must terminate at its exact pin anchor on this sheet.");
+        }
+        else if (attachment.Kind == SchematicAttachmentKind.Port)
+        {
+            var symbol = doc.Symbols.SingleOrDefault(s => s.SymbolId == attachment.SymbolId && s.PageId == wire.PageId);
+            if (symbol is null || SchematicPortPresentation.ConnectionPoint(project, symbol, attachment.EndpointId!) != point)
+                throw new InvalidOperationException("Wire must terminate at its Port group contact on this sheet.");
         }
         else if (attachment.Kind == SchematicAttachmentKind.Continuation)
         {
@@ -820,7 +838,7 @@ public sealed partial class SchematicAuthoringService
                 if (neighbour is null) { ends.Add(SchematicAttachment.Free()); continue; }
                 if (visited.Add(neighbour.WireId)) chain.Add(neighbour);
             }
-            if (ends.Count != 2 || ends.Any(e => e.Kind != SchematicAttachmentKind.Pin)) continue;
+            if (ends.Count != 2 || ends.Any(e => e.Kind is not (SchematicAttachmentKind.Pin or SchematicAttachmentKind.Port))) continue;
             var sizes = chain.Where(w => w.Awg.HasValue).Select(w => w.Awg!.Value).Distinct().ToArray();
             if (sizes.Length > 1) throw new InvalidOperationException("Paired wire segments have conflicting AWG specifications.");
             int? awg = sizes.Length == 1 ? sizes[0] : null;

@@ -24,7 +24,8 @@ public sealed class SchematicRepresentationSplitTests
         {
             Assert.Equal(4, s.SectionCount);
             Assert.Equal(original.ComponentInstanceId, s.ComponentInstanceId);
-            Assert.Equal(original.CollapsedPortIds, s.CollapsedPortIds);
+            Assert.Empty(s.CollapsedPortIds);
+            Assert.All(project.Components.Single().Ports, port => Assert.False(SchematicPortPresentation.IsRepresented(s, port)));
             Assert.True(s.Height < original.Height);
         });
         Assert.Equal(original.Anchors.Select(a => a.EndpointId).Order(StringComparer.Ordinal),

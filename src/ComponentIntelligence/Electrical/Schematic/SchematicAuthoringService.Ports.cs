@@ -12,11 +12,34 @@ public sealed partial class SchematicAuthoringService
         var owner = SchematicSymbolOwner.Resolve(draft, symbol);
         var port = owner.Ports.SingleOrDefault(p => p.PortId == portId)
             ?? throw new InvalidOperationException("Unknown port.");
+        if (!SchematicPortPresentation.IsRepresented(symbol, port))
+            throw new InvalidOperationException("This section contains only part of the Port; connect its exact Pins.");
         if (!symbol.Anchors.Any(a => port.Pins.Any(p => p.PinId == a.EndpointId)))
             throw new InvalidOperationException("This representation has no pins for the selected port.");
         var collapsed = symbol.CollapsedPortIds.ToList();
         if (!collapsed.Remove(portId)) collapsed.Add(portId);
-        doc.Symbols[index] = symbol with { CollapsedPortIds = collapsed };
+        var next = symbol with { CollapsedPortIds = collapsed };
+        foreach (var wire in doc.Wires.Where(w => w.Locked))
+            if (new[] { wire.Start, wire.End }.Where(a => a.Kind == SchematicAttachmentKind.Port && a.SymbolId == symbolId)
+                .Any(a => SymbolAttachmentPoint(draft, symbol, a) != SymbolAttachmentPoint(draft, next, a)))
+                throw new InvalidOperationException("Unlock attached Port wires before changing this display.");
+        doc.Symbols[index] = next;
+        for (var i = 0; i < doc.Wires.Count; i++)
+        {
+            var wire = doc.Wires[i];
+            var moveStart = wire.Start.Kind == SchematicAttachmentKind.Port && wire.Start.SymbolId == symbolId &&
+                SymbolAttachmentPoint(draft, symbol, wire.Start) != SymbolAttachmentPoint(draft, next, wire.Start);
+            var moveEnd = wire.End.Kind == SchematicAttachmentKind.Port && wire.End.SymbolId == symbolId &&
+                SymbolAttachmentPoint(draft, symbol, wire.End) != SymbolAttachmentPoint(draft, next, wire.End);
+            if (!moveStart && !moveEnd) continue;
+            var points = wire.Points.ToList();
+            if (moveStart)
+                points = Reanchor(points, SymbolAttachmentPoint(draft, next, wire.Start), true);
+            if (moveEnd)
+                points = Reanchor(points, SymbolAttachmentPoint(draft, next, wire.End), false);
+            doc.Wires[i] = wire with { Points = points };
+            ReanchorDependentJunctions(doc, wire.WireId);
+        }
     });
 
     public ElectricalProject MovePortToEdge(ElectricalProject project, string symbolId, string portId,
@@ -56,7 +79,7 @@ public sealed partial class SchematicAuthoringService
             next = FitGenericPortEdges(next, owner.Ports, symbol.Width, symbol.Height);
         foreach (var wire in doc.Wires.Where(w => w.Locked))
             if (new[] { wire.Start, wire.End }.Where(a => a.SymbolId == symbolId)
-                .Any(a => AnchorPoint(symbol, a.EndpointId!) != AnchorPoint(next, a.EndpointId!)))
+                .Any(a => SymbolAttachmentPoint(draft, symbol, a) != SymbolAttachmentPoint(draft, next, a)))
                 throw new InvalidOperationException("Unlock attached wires before moving or resizing this port.");
         doc.Symbols[index] = next;
         for (var i = 0; i < doc.Wires.Count; i++)
@@ -64,10 +87,10 @@ public sealed partial class SchematicAuthoringService
             var wire = doc.Wires[i];
             if (wire.Start.SymbolId != symbolId && wire.End.SymbolId != symbolId) continue;
             var points = wire.Points.ToList();
-            if (wire.Start.SymbolId == symbolId && AnchorPoint(symbol, wire.Start.EndpointId!) != AnchorPoint(next, wire.Start.EndpointId!))
-                points = ReanchorSymbol(points, next, wire.Start.EndpointId!, true);
-            if (wire.End.SymbolId == symbolId && AnchorPoint(symbol, wire.End.EndpointId!) != AnchorPoint(next, wire.End.EndpointId!))
-                points = ReanchorSymbol(points, next, wire.End.EndpointId!, false);
+            if (wire.Start.SymbolId == symbolId && SymbolAttachmentPoint(draft, symbol, wire.Start) != SymbolAttachmentPoint(draft, next, wire.Start))
+                points = ReanchorSymbol(points, draft, next, wire.Start, true);
+            if (wire.End.SymbolId == symbolId && SymbolAttachmentPoint(draft, symbol, wire.End) != SymbolAttachmentPoint(draft, next, wire.End))
+                points = ReanchorSymbol(points, draft, next, wire.End, false);
             doc.Wires[i] = wire with { Points = points };
             ReanchorDependentJunctions(doc, wire.WireId);
         }

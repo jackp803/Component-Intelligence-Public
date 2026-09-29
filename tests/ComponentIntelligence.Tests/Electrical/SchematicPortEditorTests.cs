@@ -33,7 +33,7 @@ public sealed class SchematicPortEditorTests
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
         var bounds = SchematicPortPresentation.GenericBodyBounds(project.Schematic, symbol, owner);
         var contacts = component.Ports.Skip(1)
-            .Select(port => SchematicPortPresentation.GroupContact(symbol, owner, port, bounds)).ToArray();
+            .Select(port => SchematicPortPresentation.GroupContact(project.Schematic, symbol, owner, port, bounds)).ToArray();
         Assert.True(bounds.Width > 50);
         Assert.True(symbol.Width > 50);
         var topGroups = component.Ports.Skip(1).Select(port => symbol.Anchors.Single(a => a.EndpointId == port.Pins[0].PinId).Position.X).Order().ToArray();
@@ -151,7 +151,7 @@ public sealed class SchematicPortEditorTests
         var body = SchematicPortPresentation.GenericBodyBounds(project.Schematic, symbol, owner);
         Assert.InRange(rotation == 0 ? body.Height : body.Width, 80, 139);
         Assert.Equal(5, symbol.CollapsedPortIds.Count);
-        var contacts = component.Ports.Skip(1).Select(port => SchematicPortPresentation.GroupContact(symbol, owner, port, body)).ToArray();
+        var contacts = component.Ports.Skip(1).Select(port => SchematicPortPresentation.GroupContact(project.Schematic, symbol, owner, port, body)).ToArray();
         Assert.All(contacts, contact => Assert.Equal(side, contact.Side));
         Assert.Equal(5, contacts.Select(contact => contact.Position).Distinct().Count());
         Assert.All(symbol.Anchors.Where(a => a.EndpointId.StartsWith("ETH", StringComparison.Ordinal)),

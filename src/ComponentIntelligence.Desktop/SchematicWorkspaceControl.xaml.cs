@@ -338,7 +338,8 @@ public partial class SchematicWorkspaceControl : UserControl
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
         var portEditing = _editModuleMode && !_renderingOutput;
         var compact = SchematicPortPresentation.GenericBodyBounds(project.Schematic!, symbol, owner);
-        var compacted = symbol.Geometry is null && symbol.CollapsedPortIds.Count > 0;
+        var compacted = symbol.Geometry is null && owner.Ports.Any(port =>
+            SchematicPortPresentation.IsRepresented(symbol, port) && SchematicPortPresentation.IsPortCollapsed(symbol, port));
         var body = new Border { Width = (compacted ? compact.Width : symbol.Width) * 3,
             Height = (compacted ? compact.Height : symbol.Height) * 3, BorderThickness = new(0),
             BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray, Background = Brushes.White,
@@ -433,29 +434,35 @@ public partial class SchematicWorkspaceControl : UserControl
                 Sheet.Children.Add(label);
             }
         }
-        foreach (var port in owner.Ports.Where(port => symbol.Anchors.Any(a => port.Pins.Any(p => p.PinId == a.EndpointId))))
+        foreach (var port in owner.Ports.Where(port => SchematicPortPresentation.IsRepresented(symbol, port)))
         {
-            if (!portEditing && !symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal)) continue;
+            var collapsed = SchematicPortPresentation.IsPortCollapsed(symbol, port);
+            var portRoute = SchematicPortPresentation.HasPortRoute(project.Schematic!, symbol, port.PortId);
+            if (!portEditing && !collapsed && !portRoute) continue;
             var points = symbol.Anchors.Where(a => port.Pins.Any(p => p.PinId == a.EndpointId))
                 .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
-            var center = new SchematicPoint(points.Average(p => p.X), points.Average(p => p.Y));
-            var collapsed = symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal);
-            if (collapsed)
+            var center = points.Length == 0 ? symbol.Position :
+                new SchematicPoint(points.Average(p => p.X), points.Average(p => p.Y));
+            if (collapsed || portRoute)
             {
-                var contact = SchematicPortPresentation.GroupContact(symbol, owner, port, compact);
+                var contact = SchematicPortPresentation.GroupContact(project.Schematic!, symbol, owner, port, compact);
                 center = contact.Position;
                 var point = Marker(center, Brushes.White, Brushes.Black, 9);
-                point.ToolTip = portEditing ? $"{port.Name}: 點一下展開 Pin；拖曳移動 Port"
-                    : $"{port.Name}: 雙擊展開；接線時先選確切 Pin，不合併導體";
-                point.Cursor = portEditing ? Cursors.SizeAll : Cursors.Hand;
+                point.ToolTip = points.Length == 0 ? $"{port.Name}: 可接線到 Port；尚無 Pin 明細，不能展開"
+                    : portEditing ? $"{port.Name}: 點一下展開／收合 Pin；拖曳移動 Port"
+                    : collapsed ? $"{port.Name}: 可接線到整個 Port；雙擊展開可改選確切 Pin。Port 接線不代表內部 Pin 互通。"
+                    : $"{port.Name}: 既有 Port 接線；新增接線請選確切 Pin。";
+                point.Cursor = portEditing ? Cursors.SizeAll : collapsed && _wireMode ? Cursors.Cross : Cursors.Hand;
                 point.MouseLeftButtonDown += (_, e) =>
                 {
                     _selectionId = symbol.SymbolId;
                     if (_wireMode && !_renderingOutput)
                     {
-                        if (Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已展開 Port，請選確切 Pin"))
-                            Status.Text = "請點選已展開的確切 Pin；Port 圓點不代表導體。";
+                        if (collapsed) WireAt(SchematicAttachment.Port(symbol.SymbolId, port.PortId), center, false);
+                        else Status.Text = "此 Port 已展開；新增接線請選確切 Pin。";
                     }
+                    else if (points.Length == 0)
+                        Status.Text = "此 Port 尚無 Pin 明細；可維持 Port 接線，不能展開成 Pin。";
                     else if (!portEditing && e.ClickCount >= 2)
                         Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已展開 Port Pin");
                     else if (portEditing && !symbol.Locked)
@@ -472,7 +479,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 BorderBrush = portEditing ? Brushes.DarkCyan : Brushes.DimGray, BorderThickness = new(1),
                 Cursor = portEditing ? Cursors.SizeAll : Cursors.Hand,
                 Child = new TextBlock { Text = $"{port.Name} {(collapsed ? "▸" : "▾")}", FontSize = 9 },
-                ToolTip = portEditing ? "點一下收合 Pin；拖曳到模塊四邊" : "雙擊收合 Pin；此 Port 不是導電接點" };
+                ToolTip = portEditing ? "點一下收合 Pin；拖曳到模塊四邊" : "雙擊收合 Pin；展開時新增接線請選確切 Pin" };
             Canvas.SetLeft(handle, center.X * 3 - 8); Canvas.SetTop(handle, center.Y * 3 - 18);
             handle.MouseLeftButtonDown += (_, e) =>
             {
@@ -609,7 +616,7 @@ public partial class SchematicWorkspaceControl : UserControl
             SchematicAnchorHit? hit;
             try
             {
-                hit = SchematicAnchorSnap.Find(_getProject().Schematic?.Symbols ?? [], _pageId ?? "",
+                hit = SchematicAnchorSnap.FindVisible(_getProject(), _pageId ?? "",
                     new(pointer.X / 3, pointer.Y / 3), 8 / (3 * Zoom.Value));
             }
             catch (InvalidOperationException) { Status.Text = "附近有多個等距接點，請放大並點選指定 Pin。"; e.Handled = true; return; }

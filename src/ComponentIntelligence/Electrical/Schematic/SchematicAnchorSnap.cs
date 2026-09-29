@@ -1,9 +1,24 @@
+using ComponentIntelligence.Electrical.Domain;
+
 namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed record SchematicAnchorHit(string SymbolId, string EndpointId, SchematicPoint Position);
 
 public static class SchematicAnchorSnap
 {
+    public static SchematicAnchorHit? FindVisible(ElectricalProject project, string pageId,
+        SchematicPoint pointer, double tolerance)
+    {
+        if (project.Schematic is not { } doc) return null;
+        var visible = doc.Symbols.Where(symbol => symbol.PageId == pageId).Select(symbol =>
+        {
+            var owner = SchematicSymbolOwner.Resolve(project, symbol);
+            return symbol with { Anchors = symbol.Anchors.Where(anchor =>
+                !SchematicPortPresentation.IsCollapsedPin(doc, symbol, owner, anchor)).ToList() };
+        });
+        return Find(visible, pageId, pointer, tolerance);
+    }
+
     public static SchematicAnchorHit? Find(IEnumerable<SchematicSymbol> symbols, string pageId,
         SchematicPoint pointer, double tolerance)
     {

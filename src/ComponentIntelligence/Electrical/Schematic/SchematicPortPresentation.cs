@@ -10,11 +10,10 @@ public static class SchematicPortPresentation
         var rotated = symbol.Rotation % 180 != 0;
         var original = new SchematicGridBounds(symbol.Position.X, symbol.Position.Y,
             rotated ? symbol.Height : symbol.Width, rotated ? symbol.Width : symbol.Height);
-        if (symbol.Geometry is not null || symbol.CollapsedPortIds.Count == 0) return original;
+        if (symbol.Geometry is not null || !owner.Ports.Any(port => IsRepresented(symbol, port) && IsPortCollapsed(symbol, port))) return original;
 
         var visible = symbol.Anchors.Where(a => !IsCollapsedPin(doc, symbol, owner, a)).ToArray();
-        var groups = owner.Ports.Where(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal) &&
-            symbol.Anchors.Any(a => p.Pins.Any(pin => pin.PinId == a.EndpointId))).ToArray();
+        var groups = owner.Ports.Where(p => IsRepresented(symbol, p) && IsPortCollapsed(symbol, p)).ToArray();
         var horizontal = new[] { "Top", "Bottom" }.Max(side =>
             groups.Count(p => PortSide(symbol, p) == side) * GroupPitch(groups.Where(p => PortSide(symbol, p) == side)) + 10);
         var vertical = new[] { "Left", "Right" }.Max(side =>
@@ -31,15 +30,16 @@ public static class SchematicPortPresentation
         return new(original.X + x, original.Y + y, width, height);
     }
 
-    public static (SchematicPoint Position, string Side) GroupContact(SchematicSymbol symbol,
-        SchematicSymbolOwner owner, ComponentPort port, SchematicGridBounds body)
+    public static (SchematicPoint Position, string Side) GroupContact(SchematicDocument doc,
+        SchematicSymbol symbol, SchematicSymbolOwner owner, ComponentPort port, SchematicGridBounds body)
     {
         var side = PortSide(symbol, port);
-        var sameSide = owner.Ports.Where(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal) &&
-            symbol.Anchors.Any(a => p.Pins.Any(pin => pin.PinId == a.EndpointId)) && PortSide(symbol, p) == side)
+        var sameSide = owner.Ports.Where(p => IsRepresented(symbol, p) && (IsPortCollapsed(symbol, p) ||
+            HasPortRoute(doc, symbol, p.PortId)) &&
+            PortSide(symbol, p) == side)
             .OrderBy(p => GroupCoordinate(symbol, p, side)).ThenBy(p => p.PortId, StringComparer.Ordinal).ToArray();
         var index = Array.FindIndex(sameSide, p => p.PortId == port.PortId);
-        if (index < 0) throw new InvalidOperationException("The port is not collapsed on this representation.");
+        if (index < 0) throw new InvalidOperationException("The selected port has no visible group contact.");
         var count = sameSide.Length;
         var fraction = (index + 1d) / (count + 1d);
         var position = side switch
@@ -51,6 +51,30 @@ public static class SchematicPortPresentation
         };
         return (position, side);
     }
+
+    public static SchematicPoint ConnectionPoint(ElectricalProject project, SchematicSymbol symbol, string portId)
+    {
+        var doc = project.Schematic ?? throw new InvalidOperationException("The schematic is missing.");
+        var owner = SchematicSymbolOwner.Resolve(project, symbol);
+        var port = owner.Ports.SingleOrDefault(p => p.PortId == portId)
+            ?? throw new InvalidOperationException("The Port endpoint is not part of this representation.");
+        if (!IsRepresented(symbol, port))
+            throw new InvalidOperationException("This representation does not contain the complete Port interface; connect an exact Pin instead.");
+        var body = GenericBodyBounds(doc, symbol, owner);
+        return GroupContact(doc, symbol, owner, port, body).Position;
+    }
+
+    public static bool HasPortRoute(SchematicDocument doc, SchematicSymbol symbol, string portId) =>
+        doc.Wires.Any(wire =>
+            wire.Start.Kind == SchematicAttachmentKind.Port && wire.Start.SymbolId == symbol.SymbolId && wire.Start.EndpointId == portId ||
+            wire.End.Kind == SchematicAttachmentKind.Port && wire.End.SymbolId == symbol.SymbolId && wire.End.EndpointId == portId);
+
+    public static bool IsPortCollapsed(SchematicSymbol symbol, ComponentPort port) =>
+        port.Pins.Count == 0 || symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal);
+
+    public static bool IsRepresented(SchematicSymbol symbol, ComponentPort port) =>
+        port.Pins.Count == 0 ? symbol.SectionIndex == 1 :
+            port.Pins.All(pin => symbol.Anchors.Any(anchor => anchor.EndpointId == pin.PinId));
 
     private static double GroupPitch(IEnumerable<ComponentPort> ports) =>
         Math.Max(16, ports.Select(p => p.Name.Length * 1.9 + 6).DefaultIfEmpty(0).Max());
@@ -72,14 +96,15 @@ public static class SchematicPortPresentation
     private static string PortSide(SchematicSymbol symbol, ComponentPort port)
     {
         var pinIds = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
-        var direction = symbol.Anchors.FirstOrDefault(a => pinIds.Contains(a.EndpointId))?.Direction ?? "Right";
+        var direction = symbol.Anchors.FirstOrDefault(a => pinIds.Contains(a.EndpointId))?.Direction ??
+            (port.PhysicalLocation?.Side is "Left" or "Right" or "Top" or "Bottom" ? port.PhysicalLocation.Side : "Right");
         for (var i = 0; i < symbol.Rotation; i += 90) direction = direction switch
         { "Left" => "Top", "Top" => "Right", "Right" => "Bottom", _ => "Left" };
         return direction;
     }
     public static bool IsCollapsedPin(SchematicDocument doc, SchematicSymbol symbol,
         SchematicSymbolOwner owner, SchematicAnchor anchor) =>
-        owner.Ports.Any(port => symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal) &&
+        owner.Ports.Any(port => IsRepresented(symbol, port) && symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal) &&
             port.Pins.Any(pin => pin.PinId == anchor.EndpointId)) &&
         !doc.Wires.Any(wire =>
             wire.Start.SymbolId == symbol.SymbolId && wire.Start.EndpointId == anchor.EndpointId ||

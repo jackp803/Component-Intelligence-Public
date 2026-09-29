@@ -443,6 +443,7 @@ public sealed partial class SchematicAuthoringService
             if (wire.Start.SymbolId == symbolId) points = ReanchorSymbol(points, draft, next, wire.Start, true);
             if (wire.End.SymbolId == symbolId) points = ReanchorSymbol(points, draft, next, wire.End, false);
             if (CanReroutePortWire(doc, wire)) points = ReroutePortWire(draft, doc, wire);
+            else if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire);
             doc.Wires[i] = wire with { Points = points };
             ReanchorDependentJunctions(doc, wire.WireId);
         }
@@ -472,6 +473,80 @@ public sealed partial class SchematicAuthoringService
         (wire.Start.Kind == SchematicAttachmentKind.Port && wire.End.Kind is SchematicAttachmentKind.Port or SchematicAttachmentKind.Free ||
          wire.End.Kind == SchematicAttachmentKind.Port && wire.Start.Kind == SchematicAttachmentKind.Free) &&
         !doc.Wires.Any(child => child.Start.WireId == wire.WireId || child.End.WireId == wire.WireId);
+
+    private static bool CanRerouteSimpleWire(SchematicDocument doc, SchematicWire wire) =>
+        !wire.ManualRoute && !wire.Locked &&
+        wire.Start.Kind is SchematicAttachmentKind.Pin or SchematicAttachmentKind.Port or SchematicAttachmentKind.Free &&
+        wire.End.Kind is SchematicAttachmentKind.Pin or SchematicAttachmentKind.Port or SchematicAttachmentKind.Free &&
+        (wire.Start.SymbolId is not null || wire.End.SymbolId is not null) &&
+        !doc.Wires.Any(child => child.Start.WireId == wire.WireId || child.End.WireId == wire.WireId);
+
+    private static List<SchematicPoint> RerouteSimpleWire(ElectricalProject project, SchematicDocument doc, SchematicWire wire)
+    {
+        (SchematicPoint Point, string? Side, double Clearance) Endpoint(SchematicAttachment attachment, SchematicPoint fallback)
+        {
+            if (attachment.SymbolId is null) return (fallback, null, 0);
+            var symbol = doc.Symbols.Single(s => s.SymbolId == attachment.SymbolId);
+            if (attachment.Kind == SchematicAttachmentKind.Pin)
+            {
+                var anchor = symbol.Anchors.Single(a => a.EndpointId == attachment.EndpointId);
+                var clearance = SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor) &&
+                    !string.IsNullOrWhiteSpace(anchor.Label)
+                    ? Math.Clamp(anchor.Label.Length * 1.55 + 6, 5, 60) : 5;
+                return (AnchorPoint(symbol, anchor.EndpointId),
+                    SchematicPortPresentation.RotatedSide(anchor.Direction, symbol.Rotation), clearance);
+            }
+            var owner = SchematicSymbolOwner.Resolve(project, symbol);
+            var port = owner.Ports.Single(p => p.PortId == attachment.EndpointId);
+            var contact = SchematicPortPresentation.GroupContact(doc, symbol, owner, port,
+                SchematicPortPresentation.GenericBodyBounds(doc, symbol, owner));
+            return (contact.Position, contact.Side, 8);
+        }
+        static SchematicPoint Lead(SchematicPoint point, string? side, double clearance) => side switch
+        {
+            "Left" => point with { X = point.X - clearance }, "Right" => point with { X = point.X + clearance },
+            "Top" => point with { Y = point.Y - clearance }, "Bottom" => point with { Y = point.Y + clearance },
+            _ => point
+        };
+        var start = Endpoint(wire.Start, wire.Points[0]);
+        var end = Endpoint(wire.End, wire.Points[^1]);
+        var a = Lead(start.Point, start.Side, start.Clearance);
+        var b = Lead(end.Point, end.Side, end.Clearance);
+        List<SchematicPoint[]> candidates =
+        [
+            [new(b.X, a.Y)],
+            [new(a.X, b.Y)]
+        ];
+        foreach (var lane in new[] { Math.Min(a.Y, b.Y) - 8, Math.Max(a.Y, b.Y) + 8 })
+            candidates.Add([new(a.X, lane), new(b.X, lane)]);
+        foreach (var lane in new[] { Math.Min(a.X, b.X) - 8, Math.Max(a.X, b.X) + 8 })
+            candidates.Add([new(lane, a.Y), new(lane, b.Y)]);
+        foreach (var corners in candidates)
+        {
+            var route = Simplify(new[] { start.Point, a }.Concat(corners).Concat([b, end.Point]));
+            if (RouteRetraces(route)) continue;
+            if (a != start.Point && route[1] != a) route.Insert(1, a);
+            if (b != end.Point && route[^2] != b) route.Insert(route.Count - 1, b);
+            return route;
+        }
+        throw new InvalidOperationException("The contacts need more room for a non-overlapping route.");
+    }
+
+    private static bool RouteRetraces(IReadOnlyList<SchematicPoint> route)
+    {
+        for (var i = 0; i < route.Count - 1; i++)
+        for (var j = i + 1; j < route.Count - 1; j++)
+        {
+            var a = route[i]; var b = route[i + 1];
+            var c = route[j]; var d = route[j + 1];
+            if (a.Y == b.Y && c.Y == d.Y && a.Y == c.Y &&
+                Math.Min(Math.Max(a.X, b.X), Math.Max(c.X, d.X)) > Math.Max(Math.Min(a.X, b.X), Math.Min(c.X, d.X)) ||
+                a.X == b.X && c.X == d.X && a.X == c.X &&
+                Math.Min(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y)) > Math.Max(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y)))
+                return true;
+        }
+        return false;
+    }
 
     private static List<SchematicPoint> ReroutePortWire(ElectricalProject project, SchematicDocument doc, SchematicWire wire)
     {

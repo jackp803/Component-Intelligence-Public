@@ -184,7 +184,7 @@ public sealed class SchematicDxfExporter
             }
             else
             {
-                var compacted = owner.Ports.Any(port => SchematicPortPresentation.IsRepresented(symbol, port) &&
+                var compacted = symbol.ManualSize || owner.Ports.Any(port => SchematicPortPresentation.IsRepresented(symbol, port) &&
                     SchematicPortPresentation.IsPortCollapsed(symbol, port));
                 if (compacted)
                 {

@@ -73,6 +73,7 @@ public sealed record SchematicSymbol
     public SchematicPoint Position { get; init; } = new(20, 20);
     public double Width { get; init; } = 40;
     public double Height { get; init; } = 30;
+    public bool ManualSize { get; init; }
     public int Rotation { get; init; }
     public bool Locked { get; init; }
     public string? AssetPath { get; init; }

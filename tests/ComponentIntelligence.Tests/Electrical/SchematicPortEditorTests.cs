@@ -290,6 +290,188 @@ public sealed class SchematicPortEditorTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(90)]
+    public void ResizingGenericModulePersistsFrameAndReanchorsExactPin(int rotation)
+    {
+        var project = Project();
+        var symbol = project.Schematic!.Symbols.Single() with { Rotation = rotation, CollapsedPortIds = [] };
+        project.Schematic.Symbols[0] = symbol;
+        var first = symbol.Anchors[0];
+        var start = SchematicAuthoringService.AnchorPoint(symbol, first.EndpointId);
+        project = _service.DrawWire(project, symbol.PageId,
+            SchematicAttachment.Pin(symbol.SymbolId, first.EndpointId), SchematicAttachment.Free(),
+            [start, new(start.X + 20, start.Y)]);
+        var wireId = project.Schematic!.Wires.Single().WireId;
+
+        var resized = _service.ResizeGenericSymbol(project, symbol.SymbolId, 110, 85);
+        var changed = resized.Schematic!.Symbols.Single();
+        var body = SchematicPortPresentation.GenericBodyBounds(resized.Schematic, changed,
+            SchematicSymbolOwner.Resolve(resized, changed));
+        var contact = SchematicAuthoringService.AnchorPoint(changed, first.EndpointId);
+
+        Assert.True(changed.ManualSize);
+        Assert.Equal(110, body.Width);
+        Assert.Equal(85, body.Height);
+        Assert.Equal(wireId, resized.Schematic.Wires.Single().WireId);
+        Assert.Equal(contact, resized.Schematic.Wires.Single().Points[0]);
+        Assert.Equal(rotation == 0 ? body.X + body.Width : body.Y + body.Height,
+            rotation == 0 ? contact.X : contact.Y, 6);
+        var reloaded = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(resized))!;
+        Assert.True(reloaded.Schematic!.Symbols.Single().ManualSize);
+        Assert.Equal(body, SchematicPortPresentation.GenericBodyBounds(reloaded.Schematic,
+            reloaded.Schematic.Symbols.Single(), SchematicSymbolOwner.Resolve(reloaded, reloaded.Schematic.Symbols.Single())));
+        SchematicAuthoringService.Validate(reloaded);
+    }
+
+    [Fact]
+    public void MovingOnePinRejectsAnOverlappingContactWithoutChangingItsWire()
+    {
+        var project = Project();
+        var symbol = project.Schematic!.Symbols.Single();
+        project = _service.ResizeGenericSymbol(project, symbol.SymbolId, 100, 80);
+        symbol = project.Schematic!.Symbols.Single();
+        var start = SchematicAuthoringService.AnchorPoint(symbol, "A");
+        project = _service.DrawWire(project, symbol.PageId,
+            SchematicAttachment.Pin(symbol.SymbolId, "A"), SchematicAttachment.Free(),
+            [start, new(start.X + 20, start.Y)]);
+        var moved = _service.MovePinToEdge(project, symbol.SymbolId, "A", "Top", 20);
+        Assert.Equal("A", moved.Schematic!.Wires.Single().Start.EndpointId);
+        Assert.Equal(SchematicAuthoringService.AnchorPoint(moved.Schematic.Symbols.Single(), "A"),
+            moved.Schematic.Wires.Single().Points[0]);
+        Assert.Throws<InvalidOperationException>(() =>
+            _service.MovePinToEdge(moved, symbol.SymbolId, "B", "Top", 20));
+        SchematicAuthoringService.Validate(moved);
+    }
+
+    [Fact]
+    public void MovingGenericModuleTwiceDropsStaleAutomaticBends()
+    {
+        var project = Project();
+        var symbol = project.Schematic!.Symbols.Single();
+        var start = SchematicAuthoringService.AnchorPoint(symbol, "A");
+        project = _service.DrawWire(project, symbol.PageId,
+            SchematicAttachment.Pin(symbol.SymbolId, "A"), SchematicAttachment.Free(),
+            [start, new(200, start.Y), new(200, 100), new(130, 100)]);
+        var wireId = project.Schematic!.Wires.Single().WireId;
+
+        project = _service.TransformSymbol(project, symbol.SymbolId, new(60, 70), 0);
+        project = _service.TransformSymbol(project, symbol.SymbolId, new(75, 85), 0);
+        var wire = Assert.Single(project.Schematic!.Wires);
+
+        Assert.Equal(wireId, wire.WireId);
+        Assert.Equal(SchematicAuthoringService.AnchorPoint(project.Schematic.Symbols.Single(), "A"), wire.Points[0]);
+        Assert.Equal(new SchematicPoint(130, 100), wire.Points[^1]);
+        Assert.DoesNotContain(wire.Points, point => point.X == 200);
+        Assert.False(wire.ManualRoute);
+        SchematicAuthoringService.Validate(project);
+    }
+
+    [Fact]
+    public void SameFacingPinsDoNotRetraceTheirOwnRouteAfterMoving()
+    {
+        var project = Project();
+        var first = project.Schematic!.Symbols.Single();
+        var component = new ComponentInstance { ComponentInstanceId = "C2", ComponentDefinitionId = "module",
+            TypeKey = "MODULE", Ports = [new ComponentPort { PortId = "P2", Name = "Power",
+                Pins = [new ComponentPin { PinId = "A2", PinNumber = "1" },
+                    new ComponentPin { PinId = "B2", PinNumber = "2" }] }] };
+        project.Components.Add(component);
+        var second = SchematicAuthoringService.CreateSymbol(component, first.PageId, new(110, 40))
+            with { SymbolId = "second", CollapsedPortIds = [] };
+        project.Schematic.Symbols.Add(second);
+        var start = SchematicAuthoringService.AnchorPoint(first, "A");
+        var end = SchematicAuthoringService.AnchorPoint(second, "A2");
+        project = _service.DrawWire(project, first.PageId,
+            SchematicAttachment.Pin(first.SymbolId, "A"), SchematicAttachment.Pin(second.SymbolId, "A2"),
+            [start, end]);
+
+        project = _service.TransformSymbol(project, second.SymbolId, new(125, 50), 0);
+        var wire = Assert.Single(project.Schematic!.Wires);
+        Assert.Equal(SchematicAuthoringService.AnchorPoint(project.Schematic.Symbols.Single(s => s.SymbolId == "second"), "A2"),
+            wire.Points[^1]);
+        for (var i = 0; i < wire.Points.Count - 1; i++)
+        for (var j = i + 1; j < wire.Points.Count - 1; j++)
+        {
+            var a = wire.Points[i]; var b = wire.Points[i + 1];
+            var c = wire.Points[j]; var d = wire.Points[j + 1];
+            var overlap = a.Y == b.Y && c.Y == d.Y && a.Y == c.Y &&
+                Math.Min(Math.Max(a.X, b.X), Math.Max(c.X, d.X)) > Math.Max(Math.Min(a.X, b.X), Math.Min(c.X, d.X)) ||
+                a.X == b.X && c.X == d.X && a.X == c.X &&
+                Math.Min(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y)) > Math.Max(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y));
+            Assert.False(overlap);
+        }
+    }
+
+    [Fact]
+    public void ManualFrameRejectsMovingPortOntoAnotherPort()
+    {
+        var project = Project();
+        var component = project.Components.Single();
+        component.Ports.Add(new ComponentPort { PortId = "Q", Name = "Q",
+            Pins = [new ComponentPin { PinId = "Q1", PinNumber = "1" }] });
+        var symbol = SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40));
+        project.Schematic!.Symbols[0] = symbol;
+        project = _service.ResizeGenericSymbol(project, symbol.SymbolId, 100, 90);
+        symbol = project.Schematic!.Symbols.Single();
+        var first = SchematicPortPresentation.ConnectionPoint(project, symbol, "P");
+
+        Assert.Throws<InvalidOperationException>(() => _service.MovePortToEdge(project,
+            symbol.SymbolId, "Q", "Right", first.Y - symbol.Position.Y));
+        Assert.Equal(first, SchematicPortPresentation.ConnectionPoint(project, symbol, "P"));
+        SchematicAuthoringService.Validate(project);
+    }
+
+    [Fact]
+    public void ResizingKeepsManualBendsAndRejectsLockedAttachedWire()
+    {
+        var project = Project();
+        var symbol = project.Schematic!.Symbols.Single() with { CollapsedPortIds = ["P"] };
+        project.Schematic.Symbols[0] = symbol;
+        var start = SchematicPortPresentation.ConnectionPoint(project, symbol, "P");
+        var middle = new SchematicPoint(start.X + 24, start.Y + 20);
+        project = _service.DrawWire(project, symbol.PageId,
+            SchematicAttachment.Port(symbol.SymbolId, "P"), SchematicAttachment.Free(),
+            [start, new(middle.X, start.Y), middle, new(middle.X + 20, middle.Y)]);
+        var wireId = project.Schematic!.Wires.Single().WireId;
+        project = _service.ReplaceRoute(project, wireId, project.Schematic.Wires.Single().Points);
+        var locked = _service.SetLocked(project, wireId, true);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            _service.ResizeGenericSymbol(locked, symbol.SymbolId, 100, 80));
+        var resized = _service.ResizeGenericSymbol(project, symbol.SymbolId, 100, 80);
+        var wire = Assert.Single(resized.Schematic!.Wires);
+
+        Assert.True(wire.ManualRoute);
+        Assert.Contains(middle, wire.Points);
+        Assert.Equal(wireId, wire.WireId);
+        Assert.Equal(SchematicPortPresentation.ConnectionPoint(resized, resized.Schematic.Symbols.Single(), "P"),
+            wire.Points[0]);
+        SchematicAuthoringService.Validate(resized);
+    }
+
+    [Fact]
+    public void ResizingCollapsedManyPinPortKeepsPinsSpreadWhenExpanded()
+    {
+        var project = Project();
+        var component = project.Components.Single();
+        component.Ports[0].Pins.Clear();
+        component.Ports[0].Pins.AddRange(Enumerable.Range(1, 20).Select(i =>
+            new ComponentPin { PinId = $"PIN-{i}", PinNumber = i.ToString() }));
+        var symbol = SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40));
+        project.Schematic!.Symbols[0] = symbol;
+
+        project = _service.ResizeGenericSymbol(project, symbol.SymbolId, 100, 160);
+        project = _service.TogglePortCollapsed(project, symbol.SymbolId, "P");
+        symbol = project.Schematic!.Symbols.Single();
+        var points = symbol.Anchors.Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
+
+        Assert.Equal(20, points.Distinct().Count());
+        Assert.All(points, point => Assert.Equal(symbol.Position.X + symbol.Width, point.X, 6));
+        SchematicAuthoringService.Validate(project);
+    }
+
+    [Theory]
     [InlineData(0, "Top")]
     [InlineData(90, "Left")]
     public void CollapsedBodyEdgeDragMapsBackToOriginalLocalEdge(int rotation, string expectedSide)

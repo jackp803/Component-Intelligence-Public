@@ -22,13 +22,14 @@ public sealed class SchematicContinuationNavigationTests
         Assert.Equal(1, first.DestinationPageIndex);
         Assert.Equal(pair.Destination.Position, first.Destination);
         Assert.True(first.LinkWidth >= 28);
-        Assert.Contains("第 2 頁", service.ReferenceFor(project.Schematic, pair.Source.MarkerId));
-        Assert.Contains(targetPage.GridCell(pair.Destination.Position), service.ReferenceFor(project.Schematic, pair.Source.MarkerId));
+        Assert.Equal("2.2-B", service.ReferenceCodeFor(project.Schematic, pair.Source.MarkerId));
+        Assert.Contains("2.2-B", service.ReferenceFor(project.Schematic, pair.Source.MarkerId));
 
         project = service.ReorderPages(project, [targetPage.PageId, sourcePage.PageId]);
         var reverse = SchematicContinuationNavigation.Links(project.Schematic!, targetPage.PageId).Single();
         Assert.Equal(1, reverse.DestinationPageIndex);
         Assert.Equal(pair.Source.Position, reverse.Destination);
         Assert.Equal("24V", reverse.Signal);
+        Assert.Equal("1.2-B", service.ReferenceCodeFor(project.Schematic!, pair.Source.MarkerId));
     }
 }

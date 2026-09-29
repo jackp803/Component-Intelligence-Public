@@ -88,6 +88,27 @@ public sealed class SchematicPortEditorTests
         Assert.NotEqual(new SchematicPoint(20, 30), label.Position);
     }
 
+    [Fact]
+    public void PortWithoutPinDetailsCanBeMovedAndReloadedWithoutInventingPins()
+    {
+        var project = Project();
+        var component = project.Components.Single();
+        component.Ports[0].Pins.Clear();
+        var symbol = SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40));
+        project.Schematic!.Symbols[0] = symbol;
+        var before = SchematicPortPresentation.ConnectionPoint(project, symbol, "P");
+        project = _service.MovePortToEdge(project, symbol.SymbolId, "P", "Top", 15);
+        symbol = project.Schematic!.Symbols.Single();
+        var after = SchematicPortPresentation.ConnectionPoint(project, symbol, "P");
+        Assert.NotEqual(before, after);
+        Assert.Equal("Top", Assert.Single(symbol.PortPlacements).Side);
+        Assert.Empty(symbol.Anchors);
+        Assert.Empty(component.Ports[0].Pins);
+        var reloaded = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(project))!;
+        Assert.Equal(after, SchematicPortPresentation.ConnectionPoint(reloaded, reloaded.Schematic!.Symbols.Single(), "P"));
+        SchematicAuthoringService.Validate(reloaded);
+    }
+
     [Theory]
     [InlineData("Top", 0, 25)]
     [InlineData("Bottom", 30, 25)]

@@ -56,27 +56,41 @@ public sealed partial class SchematicAuthoringService
             ?? throw new InvalidOperationException("Unknown port.");
         var pins = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
         var anchors = symbol.Anchors.Where(a => pins.Contains(a.EndpointId)).ToArray();
-        if (anchors.Length == 0) throw new InvalidOperationException("This representation has no pins for the selected port.");
-        const double margin = 3;
-        const double pitch = 5;
-        var span = (anchors.Length - 1) * pitch;
-        var extent = side is "Left" or "Right" ? symbol.Height : symbol.Width;
-        if (symbol.Geometry is null) extent = Math.Max(extent, span + 2 * margin);
-        else if (span > extent - 2 * margin)
-            throw new InvalidOperationException("This edge is too short for all pins in the port.");
-        var first = Math.Clamp(coordinate - span / 2, margin, extent - margin - span);
-        var positions = anchors.Select((anchor, i) => (anchor.EndpointId, Position: side switch
+        if (anchors.Length == 0 && port.Pins.Count > 0)
+            throw new InvalidOperationException("This representation does not contain the selected port pins.");
+        SchematicSymbol next;
+        if (anchors.Length == 0)
         {
-            "Left" => new SchematicPoint(0, first + i * pitch),
-            "Right" => new SchematicPoint(symbol.Width, first + i * pitch),
-            "Top" => new SchematicPoint(first + i * pitch, 0),
-            _ => new SchematicPoint(first + i * pitch, symbol.Height)
-        })).ToDictionary(x => x.EndpointId, x => x.Position, StringComparer.Ordinal);
-        var next = symbol with { Anchors = symbol.Anchors.Select(a => positions.TryGetValue(a.EndpointId, out var point)
-            ? a with { Position = point, Direction = side, Confirmed = false, CadContactId = null } : a).ToList(),
-            AssetRevision = null };
-        if (symbol.Geometry is null)
-            next = FitGenericPortEdges(next, owner.Ports, symbol.Width, symbol.Height);
+            var extent = side is "Left" or "Right" ? symbol.Height : symbol.Width;
+            if (extent < 6) throw new InvalidOperationException("This module edge is too short for a Port contact.");
+            var placement = new SchematicPortPlacement { PortId = portId, Side = side,
+                Coordinate = Math.Clamp(coordinate, 3, extent - 3) };
+            next = symbol with { PortPlacements = symbol.PortPlacements.Where(p => p.PortId != portId)
+                .Append(placement).ToList(), AssetRevision = null };
+        }
+        else
+        {
+            const double margin = 3;
+            const double pitch = 5;
+            var span = (anchors.Length - 1) * pitch;
+            var extent = side is "Left" or "Right" ? symbol.Height : symbol.Width;
+            if (symbol.Geometry is null) extent = Math.Max(extent, span + 2 * margin);
+            else if (span > extent - 2 * margin)
+                throw new InvalidOperationException("This edge is too short for all pins in the port.");
+            var first = Math.Clamp(coordinate - span / 2, margin, extent - margin - span);
+            var positions = anchors.Select((anchor, i) => (anchor.EndpointId, Position: side switch
+            {
+                "Left" => new SchematicPoint(0, first + i * pitch),
+                "Right" => new SchematicPoint(symbol.Width, first + i * pitch),
+                "Top" => new SchematicPoint(first + i * pitch, 0),
+                _ => new SchematicPoint(first + i * pitch, symbol.Height)
+            })).ToDictionary(x => x.EndpointId, x => x.Position, StringComparer.Ordinal);
+            next = symbol with { Anchors = symbol.Anchors.Select(a => positions.TryGetValue(a.EndpointId, out var point)
+                ? a with { Position = point, Direction = side, Confirmed = false, CadContactId = null } : a).ToList(),
+                AssetRevision = null };
+            if (symbol.Geometry is null)
+                next = FitGenericPortEdges(next, owner.Ports, symbol.Width, symbol.Height);
+        }
         foreach (var wire in doc.Wires.Where(w => w.Locked))
             if (new[] { wire.Start, wire.End }.Where(a => a.SymbolId == symbolId)
                 .Any(a => SymbolAttachmentPoint(draft, symbol, a) != SymbolAttachmentPoint(draft, next, a)))

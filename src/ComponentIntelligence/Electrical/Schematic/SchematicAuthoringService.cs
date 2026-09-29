@@ -673,10 +673,16 @@ public sealed partial class SchematicAuthoringService
     public string ReferenceFor(SchematicDocument doc, string markerId)
     {
         var pair = doc.Continuations.Single(c => c.Source.MarkerId == markerId || c.Destination.MarkerId == markerId);
+        return $"{pair.Signal}  → {ReferenceCodeFor(doc, markerId)}";
+    }
+
+    public string ReferenceCodeFor(SchematicDocument doc, string markerId)
+    {
+        var pair = doc.Continuations.Single(c => c.Source.MarkerId == markerId || c.Destination.MarkerId == markerId);
         var remote = pair.Source.MarkerId == markerId ? pair.Destination : pair.Source;
         var pageIndex = doc.Pages.FindIndex(p => p.PageId == remote.PageId);
-        var page = doc.Pages[pageIndex];
-        return $"{pair.Signal}  → 第 {pageIndex + 1} 頁 / {page.GridCell(remote.Position)}";
+        if (pageIndex < 0) throw new InvalidOperationException("The paired continuation page is missing.");
+        return $"{pageIndex + 1}.{doc.Pages[pageIndex].CrossReferenceCell(remote.Position)}";
     }
 
     public string ReferenceFor(ElectricalProject project, string markerId)

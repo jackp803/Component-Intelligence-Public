@@ -31,6 +31,7 @@ public sealed class SchematicGridBoundsTests
         var loaded = JsonSerializer.Deserialize<SchematicPage>(JsonSerializer.Serialize(page))!;
         Assert.Equal(page.CoordinateGrid, loaded.CoordinateGrid);
         Assert.Equal("B2", loaded.GridCell(new(61, 71)));
+        Assert.Equal("2-B", loaded.CrossReferenceCell(new(61, 71)));
         Assert.Equal("E8", loaded.GridCell(new(340, 230)));
     }
 

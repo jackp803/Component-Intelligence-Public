@@ -34,6 +34,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private bool _dragActivated;
     private string? _dragSymbol;
     private string? _dragPortSymbol, _dragPortId;
+    private bool _dragPortHasPins;
     private int? _dragVertex;
     private int? _dragSegment;
     private string? _dragMarker;
@@ -289,8 +290,9 @@ public partial class SchematicWorkspaceControl : UserControl
                 menu.Items.Add(remove); arrow.ContextMenu = menu;
             }
             Sheet.Children.Add(arrow);
-            var caption = new TextBlock { Text = _service.ReferenceFor(project, marker.MarkerId), FontSize = 10,
-                Foreground = Brushes.Black, Cursor = Cursors.Hand, ToolTip = "雙擊前往對端" };
+            var caption = new TextBlock { Text = _service.ReferenceCodeFor(doc, marker.MarkerId), FontSize = 10,
+                Foreground = Brushes.Black, Cursor = Cursors.Hand,
+                ToolTip = _service.ReferenceFor(project, marker.MarkerId) + "\n雙擊前往對端" };
             Canvas.SetLeft(caption, (point.X + 2) * 3); Canvas.SetTop(caption, (point.Y - 5) * 3);
             if (!_renderingOutput) caption.MouseLeftButtonDown += (_, e) =>
             {
@@ -448,7 +450,9 @@ public partial class SchematicWorkspaceControl : UserControl
                 var contact = SchematicPortPresentation.GroupContact(project.Schematic!, symbol, owner, port, compact);
                 center = contact.Position;
                 var point = Marker(center, Brushes.White, Brushes.Black, 9);
-                point.ToolTip = points.Length == 0 ? $"{port.Name}: 可接線到 Port；尚無 Pin 明細，不能展開"
+                point.ToolTip = points.Length == 0 ? portEditing
+                    ? $"{port.Name}: 拖曳移動 Port；尚無 Pin 明細，不能展開"
+                    : $"{port.Name}: 可接線到 Port；尚無 Pin 明細，不能展開"
                     : portEditing ? $"{port.Name}: 點一下展開／收合 Pin；拖曳移動 Port"
                     : collapsed ? $"{port.Name}: 可接線到整個 Port；雙擊展開可改選確切 Pin。Port 接線不代表內部 Pin 互通。"
                     : $"{port.Name}: 既有 Port 接線；新增接線請選確切 Pin。";
@@ -461,13 +465,14 @@ public partial class SchematicWorkspaceControl : UserControl
                         if (collapsed) WireAt(SchematicAttachment.Port(symbol.SymbolId, port.PortId), center, false);
                         else Status.Text = "此 Port 已展開；新增接線請選確切 Pin。";
                     }
-                    else if (points.Length == 0)
+                    else if (points.Length == 0 && !portEditing)
                         Status.Text = "此 Port 尚無 Pin 明細；可維持 Port 接線，不能展開成 Pin。";
                     else if (!portEditing && e.ClickCount >= 2)
                         Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已展開 Port Pin");
                     else if (portEditing && !symbol.Locked)
                     {
                         BeginGesture(e); _dragPortSymbol = symbol.SymbolId; _dragPortId = port.PortId;
+                        _dragPortHasPins = points.Length > 0;
                     }
                     else UpdateSelection(project);
                     e.Handled = true;
@@ -699,7 +704,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void Sheet_Up(object sender, MouseButtonEventArgs e)
     {
         if (_gestureStart is null) return;
-        var togglePort = _editModuleMode && !_dragActivated && _dragPortSymbol is not null && _dragPortId is not null
+        var togglePort = _editModuleMode && !_dragActivated && _dragPortHasPins && _dragPortSymbol is not null && _dragPortId is not null
             ? (_dragPortSymbol, _dragPortId) : ((string?, string?)?)null;
         if (_gesturePreview is not null && _pointer != _dragStart) _commit(_gesturePreview, "調整圖面位置／路徑");
         CancelGesture();
@@ -713,7 +718,7 @@ public partial class SchematicWorkspaceControl : UserControl
         Keyboard.Focus(Sheet);
     }
     private void CancelGesture()
-    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragPortSymbol = null; _dragPortId = null; _dragVertex = null; _dragSegment = null; _dragMarker = null; Sheet.ReleaseMouseCapture(); }
+    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragPortSymbol = null; _dragPortId = null; _dragPortHasPins = false; _dragVertex = null; _dragSegment = null; _dragMarker = null; Sheet.ReleaseMouseCapture(); }
     private void CancelCommand()
     {
         CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;

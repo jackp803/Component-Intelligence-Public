@@ -116,8 +116,8 @@ public sealed class SchematicAuthoringTests
         var pair = p.Schematic!.Continuations.Single();
         var old = _service.ReferenceFor(p.Schematic, pair.Source.MarkerId);
         var reordered = _service.ReorderPages(p, pages.Reverse().ToArray());
-        Assert.Contains("第 2 頁 /", old);
-        Assert.Contains("第 1 頁 /", _service.ReferenceFor(reordered.Schematic!, pair.Source.MarkerId));
+        Assert.Contains("2.", old);
+        Assert.Contains("1.", _service.ReferenceFor(reordered.Schematic!, pair.Source.MarkerId));
         Assert.Equal(pair, reordered.Schematic!.Continuations.Single());
         Assert.Empty(reordered.Connections);
         Assert.Equal(pages, p.Schematic.Pages.Select(x => x.PageId));

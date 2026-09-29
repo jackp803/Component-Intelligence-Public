@@ -133,7 +133,7 @@ public sealed class SchematicDxfExporterTests
             p = service.DrawWire(p, page.PageId, SchematicAttachment.Free(), SchematicAttachment.Free(), [new(20, 40), new(80, 40)]);
         p = service.ConnectAcrossPages(p, p.Schematic!.Wires[0].WireId, false, p.Schematic.Wires[1].WireId, true, "Signal");
         var marker = p.Schematic!.Continuations[0].Source;
-        var expected = service.ReferenceFor(p, marker.MarkerId);
+        var expected = service.ReferenceCodeFor(p.Schematic!, marker.MarkerId);
         var sheets = new SchematicDxfExporter().Create(p);
         using var stream = new MemoryStream(sheets[0].Dxf);
         var dxf = DxfDocument.Load(stream);

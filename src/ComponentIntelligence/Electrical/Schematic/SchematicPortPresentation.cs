@@ -46,7 +46,8 @@ public static class SchematicPortPresentation
         var originalExtent = side is "Top" or "Bottom"
             ? rotated ? symbol.Height : symbol.Width
             : rotated ? symbol.Width : symbol.Height;
-        var fraction = port.Pins.Count == 0 || originalExtent <= 0
+        var hasPosition = port.Pins.Count > 0 || symbol.PortPlacements.Any(p => p.PortId == port.PortId);
+        var fraction = !hasPosition || originalExtent <= 0
             ? (index + 1d) / (sameSide.Length + 1d)
             : Math.Clamp((coordinate - originalStart) / originalExtent, 0.025, 0.975);
         var position = side switch
@@ -96,6 +97,25 @@ public static class SchematicPortPresentation
 
     private static double GroupCoordinate(SchematicSymbol symbol, ComponentPort port, string side)
     {
+        var placement = symbol.PortPlacements.FirstOrDefault(p => p.PortId == port.PortId);
+        if (placement is not null)
+        {
+            var local = placement.Side switch
+            {
+                "Left" => new SchematicPoint(0, placement.Coordinate),
+                "Right" => new SchematicPoint(symbol.Width, placement.Coordinate),
+                "Top" => new SchematicPoint(placement.Coordinate, 0),
+                _ => new SchematicPoint(placement.Coordinate, symbol.Height)
+            };
+            var rotated = symbol.Rotation switch
+            {
+                90 => new SchematicPoint(symbol.Height - local.Y, local.X),
+                180 => new SchematicPoint(symbol.Width - local.X, symbol.Height - local.Y),
+                270 => new SchematicPoint(local.Y, symbol.Width - local.X),
+                _ => local
+            };
+            return side is "Top" or "Bottom" ? symbol.Position.X + rotated.X : symbol.Position.Y + rotated.Y;
+        }
         var ids = port.Pins.Select(pin => pin.PinId).ToHashSet(StringComparer.Ordinal);
         var points = symbol.Anchors.Where(a => ids.Contains(a.EndpointId))
             .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
@@ -111,7 +131,8 @@ public static class SchematicPortPresentation
     private static string PortSide(SchematicSymbol symbol, ComponentPort port)
     {
         var pinIds = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
-        var direction = symbol.Anchors.FirstOrDefault(a => pinIds.Contains(a.EndpointId))?.Direction ??
+        var direction = symbol.PortPlacements.FirstOrDefault(p => p.PortId == port.PortId)?.Side ??
+            symbol.Anchors.FirstOrDefault(a => pinIds.Contains(a.EndpointId))?.Direction ??
             (port.PhysicalLocation?.Side is "Left" or "Right" or "Top" or "Bottom" ? port.PhysicalLocation.Side : "Right");
         for (var i = 0; i < symbol.Rotation; i += 90) direction = direction switch
         { "Left" => "Top", "Top" => "Right", "Right" => "Bottom", _ => "Left" };

@@ -10,10 +10,10 @@ public static class SchematicContinuationNavigation
 {
     public static IReadOnlyList<SchematicContinuationLink> Links(ElectricalProject project, string pageId) =>
         Links(project.Schematic ?? throw new InvalidOperationException("No schematic document."), pageId,
-            markerId => new SchematicAuthoringService().ReferenceFor(project, markerId));
+            markerId => new SchematicAuthoringService().ReferenceCodeFor(project.Schematic!, markerId));
 
     public static IReadOnlyList<SchematicContinuationLink> Links(SchematicDocument document, string pageId)
-        => Links(document, pageId, markerId => new SchematicAuthoringService().ReferenceFor(document, markerId));
+        => Links(document, pageId, markerId => new SchematicAuthoringService().ReferenceCodeFor(document, markerId));
 
     private static IReadOnlyList<SchematicContinuationLink> Links(SchematicDocument document, string pageId,
         Func<string, string> caption)

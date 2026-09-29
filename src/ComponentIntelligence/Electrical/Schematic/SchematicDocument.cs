@@ -33,14 +33,24 @@ public sealed record SchematicPage
     }
     public string GridCell(SchematicPoint point)
     {
+        var address = GridAddress(point);
+        return address is { } cell ? $"{cell.Row}{cell.Column}" : "格位待校準";
+    }
+    public string CrossReferenceCell(SchematicPoint point)
+    {
+        var address = GridAddress(point);
+        return address is { } cell ? $"{cell.Column}-{cell.Row}" : "格位待校準";
+    }
+    private (int Column, char Row)? GridAddress(SchematicPoint point)
+    {
         var fallback = new SchematicGridBounds(Margin, Margin, Width - 2 * Margin, Height - 2 * Margin);
         if (TemplateGeometry is { } template && HasDefaultGrid(fallback) &&
             SchematicTemplateGrid.TryDetect(template, Width, Height, GridColumns, GridRows) is null)
-            return "格位待校準";
+            return null;
         var grid = EffectiveGrid();
         var column = Math.Clamp((int)Math.Floor((point.X - grid.X) / grid.Width * GridColumns), 0, GridColumns - 1);
         var row = Math.Clamp((int)Math.Floor((point.Y - grid.Y) / grid.Height * GridRows), 0, GridRows - 1);
-        return $"{(char)('A' + row)}{column + 1}";
+        return (column + 1, (char)('A' + row));
     }
     private bool HasDefaultGrid(SchematicGridBounds fallback) => CoordinateGrid is null ||
         Math.Abs(CoordinateGrid.X - fallback.X) < .01 && Math.Abs(CoordinateGrid.Y - fallback.Y) < .01 &&
@@ -72,8 +82,16 @@ public sealed record SchematicSymbol
     public SchematicCadAsset? Geometry { get; init; }
     public List<SchematicAnchor> Anchors { get; init; } = [];
     public List<string> CollapsedPortIds { get; init; } = [];
+    public List<SchematicPortPlacement> PortPlacements { get; init; } = [];
     public int SectionIndex { get; init; } = 1;
     public int SectionCount { get; init; } = 1;
+}
+
+public sealed record SchematicPortPlacement
+{
+    public required string PortId { get; init; }
+    public required string Side { get; init; }
+    public double Coordinate { get; init; }
 }
 
 public sealed record SchematicAnchor

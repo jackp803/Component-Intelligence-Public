@@ -127,7 +127,8 @@ public sealed class SchematicCadImporter
                     foreach (var attribute in insert.Attributes)
                     {
                         if (attribute.Tag.StartsWith("X", StringComparison.Ordinal) && attribute.Tag.Contains("TERM", StringComparison.Ordinal))
-                            contacts.Add(new(attribute.Tag, attribute.Value ?? "", Point(attribute.Position)));
+                            contacts.Add(new(attribute.Tag, attribute.Value ?? "", Point(attribute.Position),
+                                Direction: InsertContactDirection(attribute.Tag, insert)));
                         // Explode discards attribute identity. Preserve tagged text before flattening.
                         if (attribute.IsVisible && attribute.Layer.IsVisible && !attribute.Flags.HasFlag(AttributeFlags.Hidden) && !string.IsNullOrEmpty(attribute.Value))
                         {
@@ -203,6 +204,25 @@ public sealed class SchematicCadImporter
             ConnectionPoints = contacts.Select(c => c with { Position = Map(c.Position) }).ToArray(),
             Diagnostics = diagnostics.Distinct(StringComparer.Ordinal).ToArray()
         };
+    }
+
+    private static string? InsertContactDirection(string tag, Insert insert)
+    {
+        var direction = ContactDirection(tag);
+        if (direction is null || insert.Normal != Vector3.UnitZ) return null;
+        var vector = direction switch
+        {
+            "Left" => new Vector2(-insert.Scale.X, 0), "Right" => new Vector2(insert.Scale.X, 0),
+            "Top" => new Vector2(0, insert.Scale.Y), _ => new Vector2(0, -insert.Scale.Y)
+        };
+        var radians = insert.Rotation * Math.PI / 180;
+        var x = vector.X * Math.Cos(radians) - vector.Y * Math.Sin(radians);
+        var y = vector.X * Math.Sin(radians) + vector.Y * Math.Cos(radians);
+        var length = Math.Sqrt(x * x + y * y);
+        if (length == 0) return null;
+        if (Math.Abs(y / length) < 1e-8) return x < 0 ? "Left" : "Right";
+        if (Math.Abs(x / length) < 1e-8) return y < 0 ? "Bottom" : "Top";
+        return null;
     }
 
     // ACADE connection-attribute orientation, not a catalog endpoint identity rule.

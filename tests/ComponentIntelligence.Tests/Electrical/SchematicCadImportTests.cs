@@ -8,6 +8,32 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicCadImportTests
 {
     [Theory]
+    [InlineData(0, 1, "Left")]
+    [InlineData(90, 1, "Bottom")]
+    [InlineData(180, 1, "Right")]
+    [InlineData(270, 1, "Top")]
+    [InlineData(0, -1, "Right")]
+    [InlineData(45, 1, null)]
+    public void InsertContactPreservesTransformedExitDirection(double rotation, double scaleX, string? expected)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"cad-{Guid.NewGuid():N}.dxf");
+        try
+        {
+            var block = new netDxf.Blocks.Block("ContactDirection");
+            block.Entities.Add(new Line(Vector2.Zero, new Vector2(30, 20)));
+            block.AttributeDefinitions.Add(new AttributeDefinition("X4TERM01")
+                { Position = new Vector3(0, 10, 0), Flags = AttributeFlags.Hidden });
+            var doc = new DxfDocument();
+            doc.Entities.Add(new Insert(block, Vector2.Zero) { Rotation = rotation, Scale = new Vector3(scaleX, 1, 1) });
+            doc.Save(path);
+            var contact = Assert.Single(new SchematicCadImporter().ReadDxf(path, 1).ConnectionPoints);
+            Assert.Equal(expected, contact.Direction);
+            Assert.Null(contact.SourcePinId);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
     [InlineData(TextAlignment.MiddleCenter)]
     [InlineData(TextAlignment.TopRight)]
     [InlineData(TextAlignment.BaselineRight)]

@@ -6,6 +6,27 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+AG continuation (416128d plus preserved WIP): AF was normally closed, then AG was
+launched with a fresh disposable copy and visibly verified isolated DB/workbook.
+The old two-bound-contact project now shows 2/3 in the normal selection sidebar;
+local screenshot ag-missing-contact-coverage.png. The saved AF three-contact
+project loaded in the new process with its text and contacts intact.
+
+Normal Wire tool: common contact -> orthogonal bend -> double click at blank space
+created an unfinished wire. Moving the cable exposed a route entering its body;
+this is NOT a route-quality PASS. Screenshot ag-cable-move-route-overlap.png.
+Root cause: INSERT attributes lost the CAD contact exit direction while standalone
+ATTDEF preserved it; cable binding defaulted missing direction to Right. A new
+import regression failed in five cardinal/mirrored cases. INSERT contact direction
+now respects scale/rotation; non-cardinal/non-planar cases remain unknown, not a
+guessed source identity. All six cases pass; full Release 1123 PASS; Desktop Release
+zero errors/16 warnings. Existing saved geometry is not silently rewritten.
+Next: freshly import the fixture in the next candidate, verify outward route after
+move/rotation, and explicitly preserve/read back endpoint identity. AG remains the
+pre-direction-fix running build with the unsaved overlap reproduction. Save that
+disposable checkpoint before replacing it. Native direction-fix, PDF and complete
+cable workflow remain NOT_RUN/PARTIAL. No company engineering approval is implied.
+
 Native AF (71bc1ca plus preserved Drawing WIP) supersedes the pending cable
 text/contact checks below only. The owner handed back the isolated window. Normal
 UI set Reference, length and specification, saved, and loaded the synthetic project.

@@ -129,6 +129,24 @@ public sealed class DerivedBomEngine
 
         foreach (var cable in project.Cables)
         {
+            if (cable.ArchivedCable is { } archived)
+            {
+                lines.Add(new ElectricalBomLine
+                {
+                    LineId = $"derived:cable:{cable.CableInstanceId}",
+                    Kind = ElectricalBomItemKind.CableProduct,
+                    Description = $"{archived.Template.DisplayName ?? archived.Template.TemplateId} {cable.ReferenceDesignator ?? cable.CableInstanceId}",
+                    Quantity = 1,
+                    Unit = "EA",
+                    ResolutionStatus = cable.ProvidedLengthMm is > 0
+                        ? MaterialResolutionStatus.NeedsSelection : MaterialResolutionStatus.LengthPending,
+                    RuleId = "RULE-BOM-ARCHIVED-CABLE-001",
+                    Reason = "One archived physical cable instance; representations and external contacts do not add material quantity. Length, specification and engineering confirmation remain separate from this count.",
+                    SourceObjectIds = new[] { cable.CableInstanceId },
+                    GeneratedAt = timestamp
+                });
+                continue;
+            }
             cableDefinitions.TryGetValue(cable.CableDefinitionId, out var definition);
             var providedLengthMm = cable.ProvidedLengthMm is > 0 ? cable.ProvidedLengthMm : null;
             var finalLengthMm = providedLengthMm is double length ? lengthPolicy.Apply(length) : (double?)null;

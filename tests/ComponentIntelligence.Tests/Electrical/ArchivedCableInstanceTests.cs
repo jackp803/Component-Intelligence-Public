@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ComponentIntelligence.Electrical.Bom;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Persistence;
 using ComponentIntelligence.Electrical.Schematic;
@@ -10,6 +11,28 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class ArchivedCableInstanceTests
 {
+    [Fact]
+    public void ArchivedPhysicalCablesRemainCountedWhenLengthIsPending()
+    {
+        var first = ArchivedCableInstanceFactory.Create(Template(), CableConstructionType.Custom);
+        var second = ArchivedCableInstanceFactory.Create(Template(), CableConstructionType.Purchased);
+        var project = new ElectricalProject { ProjectId = "physical-count", Cables = [first, second] };
+        var before = JsonSerializer.Serialize(project);
+        var lines = new DerivedBomEngine().Build(project);
+        Assert.Equal(2, lines.Count);
+        Assert.All(lines, line => {
+            Assert.Equal(1m, line.Quantity);
+            Assert.Equal("EA", line.Unit);
+            Assert.Equal(MaterialResolutionStatus.LengthPending, line.ResolutionStatus);
+            Assert.Single(line.SourceObjectIds);
+        });
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+        first.ProvidedLengthMm = 2500;
+        var updated = new DerivedBomEngine().Build(project);
+        Assert.Equal(1m, updated.Single(l => l.SourceObjectIds.Contains(first.CableInstanceId)).Quantity);
+        Assert.DoesNotContain(updated, l => l.ResolutionStatus == MaterialResolutionStatus.Resolved);
+    }
+
     private static ArchivedCableTemplate Template(bool confirmed = false) => new()
     {
         TemplateId = "company-y", TemplateRevision = "rev-001", AssetSha256 = new string('A', 64),
@@ -134,6 +157,7 @@ public sealed class ArchivedCableInstanceTests
         Assert.Single(p.Cables); Assert.Equal(2, p.Schematic!.Symbols.Count);
         var extra = service.PlaceExistingRepresentation(p, symbol.SymbolId, page, new(220, 80));
         Assert.Single(extra.Cables); Assert.Equal(3, extra.Schematic!.Symbols.Count);
+        Assert.Equal(1m, Assert.Single(new DerivedBomEngine().Build(extra)).Quantity);
         Assert.Equal(symbol.Anchors, extra.Schematic.Symbols[2].Anchors);
         Assert.NotEqual(symbol.SymbolId, extra.Schematic.Symbols[2].SymbolId);
         p = service.SetSymbolDetails(p, symbol.SymbolId, "W-Y1", symbol.Anchors);
@@ -153,6 +177,7 @@ public sealed class ArchivedCableInstanceTests
             await repo.SaveAsync(p); var loaded = (await repo.GetAsync(p.ProjectId))!;
             Assert.Equal(JsonSerializer.Serialize(p.Schematic), JsonSerializer.Serialize(loaded.Schematic));
             Assert.Single(loaded.Cables); Assert.Empty(loaded.Components);
+            Assert.Equal(1m, Assert.Single(new DerivedBomEngine().Build(loaded)).Quantity);
         } finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); File.Delete(path); }
     }
 

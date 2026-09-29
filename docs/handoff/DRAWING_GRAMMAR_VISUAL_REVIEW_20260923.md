@@ -6,6 +6,22 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Physical cable count checkpoint: DerivedBomEngine previously returned zero metres
+for an archived cable instance with unknown length. Fresh regression reproduced
+this failure. Archived physical cables now each contribute one EA, independent of
+length or representation count. Pending length remains LengthPending; a filled
+length does not assert engineering completion. Historical bulk cable metre rules
+are unchanged. Tests cover two physical instances, three representations of one
+instance and SQLite reload without duplication. Full Release 1116 PASS; Desktop
+Release zero errors/16 warnings. Production DB, central workbook and approved K7L
+hashes match the recorded protection baselines.
+
+Native observation this checkpoint found old candidate AD still in the PDF Save
+dialog, with SearchEditBox focus. No input was sent while awaiting the requested
+human save action. This observation is not native PDF completion, nor current-build
+UI verification. Full contained-material inventory/accounting remains unfinished;
+this change only fixes physical cable quantity. Overall PARTIAL.
+
 Cable contact/text checkpoint: the existing binding action now lists every
 archived cable external Pin, including omitted bindings, with Port/Pin labels and
 explicit CAD-contact choices. Removing a contact with an attached wire is rejected;

@@ -25,6 +25,9 @@ public sealed record SchematicAnchorLabel(SchematicPoint Position, SchematicLabe
 
 public static class SchematicSymbolPresentation
 {
+    public static string DisplayTitle(SchematicSymbol symbol, SchematicSymbolOwner owner) =>
+        symbol.SectionCount > 1 ? $"{owner.DisplayName}  {symbol.SectionIndex}/{symbol.SectionCount}" : owner.DisplayName;
+
     public static (int Confirmed, int Total) ContactCoverage(SchematicSymbol symbol, SchematicSymbolOwner owner)
     {
         if (owner.Cable?.ArchivedCable is null)

@@ -122,6 +122,7 @@ public sealed partial class SchematicAuthoringService
         var rows = new Dictionary<string, int> { ["Left"] = 0, ["Right"] = 0 };
         return new() { SymbolId = $"symbol-{Guid.NewGuid():N}", ComponentInstanceId = component.ComponentInstanceId,
             PageId = pageId, Position = position, Width = 50, Height = height,
+            CollapsedPortIds = component.Ports.Where(port => port.Pins.Count > 0).Select(port => port.PortId).ToList(),
             Anchors = pins.Select(p =>
             {
                 var side = p.Port.PhysicalLocation?.Side == "Left" ? "Left" : "Right";
@@ -642,6 +643,8 @@ public sealed partial class SchematicAuthoringService
         }
         foreach (var symbol in doc.Symbols)
         {
+            if (symbol.SectionCount < 1 || symbol.SectionIndex < 1 || symbol.SectionIndex > symbol.SectionCount)
+                throw new InvalidOperationException("Representation section identity is invalid.");
             RequirePage(doc, symbol.PageId); RequirePoint(symbol.Position);
             if (symbol.Width <= 0 || symbol.Height <= 0 || !double.IsFinite(symbol.Width) || !double.IsFinite(symbol.Height) || symbol.Rotation is not (0 or 90 or 180 or 270))
                 throw new InvalidOperationException("Invalid symbol size or orientation.");

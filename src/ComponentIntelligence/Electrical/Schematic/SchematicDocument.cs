@@ -72,6 +72,8 @@ public sealed record SchematicSymbol
     public SchematicCadAsset? Geometry { get; init; }
     public List<SchematicAnchor> Anchors { get; init; } = [];
     public List<string> CollapsedPortIds { get; init; } = [];
+    public int SectionIndex { get; init; } = 1;
+    public int SectionCount { get; init; } = 1;
 }
 
 public sealed record SchematicAnchor

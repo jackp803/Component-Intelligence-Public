@@ -227,7 +227,7 @@ public sealed class SchematicDxfExporter
                 }
                 else diagnostics.Add("CATALOG_RASTER_IMAGE_NOT_EMBEDDED: " + symbol.SymbolId);
                 Primitive(new() { Kind = "MTEXT", Start = new(body.X + 2, body.Y + body.Height - 10),
-                    Text = owner.DisplayName, TextHeight = 9d / 3,
+                    Text = SchematicSymbolPresentation.DisplayTitle(symbol, owner), TextHeight = 9d / 3,
                     TextWidth = body.Width - 4,
                     TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25);
             }
@@ -259,7 +259,7 @@ public sealed class SchematicDxfExporter
                 var points = symbol.Anchors.Where(a => port.Pins.Any(p => p.PinId == a.EndpointId))
                     .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
                 if (points.Length == 0) continue;
-                var contact = SchematicPortPresentation.GroupContact(symbol, port, body);
+                var contact = SchematicPortPresentation.GroupContact(symbol, owner, port, body);
                 Add(new Circle(Point(contact.Position), 1.5), "SCHEMATIC_PORT_GROUP");
                 Label(port.Name, new(contact.Position.X + (contact.Side == "Left" ? -13 : 2), contact.Position.Y - 5),
                     "SCHEMATIC_LABEL", 9d / 3);

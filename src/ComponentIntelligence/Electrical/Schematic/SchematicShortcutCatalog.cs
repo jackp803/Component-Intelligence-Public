@@ -9,6 +9,7 @@ public static class SchematicShortcutCatalog
         new("Wire", "W", "導線"), new("Finish", "Enter", "完成線段"),
         new("Place", "P", "放置元件"), new("Continuation", "X", "連接兩頁導線"),
         new("AnotherRepresentation", "Shift+P", "放置此元件的另一個表示"),
+        new("SplitRepresentation", "Ctrl+Shift+P", "拆分通用模塊表示"),
         new("ReviewDraft", "F8", "查看草稿缺口"),
         new("CableLibrary", "Ctrl+Shift+C", "從線材庫新增實體線材"),
         new("Bindings", "B", "接點設定"), new("Import", "I", "圖塊外觀"), new("Template", "T", "圖框／頁面"),
@@ -24,6 +25,8 @@ public static class SchematicShortcutCatalog
         new("CableDetail", "Ctrl+D", "開啟線材明細"),
         new("Undo", "Ctrl+Z", "復原"), new("Redo", "Ctrl+Y", "重做"),
         new("ZoomIn", "Ctrl+Add", "放大"), new("ZoomOut", "Ctrl+Subtract", "縮小"),
+        new("ViewportZoom", "Ctrl+滾輪", "以游標位置縮放"),
+        new("ViewportPan", "滑鼠中鍵拖曳", "移動視角"),
         new("Help", "F1", "快捷鍵"), new("Cancel", "Escape", "取消目前操作"), new("Delete", "Delete", "刪除選取的導線／跨頁符號／表示")
     ]);
 }

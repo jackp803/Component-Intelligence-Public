@@ -13,26 +13,34 @@ public static class SchematicPortPresentation
         if (symbol.Geometry is not null || symbol.CollapsedPortIds.Count == 0) return original;
 
         var visible = symbol.Anchors.Where(a => !IsCollapsedPin(doc, symbol, owner, a)).ToArray();
-        var rightOrLeft = owner.Ports.Count(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal) &&
-            PortSide(symbol, p) is "Left" or "Right");
-        var topOrBottom = owner.Ports.Count(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal) &&
-            PortSide(symbol, p) is "Top" or "Bottom");
+        var groups = owner.Ports.Where(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal) &&
+            symbol.Anchors.Any(a => p.Pins.Any(pin => pin.PinId == a.EndpointId))).ToArray();
+        var horizontal = new[] { "Top", "Bottom" }.Max(side =>
+            groups.Count(p => PortSide(symbol, p) == side) * GroupPitch(groups.Where(p => PortSide(symbol, p) == side)) + 10);
+        var vertical = new[] { "Left", "Right" }.Max(side =>
+            groups.Count(p => PortSide(symbol, p) == side) * GroupPitch(groups.Where(p => PortSide(symbol, p) == side)) + 10);
         var offsets = visible.Select(a => AnchorOffset(symbol, a)).ToArray();
-        var width = Math.Min(original.Width, Math.Max(30, Math.Max(topOrBottom * 6 + 10,
-            offsets.Length == 0 ? 0 : offsets.Max(p => p.X) - offsets.Min(p => p.X) + 12)));
-        var height = Math.Min(original.Height, Math.Max(30, Math.Max(rightOrLeft * 6 + 10,
-            offsets.Length == 0 ? 0 : offsets.Max(p => p.Y) - offsets.Min(p => p.Y) + 12)));
-        var x = offsets.Length == 0 ? 0 : Math.Clamp((offsets.Min(p => p.X) + offsets.Max(p => p.X) - width) / 2, 0, original.Width - width);
-        var y = offsets.Length == 0 ? 0 : Math.Clamp((offsets.Min(p => p.Y) + offsets.Max(p => p.Y) - height) / 2, 0, original.Height - height);
+        var width = Math.Max(30, Math.Max(horizontal,
+            offsets.Length == 0 ? 0 : offsets.Max(p => p.X) - offsets.Min(p => p.X) + 12));
+        var height = Math.Max(30, Math.Max(vertical,
+            offsets.Length == 0 ? 0 : offsets.Max(p => p.Y) - offsets.Min(p => p.Y) + 12));
+        var x = offsets.Length == 0 || width >= original.Width ? 0 :
+            Math.Clamp((offsets.Min(p => p.X) + offsets.Max(p => p.X) - width) / 2, 0, original.Width - width);
+        var y = offsets.Length == 0 || height >= original.Height ? 0 :
+            Math.Clamp((offsets.Min(p => p.Y) + offsets.Max(p => p.Y) - height) / 2, 0, original.Height - height);
         return new(original.X + x, original.Y + y, width, height);
     }
 
     public static (SchematicPoint Position, string Side) GroupContact(SchematicSymbol symbol,
-        ComponentPort port, SchematicGridBounds body)
+        SchematicSymbolOwner owner, ComponentPort port, SchematicGridBounds body)
     {
         var side = PortSide(symbol, port);
-        var index = Array.IndexOf(symbol.CollapsedPortIds.ToArray(), port.PortId);
-        var count = Math.Max(1, symbol.CollapsedPortIds.Count);
+        var sameSide = owner.Ports.Where(p => symbol.CollapsedPortIds.Contains(p.PortId, StringComparer.Ordinal) &&
+            symbol.Anchors.Any(a => p.Pins.Any(pin => pin.PinId == a.EndpointId)) && PortSide(symbol, p) == side)
+            .OrderBy(p => GroupCoordinate(symbol, p, side)).ThenBy(p => p.PortId, StringComparer.Ordinal).ToArray();
+        var index = Array.FindIndex(sameSide, p => p.PortId == port.PortId);
+        if (index < 0) throw new InvalidOperationException("The port is not collapsed on this representation.");
+        var count = sameSide.Length;
         var fraction = (index + 1d) / (count + 1d);
         var position = side switch
         {
@@ -42,6 +50,17 @@ public static class SchematicPortPresentation
             _ => new SchematicPoint(body.X + body.Width, body.Y + body.Height * fraction)
         };
         return (position, side);
+    }
+
+    private static double GroupPitch(IEnumerable<ComponentPort> ports) =>
+        Math.Max(16, ports.Select(p => p.Name.Length * 1.9 + 6).DefaultIfEmpty(0).Max());
+
+    private static double GroupCoordinate(SchematicSymbol symbol, ComponentPort port, string side)
+    {
+        var ids = port.Pins.Select(pin => pin.PinId).ToHashSet(StringComparer.Ordinal);
+        var points = symbol.Anchors.Where(a => ids.Contains(a.EndpointId))
+            .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
+        return points.Length == 0 ? 0 : side is "Top" or "Bottom" ? points.Average(p => p.X) : points.Average(p => p.Y);
     }
 
     private static SchematicPoint AnchorOffset(SchematicSymbol symbol, SchematicAnchor anchor)

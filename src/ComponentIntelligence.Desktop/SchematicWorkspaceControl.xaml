@@ -6,7 +6,7 @@
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <WrapPanel Margin="0,0,0,8">
    <ToggleButton x:Name="SelectTool" Content="選取" IsChecked="True" Padding="12,5" Click="Select_Click" ToolTip="選取 (V)"/>
-   <ToggleButton x:Name="EditModuleTool" Content="編輯模塊" Padding="12,5" Margin="4,0" Click="EditModule_Click" ToolTip="編輯模塊接點位置；拖動 Port 到四邊、雙擊展開／收合 (E)"/>
+   <ToggleButton x:Name="EditModuleTool" Content="編輯模塊" Padding="12,5" Margin="4,0" Click="EditModule_Click" ToolTip="編輯模塊接點位置；點一下 Port 展開／收合，拖曳到四邊 (E)"/>
    <ToggleButton x:Name="WireTool" Content="導線" Padding="12,5" Margin="4,0" Click="Wire_Click" ToolTip="導線 (W)"/>
    <Button Content="完成線段" Padding="12,5" Click="FinishWire_Click" ToolTip="完成線段 (Enter／雙擊)"/>
    <Button Content="跨頁符號" Padding="12,5" Margin="4,0" Click="Continuation_Click" ToolTip="跨頁符號 (X)"/>
@@ -52,7 +52,9 @@
     <Button Grid.Row="4" Content="放置元件" Padding="10,6" Margin="0,5,0,0" Click="Place_Click" ToolTip="放置元件 (P)；取消 (Esc)"/>
    </Grid>
    <Border Grid.Column="1" BorderBrush="#CBD0D2" BorderThickness="1" Background="#E9ECEC">
-    <ScrollViewer x:Name="PageScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="PageScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+      PreviewMouseWheel="PageScroll_Wheel" PreviewMouseDown="PageScroll_Down"
+      PreviewMouseMove="PageScroll_Move" PreviewMouseUp="PageScroll_Up" LostMouseCapture="PageScroll_LostCapture">
      <StackPanel x:Name="PageHost" HorizontalAlignment="Left">
       <StackPanel.LayoutTransform><ScaleTransform x:Name="SheetZoom" ScaleX="0.65" ScaleY="0.65"/></StackPanel.LayoutTransform>
      </StackPanel>
@@ -65,6 +67,7 @@
     <TextBox x:Name="ReferenceText" Margin="0,4,0,6"/>
     <Button Content="套用 Reference" Padding="8,5" Click="Reference_Click" ToolTip="套用 Reference (Ctrl+Enter)"/>
     <Button Content="放置另一個表示" Padding="8,5" Margin="0,6,0,0" Click="AnotherRepresentation_Click" ToolTip="放置此元件的另一個表示 (Shift+P)"/>
+    <Button Content="拆分模塊表示" Padding="8,5" Margin="0,6,0,0" Click="SplitRepresentation_Click" ToolTip="將通用模塊接點分段放到各頁；仍是一顆實體 (Ctrl+Shift+P)"/>
     <TextBlock x:Name="SelectionState" TextWrapping="Wrap" Margin="0,12,0,0" Foreground="#61696B"/>
    </StackPanel>
   </Grid>

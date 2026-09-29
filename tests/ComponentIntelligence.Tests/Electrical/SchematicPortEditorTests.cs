@@ -8,6 +8,44 @@ public sealed class SchematicPortEditorTests
 {
     private readonly SchematicAuthoringService _service = new();
 
+    [Fact]
+    public void NewlyPlacedGenericModuleStartsWithItsPortsCollapsed()
+    {
+        var project = Project();
+        var symbol = SchematicAuthoringService.CreateSymbol(project.Components.Single(), "page", new(40, 40));
+        Assert.Equal(["P"], symbol.CollapsedPortIds);
+        Assert.Equal(2, symbol.Anchors.Count);
+    }
+
+    [Fact]
+    public void TopEdgeGrowsAndKeepsCollapsedPortContactsDistinct()
+    {
+        var project = Project();
+        var component = project.Components.Single();
+        for (var i = 1; i <= 5; i++)
+            component.Ports.Add(new ComponentPort { PortId = $"ETH{i}", Name = $"ETH{i}",
+                Pins = [new ComponentPin { PinId = $"ETH{i}-1", PinNumber = "1" }] });
+        var symbol = SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40));
+        project.Schematic!.Symbols[0] = symbol;
+        for (var i = 1; i <= 5; i++)
+            project = _service.MovePortToEdge(project, symbol.SymbolId, $"ETH{i}", "Top", 10 + i * 5);
+        symbol = project.Schematic!.Symbols.Single();
+        var owner = SchematicSymbolOwner.Resolve(project, symbol);
+        var bounds = SchematicPortPresentation.GenericBodyBounds(project.Schematic, symbol, owner);
+        var contacts = component.Ports.Skip(1)
+            .Select(port => SchematicPortPresentation.GroupContact(symbol, owner, port, bounds)).ToArray();
+        Assert.True(bounds.Width > 50);
+        Assert.True(symbol.Width > 50);
+        var topGroups = component.Ports.Skip(1).Select(port => symbol.Anchors.Single(a => a.EndpointId == port.Pins[0].PinId).Position.X).Order().ToArray();
+        Assert.All(topGroups.Zip(topGroups.Skip(1)), pair => Assert.True(pair.Second - pair.First >= 12));
+        Assert.All(contacts, c => Assert.Equal("Top", c.Side));
+        Assert.Equal(contacts.Length, contacts.Select(c => c.Position).Distinct().Count());
+        var sortedContacts = contacts.OrderBy(c => c.Position.X).ToArray();
+        Assert.All(sortedContacts.Zip(sortedContacts.Skip(1)), pair => Assert.True(pair.Second.Position.X - pair.First.Position.X >= 12));
+        Assert.Equal(component.Ports.SelectMany(p => p.Pins).Count(), symbol.Anchors.Count);
+        SchematicAuthoringService.Validate(project);
+    }
+
     [Theory]
     [InlineData("Top", 0, 25)]
     [InlineData("Bottom", 30, 25)]
@@ -111,9 +149,9 @@ public sealed class SchematicPortEditorTests
         symbol = project.Schematic.Symbols.Single();
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
         var body = SchematicPortPresentation.GenericBodyBounds(project.Schematic, symbol, owner);
-        Assert.True(rotation == 0 ? body.Height < 70 : body.Width < 70);
+        Assert.InRange(rotation == 0 ? body.Height : body.Width, 80, 139);
         Assert.Equal(5, symbol.CollapsedPortIds.Count);
-        var contacts = component.Ports.Skip(1).Select(port => SchematicPortPresentation.GroupContact(symbol, port, body)).ToArray();
+        var contacts = component.Ports.Skip(1).Select(port => SchematicPortPresentation.GroupContact(symbol, owner, port, body)).ToArray();
         Assert.All(contacts, contact => Assert.Equal(side, contact.Side));
         Assert.Equal(5, contacts.Select(contact => contact.Position).Distinct().Count());
         Assert.All(symbol.Anchors.Where(a => a.EndpointId.StartsWith("ETH", StringComparison.Ordinal)),
@@ -146,7 +184,7 @@ public sealed class SchematicPortEditorTests
         return new ElectricalProject { ProjectId = "test", Components = [component], Schematic = new SchematicDocument
         {
             Pages = [new SchematicPage { PageId = "page", Title = "First" }],
-            Symbols = [SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40))]
+            Symbols = [SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40)) with { CollapsedPortIds = [] }]
         } };
     }
 }

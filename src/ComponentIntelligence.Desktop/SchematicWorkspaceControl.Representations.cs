@@ -13,6 +13,64 @@ public partial class SchematicWorkspaceControl
     private PendingRepresentation? _pendingRepresentation;
     private sealed record RepresentationChoice(string Id, string Label);
 
+    private void SplitRepresentation_Click(object sender, RoutedEventArgs e)
+    {
+        var project = _getProject();
+        var symbol = project.Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
+        if (symbol is null || symbol.CableInstanceId is not null) { Status.Text = "請先選取要分段的通用元件模塊。"; return; }
+        if (symbol.Geometry is not null || symbol.AssetRevision is not null)
+        { Status.Text = "已歸檔 CAD 圖塊不可直接切開；請歸檔分段表示。"; return; }
+        if (symbol.Locked || project.Schematic!.Wires.Any(w => w.Start.SymbolId == symbol.SymbolId || w.End.SymbolId == symbol.SymbolId))
+        { Status.Text = "請先解鎖，並在此表示接線前分段。"; return; }
+        var rows = symbol.Anchors.Select(a => Math.Round(a.Position.Y, 3)).Distinct().Count();
+        if (rows < 2) { Status.Text = "此表示沒有足夠的接點列可分段。"; return; }
+        if (!FinishPendingDraft()) return;
+        var pages = project.Schematic.Pages.ToArray();
+        var currentIndex = Array.FindIndex(pages, page => page.PageId == symbol.PageId);
+        var dialog = new Window { Title = "拆分模塊表示", Width = 420, Height = 520,
+            Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var panel = new StackPanel { Margin = new(16) };
+        panel.Children.Add(new TextBlock { Text = SchematicSymbolOwner.Resolve(project, symbol).DisplayName,
+            FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "分段數", Margin = new(0, 12, 0, 4) });
+        var count = new ComboBox { ItemsSource = Enumerable.Range(2, Math.Min(16, rows) - 1).ToArray(), SelectedItem = 2 };
+        panel.Children.Add(count);
+        var targets = new StackPanel { Margin = new(0, 12, 0, 0) };
+        var selectors = new List<ComboBox>();
+        void BuildTargets()
+        {
+            targets.Children.Clear(); selectors.Clear();
+            for (var part = 0; part < (int)count.SelectedItem; part++)
+            {
+                var row = new DockPanel { Margin = new(0, 0, 0, 8) };
+                var label = new TextBlock { Text = $"第 {part + 1} 段", Width = 65, VerticalAlignment = VerticalAlignment.Center };
+                DockPanel.SetDock(label, Dock.Left); row.Children.Add(label);
+                var page = new ComboBox { ItemsSource = pages, DisplayMemberPath = "Title",
+                    SelectedItem = pages[(currentIndex + part) % pages.Length] };
+                row.Children.Add(page); targets.Children.Add(row); selectors.Add(page);
+            }
+        }
+        count.SelectionChanged += (_, _) => BuildTargets();
+        BuildTargets();
+        panel.Children.Add(new ScrollViewer { Content = targets, MaxHeight = 300,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        var actions = new StackPanel { Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 12, 0, 0) };
+        actions.Children.Add(new Button { Content = "取消", IsCancel = true, Padding = new(12, 5, 12, 5) });
+        var apply = new Button { Content = "建立分段", Padding = new(12, 5, 12, 5), Margin = new(8, 0, 0, 0) };
+        apply.Click += (_, _) => dialog.DialogResult = true;
+        actions.Children.Add(apply); panel.Children.Add(actions); dialog.Content = panel;
+        if (dialog.ShowDialog() != true) return;
+        var pageIds = selectors.Select(selector => ((SchematicPage)selector.SelectedItem).PageId).ToArray();
+        var previousIds = project.Schematic.Symbols.Select(s => s.SymbolId).ToHashSet(StringComparer.Ordinal);
+        if (Apply(p => _service.SplitGenericRepresentation(p, symbol.SymbolId, pageIds),
+            $"已建立 {pageIds.Length} 個圖面表示；實體仍只有一顆"))
+        {
+            _selectionId = _getProject().Schematic!.Symbols.First(s => !previousIds.Contains(s.SymbolId)).SymbolId;
+            RefreshWorkspace();
+        }
+    }
+
     private async void AnotherRepresentation_Click(object sender, RoutedEventArgs e)
     {
         var project = _getProject();

@@ -380,7 +380,7 @@ public partial class SchematicWorkspaceControl : UserControl
         }
         if (symbol.Geometry is null)
         {
-            var label = new TextBlock { Text = owner.DisplayName, FontSize = 9, Width = (compact.Width - 4) * 3,
+            var label = new TextBlock { Text = SchematicSymbolPresentation.DisplayTitle(symbol, owner), FontSize = 9, Width = (compact.Width - 4) * 3,
                 Height = 9 * 3, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis,
                 Foreground = Brushes.Black, IsHitTestVisible = false };
             Canvas.SetLeft(label, (compact.X + 2) * 3);
@@ -442,10 +442,11 @@ public partial class SchematicWorkspaceControl : UserControl
             var collapsed = symbol.CollapsedPortIds.Contains(port.PortId, StringComparer.Ordinal);
             if (collapsed)
             {
-                var contact = SchematicPortPresentation.GroupContact(symbol, port, compact);
+                var contact = SchematicPortPresentation.GroupContact(symbol, owner, port, compact);
                 center = contact.Position;
                 var point = Marker(center, Brushes.White, Brushes.Black, 9);
-                point.ToolTip = $"{port.Name}: 雙擊展開；接線時先選確切 Pin，不合併導體";
+                point.ToolTip = portEditing ? $"{port.Name}: 點一下展開 Pin；拖曳移動 Port"
+                    : $"{port.Name}: 雙擊展開；接線時先選確切 Pin，不合併導體";
                 point.Cursor = portEditing ? Cursors.SizeAll : Cursors.Hand;
                 point.MouseLeftButtonDown += (_, e) =>
                 {
@@ -455,7 +456,7 @@ public partial class SchematicWorkspaceControl : UserControl
                         if (Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已展開 Port，請選確切 Pin"))
                             Status.Text = "請點選已展開的確切 Pin；Port 圓點不代表導體。";
                     }
-                    else if (e.ClickCount >= 2)
+                    else if (!portEditing && e.ClickCount >= 2)
                         Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已展開 Port Pin");
                     else if (portEditing && !symbol.Locked)
                     {
@@ -471,12 +472,12 @@ public partial class SchematicWorkspaceControl : UserControl
                 BorderBrush = portEditing ? Brushes.DarkCyan : Brushes.DimGray, BorderThickness = new(1),
                 Cursor = portEditing ? Cursors.SizeAll : Cursors.Hand,
                 Child = new TextBlock { Text = $"{port.Name} {(collapsed ? "▸" : "▾")}", FontSize = 9 },
-                ToolTip = portEditing ? "拖到模塊四邊；雙擊展開／收合 Pin" : "雙擊展開 Pin；此 Port 不是導電接點" };
+                ToolTip = portEditing ? "點一下收合 Pin；拖曳到模塊四邊" : "雙擊收合 Pin；此 Port 不是導電接點" };
             Canvas.SetLeft(handle, center.X * 3 - 8); Canvas.SetTop(handle, center.Y * 3 - 18);
             handle.MouseLeftButtonDown += (_, e) =>
             {
                 _selectionId = symbol.SymbolId;
-                if (e.ClickCount >= 2)
+                if (!portEditing && e.ClickCount >= 2)
                 {
                     CancelGesture(); Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已切換 Port 接點顯示");
                 }
@@ -677,8 +678,13 @@ public partial class SchematicWorkspaceControl : UserControl
     private void Sheet_Up(object sender, MouseButtonEventArgs e)
     {
         if (_gestureStart is null) return;
+        var togglePort = _editModuleMode && !_dragActivated && _dragPortSymbol is not null && _dragPortId is not null
+            ? (_dragPortSymbol, _dragPortId) : ((string?, string?)?)null;
         if (_gesturePreview is not null && _pointer != _dragStart) _commit(_gesturePreview, "調整圖面位置／路徑");
-        CancelGesture(); RefreshWorkspace(); FocusCanvas();
+        CancelGesture();
+        if (togglePort is { } target)
+            Apply(p => _service.TogglePortCollapsed(p, target.Item1!, target.Item2!), "已切換 Port 接點顯示");
+        RefreshWorkspace(); FocusCanvas();
     }
     private void FocusCanvas()
     {
@@ -765,7 +771,7 @@ public partial class SchematicWorkspaceControl : UserControl
         var s = p.Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
         var owner = s is null ? null : SchematicSymbolOwner.Resolve(p, s);
         var w = p.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
-        SelectionLabel.Text = owner?.DisplayName ?? (w is not null ? "導線" : "");
+        SelectionLabel.Text = s is null ? (w is not null ? "導線" : "") : SchematicSymbolPresentation.DisplayTitle(s, owner!);
         ReferenceText.Text = owner?.Reference ?? "";
         var coverage = s is null ? default : SchematicSymbolPresentation.ContactCoverage(s, owner!);
         SelectionState.Text = s is not null ? $"{(s.Locked ? "已鎖定" : "可編輯")}\n接點位置：{coverage.Confirmed} / {coverage.Total} 已確認" :

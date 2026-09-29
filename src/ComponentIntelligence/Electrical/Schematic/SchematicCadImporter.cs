@@ -128,8 +128,16 @@ public sealed class SchematicCadImporter
                     {
                         if (attribute.Tag.StartsWith("X", StringComparison.Ordinal) && attribute.Tag.Contains("TERM", StringComparison.Ordinal))
                             contacts.Add(new(attribute.Tag, attribute.Value ?? "", Point(attribute.Position)));
-                        // Explode copies IsVisible, but not the separate Hidden attribute flag.
-                        if (attribute.Flags.HasFlag(AttributeFlags.Hidden)) attribute.IsVisible = false;
+                        // Explode discards attribute identity. Preserve tagged text before flattening.
+                        if (attribute.IsVisible && attribute.Layer.IsVisible && !attribute.Flags.HasFlag(AttributeFlags.Hidden) && !string.IsNullOrEmpty(attribute.Value))
+                        {
+                            raw.Add(new() { Kind = "TEXT", Start = Point(attribute.Position), Text = attribute.Value,
+                                AttributeTag = attribute.Tag, TextHeight = attribute.Height, Rotation = attribute.Rotation,
+                                TextAttachment = attribute.Alignment.ToString(), TextWidthFactor = attribute.WidthFactor });
+                            if (attribute.Alignment != TextAlignment.BaselineLeft || attribute.WidthFactor != 1 || attribute.ObliqueAngle != 0)
+                                diagnostics.Add("Attribute text formatting requires visual review.");
+                        }
+                        attribute.IsVisible = false;
                     }
                     foreach (var child in insert.Explode()) Read(child, depth + 1);
                     break;

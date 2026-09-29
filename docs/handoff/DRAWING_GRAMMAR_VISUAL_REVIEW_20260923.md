@@ -6,6 +6,21 @@ Authority: same CODEX-W1-20260922-013, same Component/Auto branches and PRs. The
 
 ### Owner Decision Update: 2026-09-29
 
+Native AE continuation: owner closed AD and explicitly handed back the test
+window. AE visibly used isolated DB/workbook. Normal Cable Library showed the
+synthetic unapproved Y fixture without preselection, 2/3 contact bindings and
+unconfirmed internal mapping. Explicit fixture Custom authority was displayed.
+Placement preview -> Escape returned to an empty page with Undo disabled. A fresh
+selection and canvas click placed the CAD geometry through normal UI.
+
+This exposed a real defect: INSERT.Explode converted attribute text into plain
+text, losing AttributeTag, so archived cable text fields could not bind. A fresh
+regression failed with expected TAG1, actual null. Import now preserves visible
+tagged attributes before flattening and suppresses duplicate exploded text;
+hidden attributes remain contact inventory only. Full Release 1116 PASS; Desktop
+Release zero errors/16 warnings. AE remains the pre-fix build; fixed-build native
+text/Save/reload/PDF checks are still required. No completed cable workflow claim.
+
 Physical cable count checkpoint: DerivedBomEngine previously returned zero metres
 for an archived cable instance with unknown length. Fresh regression reproduced
 this failure. Archived physical cables now each contribute one EA, independent of

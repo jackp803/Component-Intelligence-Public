@@ -64,6 +64,7 @@ public sealed class SchematicCadImportTests
             Assert.Equal(20, asset.Height);
             Assert.DoesNotContain(asset.Primitives, p => p.Text == "PRIVATE_CONFIG" || p.Text == "1");
             Assert.Contains(asset.Primitives, p => p.Text == "DEVICE");
+            Assert.Equal("TAG1", Assert.Single(asset.Primitives, p => p.Text == "DEVICE").AttributeTag);
             Assert.Equal("X1TERM01", Assert.Single(asset.ConnectionPoints).Tag);
             Assert.Null(asset.ConnectionPoints[0].SourcePinId);
             Assert.Equal(before, File.ReadAllBytes(path));

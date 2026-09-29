@@ -52,6 +52,9 @@ public static class SchematicCrossingService
                     point.Y < Math.Min(v.First.Y, v.Second.Y) || point.Y > Math.Max(v.First.Y, v.Second.Y)) continue;
                 var aEnd = AttachmentAt(first, point); var bEnd = AttachmentAt(second, point);
                 if (aEnd?.Kind == SchematicAttachmentKind.Pin && aEnd == bEnd) { junctions.Add(point); continue; }
+                if (aEnd?.Kind == SchematicAttachmentKind.WireJunction && aEnd.WireId == second.WireId ||
+                    bEnd?.Kind == SchematicAttachmentKind.WireJunction && bEnd.WireId == first.WireId)
+                { junctions.Add(point); continue; }
                 if (point == a.First || point == a.Second || point == b.First || point == b.Second)
                     conflicts.Add(new("UNCONNECTED_CONTACT", first.WireId, second.WireId, point));
                 else if (Math.Min(Math.Abs(point.X - h.First.X), Math.Abs(point.X - h.Second.X)) < 2)

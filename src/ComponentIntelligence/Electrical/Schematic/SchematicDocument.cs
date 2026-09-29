@@ -86,7 +86,7 @@ public sealed record SchematicAnchor
     public bool Confirmed { get; init; }
 }
 
-public enum SchematicAttachmentKind { Free, Pin, Continuation }
+public enum SchematicAttachmentKind { Free, Pin, Continuation, WireJunction }
 
 public sealed record SchematicAttachment
 {
@@ -94,11 +94,14 @@ public sealed record SchematicAttachment
     public string? SymbolId { get; init; }
     public string? EndpointId { get; init; }
     public string? MarkerId { get; init; }
+    public string? WireId { get; init; }
     public static SchematicAttachment Free() => new();
     public static SchematicAttachment Pin(string symbolId, string endpointId) =>
         new() { Kind = SchematicAttachmentKind.Pin, SymbolId = symbolId, EndpointId = endpointId };
     public static SchematicAttachment Marker(string markerId) =>
         new() { Kind = SchematicAttachmentKind.Continuation, MarkerId = markerId };
+    public static SchematicAttachment Junction(string parentWireId) =>
+        new() { Kind = SchematicAttachmentKind.WireJunction, WireId = parentWireId };
 }
 
 public sealed record SchematicWire

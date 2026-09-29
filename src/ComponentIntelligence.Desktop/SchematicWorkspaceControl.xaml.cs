@@ -155,7 +155,7 @@ public partial class SchematicWorkspaceControl : UserControl
             var weight = Math.Max(1.5 / zoom, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
             var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
             var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
-            line.ToolTip = (wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
+            line.ToolTip = (_wireMode ? "點選既有導線，建立明確分支" : wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
             line.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) return;
@@ -174,6 +174,24 @@ public partial class SchematicWorkspaceControl : UserControl
                 Sheet.Children.Add(geometry);
             }
             else Sheet.Children.Add(line);
+            if (_wireMode && !_renderingOutput)
+            for (var segment = 0; segment < wire.Points.Count - 1; segment++)
+            {
+                var a = wire.Points[segment]; var b = wire.Points[segment + 1];
+                var hit = Path([a, b], Brushes.Transparent, 12);
+                hit.Cursor = Cursors.Cross; hit.ToolTip = "點選導線，建立明確分支";
+                hit.MouseLeftButtonDown += (_, e) =>
+                {
+                    var pointer = e.GetPosition(Sheet);
+                    var raw = new SchematicPoint(pointer.X / 3, pointer.Y / 3);
+                    var junction = a.Y == b.Y
+                        ? new SchematicPoint(Math.Clamp(raw.X, Math.Min(a.X, b.X), Math.Max(a.X, b.X)), a.Y)
+                        : new SchematicPoint(a.X, Math.Clamp(raw.Y, Math.Min(a.Y, b.Y), Math.Max(a.Y, b.Y)));
+                    WireAt(SchematicAttachment.Junction(wire.WireId), junction, false);
+                    e.Handled = true;
+                };
+                Sheet.Children.Add(hit);
+            }
             if (!_wireMode && !_renderingOutput)
             for (var segment = 0; segment < wire.Points.Count - 1; segment++)
             {
@@ -252,16 +270,24 @@ public partial class SchematicWorkspaceControl : UserControl
         {
             var point = marker.Position; var arrow = new Polygon
             {
-                Points = new PointCollection([new(point.X * 3, point.Y * 3), new(point.X * 3 - 9, point.Y * 3 - 5), new(point.X * 3 - 9, point.Y * 3 + 5)]),
+                Points = new PointCollection(SchematicContinuationArrow.Points(doc, marker)
+                    .Select(p => new Point(p.X * 3, p.Y * 3))),
                 Stroke = Brushes.Black, Fill = Brushes.White, StrokeThickness = 1.3, Cursor = Cursors.Hand
             };
             arrow.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) WireAt(SchematicAttachment.Marker(marker.MarkerId), point, false);
                 else if (e.ClickCount >= 2) NavigateToMarker(marker.MarkerId);
-                else { _selectionId = marker.MarkerId; BeginGesture(e); _dragMarker = marker.MarkerId; UpdateSelection(_getProject()); }
+                else { _selectionId = marker.MarkerId; BeginGesture(e); _dragMarker = marker.MarkerId; UpdateSelection(_getProject()); Focus(); }
                 e.Handled = true;
             };
+            if (!_renderingOutput)
+            {
+                var menu = new ContextMenu();
+                var remove = new MenuItem { Header = "刪除這對跨頁符號" };
+                remove.Click += (_, _) => DeleteContinuationMarker(marker.MarkerId);
+                menu.Items.Add(remove); arrow.ContextMenu = menu;
+            }
             Sheet.Children.Add(arrow);
             var caption = new TextBlock { Text = _service.ReferenceFor(project, marker.MarkerId), FontSize = 10,
                 Foreground = Brushes.Black, Cursor = Cursors.Hand, ToolTip = "雙擊前往對端" };
@@ -269,9 +295,10 @@ public partial class SchematicWorkspaceControl : UserControl
             if (!_renderingOutput) caption.MouseLeftButtonDown += (_, e) =>
             {
                 if (e.ClickCount >= 2) NavigateToMarker(marker.MarkerId);
-                else { _selectionId = marker.MarkerId; UpdateSelection(_getProject()); }
+                else { _selectionId = marker.MarkerId; UpdateSelection(_getProject()); Focus(); }
                 e.Handled = true;
             };
+            if (!_renderingOutput) caption.ContextMenu = arrow.ContextMenu;
             Sheet.Children.Add(caption);
         }
         if (page.PageId == _pageId && !_renderingOutput)

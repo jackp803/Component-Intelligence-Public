@@ -241,6 +241,37 @@ public sealed class SchematicAuthoringTests
     }
 
     [Fact]
+    public void ExplicitDraftBranchFollowsMovedParentWithoutInventingElectricalConnection()
+    {
+        var project = PlacedProject();
+        var page = project.Schematic!.Pages[0].PageId;
+        project = _service.DrawWire(project, page, Pin("S1", "A"), SchematicAttachment.Free(),
+            [new(60, 40), new(100, 40)]);
+        var parentId = project.Schematic!.Wires.Single().WireId;
+        project = _service.DrawWire(project, page, SchematicAttachment.Junction(parentId),
+            SchematicAttachment.Free(), [new(80, 40), new(80, 70)]);
+        var branchId = project.Schematic!.Wires[1].WireId;
+        Assert.Empty(project.Connections);
+        Assert.Empty(project.Nets);
+        var moved = _service.TransformSymbol(project, "S1", new(50, 50), 0);
+        var parent = moved.Schematic!.Wires.Single(w => w.WireId == parentId);
+        var branch = moved.Schematic.Wires.Single(w => w.WireId == branchId);
+        Assert.Equal(parentId, branch.Start.WireId);
+        Assert.NotEqual(new SchematicPoint(80, 40), branch.Points[0]);
+        Assert.True(parent.Points.Zip(parent.Points.Skip(1)).Any(pair =>
+            pair.First.X == pair.Second.X && pair.First.X == branch.Points[0].X &&
+            branch.Points[0].Y >= Math.Min(pair.First.Y, pair.Second.Y) &&
+            branch.Points[0].Y <= Math.Max(pair.First.Y, pair.Second.Y) ||
+            pair.First.Y == pair.Second.Y && pair.First.Y == branch.Points[0].Y &&
+            branch.Points[0].X >= Math.Min(pair.First.X, pair.Second.X) &&
+            branch.Points[0].X <= Math.Max(pair.First.X, pair.Second.X)));
+        Assert.Equal(new SchematicPoint(80, 70), branch.Points[^1]);
+        Assert.Empty(moved.Connections);
+        Assert.Empty(moved.Nets);
+        Assert.Throws<InvalidOperationException>(() => _service.DeleteWire(project, parentId));
+    }
+
+    [Fact]
     public void LockedIncidentRouteRejectsMoveAtomically()
     {
         var p = PlacedProject();
@@ -428,6 +459,63 @@ public sealed class SchematicAuthoringTests
         Assert.Empty(result.Schematic!.Wires); Assert.Empty(result.Connections);
         Assert.Equal(2, result.Components.Count); Assert.Equal(2, result.Schematic.Symbols.Count);
         Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    [Fact]
+    public void DeleteDraftContinuationDetachesBothWireEndsWithoutChangingEngineering()
+    {
+        var p = PlacedProject(); var pages = p.Schematic!.Pages;
+        p = _service.AddContinuation(p, "DRAFT", pages[0].PageId, new(100, 40), pages[1].PageId, new(20, 40));
+        var pair = p.Schematic!.Continuations.Single();
+        p = _service.DrawWire(p, pages[0].PageId, Pin("S1", "A"), SchematicAttachment.Marker(pair.Source.MarkerId), [new(60, 40), new(100, 40)]);
+        var before = JsonSerializer.Serialize(p);
+        var result = _service.DeleteContinuation(p, pair.Source.MarkerId);
+        Assert.Empty(result.Schematic!.Continuations);
+        Assert.Single(result.Schematic.Wires);
+        Assert.Equal(SchematicAttachmentKind.Free, result.Schematic.Wires[0].End.Kind);
+        Assert.Equal(new SchematicPoint(100, 40), result.Schematic.Wires[0].Points[^1]);
+        Assert.Empty(result.Connections);
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    [Fact]
+    public void DeleteCompletedContinuationRequiresExplicitCircuitRemovalAndPreservesUnrelatedPair()
+    {
+        var p = PlacedProject(); var pages = p.Schematic!.Pages;
+        p = _service.AddContinuation(p, "CONNECTED", pages[0].PageId, new(100, 40), pages[1].PageId, new(20, 40));
+        var pair = p.Schematic!.Continuations.Single();
+        p = _service.DrawWire(p, pages[0].PageId, Pin("S1", "A"), SchematicAttachment.Marker(pair.Source.MarkerId), [new(60, 40), new(100, 40)]);
+        p = _service.DrawWire(p, pages[1].PageId, SchematicAttachment.Marker(pair.Destination.MarkerId), Pin("S2", "B"), [new(20, 40), new(120, 40)]);
+        p = _service.AddContinuation(p, "UNRELATED", pages[0].PageId, new(200, 60), pages[1].PageId, new(200, 60));
+        var original = JsonSerializer.Serialize(p);
+        Assert.Throws<InvalidOperationException>(() => _service.DeleteContinuation(p, pair.Source.MarkerId));
+        Assert.Equal(original, JsonSerializer.Serialize(p));
+        var result = _service.DeleteContinuation(p, pair.Source.MarkerId, deleteCompletedCircuit: true);
+        Assert.Empty(result.Connections);
+        Assert.Empty(result.Schematic!.Wires);
+        Assert.Single(result.Schematic.Continuations);
+        Assert.Equal("UNRELATED", result.Schematic.Continuations[0].Signal);
+        Assert.Equal(2, result.Components.Count);
+        Assert.Equal(original, JsonSerializer.Serialize(p));
+    }
+
+    [Fact]
+    public void DeleteContinuationRejectsLockedRoutesAndOwnedCableWithoutMutation()
+    {
+        var p = PlacedProject(); var pages = p.Schematic!.Pages;
+        p = _service.AddContinuation(p, "SIGNAL", pages[0].PageId, new(100, 40), pages[1].PageId, new(20, 40));
+        var pair = p.Schematic!.Continuations.Single();
+        p = _service.DrawWire(p, pages[0].PageId, Pin("S1", "A"), SchematicAttachment.Marker(pair.Source.MarkerId), [new(60, 40), new(100, 40)]);
+        var locked = _service.SetLocked(p, p.Schematic.Wires[0].WireId, true);
+        var lockedJson = JsonSerializer.Serialize(locked);
+        Assert.Throws<InvalidOperationException>(() => _service.DeleteContinuation(locked, pair.Source.MarkerId));
+        Assert.Equal(lockedJson, JsonSerializer.Serialize(locked));
+
+        p = _service.DrawWire(p, pages[1].PageId, SchematicAttachment.Marker(pair.Destination.MarkerId), Pin("S2", "B"), [new(20, 40), new(120, 40)]);
+        p.Connections.Single().CableInstanceId = "OWNED";
+        var original = JsonSerializer.Serialize(p);
+        Assert.Throws<InvalidOperationException>(() => _service.DeleteContinuation(p, pair.Source.MarkerId, deleteCompletedCircuit: true));
+        Assert.Equal(original, JsonSerializer.Serialize(p));
     }
 
     [Fact]

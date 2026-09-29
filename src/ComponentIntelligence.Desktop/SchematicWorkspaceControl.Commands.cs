@@ -92,10 +92,35 @@ public partial class SchematicWorkspaceControl
             { _selectionId = null; RefreshWorkspace(); }
             return;
         }
+        if (doc?.Continuations.Any(c => c.Source.MarkerId == _selectionId || c.Destination.MarkerId == _selectionId) == true)
+        {
+            DeleteContinuationMarker(_selectionId!);
+            return;
+        }
         if (_getProject().Schematic?.Wires.Any(w => w.WireId == _selectionId) != true) return;
         if (MessageBox.Show(Window.GetWindow(this), "刪除此導線及對應工程連線？", "刪除導線",
             MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         Apply(p => _service.DeleteWire(p, _selectionId!), "已刪除導線");
+    }
+
+    private void DeleteContinuationMarker(string markerId)
+    {
+        if (_wireStart is not null) { Status.Text = "請先完成目前導線，或按 Esc 取消畫線，再刪除跨頁符號。"; return; }
+        var doc = _getProject().Schematic;
+        var pair = doc?.Continuations.SingleOrDefault(c => c.Source.MarkerId == markerId || c.Destination.MarkerId == markerId);
+        if (pair is null) return;
+        var connected = doc!.Wires.Any(w => w.ConnectionId is not null &&
+            (w.Start.MarkerId == pair.Source.MarkerId || w.End.MarkerId == pair.Source.MarkerId ||
+             w.Start.MarkerId == pair.Destination.MarkerId || w.End.MarkerId == pair.Destination.MarkerId));
+        var message = connected
+            ? "這對跨頁符號已建立工程連線。刪除會同時移除整條工程連線及其所有頁面線段；元件不會刪除。確定嗎？"
+            : "刪除這一對跨頁符號？已畫的導線保留在原位，兩端恢復為未完成線尾。";
+        if (MessageBox.Show(Window.GetWindow(this), message, "刪除跨頁符號",
+            MessageBoxButton.YesNo, connected ? MessageBoxImage.Warning : MessageBoxImage.Question,
+            MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        if (Apply(p => _service.DeleteContinuation(p, markerId, deleteCompletedCircuit: connected),
+            connected ? "已刪除跨頁符號與工程連線；可復原" : "已刪除成對跨頁符號；導線保留為未完成"))
+        { _selectionId = null; RefreshWorkspace(); }
     }
 
     private void Shortcuts_Click(object sender, RoutedEventArgs e)

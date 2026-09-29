@@ -16,8 +16,15 @@ public sealed record SchematicWireEvidence(string Category, string ColorHex, str
         if (connection is null && project.Schematic is { } doc)
         {
             for (var i = 0; i < chain.Count; i++)
-            foreach (var attachment in new[] { chain[i].Start, chain[i].End }.Where(a => a.Kind == SchematicAttachmentKind.Continuation))
+            foreach (var attachment in new[] { chain[i].Start, chain[i].End })
             {
+                if (attachment.Kind == SchematicAttachmentKind.WireJunction)
+                {
+                    var parent = doc.Wires.SingleOrDefault(w => w.WireId == attachment.WireId);
+                    if (parent is not null && seen.Add(parent.WireId)) chain.Add(parent);
+                    continue;
+                }
+                if (attachment.Kind != SchematicAttachmentKind.Continuation) continue;
                 var pair = doc.Continuations.SingleOrDefault(c => c.Source.MarkerId == attachment.MarkerId || c.Destination.MarkerId == attachment.MarkerId);
                 if (pair is null) continue;
                 var peer = pair.Source.MarkerId == attachment.MarkerId ? pair.Destination.MarkerId : pair.Source.MarkerId;
@@ -26,7 +33,10 @@ public sealed record SchematicWireEvidence(string Category, string ColorHex, str
             }
         }
         var endpointIds = connection is null
-            ? chain.SelectMany(w => new[] { w.Start, w.End }).Where(a => a.Kind == SchematicAttachmentKind.Pin).Select(a => a.EndpointId).ToArray()
+            ? chain.SelectMany(w => new[] { w.Start.EndpointId, w.End.EndpointId })
+                .Concat(chain.Where(w => w.ConnectionId is not null)
+                    .SelectMany(w => project.Connections.Where(c => c.ConnectionId == w.ConnectionId)
+                        .SelectMany(c => new[] { c.FromEndpointId, c.ToEndpointId }))).ToArray()
             : new[] { connection.FromEndpointId, connection.ToEndpointId };
         var pins = project.Components.SelectMany(c => c.Ports).SelectMany(p => p.Pins)
             .Where(p => endpointIds.Contains(p.PinId, StringComparer.Ordinal)).ToArray();

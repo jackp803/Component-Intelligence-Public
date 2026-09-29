@@ -43,7 +43,50 @@ public sealed partial class SchematicAuthoringService
     {
         var wire = doc.Wires.SingleOrDefault(w => w.WireId == wireId)
             ?? throw new InvalidOperationException("Unknown wire.");
+        RemoveWireGroup(draft, doc, wire);
+    });
+
+    public ElectricalProject DeleteContinuation(ElectricalProject project, string markerId,
+        bool deleteCompletedCircuit = false) => Edit(project, (draft, doc) =>
+    {
+        var pair = doc.Continuations.SingleOrDefault(c => c.Source.MarkerId == markerId || c.Destination.MarkerId == markerId)
+            ?? throw new InvalidOperationException("Unknown continuation marker.");
+        var markerIds = new HashSet<string>(StringComparer.Ordinal) { pair.Source.MarkerId, pair.Destination.MarkerId };
+        var attached = doc.Wires.Where(w => markerIds.Contains(w.Start.MarkerId ?? "") || markerIds.Contains(w.End.MarkerId ?? "")).ToArray();
+        var completed = attached.Where(w => w.ConnectionId is not null).Select(w => w.ConnectionId).Distinct(StringComparer.Ordinal).ToArray();
+        if (completed.Length > 1) throw new InvalidOperationException("Continuation joins conflicting electrical connections.");
+        if (completed.Length == 1)
+        {
+            if (!deleteCompletedCircuit)
+                throw new InvalidOperationException("This continuation belongs to a completed circuit. Confirm removal of the circuit and all its page routes.");
+            var members = doc.Wires.Where(w => w.ConnectionId == completed[0]).ToArray();
+            var affectedMarkers = members.SelectMany(w => new[] { w.Start.MarkerId, w.End.MarkerId })
+                .Where(id => id is not null).ToHashSet(StringComparer.Ordinal);
+            RemoveWireGroup(draft, doc, members[0]);
+            doc.Continuations.RemoveAll(c => affectedMarkers.Contains(c.Source.MarkerId) || affectedMarkers.Contains(c.Destination.MarkerId));
+            return;
+        }
+        if (attached.Any(w => w.Locked)) throw new InvalidOperationException("Unlock both attached route ends before deleting the continuation.");
+        foreach (var wire in attached)
+        {
+            var index = doc.Wires.IndexOf(wire);
+            doc.Wires[index] = wire with
+            {
+                Start = markerIds.Contains(wire.Start.MarkerId ?? "") ? SchematicAttachment.Free() : wire.Start,
+                End = markerIds.Contains(wire.End.MarkerId ?? "") ? SchematicAttachment.Free() : wire.End
+            };
+        }
+        doc.Continuations.Remove(pair);
+    });
+
+    private static void RemoveWireGroup(ElectricalProject draft, SchematicDocument doc, SchematicWire wire)
+    {
         var members = wire.ConnectionId is null ? [wire] : doc.Wires.Where(w => w.ConnectionId == wire.ConnectionId).ToArray();
+        var memberIds = members.Select(w => w.WireId).ToHashSet(StringComparer.Ordinal);
+        if (doc.Wires.Any(w => !memberIds.Contains(w.WireId) &&
+            (w.Start.Kind == SchematicAttachmentKind.WireJunction && memberIds.Contains(w.Start.WireId!) ||
+             w.End.Kind == SchematicAttachmentKind.WireJunction && memberIds.Contains(w.End.WireId!))))
+            throw new InvalidOperationException("Remove attached branch wires before deleting their parent wire.");
         if (members.Any(w => w.Locked)) throw new InvalidOperationException("A route segment is locked.");
         if (wire.ConnectionId is not null)
         {
@@ -53,9 +96,8 @@ public sealed partial class SchematicAuthoringService
             draft.Connections.Remove(connection);
             draft.TopologyRoutes.RemoveAll(r => r.ConnectionId == connection.ConnectionId);
         }
-        var ids = members.Select(w => w.WireId).ToHashSet(StringComparer.Ordinal);
-        doc.Wires.RemoveAll(w => ids.Contains(w.WireId));
-    });
+        doc.Wires.RemoveAll(w => memberIds.Contains(w.WireId));
+    }
 
     public ElectricalProject RenamePage(ElectricalProject project, string pageId, string title) => Edit(project, (_, doc) =>
     {
@@ -116,6 +158,7 @@ public sealed partial class SchematicAuthoringService
             if (wire.Start.SymbolId == symbolId) points = Reanchor(points, AnchorPoint(next, wire.Start.EndpointId!), true);
             if (wire.End.SymbolId == symbolId) points = Reanchor(points, AnchorPoint(next, wire.End.EndpointId!), false);
             doc.Wires[w] = wire with { Points = points };
+            ReanchorDependentJunctions(doc, wire.WireId);
         }
     });
 
@@ -295,6 +338,7 @@ public sealed partial class SchematicAuthoringService
         if (points.Count < 2 || points[0] != old.Points[0] || points[^1] != old.Points[^1])
             throw new InvalidOperationException("Route edits must preserve both end anchors.");
         doc.Wires[index] = old with { Points = points.ToList() };
+        ReanchorDependentJunctions(doc, wireId);
     });
 
     public ElectricalProject CompleteDraft(ElectricalProject project, string wireId, SchematicAttachment start,
@@ -398,6 +442,7 @@ public sealed partial class SchematicAuthoringService
             if (wire.Start.SymbolId == symbolId) points = ReanchorSymbol(points, next, wire.Start.EndpointId!, true);
             if (wire.End.SymbolId == symbolId) points = ReanchorSymbol(points, next, wire.End.EndpointId!, false);
             doc.Wires[i] = wire with { Points = points };
+            ReanchorDependentJunctions(doc, wire.WireId);
         }
     });
 
@@ -462,6 +507,7 @@ public sealed partial class SchematicAuthoringService
             if (wire.Start.MarkerId == markerId) points = Reanchor(points, position, true);
             if (wire.End.MarkerId == markerId) points = Reanchor(points, position, false);
             doc.Wires[i] = wire with { Points = points };
+            ReanchorDependentJunctions(doc, wire.WireId);
         }
     });
 
@@ -643,14 +689,16 @@ public sealed partial class SchematicAuthoringService
             foreach (var p in wire.Points) RequirePoint(p);
             foreach (var (a, b) in wire.Points.Zip(wire.Points.Skip(1)))
                 if (a == b || a.X != b.X && a.Y != b.Y) throw new InvalidOperationException("Wire segments must be nonzero and orthogonal.");
-            ValidateAttachment(doc, wire.Start, wire.PageId, wire.Points[0]);
-            ValidateAttachment(doc, wire.End, wire.PageId, wire.Points[^1]);
+            ValidateAttachment(doc, wire, wire.Start, wire.Points[0]);
+            ValidateAttachment(doc, wire, wire.End, wire.Points[^1]);
             if (wire.ConnectionId is not null && !project.Connections.Any(c => c.ConnectionId == wire.ConnectionId))
                 throw new InvalidOperationException("Wire references an unknown electrical connection.");
         }
         foreach (var marker in markers)
             if (doc.Wires.Sum(w => (w.Start.MarkerId == marker.MarkerId ? 1 : 0) + (w.End.MarkerId == marker.MarkerId ? 1 : 0)) > 1)
                 throw new InvalidOperationException("A continuation marker accepts one wire; branching requires an explicit junction.");
+        foreach (var wire in doc.Wires)
+            ValidateJunctionAcyclic(doc, wire.WireId, new HashSet<string>(StringComparer.Ordinal));
         foreach (var group in doc.Wires.Where(w => w.ConnectionId is not null).GroupBy(w => w.ConnectionId, StringComparer.Ordinal))
         {
             var members = group.ToArray();
@@ -677,12 +725,13 @@ public sealed partial class SchematicAuthoringService
         }
     }
 
-    private static void ValidateAttachment(SchematicDocument doc, SchematicAttachment attachment, string pageId, SchematicPoint point)
+    private static void ValidateAttachment(SchematicDocument doc, SchematicWire wire,
+        SchematicAttachment attachment, SchematicPoint point)
     {
         if (attachment.Kind == SchematicAttachmentKind.Free) return;
         if (attachment.Kind == SchematicAttachmentKind.Pin)
         {
-            var symbol = doc.Symbols.SingleOrDefault(s => s.SymbolId == attachment.SymbolId && s.PageId == pageId);
+            var symbol = doc.Symbols.SingleOrDefault(s => s.SymbolId == attachment.SymbolId && s.PageId == wire.PageId);
             var anchor = symbol?.Anchors.SingleOrDefault(a => a.EndpointId == attachment.EndpointId);
             if (symbol is null || anchor is null || AnchorPoint(symbol, anchor.EndpointId) != point)
                 throw new InvalidOperationException("Wire must terminate at its exact pin anchor on this sheet.");
@@ -690,10 +739,65 @@ public sealed partial class SchematicAuthoringService
         else if (attachment.Kind == SchematicAttachmentKind.Continuation)
         {
             var marker = doc.Continuations.SelectMany(c => new[] { c.Source, c.Destination }).SingleOrDefault(m => m.MarkerId == attachment.MarkerId);
-            if (marker is null || marker.PageId != pageId || marker.Position != point)
+            if (marker is null || marker.PageId != wire.PageId || marker.Position != point)
                 throw new InvalidOperationException("Wire must terminate at the selected continuation marker.");
         }
+        else if (attachment.Kind == SchematicAttachmentKind.WireJunction)
+        {
+            var parent = doc.Wires.SingleOrDefault(w => w.WireId == attachment.WireId);
+            if (parent is null || parent.WireId == wire.WireId || parent.PageId != wire.PageId ||
+                !PointOnWire(parent, point))
+                throw new InvalidOperationException("A branch must terminate on its explicitly selected parent wire on the same page.");
+        }
         else throw new InvalidOperationException("Unknown attachment kind.");
+    }
+
+    private static bool PointOnWire(SchematicWire wire, SchematicPoint point) =>
+        wire.Points.Zip(wire.Points.Skip(1)).Any(segment =>
+            segment.First.X == segment.Second.X && Math.Abs(point.X - segment.First.X) < .001 &&
+            point.Y >= Math.Min(segment.First.Y, segment.Second.Y) - .001 &&
+            point.Y <= Math.Max(segment.First.Y, segment.Second.Y) + .001 ||
+            segment.First.Y == segment.Second.Y && Math.Abs(point.Y - segment.First.Y) < .001 &&
+            point.X >= Math.Min(segment.First.X, segment.Second.X) - .001 &&
+            point.X <= Math.Max(segment.First.X, segment.Second.X) + .001);
+
+    private static void ValidateJunctionAcyclic(SchematicDocument doc, string wireId, HashSet<string> path)
+    {
+        if (!path.Add(wireId)) throw new InvalidOperationException("Wire branches cannot form a parent cycle.");
+        var wire = doc.Wires.Single(w => w.WireId == wireId);
+        foreach (var attachment in new[] { wire.Start, wire.End }.Where(a => a.Kind == SchematicAttachmentKind.WireJunction))
+            ValidateJunctionAcyclic(doc, attachment.WireId!, path);
+        path.Remove(wireId);
+    }
+
+    private static void ReanchorDependentJunctions(SchematicDocument doc, string parentWireId)
+    {
+        var parent = doc.Wires.Single(w => w.WireId == parentWireId);
+        for (var i = 0; i < doc.Wires.Count; i++)
+        {
+            var child = doc.Wires[i];
+            if (child.WireId == parentWireId) continue;
+            var start = child.Start.Kind == SchematicAttachmentKind.WireJunction && child.Start.WireId == parentWireId;
+            var end = child.End.Kind == SchematicAttachmentKind.WireJunction && child.End.WireId == parentWireId;
+            if (!start && !end) continue;
+            var points = child.Points.ToList();
+            foreach (var atStart in new[] { true, false }.Where(value => value ? start : end))
+            {
+                var old = atStart ? points[0] : points[^1];
+                if (PointOnWire(parent, old)) continue;
+                if (child.Locked) throw new InvalidOperationException("Unlock the attached branch before moving its parent wire.");
+                var nearest = parent.Points.Zip(parent.Points.Skip(1)).Select(segment =>
+                {
+                    var a = segment.First; var b = segment.Second;
+                    return a.X == b.X
+                        ? new SchematicPoint(a.X, Math.Clamp(old.Y, Math.Min(a.Y, b.Y), Math.Max(a.Y, b.Y)))
+                        : new SchematicPoint(Math.Clamp(old.X, Math.Min(a.X, b.X), Math.Max(a.X, b.X)), a.Y);
+                }).MinBy(p => Math.Pow(p.X - old.X, 2) + Math.Pow(p.Y - old.Y, 2))!;
+                points = Reanchor(points, nearest, atStart);
+            }
+            doc.Wires[i] = child with { Points = points };
+            ReanchorDependentJunctions(doc, child.WireId);
+        }
     }
 
     private static void ResolveCompletedConnections(ElectricalProject project, SchematicDocument doc)

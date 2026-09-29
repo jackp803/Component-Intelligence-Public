@@ -56,6 +56,23 @@ public sealed class SchematicWireEvidenceTests
         Assert.Equal("UNCLASSIFIED", SchematicWireEvidence.Resolve(p, second).Category);
     }
 
+    [Fact]
+    public void ExplicitBranchInheritsParentDisplayEvidenceButCoincidentFreeEndDoesNot()
+    {
+        var (project, parent) = Fixture(Polarity.Positive, 24);
+        parent = parent with { Points = [new(10, 10), new(10, 40)] };
+        var branch = new SchematicWire { WireId = "BRANCH", PageId = "P",
+            Start = SchematicAttachment.Junction(parent.WireId), End = SchematicAttachment.Free(),
+            Points = [new(10, 20), new(30, 20)] };
+        project.Schematic = new() { Wires = [parent, branch] };
+        Assert.Equal("DC_POSITIVE", SchematicWireEvidence.Resolve(project, branch).Category);
+        Assert.Contains(new SchematicPoint(10, 20), SchematicCrossingService.Analyze(project.Schematic.Wires).Junctions);
+        var coincident = branch with { Start = SchematicAttachment.Free() };
+        project.Schematic.Wires[1] = coincident;
+        Assert.Equal("UNCLASSIFIED", SchematicWireEvidence.Resolve(project, coincident).Category);
+        Assert.DoesNotContain(new SchematicPoint(10, 20), SchematicCrossingService.Analyze(project.Schematic.Wires).Junctions);
+    }
+
     private static (ElectricalProject, SchematicWire) Fixture(Polarity polarity, double voltage)
     {
         var p = new ElectricalProject { ProjectId = "TEST" };

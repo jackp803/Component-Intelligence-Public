@@ -269,7 +269,8 @@ public sealed class SchematicDxfExporter
         foreach (var pair in source.Continuations)
         foreach (var marker in new[] { pair.Source, pair.Destination }.Where(m => m.PageId == page.PageId))
         {
-            var p = marker.Position; var a = new SchematicPoint(p.X - 3, p.Y - 5d / 3); var b = new SchematicPoint(p.X - 3, p.Y + 5d / 3);
+            var triangle = SchematicContinuationArrow.Points(source, marker);
+            var p = triangle[0]; var a = triangle[1]; var b = triangle[2];
             Line(p, a, "SCHEMATIC_CONTINUATION"); Line(a, b, "SCHEMATIC_CONTINUATION"); Line(b, p, "SCHEMATIC_CONTINUATION");
             Label(service.ReferenceFor(project, marker.MarkerId), new(p.X + 2, p.Y - 5), "SCHEMATIC_LABEL", 10d / 3);
         }

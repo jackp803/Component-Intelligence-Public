@@ -24,6 +24,6 @@ public static class SchematicShortcutCatalog
         new("CableDetail", "Ctrl+D", "開啟線材明細"),
         new("Undo", "Ctrl+Z", "復原"), new("Redo", "Ctrl+Y", "重做"),
         new("ZoomIn", "Ctrl+Add", "放大"), new("ZoomOut", "Ctrl+Subtract", "縮小"),
-        new("Help", "F1", "快捷鍵"), new("Cancel", "Escape", "取消目前操作"), new("Delete", "Delete", "刪除導線")
+        new("Help", "F1", "快捷鍵"), new("Cancel", "Escape", "取消目前操作"), new("Delete", "Delete", "刪除選取的導線／跨頁符號／表示")
     ]);
 }

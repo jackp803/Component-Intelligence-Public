@@ -338,7 +338,7 @@ public sealed partial class SchematicAuthoringService
         var old = doc.Wires[index];
         if (points.Count < 2 || points[0] != old.Points[0] || points[^1] != old.Points[^1])
             throw new InvalidOperationException("Route edits must preserve both end anchors.");
-        doc.Wires[index] = old with { Points = points.ToList() };
+        doc.Wires[index] = old with { Points = points.ToList(), ManualRoute = true };
         ReanchorDependentJunctions(doc, wireId);
     });
 
@@ -442,6 +442,7 @@ public sealed partial class SchematicAuthoringService
             var points = wire.Points.ToList();
             if (wire.Start.SymbolId == symbolId) points = ReanchorSymbol(points, draft, next, wire.Start, true);
             if (wire.End.SymbolId == symbolId) points = ReanchorSymbol(points, draft, next, wire.End, false);
+            if (CanReroutePortWire(doc, wire)) points = ReroutePortWire(draft, doc, wire);
             doc.Wires[i] = wire with { Points = points };
             ReanchorDependentJunctions(doc, wire.WireId);
         }
@@ -465,6 +466,72 @@ public sealed partial class SchematicAuthoringService
         SchematicAttachment attachment) => attachment.Kind == SchematicAttachmentKind.Port
             ? SchematicPortPresentation.ConnectionPoint(project, symbol, attachment.EndpointId!)
             : AnchorPoint(symbol, attachment.EndpointId!);
+
+    private static bool CanReroutePortWire(SchematicDocument doc, SchematicWire wire) =>
+        !wire.ManualRoute &&
+        (wire.Start.Kind == SchematicAttachmentKind.Port && wire.End.Kind is SchematicAttachmentKind.Port or SchematicAttachmentKind.Free ||
+         wire.End.Kind == SchematicAttachmentKind.Port && wire.Start.Kind == SchematicAttachmentKind.Free) &&
+        !doc.Wires.Any(child => child.Start.WireId == wire.WireId || child.End.WireId == wire.WireId);
+
+    private static List<SchematicPoint> ReroutePortWire(ElectricalProject project, SchematicDocument doc, SchematicWire wire)
+    {
+        static SchematicPoint Lead(SchematicPoint p, string side) => side switch
+        {
+            "Left" => p with { X = p.X - 8 }, "Right" => p with { X = p.X + 8 },
+            "Top" => p with { Y = p.Y - 8 }, _ => p with { Y = p.Y + 8 }
+        };
+        if (wire.Start.Kind == SchematicAttachmentKind.Free || wire.End.Kind == SchematicAttachmentKind.Free)
+        {
+            var portAtStart = wire.Start.Kind == SchematicAttachmentKind.Port;
+            var attachment = portAtStart ? wire.Start : wire.End;
+            var symbol = doc.Symbols.Single(s => s.SymbolId == attachment.SymbolId);
+            var owner = SchematicSymbolOwner.Resolve(project, symbol);
+            var port = owner.Ports.Single(p => p.PortId == attachment.EndpointId);
+            var body = SchematicPortPresentation.GenericBodyBounds(doc, symbol, owner);
+            var (contact, side) = SchematicPortPresentation.GroupContact(doc, symbol, owner, port, body);
+            var lead = Lead(contact, side);
+            var free = portAtStart ? wire.Points[^1] : wire.Points[0];
+            var route = new List<SchematicPoint> { contact, lead };
+            if (lead.X != free.X && lead.Y != free.Y)
+                route.Add(side is "Left" or "Right" ? new(free.X, lead.Y) : new(lead.X, free.Y));
+            route.Add(free);
+            if (!portAtStart) route.Reverse();
+            return Simplify(route);
+        }
+        var first = doc.Symbols.Single(s => s.SymbolId == wire.Start.SymbolId);
+        var second = doc.Symbols.Single(s => s.SymbolId == wire.End.SymbolId);
+        var firstOwner = SchematicSymbolOwner.Resolve(project, first);
+        var secondOwner = SchematicSymbolOwner.Resolve(project, second);
+        var firstPort = firstOwner.Ports.Single(p => p.PortId == wire.Start.EndpointId);
+        var secondPort = secondOwner.Ports.Single(p => p.PortId == wire.End.EndpointId);
+        var firstBody = SchematicPortPresentation.GenericBodyBounds(doc, first, firstOwner);
+        var secondBody = SchematicPortPresentation.GenericBodyBounds(doc, second, secondOwner);
+        var (start, firstSide) = SchematicPortPresentation.GroupContact(doc, first, firstOwner, firstPort, firstBody);
+        var (end, secondSide) = SchematicPortPresentation.GroupContact(doc, second, secondOwner, secondPort, secondBody);
+        var a = Lead(start, firstSide);
+        var b = Lead(end, secondSide);
+        var points = new List<SchematicPoint> { start, a };
+        if (firstSide == secondSide)
+        {
+            if (firstSide is "Left" or "Right")
+            {
+                var y = Math.Min(firstBody.Y, secondBody.Y) - 12;
+                points.Add(new(a.X, y));
+                points.Add(new(b.X, y));
+            }
+            else
+            {
+                var x = Math.Max(firstBody.X + firstBody.Width, secondBody.X + secondBody.Width) + 12;
+                points.Add(new(x, a.Y));
+                points.Add(new(x, b.Y));
+            }
+        }
+        else if (a.X != b.X && a.Y != b.Y)
+            points.Add(new(b.X, a.Y));
+        points.Add(b);
+        points.Add(end);
+        return Simplify(points);
+    }
 
     private static List<SchematicPoint> ReanchorSymbol(List<SchematicPoint> points, ElectricalProject project,
         SchematicSymbol symbol, SchematicAttachment attachment, bool atStart)

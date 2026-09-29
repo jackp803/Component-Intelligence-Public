@@ -37,13 +37,55 @@ public sealed class SchematicPortEditorTests
         Assert.True(bounds.Width > 50);
         Assert.True(symbol.Width > 50);
         var topGroups = component.Ports.Skip(1).Select(port => symbol.Anchors.Single(a => a.EndpointId == port.Pins[0].PinId).Position.X).Order().ToArray();
-        Assert.All(topGroups.Zip(topGroups.Skip(1)), pair => Assert.True(pair.Second - pair.First >= 12));
+        Assert.All(topGroups.Zip(topGroups.Skip(1)), pair => Assert.True(pair.Second - pair.First >= 5));
         Assert.All(contacts, c => Assert.Equal("Top", c.Side));
         Assert.Equal(contacts.Length, contacts.Select(c => c.Position).Distinct().Count());
         var sortedContacts = contacts.OrderBy(c => c.Position.X).ToArray();
-        Assert.All(sortedContacts.Zip(sortedContacts.Skip(1)), pair => Assert.True(pair.Second.Position.X - pair.First.Position.X >= 12));
+        Assert.All(sortedContacts.Zip(sortedContacts.Skip(1)), pair => Assert.True(pair.Second.Position.X - pair.First.Position.X >= 4.5));
         Assert.Equal(component.Ports.SelectMany(p => p.Pins).Count(), symbol.Anchors.Count);
         SchematicAuthoringService.Validate(project);
+    }
+
+    [Fact]
+    public void DraggingOneCollapsedPortChangesItsSpacingWithoutRedistributingItsNeighbours()
+    {
+        var project = Project();
+        var component = project.Components.Single();
+        component.Ports.AddRange(Enumerable.Range(1, 3).Select(i => new ComponentPort
+        {
+            PortId = $"ETH{i}", Name = $"ETH{i}",
+            Pins = [new ComponentPin { PinId = $"ETH{i}-1", PinNumber = "1" }]
+        }));
+        var symbol = SchematicAuthoringService.CreateSymbol(component, "page", new(40, 40));
+        project.Schematic!.Symbols[0] = symbol;
+        project = _service.MovePortToEdge(project, symbol.SymbolId, "ETH1", "Top", 12);
+        project = _service.MovePortToEdge(project, symbol.SymbolId, "ETH2", "Top", 32);
+        project = _service.MovePortToEdge(project, symbol.SymbolId, "ETH3", "Top", 52);
+        symbol = project.Schematic!.Symbols.Single();
+        var before = component.Ports.Skip(1).Select(p => SchematicPortPresentation.ConnectionPoint(project, symbol, p.PortId)).ToArray();
+
+        project = _service.MovePortToEdge(project, symbol.SymbolId, "ETH2", "Top", 22);
+        symbol = project.Schematic!.Symbols.Single();
+        var after = component.Ports.Skip(1).Select(p => SchematicPortPresentation.ConnectionPoint(project, symbol, p.PortId)).ToArray();
+        Assert.Equal(before[0], after[0]);
+        Assert.NotEqual(before[1], after[1]);
+        Assert.Equal(before[2], after[2]);
+        Assert.True(after[1].X - after[0].X < before[1].X - before[0].X);
+        var reloaded = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(project))!;
+        Assert.Equal(after, component.Ports.Skip(1).Select(p => SchematicPortPresentation.ConnectionPoint(reloaded, reloaded.Schematic!.Symbols.Single(), p.PortId)));
+        SchematicAuthoringService.Validate(reloaded);
+    }
+
+    [Theory]
+    [InlineData("Top", -90)]
+    [InlineData("Bottom", 90)]
+    [InlineData("Left", 0)]
+    [InlineData("Right", 0)]
+    public void CollapsedPortLabelFollowsItsEdgeWithoutRotatingModelText(string side, int rotation)
+    {
+        var label = SchematicPortPresentation.GroupLabel(new SchematicPoint(20, 30), side);
+        Assert.Equal(rotation, label.Rotation);
+        Assert.NotEqual(new SchematicPoint(20, 30), label.Position);
     }
 
     [Theory]

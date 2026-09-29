@@ -23,7 +23,7 @@ public partial class SchematicWorkspaceControl
                 .Distinct(StringComparer.Ordinal).ToArray() ?? [];
             foreach (var id in definitions)
             {
-                BitmapImage? bitmap;
+                BitmapSource? bitmap;
                 try { bitmap = await GetImage(id); }
                 catch { continue; } // The exporter reports every absent picture on its exact symbol.
                 if (bitmap is null) continue;

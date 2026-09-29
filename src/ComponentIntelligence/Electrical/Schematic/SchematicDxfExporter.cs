@@ -263,8 +263,8 @@ public sealed class SchematicDxfExporter
                     .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
                 var contact = SchematicPortPresentation.GroupContact(source, symbol, owner, port, body);
                 Add(new Circle(Point(contact.Position), 1.5), "SCHEMATIC_PORT_GROUP");
-                Label(port.Name, new(contact.Position.X + (contact.Side == "Left" ? -13 : 2), contact.Position.Y - 5),
-                    "SCHEMATIC_LABEL", 9d / 3);
+                var label = SchematicPortPresentation.GroupLabel(contact.Position, contact.Side);
+                Label(port.Name, label.Position, "SCHEMATIC_LABEL", 9d / 3, label.Rotation);
             }
         }
         var service = new SchematicAuthoringService();

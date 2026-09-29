@@ -472,7 +472,8 @@ public partial class SchematicWorkspaceControl : UserControl
                     else UpdateSelection(project);
                     e.Handled = true;
                 };
-                Text(port.Name, center.X + (contact.Side == "Left" ? -13 : 2), center.Y - 5, 9, Brushes.DimGray);
+                var label = SchematicPortPresentation.GroupLabel(center, contact.Side);
+                Text(port.Name, label.Position.X, label.Position.Y, 9, Brushes.DimGray, label.Rotation);
                 continue;
             }
             var handle = new Border { Padding = new(3, 1, 3, 1), Background = Brushes.White,
@@ -511,12 +512,24 @@ public partial class SchematicWorkspaceControl : UserControl
         }
     }
 
-    private readonly Dictionary<string, BitmapImage?> _images = new(StringComparer.Ordinal);
-    private async Task<BitmapImage?> GetImage(string id)
+    private readonly Dictionary<string, BitmapSource?> _images = new(StringComparer.Ordinal);
+    private async Task<BitmapSource?> GetImage(string id)
     {
         if (_images.TryGetValue(id, out var cached)) return cached;
-        var uri = await _imageResolver(id); BitmapImage? bitmap = null;
-        if (uri is not null) { bitmap = new BitmapImage(); bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad; bitmap.UriSource = uri; bitmap.EndInit(); bitmap.Freeze(); }
+        var uri = await _imageResolver(id); BitmapSource? bitmap = null;
+        if (uri is not null)
+        {
+            var source = new BitmapImage();
+            source.BeginInit(); source.CacheOption = BitmapCacheOption.OnLoad; source.UriSource = uri; source.EndInit(); source.Freeze();
+            var bgra = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+            var stride = checked(bgra.PixelWidth * 4);
+            var pixels = new byte[checked(stride * bgra.PixelHeight)];
+            bgra.CopyPixels(pixels, stride, 0);
+            var bounds = SchematicRasterCrop.FindContentBounds(pixels, bgra.PixelWidth, bgra.PixelHeight, stride);
+            bitmap = bounds.Width == bgra.PixelWidth && bounds.Height == bgra.PixelHeight
+                ? source : new CroppedBitmap(source, new Int32Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height));
+            bitmap.Freeze();
+        }
         _images[id] = bitmap;
         return bitmap;
     }
@@ -537,9 +550,10 @@ public partial class SchematicWorkspaceControl : UserControl
         catch { target.ToolTip = "圖片無法載入"; }
     }
 
-    private void Text(string text, double x, double y, double size, Brush colour)
+    private void Text(string text, double x, double y, double size, Brush colour, int rotation = 0)
     {
         var label = new TextBlock { Text = text, FontSize = size, Foreground = colour, IsHitTestVisible = false };
+        if (rotation != 0) label.RenderTransform = new RotateTransform(rotation);
         Canvas.SetLeft(label, x * 3); Canvas.SetTop(label, y * 3); Sheet.Children.Add(label);
     }
     private Ellipse Marker(SchematicPoint p, Brush fill, Brush stroke, double diameter)

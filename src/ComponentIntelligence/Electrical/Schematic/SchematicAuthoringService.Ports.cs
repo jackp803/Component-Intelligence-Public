@@ -91,6 +91,7 @@ public sealed partial class SchematicAuthoringService
                 points = ReanchorSymbol(points, draft, next, wire.Start, true);
             if (wire.End.SymbolId == symbolId && SymbolAttachmentPoint(draft, symbol, wire.End) != SymbolAttachmentPoint(draft, next, wire.End))
                 points = ReanchorSymbol(points, draft, next, wire.End, false);
+            if (CanReroutePortWire(doc, wire)) points = ReroutePortWire(draft, doc, wire);
             doc.Wires[i] = wire with { Points = points };
             ReanchorDependentJunctions(doc, wire.WireId);
         }
@@ -122,29 +123,6 @@ public sealed partial class SchematicAuthoringService
                 if (anchor.Direction == "Bottom" && Math.Abs(p.Y - oldHeight) < .001) p = p with { Y = height };
                 anchorsById[anchor.EndpointId] = anchor with { Position = p };
             }
-        foreach (var (side, groups) in bySide)
-        {
-            if (groups.Count < 2) continue;
-            var horizontal = side is "Top" or "Bottom";
-            var length = horizontal ? width : height;
-            var ordered = groups.OrderBy(g => g.Average(a => horizontal ? a.Position.X : a.Position.Y)).ToArray();
-            var widths = ordered.Select(g => Math.Max(16, (g.Count - 1) * 5 + 5)).ToArray();
-            var gap = (length - 6 - widths.Sum()) / (ordered.Length + 1);
-            var cursor = 3 + gap;
-            for (var groupIndex = 0; groupIndex < ordered.Length; groupIndex++)
-            {
-                var group = ordered[groupIndex].OrderBy(a => horizontal ? a.Position.X : a.Position.Y).ToArray();
-                var start = cursor + (widths[groupIndex] - (group.Length - 1) * 5) / 2;
-                for (var pin = 0; pin < group.Length; pin++)
-                {
-                    var old = anchorsById[group[pin].EndpointId];
-                    var position = horizontal ? new SchematicPoint(start + pin * 5, side == "Top" ? 0 : height)
-                        : new SchematicPoint(side == "Left" ? 0 : width, start + pin * 5);
-                    anchorsById[old.EndpointId] = old with { Position = position, Confirmed = false, CadContactId = null };
-                }
-                cursor += widths[groupIndex] + gap;
-            }
-        }
         return symbol with { Width = width, Height = height,
             Anchors = symbol.Anchors.Select(a => anchorsById[a.EndpointId]).ToList() };
     }

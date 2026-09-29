@@ -87,6 +87,75 @@ public sealed class SchematicPortConnectionTests
     }
 
     [Fact]
+    public void MovingPortModuleRecomputesSimpleRouteWithoutKeepingTheOldDetour()
+    {
+        var project = Project();
+        var first = project.Schematic!.Symbols[0];
+        var second = project.Schematic.Symbols[1];
+        var start = SchematicPortPresentation.ConnectionPoint(project, first, "A");
+        var end = SchematicPortPresentation.ConnectionPoint(project, second, "B");
+        project = _service.DrawWire(project, "page", SchematicAttachment.Port(first.SymbolId, "A"),
+            SchematicAttachment.Port(second.SymbolId, "B"),
+            [start, new(start.X + 220, start.Y), new(start.X + 220, end.Y - 30), new(end.X + 30, end.Y - 30),
+                new(end.X + 30, end.Y), end]);
+        var connection = Assert.Single(project.Connections);
+        var wireId = project.Schematic!.Wires.Single().WireId;
+        project = _service.TransformSymbol(project, second.SymbolId, new(85, 60), 0);
+        var wire = Assert.Single(project.Schematic!.Wires);
+        Assert.Equal(wireId, wire.WireId);
+        Assert.Equal(connection.ConnectionId, Assert.Single(project.Connections).ConnectionId);
+        Assert.Equal(start, wire.Points[0]);
+        Assert.Equal(SchematicPortPresentation.ConnectionPoint(project, project.Schematic.Symbols[1], "B"), wire.Points[^1]);
+        Assert.All(wire.Points, p => Assert.True(p.X < start.X + 220));
+        Assert.All(wire.Points.Zip(wire.Points.Skip(1)), pair =>
+            Assert.True(pair.First.X == pair.Second.X || pair.First.Y == pair.Second.Y));
+        SchematicAuthoringService.Validate(project);
+    }
+
+    [Fact]
+    public void ExplicitlyEditedPortRouteKeepsItsInteriorBendsWhenModuleMoves()
+    {
+        var project = Project();
+        var first = project.Schematic!.Symbols[0];
+        var second = project.Schematic.Symbols[1];
+        var start = SchematicPortPresentation.ConnectionPoint(project, first, "A");
+        var end = SchematicPortPresentation.ConnectionPoint(project, second, "B");
+        project = _service.DrawWire(project, "page", SchematicAttachment.Port(first.SymbolId, "A"),
+            SchematicAttachment.Port(second.SymbolId, "B"), Route(start, end));
+        var wire = Assert.Single(project.Schematic!.Wires);
+        var middle = new SchematicPoint(start.X + 20, start.Y + 30);
+        project = _service.ReplaceRoute(project, wire.WireId,
+            [start, new(start.X + 20, start.Y), middle, new(end.X, middle.Y), end]);
+        Assert.True(Assert.Single(project.Schematic!.Wires).ManualRoute);
+        project = _service.TransformSymbol(project, second.SymbolId, new(150, 45), 0);
+        wire = Assert.Single(project.Schematic!.Wires);
+        Assert.Contains(middle, wire.Points);
+        Assert.Equal(start, wire.Points[0]);
+        Assert.Equal(SchematicPortPresentation.ConnectionPoint(project, project.Schematic.Symbols[1], "B"), wire.Points[^1]);
+        SchematicAuthoringService.Validate(project);
+    }
+
+    [Fact]
+    public void MovingPortModuleShortensDraftRouteButKeepsFreeTail()
+    {
+        var project = Project();
+        var symbol = project.Schematic!.Symbols[0];
+        var start = SchematicPortPresentation.ConnectionPoint(project, symbol, "A");
+        var tail = new SchematicPoint(230, 80);
+        project = _service.DrawWire(project, "page", SchematicAttachment.Port(symbol.SymbolId, "A"),
+            SchematicAttachment.Free(), [start, new(300, start.Y), new(300, tail.Y), tail]);
+        var id = Assert.Single(project.Schematic!.Wires).WireId;
+        project = _service.TransformSymbol(project, symbol.SymbolId, new(100, 35), 0);
+        var wire = Assert.Single(project.Schematic!.Wires);
+        Assert.Equal(id, wire.WireId);
+        Assert.Equal(tail, wire.Points[^1]);
+        Assert.Equal(SchematicPortPresentation.ConnectionPoint(project, project.Schematic.Symbols[0], "A"), wire.Points[0]);
+        Assert.All(wire.Points, p => Assert.True(p.X < 300));
+        Assert.Empty(project.Connections);
+        SchematicAuthoringService.Validate(project);
+    }
+
+    [Fact]
     public void HiddenPinsCannotBeSnappedUntilTheirPortIsExpanded()
     {
         var project = Project();

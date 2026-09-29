@@ -118,6 +118,7 @@ public sealed record SchematicWire
     public SchematicAttachment End { get; init; } = SchematicAttachment.Free();
     public List<SchematicPoint> Points { get; init; } = [];
     public bool Locked { get; init; }
+    public bool ManualRoute { get; init; }
 }
 
 public sealed record SchematicMarker

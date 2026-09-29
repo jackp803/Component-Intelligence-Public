@@ -40,8 +40,15 @@ public static class SchematicPortPresentation
             .OrderBy(p => GroupCoordinate(symbol, p, side)).ThenBy(p => p.PortId, StringComparer.Ordinal).ToArray();
         var index = Array.FindIndex(sameSide, p => p.PortId == port.PortId);
         if (index < 0) throw new InvalidOperationException("The selected port has no visible group contact.");
-        var count = sameSide.Length;
-        var fraction = (index + 1d) / (count + 1d);
+        var coordinate = GroupCoordinate(symbol, port, side);
+        var rotated = symbol.Rotation % 180 != 0;
+        var originalStart = side is "Top" or "Bottom" ? symbol.Position.X : symbol.Position.Y;
+        var originalExtent = side is "Top" or "Bottom"
+            ? rotated ? symbol.Height : symbol.Width
+            : rotated ? symbol.Width : symbol.Height;
+        var fraction = port.Pins.Count == 0 || originalExtent <= 0
+            ? (index + 1d) / (sameSide.Length + 1d)
+            : Math.Clamp((coordinate - originalStart) / originalExtent, 0.025, 0.975);
         var position = side switch
         {
             "Left" => new SchematicPoint(body.X, body.Y + body.Height * fraction),
@@ -63,6 +70,14 @@ public static class SchematicPortPresentation
         var body = GenericBodyBounds(doc, symbol, owner);
         return GroupContact(doc, symbol, owner, port, body).Position;
     }
+
+    public static (SchematicPoint Position, int Rotation) GroupLabel(SchematicPoint contact, string side) => side switch
+    {
+        "Top" => (new(contact.X + 2, contact.Y - 3), -90),
+        "Bottom" => (new(contact.X - 2, contact.Y + 3), 90),
+        "Left" => (new(contact.X - 13, contact.Y - 5), 0),
+        _ => (new(contact.X + 2, contact.Y - 5), 0)
+    };
 
     public static bool HasPortRoute(SchematicDocument doc, SchematicSymbol symbol, string portId) =>
         doc.Wires.Any(wire =>

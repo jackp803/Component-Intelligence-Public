@@ -136,6 +136,7 @@ public partial class SchematicWorkspaceControl : UserControl
         if (page.TemplateGeometry is not null)
         {
             var geometry = CadCanvas(page.TemplateGeometry); geometry.IsHitTestVisible = false; Sheet.Children.Add(geometry);
+            RenderTitleBlock(project, page);
         }
         DrawFrame(page, doc.Pages.IndexOf(page) + 1, project.Name);
         if (page.CableDetail is not null)
@@ -656,7 +657,17 @@ public partial class SchematicWorkspaceControl : UserControl
         }
         if (_placeMode && CatalogList.SelectedItem is CatalogItem item && _pageId is not null)
         {
-            Apply(p => _service.AddCatalogComponent(p, item.Component, _pageId, point), "已放置元件；接點位置待確認");
+            string? warning = null;
+            var savedLayoutApplied = false;
+            var placed = Apply(p =>
+            {
+                var result = AddCatalogWithSavedLayout(p, item.Component, _pageId, point);
+                warning = result.Warning;
+                savedLayoutApplied = result.Applied;
+                return result.Project;
+            }, "已放置元件");
+            if (placed && warning is not null) Status.Text = warning;
+            else if (placed && savedLayoutApplied) Status.Text = "已放置元件並套用已保存模塊版型。";
             _placeMode = false; _placementPreview = null; Render(_getProject()); return;
         }
         if (_wireMode)
@@ -827,7 +838,7 @@ public partial class SchematicWorkspaceControl : UserControl
         CancelCommand();
         try
         {
-            _placementPreview = _service.AddCatalogComponent(_getProject(), item.Component, _pageId, new(20, 20));
+            _placementPreview = AddCatalogWithSavedLayout(_getProject(), item.Component, _pageId, new(20, 20)).Project;
             _placeMode = true; Status.Text = "選定元件待放置"; Focus(); Render(_getProject());
         }
         catch (Exception error) { Status.Text = error.Message; }

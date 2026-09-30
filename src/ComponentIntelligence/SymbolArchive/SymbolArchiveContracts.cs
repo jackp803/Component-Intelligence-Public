@@ -62,6 +62,37 @@ public sealed record SymbolArchiveDocument
     public string SchemaVersion { get; init; } = SymbolArchiveRepository.SchemaVersion;
     public IReadOnlyList<ComponentSymbolBinding> Bindings { get; init; } = [];
     public IReadOnlyList<CableArchiveEntry> CableTemplates { get; init; } = [];
+    public IReadOnlyList<SchematicModuleLayoutProfile> SchematicLayouts { get; init; } = [];
+}
+
+public sealed record SchematicModulePinLayout
+{
+    public required string SourcePortId { get; init; }
+    public required string SourcePinId { get; init; }
+    public required Electrical.Schematic.SchematicPoint Position { get; init; }
+    public required string Side { get; init; }
+}
+
+public sealed record SchematicModulePortLayout
+{
+    public required string SourcePortId { get; init; }
+    public required string Side { get; init; }
+    public double Coordinate { get; init; }
+}
+
+// A reusable drawing preference, not an approved CAD asset or electrical pin-mapping authority.
+public sealed record SchematicModuleLayoutProfile
+{
+    public required string ComponentId { get; init; }
+    public required string Revision { get; init; }
+    public bool Active { get; init; } = true;
+    public double Width { get; init; }
+    public double Height { get; init; }
+    public int Rotation { get; init; }
+    public bool ManualSize { get; init; }
+    public IReadOnlyList<SchematicModulePinLayout> Pins { get; init; } = [];
+    public IReadOnlyList<SchematicModulePortLayout> Ports { get; init; } = [];
+    public IReadOnlyList<string> CollapsedSourcePortIds { get; init; } = [];
 }
 
 public sealed record CableArchiveEntry

@@ -9,6 +9,7 @@ public sealed class SymbolArchiveRepository
     public const string SchemaVersion = "ci-symbol-archive.v1";
     public const string MultiRepresentationSchemaVersion = "ci-symbol-archive.v2";
     public const string CableTemplateSchemaVersion = "ci-symbol-archive.v3";
+    public const string SchematicLayoutSchemaVersion = "ci-symbol-archive.v4";
     public const string FileName = "SymbolArchive.json";
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -76,7 +77,8 @@ public sealed class SymbolArchiveRepository
 
     public SymbolArchiveDocument ValidateAndNormalize(SymbolArchiveDocument document)
     {
-        if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion && document.SchemaVersion != CableTemplateSchemaVersion)
+        if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion &&
+            document.SchemaVersion != CableTemplateSchemaVersion && document.SchemaVersion != SchematicLayoutSchemaVersion)
             throw new InvalidDataException($"Unsupported Symbol Archive schema '{document.SchemaVersion}'.");
 
         var bindingKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -156,13 +158,55 @@ public sealed class SymbolArchiveRepository
             return entry with { AssetPath = NormalizeArchiveRelativePath(entry.AssetPath) };
         }).OrderBy(e => e.Template.TemplateId, StringComparer.Ordinal).ThenBy(e => e.Template.TemplateRevision, StringComparer.Ordinal).ToArray();
 
+        var layoutKeys = new HashSet<(string ComponentId, string Revision)>();
+        var activeLayouts = new HashSet<string>(StringComparer.Ordinal);
+        var layouts = (document.SchematicLayouts ?? []).Select(layout =>
+        {
+            if (string.IsNullOrWhiteSpace(layout.ComponentId) || string.IsNullOrWhiteSpace(layout.Revision) ||
+                !layoutKeys.Add((layout.ComponentId, layout.Revision)) ||
+                layout.Active && !activeLayouts.Add(layout.ComponentId))
+                throw new InvalidDataException("Schematic layout requires a unique component/revision and one active revision.");
+            if (!double.IsFinite(layout.Width) || !double.IsFinite(layout.Height) || layout.Width < 10 || layout.Height < 10 ||
+                layout.Rotation is not (0 or 90 or 180 or 270))
+                throw new InvalidDataException("Schematic layout requires finite positive frame dimensions.");
+            var pins = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var pin in layout.Pins)
+                if (string.IsNullOrWhiteSpace(pin.SourcePortId) || string.IsNullOrWhiteSpace(pin.SourcePinId) ||
+                    !pins.Add(pin.SourcePinId) || !ValidSide(pin.Side) ||
+                    !double.IsFinite(pin.Position.X) || !double.IsFinite(pin.Position.Y) ||
+                    pin.Position.X < 0 || pin.Position.Y < 0 ||
+                    pin.Position.X > layout.Width || pin.Position.Y > layout.Height ||
+                    !(pin.Side switch
+                    {
+                        "Left" => Math.Abs(pin.Position.X) < .01,
+                        "Right" => Math.Abs(pin.Position.X - layout.Width) < .01,
+                        "Top" => Math.Abs(pin.Position.Y) < .01,
+                        "Bottom" => Math.Abs(pin.Position.Y - layout.Height) < .01,
+                        _ => false
+                    }))
+                    throw new InvalidDataException("Schematic layout Pin must have unique exact source identity and a frame-edge position.");
+            var ports = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var port in layout.Ports)
+                if (string.IsNullOrWhiteSpace(port.SourcePortId) || !ports.Add(port.SourcePortId) ||
+                    !ValidSide(port.Side) || !double.IsFinite(port.Coordinate) || port.Coordinate < 0 ||
+                    port.Coordinate > (port.Side is "Top" or "Bottom" ? layout.Width : layout.Height))
+                    throw new InvalidDataException("Schematic layout Port position is invalid.");
+            if (layout.CollapsedSourcePortIds.Distinct(StringComparer.Ordinal).Count() != layout.CollapsedSourcePortIds.Count ||
+                layout.CollapsedSourcePortIds.Any(string.IsNullOrWhiteSpace))
+                throw new InvalidDataException("Schematic layout collapsed Port identities must be unique.");
+            return layout;
+        }).OrderBy(item => item.ComponentId, StringComparer.Ordinal)
+          .ThenBy(item => item.Revision, StringComparer.Ordinal).ToArray();
+
         return document with
         {
             // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
-            SchemaVersion = document.SchemaVersion == CableTemplateSchemaVersion || cables.Length > 0 ? CableTemplateSchemaVersion :
+            SchemaVersion = document.SchemaVersion == SchematicLayoutSchemaVersion || layouts.Length > 0 ? SchematicLayoutSchemaVersion :
+                document.SchemaVersion == CableTemplateSchemaVersion || cables.Length > 0 ? CableTemplateSchemaVersion :
                 document.SchemaVersion == MultiRepresentationSchemaVersion || bindings.Any(b => b.RepresentationId != "default")
                 ? MultiRepresentationSchemaVersion : SchemaVersion,
             CableTemplates = cables,
+            SchematicLayouts = layouts,
             Bindings = bindings
                 .OrderBy(item => item.ComponentId, StringComparer.Ordinal)
                 .ThenBy(item => item.Role)
@@ -170,6 +214,8 @@ public sealed class SymbolArchiveRepository
                 .ToArray()
         };
     }
+
+    private static bool ValidSide(string side) => side is "Left" or "Right" or "Top" or "Bottom";
 
     public string ResolveArchivePath(string assetPath)
     {

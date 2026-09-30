@@ -4,6 +4,7 @@ namespace ComponentIntelligence.Electrical.Schematic;
 public sealed class SchematicDocument
 {
     public string SchemaVersion { get; init; } = "electrical-schematic.v1";
+    public SchematicTitleBlockSettings TitleBlock { get; set; } = new();
     public List<SchematicPage> Pages { get; init; } = [];
     public List<SchematicSymbol> Symbols { get; init; } = [];
     public List<SchematicWire> Wires { get; init; } = [];
@@ -23,6 +24,8 @@ public sealed record SchematicPage
     public int GridColumns { get; init; } = 8;
     public int GridRows { get; init; } = 5;
     public SchematicGridBounds? CoordinateGrid { get; init; }
+    public string? TitleBlockContentOverride { get; init; }
+    public IReadOnlyList<SchematicTitleBlockSlot> TitleBlockSlots { get; init; } = [];
     public SchematicGridBounds EffectiveGrid()
     {
         var fallback = new SchematicGridBounds(Margin, Margin, Width - 2 * Margin, Height - 2 * Margin);

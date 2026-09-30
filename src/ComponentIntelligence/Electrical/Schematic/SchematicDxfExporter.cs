@@ -117,6 +117,17 @@ public sealed class SchematicDxfExporter
         {
             foreach (var p in template.Primitives) Primitive(p, "SCHEMATIC_TEMPLATE", .25);
             diagnostics.AddRange(template.Diagnostics.Select(d => "TEMPLATE: " + d));
+            var slots = page.TitleBlockSlots.Count > 0 ? page.TitleBlockSlots : SchematicTitleBlock.DetectSlots(template);
+            foreach (var slot in slots)
+            {
+                var value = SchematicTitleBlock.Value(project, page, slot.Field);
+                if (string.IsNullOrWhiteSpace(value)) continue;
+                var literal = value.Replace("\\", "\\\\").Replace("{", "\\{").Replace("}", "\\}")
+                    .Replace("\r\n", "\n").Replace("\n", "\\P");
+                Add(new MText(literal, Point(new(slot.Bounds.X, slot.Bounds.Y)),
+                    Math.Min(3, slot.Bounds.Height * .7), slot.Bounds.Width)
+                    { AttachmentPoint = MTextAttachmentPoint.TopLeft }, "SCHEMATIC_TITLE_BLOCK");
+            }
         }
         else
         {

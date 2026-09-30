@@ -13,6 +13,7 @@
    <Button Content="接點設定" Padding="12,5" Click="Bindings_Click" ToolTip="接點設定 (B)"/>
    <Button Content="圖塊外觀" Padding="12,5" Margin="4,0" Click="ImportSymbol_Click" ToolTip="圖塊外觀 (I)"/>
    <Button Content="圖框／頁面" Padding="12,5" Click="ImportTemplate_Click" ToolTip="圖框／頁面 (T)"/>
+   <Button Content="標題欄" Padding="12,5" Margin="4,0" Click="TitleBlock_Click" ToolTip="填寫專案與本頁圖框欄位"/>
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE7AD;" ToolTip="旋轉 90 度 (R)" Padding="10,5" Margin="4,0" Click="Rotate_Click"/>
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE72E;" ToolTip="鎖定／解鎖 (L)" Padding="10,5" Click="Lock_Click"/>
    <Button Content="前往對端" Padding="12,5" Margin="4,0" Click="Navigate_Click" ToolTip="前往對端 (J)"/>
@@ -68,6 +69,7 @@
     <Button Content="套用 Reference" Padding="8,5" Click="Reference_Click" ToolTip="套用 Reference (Ctrl+Enter)"/>
     <Button Content="放置另一個表示" Padding="8,5" Margin="0,6,0,0" Click="AnotherRepresentation_Click" ToolTip="放置此元件的另一個表示 (Shift+P)"/>
     <Button Content="拆分模塊表示" Padding="8,5" Margin="0,6,0,0" Click="SplitRepresentation_Click" ToolTip="將通用模塊接點分段放到各頁；仍是一顆實體 (Ctrl+Shift+P)"/>
+    <Button Content="保存模塊版型" Padding="8,5" Margin="0,6,0,0" Click="SaveModuleLayout_Click" ToolTip="讓同型元件在其他專案沿用目前的尺寸與接點位置；不核准 CAD 圖塊"/>
     <TextBlock x:Name="SelectionState" TextWrapping="Wrap" Margin="0,12,0,0" Foreground="#61696B"/>
    </StackPanel>
   </Grid>

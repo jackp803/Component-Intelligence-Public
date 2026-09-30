@@ -107,6 +107,21 @@ public sealed partial class SchematicAuthoringService
         doc.Pages[index] = doc.Pages[index] with { Title = title.Trim() };
     });
 
+    public ElectricalProject SetTitleBlock(ElectricalProject project, string pageId,
+        SchematicTitleBlockSettings settings, string? pageContentOverride) => Edit(project, (_, doc) =>
+    {
+        var index = doc.Pages.FindIndex(p => p.PageId == pageId);
+        if (index < 0) throw new InvalidOperationException("Select a sheet.");
+        static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        foreach (var value in new[] { settings.ProjectName, settings.DrawingNumber, settings.DrawnBy,
+            settings.CheckedBy, settings.Revision, pageContentOverride })
+            if (value?.Length > 200) throw new InvalidOperationException("Title-block fields cannot exceed 200 characters.");
+        doc.TitleBlock = settings with { ProjectName = Clean(settings.ProjectName),
+            DrawingNumber = Clean(settings.DrawingNumber), DrawnBy = Clean(settings.DrawnBy),
+            CheckedBy = Clean(settings.CheckedBy), Revision = Clean(settings.Revision) };
+        doc.Pages[index] = doc.Pages[index] with { TitleBlockContentOverride = Clean(pageContentOverride) };
+    });
+
     public ElectricalProject AddCatalogComponent(ElectricalProject project, ComponentIR source, string pageId, SchematicPoint position) => Edit(project, (draft, doc) =>
     {
         var component = new ComponentProjectBridge().CreateInstance(source, $"cmp-{Guid.NewGuid():N}");
@@ -200,7 +215,7 @@ public sealed partial class SchematicAuthoringService
         if (index < 0) throw new InvalidOperationException("Select a sheet.");
         doc.Pages[index] = doc.Pages[index] with { TemplateGeometry = asset, TemplatePath = sourcePath,
             TemplateSha256 = asset.SourceSha256, Width = width, Height = height, Margin = margin, GridColumns = columns, GridRows = rows,
-            CoordinateGrid = coordinateGrid };
+            CoordinateGrid = coordinateGrid, TitleBlockSlots = SchematicTitleBlock.DetectSlots(asset) };
     });
 
     public ElectricalProject PlaceApprovedRepresentation(ElectricalProject project, string componentInstanceId,
@@ -268,7 +283,8 @@ public sealed partial class SchematicAuthoringService
             doc.Pages.SingleOrDefault(p => p.PageId == templatePageId)
             ?? throw new InvalidOperationException("Source page format no longer exists.");
         // Edit cloned the document; reuse only its format, never a cable-detail binding.
-        doc.Pages.Add(format with { PageId = $"sheet-{Guid.NewGuid():N}", Title = title.Trim(), CableDetail = null });
+        doc.Pages.Add(format with { PageId = $"sheet-{Guid.NewGuid():N}", Title = title.Trim(),
+            TitleBlockContentOverride = null, CableDetail = null });
     });
 
     public ElectricalProject ReorderPages(ElectricalProject project, IReadOnlyList<string> pageIds) => Edit(project, (_, doc) =>

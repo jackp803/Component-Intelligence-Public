@@ -15,6 +15,8 @@ public sealed class SchematicPageFormatTests
             Width = 500, Height = 300, Margin = 12, GridColumns = 10, GridRows = 6,
             CoordinateGrid = new(20, 15, 460, 260), TemplatePath = "company.dxf",
             TemplateSha256 = new string('A', 64),
+            TitleBlockContentOverride = "Previous page only",
+            TitleBlockSlots = [new("SheetContent", new(30, 250, 80, 10))],
             TemplateGeometry = new() { SourceSha256 = new string('A', 64), Width = 500, Height = 300,
                 Primitives = [new() { Kind = "LINE", Start = new(0, 0), End = new(500, 0) }] }
         };
@@ -23,7 +25,11 @@ public sealed class SchematicPageFormatTests
         var added = next.Schematic!.Pages[1];
         Assert.NotEqual(source.PageId, added.PageId);
         Assert.Equal("Next", added.Title);
-        Assert.Equal(source with { PageId = added.PageId, Title = "Next", TemplateGeometry = added.TemplateGeometry }, added);
+        Assert.Equal(source with { PageId = added.PageId, Title = "Next", TemplateGeometry = added.TemplateGeometry,
+            TitleBlockContentOverride = null, TitleBlockSlots = added.TitleBlockSlots }, added);
+        Assert.Null(added.TitleBlockContentOverride);
+        Assert.Equal(source.TitleBlockSlots, added.TitleBlockSlots);
+        Assert.NotSame(source.TitleBlockSlots, added.TitleBlockSlots);
         Assert.NotSame(source.TemplateGeometry, added.TemplateGeometry);
         Assert.Equal(System.Text.Json.JsonSerializer.Serialize(source.TemplateGeometry),
             System.Text.Json.JsonSerializer.Serialize(added.TemplateGeometry));

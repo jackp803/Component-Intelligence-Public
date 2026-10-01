@@ -13,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/ComponentIntelligence/ComponentIntelligence.csproj" />
+    <ProjectReference Include="../../src/ComponentIntelligence.Cli/ComponentIntelligence.Cli.csproj" />
   </ItemGroup>
 </Project>

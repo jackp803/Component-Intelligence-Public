@@ -1,6 +1,6 @@
 # Cable Wiring And Manufacturing Details Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Independent review is required before delivery.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking. Independent review is required before delivery.
 
 **Goal:** Import and reuse one cable with connectable CAD geometry, a manufacturing sketch, and an editable pin table without duplicate BOM counts.
 
@@ -44,11 +44,11 @@
 
 **Interfaces:** Add optional `CableArchiveEntry.ManufacturingAsset : CableCadRoleAsset?`. `CableCadRoleAsset` stores archive-relative path, source SHA-256, units and optional `CableCadSelection`. Add `ResolvedCableArchive.ManufacturingPath : string?` without changing existing wiring `AbsolutePath`. Use `ci-symbol-archive.v5` only for new role-bearing data; preserve v1-v4 load behavior.
 
-- [ ] Write failing tests: `LegacyArchiveLoadsWithoutManufacturingAndDoesNotWrite`, `DualAssetsRoundTripWithPinnedHashes`, `TraversalAndLinkedAssetsRejected`, `ChangedManufacturingAssetFailsResolution`.
-- [ ] Run `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter CableDualRepresentationArchiveTests` and confirm the expected failures.
-- [ ] Implement optional records, role validation and resolver verification. Reject invalid finite units, malformed hashes, duplicate roles and unsupported versions before writes.
-- [ ] Run that filter plus `CableArchiveConsumptionTests` and `SymbolArchiveRepositoryTests`; all must pass.
-- [ ] Review and commit only Task 1 paths.
+- [x] Write failing tests: `LegacyArchiveLoadsWithoutManufacturingAndDoesNotWrite`, `DualAssetsRoundTripWithPinnedHashes`, `TraversalAndLinkedAssetsRejected`, `ChangedManufacturingAssetFailsResolution`.
+- [x] Run `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj --filter CableDualRepresentationArchiveTests` and confirm the expected failures.
+- [x] Implement optional records, role validation and resolver verification. Reject invalid finite units, malformed hashes, duplicate roles and unsupported versions before writes.
+- [x] Run that filter plus `CableArchiveConsumptionTests` and `SymbolArchiveRepositoryTests`; all must pass.
+- [x] Review and commit only Task 1 paths.
 
 ## Task 2: Explicit CAD Selection And Transactional Archive Creation
 
@@ -62,11 +62,11 @@
 
 **Interfaces:** `SchematicCadSelectionService.Select(SchematicCadAsset asset, CableCadSelection selection) : SchematicCadAsset`. Selection records explicit region/block role, original source hash and a deterministic geometry hash. `CableArchiveCreationService.CreateAsync(CableArchiveDraft draft, CancellationToken cancellationToken = default) : Task<CableArchiveEntry>` consumes loaded role geometries and source paths; writes a new revision with expected-original-archive concurrency checks.
 
-- [ ] Write failing tests: `TwoFilesCreateOneTemplateWithoutTouchingSources`, `CombinedRegionsKeepContactTransforms`, `DifferentSelectionsHaveDifferentGeometryIdentity`, `StaticTableExcludedOnlyExplicitly`, `BoundaryCutOrUnsupportedGeometryIsDiagnosed`, `CancelledOrFailedSaveLeavesArchiveUnchanged`.
-- [ ] Run the two new test-class filters and verify expected failures.
-- [ ] Implement selected-geometry normalization using existing primitives/transforms. Preserve entity/block provenance where needed; do not infer electrical identities. Stage source copies and verify bytes before committing one archive revision. Refuse replacing an existing immutable revision.
-- [ ] Run new tests and `SchematicCadImportTests`, `SchematicCadFileLoaderTests`, `SchematicHatchTests`.
-- [ ] Review and commit only Task 2 paths.
+- [x] Write failing tests: `TwoFilesCreateOneTemplateWithoutTouchingSources`, `CombinedRegionsKeepContactTransforms`, `DifferentSelectionsHaveDifferentGeometryIdentity`, `StaticTableExcludedOnlyExplicitly`, `BoundaryCutOrUnsupportedGeometryIsDiagnosed`, `CancelledOrFailedSaveLeavesArchiveUnchanged`.
+- [x] Run the two new test-class filters and verify expected failures.
+- [x] Implement selected-geometry normalization using existing primitives/transforms. Preserve entity/block provenance where needed; do not infer electrical identities. Stage source copies and verify bytes before committing one archive revision. Refuse replacing an existing immutable revision.
+- [x] Run new tests and `SchematicCadImportTests`, `SchematicCadFileLoaderTests`, `SchematicHatchTests`.
+- [x] Review and commit only Task 2 paths.
 
 ## Task 3: Connector Choices And Canonical Four-Column Table Drafts
 
@@ -79,11 +79,11 @@
 
 **Interfaces:** `CableManufacturingEditorService.Prepare(ArchivedCableTemplate template) : CableManufacturingDraft`; `Apply(ArchivedCableTemplate template, CableManufacturingDraft draft) : ArchivedCableTemplate`; `Validate(CableManufacturingDraft draft) : IReadOnlyList<string>`. Draft end choices reference existing `ConnectorDefinition` and exact source Port/Pin IDs. Complete rows produce existing `CablePinMapping`; incomplete rows/explicit per-Pin usage persist as draft metadata, not a second confirmed pair graph. Table order/layout is separate presentation metadata.
 
-- [ ] Write failing tests: `PinCountCreatesPinsWithoutMapping`, `BlankTargetIsNotNc`, `ExplicitNcAndUnusedRemainDistinct`, `MappedPinRemovalRejected`, `UnknownConnectorRemainsDraft`, `MappingEditRevokesOnlyEditedConfirmation`, `YAppearanceDoesNotShortBranches`.
-- [ ] Run `--filter CableManufacturingEditorTests` and verify expected failures.
-- [ ] Implement clone-only draft editing, source-ID selection, explicit confirmation evidence, and conflict reports before removing Pins. Define and validate table projection from canonical pairs; no automatic 1-to-1 map. Preserve multi-end identities even while the primary editor starts with P1/P2 groups.
-- [ ] Run new tests plus `ArchivedCableInstanceTests` and `CableConstructionAuthorityTests`.
-- [ ] Review and commit only Task 3 paths.
+- [x] Write failing tests: `PinCountCreatesPinsWithoutMapping`, `BlankTargetIsNotNc`, `ExplicitNcAndUnusedRemainDistinct`, `MappedPinRemovalRejected`, `UnknownConnectorRemainsDraft`, `MappingEditRevokesOnlyEditedConfirmation`, `YAppearanceDoesNotShortBranches`.
+- [x] Run `--filter CableManufacturingEditorTests` and verify expected failures.
+- [x] Implement clone-only draft editing, source-ID selection, explicit confirmation evidence, and conflict reports before removing Pins. Define and validate table projection from canonical pairs; no automatic 1-to-1 map. Preserve multi-end identities even while the primary editor starts with P1/P2 groups.
+- [x] Run new tests plus `ArchivedCableInstanceTests` and `CableConstructionAuthorityTests`.
+- [x] Review and commit only Task 3 paths.
 
 ## Task 4: Reachable Library Import And Table Editor
 
@@ -98,11 +98,11 @@
 
 **Interfaces:** `CableArchiveEditorDialog` accepts the archive repository/catalog and returns a saved candidate only after explicit save. Library import is available even with zero templates. `CableManufacturingTableEditor` stages `CableManufacturingDraft` using connector and exact Pin dropdowns. Extend instance edit commands to accept a validated manufacturing draft and retain existing `SetArchivedCableDetails` compatibility.
 
-- [ ] Write failing tests: `InstanceDraftEditDoesNotModifyTemplateOrSibling`, `ConnectedPinRemovalRejectedAtomically`, `CancelledTableEditChangesNothing`, `IncompleteTableRowsRoundTrip`, `AllNewCommandsHaveNonConflictingShortcuts`.
-- [ ] Run the new filter and verify expected failures.
-- [ ] Implement explicit wiring/sketch file selectors, CAD-role region/block preview, units, contacts, connector choices, four table columns, draft gaps and evidence fields. Commit pending WPF grid edits before save; cancelled file/dialog operations do not archive. Do not rely on a conductor picker to create an imported custom cable.
-- [ ] Build Desktop and run new tests plus `SchematicShortcutTests` and `ArchivedCableInstanceTests`. Verify reachability/binding statically; owner performs mouse UAT.
-- [ ] Review and commit only Task 4 paths.
+- [x] Write failing tests: `InstanceDraftEditDoesNotModifyTemplateOrSibling`, `ConnectedPinRemovalRejectedAtomically`, `CancelledTableEditChangesNothing`, `IncompleteTableRowsRoundTrip`, `AllNewCommandsHaveNonConflictingShortcuts`.
+- [x] Run the new filter and verify expected failures.
+- [x] Implement explicit wiring/sketch file selectors, CAD-role region/block preview, units, contacts, connector choices, four table columns, draft gaps and evidence fields. Commit pending WPF grid edits before save; cancelled file/dialog operations do not archive. Do not rely on a conductor picker to create an imported custom cable.
+- [x] Build Desktop and run new tests plus `SchematicShortcutTests` and `ArchivedCableInstanceTests`. Verify reachability/binding statically; owner performs mouse UAT.
+- [x] Review and commit only Task 4 paths.
 
 ## Task 5: Instance-Pinned Manufacturing Details And Shared Rendering
 
@@ -118,11 +118,11 @@
 
 **Interfaces:** `SchematicCableDetailService.AddArchivedDetail(ElectricalProject project, string cableInstanceId, string? templatePageId = null) : ElectricalProject` creates a detail without requiring existing external connections. Save optional sketch/table positions in the detail binding and instance-pinned role geometry. `Build(project, page)` keeps its existing primitive/diagnostic return contract. Add same-sheet detail placement referencing an existing cable; no independent cable clone.
 
-- [ ] Write failing tests: `UnwiredArchivedCableHasDraftDetail`, `TwoViewsCountOneCable`, `ReferenceLengthSpecificationUpdateBothViews`, `DetailGeometryHasNoConnectableAnchors`, `RemovingDetailDoesNotRemoveCableOrConnections`, `MoveDetailDoesNotChangePhysicalLength`, `OverflowIsNotSilent`, `LongTextFitsOrIsDiagnosed`.
-- [ ] Run the new filter and verify expected failures.
-- [ ] Build table/sketch primitives from the saved instance using existing text substitutions. Retain the legacy connection-derived detail path. Reuse these primitives for canvas/export/print and clearly emit draft issues. Support independent table/sketch placement with persisted sheet coordinates.
-- [ ] Run new tests plus `SchematicCableDetailTests`, `SchematicPrintSafetyTests`, `SchematicDxfExporterTests`.
-- [ ] Review and commit only Task 5 paths.
+- [x] Write failing tests: `UnwiredArchivedCableHasDraftDetail`, `TwoViewsCountOneCable`, `ReferenceLengthSpecificationUpdateBothViews`, `DetailGeometryHasNoConnectableAnchors`, `RemovingDetailDoesNotRemoveCableOrConnections`, `MoveDetailDoesNotChangePhysicalLength`, `OverflowIsNotSilent`, `LongTextFitsOrIsDiagnosed`.
+- [x] Run the new filter and verify expected failures.
+- [x] Build table/sketch primitives from the saved instance using existing text substitutions. Retain the legacy connection-derived detail path. Reuse these primitives for canvas/export/print and clearly emit draft issues. Support independent table/sketch placement with persisted sheet coordinates.
+- [x] Run new tests plus `SchematicCableDetailTests`, `SchematicPrintSafetyTests`, `SchematicDxfExporterTests`.
+- [x] Review and commit only Task 5 paths.
 
 ## Task 6: Persistence, PDF Regression And Owner Test Package
 
@@ -133,11 +133,11 @@
 
 **Interfaces:** Use the existing project snapshot/reload path and shared PDF/print renderer; no new project repository. Embedded manufacturing snapshots must allow rendering without the original CAD or central archive.
 
-- [ ] Write failing tests: `OldProjectLoadsWithoutManufacturingFields`, `NewProjectReloadsWithAllDraftRowsAndSelections`, `ArchiveRelocationDoesNotChangeSavedGeometry`, `ChangedTemplateDoesNotUpgradeExistingProject`, `MultipagePdfContainsTableSketchFrameAndDraftStatus`, `FailedExportDoesNotMutateProject`.
-- [ ] Run the new test filters and verify expected failures where behavior is not yet implemented.
-- [ ] Complete serialization/validation wiring. Generate synthetic, non-company CAD fixtures and a sample project for repeatable tests. Run focused tests and the complete suite; record actual counts, warnings and unsupported cases.
-- [ ] Obtain independent read-only review of changed product files, fix findings, rerun affected tests, and only then publish a new isolated test runtime with launch validation. Preserve AT and working data. Do not claim installer or ordinary mouse acceptance passed.
-- [ ] Commit/push only reviewed source changes under existing owner authorization; attach any created/continued PR. Provide the new test entry and a short owner UAT checklist.
+- [x] Write failing tests: `OldProjectLoadsWithoutManufacturingFields`, `NewProjectReloadsWithAllDraftRowsAndSelections`, `ArchiveRelocationDoesNotChangeSavedGeometry`, `ChangedTemplateDoesNotUpgradeExistingProject`, `MultipagePdfContainsTableSketchFrameAndDraftStatus`, `FailedExportDoesNotMutateProject`.
+- [x] Run the new test filters and verify expected failures where behavior is not yet implemented.
+- [x] Complete serialization/validation wiring. Generate synthetic, non-company CAD fixtures and a sample project for repeatable tests. Run focused tests and the complete suite; record actual counts, warnings and unsupported cases.
+- [x] Obtain independent read-only review of changed product files, fix findings, rerun affected tests, and only then publish a new isolated test runtime with launch validation. Preserve AT and working data. Do not claim installer or ordinary mouse acceptance passed.
+- [x] Commit/push only reviewed source changes under existing owner authorization; attach any created/continued PR. Provide the new test entry and a short owner UAT checklist.
 
 ## Execution Environment Note
 
@@ -155,6 +155,24 @@
 - Owner mouse UAT, installer and project Save As are not claimed complete.
 - Final review and isolated owner package evidence will be appended after their
   verification.
+
+### Verified Final Delivery
+
+- Product runtime source: e1f8ab23fc9da94ca3d575aead3e64330b7ec783.
+- Independent review found zero Critical, six Important, zero Minor; all six
+  Important findings were addressed in one fix pass with regression evidence.
+- Worktree suite: 1279 passed, zero failed/skipped. Committed clean-source
+  Release suite: 1276 passed, zero failed/skipped; the difference is three
+  protected, pre-existing unrelated Drawing Planning tests.
+- Clean-source Release Windows smoke passed, including exact imported contacts,
+  custom/catalog connector persistence, per-row usage, legacy CAD selection,
+  layout recovery, SQLite reload, shared-instance views and two-page A3 PDF.
+- AU isolated package contains 222 runtime files with SHA256 manifest, synthetic
+  test database/archive/workbook, source CAD examples and validation evidence.
+- AU launcher ValidateOnly passed. AT launcher ValidateOnly also passed with
+  original 7f06276 identity. Neither launcher started a software window.
+- Owner mouse acceptance, real company CAD acceptance and physical printing
+  remain pending. Installer/general project Save As remain separately scoped.
 
 The repository has `.agent-orchestrator.json` with `enabled: true`. The instructed
 Python bridge invocation currently fails with `ModuleNotFoundError` before a

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ComponentIntelligence.Archive;
 using ComponentIntelligence.Bom;
 using ComponentIntelligence.Contracts;
 using ComponentIntelligence.Runtime;
@@ -22,6 +23,7 @@ public static class Program
                 "demo" => await RunDemoAsync(dbPath),
                 "run" => await RunWorkbookAsync(args, dbPath, cachePath),
                 "template" => GenerateTemplate(args),
+                "archive-validate" => await ValidateArchiveAsync(args),
                 "help" or "--help" or "-h" => PrintHelp(),
                 _ => Unknown(command)
             };
@@ -71,6 +73,20 @@ public static class Program
         return results.Count > 0 ? 0 : 3;
     }
 
+    private static async Task<int> ValidateArchiveAsync(string[] args)
+    {
+        var path = args.Skip(1).FirstOrDefault(arg => !arg.StartsWith("--", StringComparison.Ordinal));
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            Console.Error.WriteLine("Usage: archive-validate <changeset.json>");
+            return 64;
+        }
+
+        var result = await new ArchiveValidationJsonRunner().ValidateFileAsync(path);
+        Console.WriteLine(result.Json);
+        return result.ExitCode;
+    }
+
     private static int GenerateTemplate(string[] args)
     {
         var path = args.Skip(1).FirstOrDefault(arg => !arg.StartsWith("--", StringComparison.Ordinal)) ?? "BOM.xlsx";
@@ -87,7 +103,7 @@ public static class Program
 
     private static int PrintHelp()
     {
-        Console.WriteLine("Component Intelligence v0.1\n  demo [--db path]                     deterministic offline acceptance demo\n  template [path]\n  run <bom.xlsx> [--db path] [--cache path] [--offline]\n\nNormal 'run' uses Notion central knowledge when configured, then Local SQLite, then live deterministic manufacturer sources. --offline enables the O5D100 seed fixture only.");
+        Console.WriteLine("Component Intelligence v0.1\n  demo [--db path]                     deterministic offline acceptance demo\n  template [path]\n  run <bom.xlsx> [--db path] [--cache path] [--offline]\n  archive-validate <changeset.json>    validate Component Intelligence archive candidate\n\nNormal 'run' uses Notion central knowledge when configured, then Local SQLite, then live deterministic manufacturer sources. --offline enables the O5D100 seed fixture only.");
         return 0;
     }
 

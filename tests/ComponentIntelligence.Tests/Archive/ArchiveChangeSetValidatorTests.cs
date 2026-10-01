@@ -33,6 +33,58 @@ public sealed class ArchiveChangeSetValidatorTests
     }
 
     [Fact]
+    public void MultipleComponentRowsForOneTargetIdentity_AreRejected()
+    {
+        var first = ValidComponent("CMP-1");
+        var second = ValidComponent("CMP-2");
+
+        var report = Validate(ValidChangeSet() with { Components = new[] { first, second } });
+
+        Assert.Equal(ArchiveValidationStatus.REJECT, report.Status);
+        Assert.Contains(report.Issues, issue => issue.RuleId == "ARCHIVE-IDENTITY-003");
+    }
+
+    [Fact]
+    public void BlankPortIdentity_IsRejected()
+    {
+        var port = ValidPort("", "CMP-1", Array.Empty<ArchivePinChange>()) with { PortName = " " };
+        var component = ValidComponent("CMP-1") with { Ports = new[] { port } };
+
+        var report = Validate(ValidChangeSet() with { Components = new[] { component } });
+
+        Assert.Equal(ArchiveValidationStatus.REJECT, report.Status);
+        Assert.Contains(report.Issues, issue => issue.RuleId == "ARCHIVE-PORT-001");
+    }
+
+    [Fact]
+    public void BlankPinIdentity_IsRejected()
+    {
+        var pin = ValidPin("", "PORT-1", " ");
+        var component = ValidComponent("CMP-1") with
+        {
+            Ports = new[] { ValidPort("PORT-1", "CMP-1", new[] { pin }) }
+        };
+
+        var report = Validate(ValidChangeSet() with { Components = new[] { component } });
+
+        Assert.Equal(ArchiveValidationStatus.REJECT, report.Status);
+        Assert.Contains(report.Issues, issue => issue.RuleId == "ARCHIVE-PIN-003");
+    }
+
+    [Fact]
+    public void DeclaredActualPinCount_MustMatchPinRows_EvenWhenExpectedCountIsUnknown()
+    {
+        var pin = ValidPin("PIN-1", "PORT-1", "1");
+        var port = ValidPort("PORT-1", "CMP-1", new[] { pin }) with { PinCount = null, ActualPinCount = 2 };
+        var component = ValidComponent("CMP-1") with { Ports = new[] { port } };
+
+        var report = Validate(ValidChangeSet() with { Components = new[] { component } });
+
+        Assert.Equal(ArchiveValidationStatus.REJECT, report.Status);
+        Assert.Contains(report.Issues, issue => issue.RuleId == "ARCHIVE-PIN-004");
+    }
+
+    [Fact]
     public void PortAndPinOwnership_MustMatchParents()
     {
         var pin = ValidPin("PIN-1", "WRONG-PORT", "1");

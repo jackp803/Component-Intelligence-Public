@@ -143,16 +143,8 @@ public partial class ElectricalWorkspaceWindow : Window
             _project = loaded;
             _history.Clear();
             RefreshAll();
-            if (_workingBomSnapshot.Count > 0)
-            {
-                WorkspaceStatusText.Text = $"已載入 Project {_project.ProjectId}；正在合併目前新版 BOM…";
-                await SynchronizeWorkingBomAsync(_workingBomSnapshot);
-            }
-            else
-            {
-                WorkspaceStatusText.Text = $"已載入 Project {_project.ProjectId}。";
-                await SynchronizeCentralArchiveOnLoadAsync();
-            }
+            WorkspaceStatusText.Text = $"已載入 Project {_project.ProjectId} 及其專案 BOM。";
+            await SynchronizeCentralArchiveOnLoadAsync();
         }
         catch (Exception exception)
         {
@@ -184,6 +176,7 @@ public partial class ElectricalWorkspaceWindow : Window
         if (savedChoice is null) ProjectIdText.Text = _project.ProjectId;
         ProjectNameText.Text = _project.Name ?? string.Empty;
         TopologyCanvas.SetProject(_project);
+        TopologyCanvas.SetAvailableCableMaterials(ComponentIntelligence.Electrical.Schematic.SchematicBomPalette.MaterialOptions(_project));
         _cabinetLayoutWorkspace?.RefreshWorkspace();
         _drawingPlanningWorkspace?.LoadPlan(_project.DrawingPlan);
         _schematicWorkspace?.RefreshWorkspace();

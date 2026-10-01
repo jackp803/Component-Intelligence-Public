@@ -55,10 +55,15 @@ public sealed class BomTopologySynchronizer
         var spareOnly = 0;
         var deferredConnectionMaterial = 0;
         var connectionMaterials = new Dictionary<string, BomConnectionMaterialOption>(StringComparer.OrdinalIgnoreCase);
+        var inventory = new List<ProjectBomItem>();
+        var additions = new List<ComponentInstance>();
+        var instanceIds = project.Components.Select(c => c.ComponentInstanceId).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var inventoryIndex = inventory.Count;
+            inventory.Add(new ProjectBomItem { Row = row });
             var manufacturer = row.Manufacturer?.Trim();
             var model = row.ModelOrPartNumber?.Trim();
             if (string.IsNullOrWhiteSpace(manufacturer) || string.IsNullOrWhiteSpace(model))
@@ -66,11 +71,6 @@ public sealed class BomTopologySynchronizer
 
             var quantityUnknown = row.UsedQuantity is null;
             var installedQuantity = row.UsedQuantity.GetValueOrDefault();
-            if (!quantityUnknown && installedQuantity <= 0)
-            {
-                spareOnly++;
-                continue;
-            }
 
             ComponentIR? component = null;
             try
@@ -86,15 +86,31 @@ public sealed class BomTopologySynchronizer
                 // Topology import must still expose unresolved device-like BOM rows when knowledge lookup fails.
                 component = null;
             }
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var material = component is not null &&
+                ComponentMaterialRolePolicy.Classify(component) == BomTopologyDisposition.DeferredConnectionMaterial;
+            inventory[inventoryIndex] = inventory[inventoryIndex] with
+            {
+                ComponentDefinitionId = component?.Identity.ComponentId,
+                Category = component?.Classification.Category, Subcategory = component?.Classification.Subcategory,
+                ConnectionMaterial = material, CableProduct = component?.CableProduct,
+                ComponentInstanceIds = material ? [] : Enumerable.Range(1, quantityUnknown ? 1 : Math.Max(0, installedQuantity))
+                    .Select(index => BuildStableInstanceId(row, manufacturer, model, index)).ToArray()
+            };
+            if (!quantityUnknown && installedQuantity <= 0)
+            {
+                spareOnly++;
+                continue;
+            }
 
             // Cable, wire, harness and cable-assembly rows are material for an electrical connection.
             // Do not create a sensor/device-looking node just because the material appears in the BOM.
             // Classification is intentionally based only on structured Component IR facts; unknown stays visible.
-            if (component is not null &&
-                ComponentMaterialRolePolicy.Classify(component) == BomTopologyDisposition.DeferredConnectionMaterial)
+            if (material)
             {
                 deferredConnectionMaterial++;
-                AddConnectionMaterial(connectionMaterials, component, row);
+                AddConnectionMaterial(connectionMaterials, component!, row);
                 if (quantityUnknown) unknownQuantity++;
                 continue;
             }
@@ -103,10 +119,10 @@ public sealed class BomTopologySynchronizer
             {
                 unknownQuantity++;
                 var instanceId = BuildStableInstanceId(row, manufacturer, model, 1);
-                if (project.Components.Any(item => string.Equals(item.ComponentInstanceId, instanceId, StringComparison.OrdinalIgnoreCase)))
+                if (!instanceIds.Add(instanceId))
                     continue;
 
-                project.Components.Add(new ComponentInstance
+                additions.Add(new ComponentInstance
                 {
                     ComponentInstanceId = instanceId,
                     ComponentDefinitionId = $"bom-unresolved:{Sanitize(row.RowId)}:{Sanitize(manufacturer)}:{Sanitize(model)}",
@@ -123,7 +139,7 @@ public sealed class BomTopologySynchronizer
             for (var index = 1; index <= installedQuantity; index++)
             {
                 var instanceId = BuildStableInstanceId(row, manufacturer, model, index);
-                if (project.Components.Any(item => string.Equals(item.ComponentInstanceId, instanceId, StringComparison.OrdinalIgnoreCase)))
+                if (!instanceIds.Add(instanceId))
                     continue;
 
                 ComponentInstance instance;
@@ -149,11 +165,16 @@ public sealed class BomTopologySynchronizer
                     placeholders++;
                 }
 
-                project.Components.Add(instance);
+                additions.Add(instance);
                 added++;
             }
         }
 
+        // Publish both inventories only after all asynchronous lookups have completed.
+        cancellationToken.ThrowIfCancellationRequested();
+        project.Components.AddRange(additions);
+        project.BomItems.Clear();
+        project.BomItems.AddRange(inventory);
         return new BomTopologySyncResult(
             rows.Count,
             added,

@@ -1,5 +1,4 @@
 using System.Windows;
-using ComponentIntelligence.Contracts;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Schematic;
 using ComponentIntelligence.SymbolArchive;
@@ -8,10 +7,11 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class SchematicWorkspaceControl
 {
-    private SchematicModuleLayoutApplyResult AddCatalogWithSavedLayout(ElectricalProject project,
-        ComponentIR component, string pageId, SchematicPoint position)
+    private SchematicModuleLayoutApplyResult PlaceBomWithSavedLayout(ElectricalProject project,
+        SchematicBomPaletteEntry item, string pageId, SchematicPoint position)
     {
-        var placed = _service.AddCatalogComponent(project, component, pageId, position);
+        var instanceId = SchematicBomPalette.NextInstance(project, item);
+        var placed = _service.PlaceProjectComponent(project, instanceId, pageId, position);
         if (string.IsNullOrWhiteSpace(_archiveRoot)) return new(placed, false, "尚未設定模塊版型歸檔路徑。");
         var symbolId = placed.Schematic!.Symbols[^1].SymbolId;
         return new SchematicModuleLayoutStore(new SymbolArchiveRepository(_archiveRoot)).ApplyActive(placed, symbolId);

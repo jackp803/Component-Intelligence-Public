@@ -77,6 +77,7 @@ public partial class SchematicWorkspaceControl : UserControl
             PageList.SelectedItem = pages.FirstOrDefault(p => p.Id == _pageId);
         }
         finally { _refreshing = false; }
+        FilterCatalog();
         Render(project);
     }
 
@@ -566,7 +567,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 ? source : new CroppedBitmap(source, new Int32Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height));
             bitmap.Freeze();
         }
-        _images[id] = bitmap;
+        if (bitmap is not null) _images[id] = bitmap;
         return bitmap;
     }
 
@@ -655,20 +656,20 @@ public partial class SchematicWorkspaceControl : UserControl
         {
             PlacePendingRepresentation(point); e.Handled = true; return;
         }
-        if (_placeMode && CatalogList.SelectedItem is CatalogItem item && _pageId is not null)
+        if (_placeMode && _pendingBom is SchematicBomPaletteEntry item && _pageId is not null)
         {
             string? warning = null;
             var savedLayoutApplied = false;
             var placed = Apply(p =>
             {
-                var result = AddCatalogWithSavedLayout(p, item.Component, _pageId, point);
+                var result = PlaceBomWithSavedLayout(p, item, _pageId, point);
                 warning = result.Warning;
                 savedLayoutApplied = result.Applied;
                 return result.Project;
             }, "已放置元件");
             if (placed && warning is not null) Status.Text = warning;
             else if (placed && savedLayoutApplied) Status.Text = "已放置元件並套用已保存模塊版型。";
-            _placeMode = false; _placementPreview = null; Render(_getProject()); return;
+            _placeMode = false; _placementPreview = null; _pendingBom = null; Render(_getProject()); return;
         }
         if (_wireMode)
         {
@@ -787,6 +788,7 @@ public partial class SchematicWorkspaceControl : UserControl
         _pendingRepresentation = null;
         _pendingCable = null;
         _pendingCableRepresentation = null;
+        _pendingBom = null;
         _wireMode = false; _editModuleMode = false; _placementPreview = null;
         SelectTool.IsChecked = true; WireTool.IsChecked = false; EditModuleTool.IsChecked = false;
         _selectionId = null; Render(_getProject()); Status.Text = "已取消目前操作";
@@ -826,19 +828,14 @@ public partial class SchematicWorkspaceControl : UserControl
         (ids[index], ids[next]) = (ids[next], ids[index]); Apply(p => _service.ReorderPages(p, ids), "已調整頁序與跨頁參照");
     }
     private void Search_Changed(object sender, TextChangedEventArgs e) => FilterCatalog();
-    private void FilterCatalog()
-    {
-        if (CatalogList is null) return; var search = Search.Text.Trim();
-        CatalogList.ItemsSource = _catalog.Select(c => new CatalogItem(c, $"{c.Identity.Manufacturer} {c.Identity.Model}"))
-            .Where(c => c.Label.Contains(search, StringComparison.OrdinalIgnoreCase)).ToArray();
-    }
     private void Place_Click(object sender, RoutedEventArgs e)
     {
         if (CatalogList.SelectedItem is not CatalogItem item || _pageId is null || !FinishPendingDraft()) return;
         CancelCommand();
         try
         {
-            _placementPreview = AddCatalogWithSavedLayout(_getProject(), item.Component, _pageId, new(20, 20)).Project;
+            _placementPreview = PlaceBomWithSavedLayout(_getProject(), item.Entry, _pageId, new(20, 20)).Project;
+            _pendingBom = item.Entry;
             _placeMode = true; Status.Text = "選定元件待放置"; Focus(); Render(_getProject());
         }
         catch (Exception error) { Status.Text = error.Message; }
@@ -992,7 +989,6 @@ public partial class SchematicWorkspaceControl : UserControl
                         r.CadContact is null && r.Anchor.Position == new SchematicPoint(r.X, r.Y) ? r.Anchor.CadContactId : null }).ToArray()), "已更新接點位置");
     }
     private sealed record PageItem(string Id, string Label);
-    private sealed record CatalogItem(ComponentIR Component, string Label);
     private sealed class AnchorRow(SchematicAnchor anchor) : System.ComponentModel.INotifyPropertyChanged
     {
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;

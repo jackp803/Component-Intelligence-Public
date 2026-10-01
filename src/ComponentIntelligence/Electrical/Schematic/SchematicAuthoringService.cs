@@ -129,6 +129,18 @@ public sealed partial class SchematicAuthoringService
         doc.Symbols.Add(CreateSymbol(component, pageId, position));
     });
 
+    public ElectricalProject PlaceProjectComponent(ElectricalProject project, string instanceId, string pageId,
+        SchematicPoint position) => Edit(project, (draft, doc) =>
+    {
+        RequirePage(doc, pageId);
+        RequirePoint(position);
+        var component = draft.Components.SingleOrDefault(c => c.ComponentInstanceId == instanceId)
+            ?? throw new InvalidOperationException("此元件不在目前專案的 BOM 實體清單中。");
+        if (doc.Symbols.Any(s => s.ComponentInstanceId == instanceId))
+            throw new InvalidOperationException("此實體已放置；請使用放置另一個表示。");
+        doc.Symbols.Add(CreateSymbol(component, pageId, position));
+    });
+
     public static SchematicSymbol CreateSymbol(ComponentInstance component, string pageId, SchematicPoint position)
     {
         var pins = component.Ports.SelectMany(p => p.Pins.Select(pin => (Port: p, Pin: pin))).ToArray();

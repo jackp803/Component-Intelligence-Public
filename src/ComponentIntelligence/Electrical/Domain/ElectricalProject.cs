@@ -9,6 +9,7 @@ public sealed class ElectricalProject
     public string? Name { get; set; }
     public DrawingPlanDocument? DrawingPlan { get; set; }
     public Schematic.SchematicDocument? Schematic { get; set; }
+    public List<ProjectBomItem> BomItems { get; init; } = new();
     public List<ComponentInstance> Components { get; init; } = new();
     public List<NetDefinition> Nets { get; init; } = new();
     public List<ElectricalConnection> Connections { get; init; } = new();

@@ -104,6 +104,22 @@ public sealed record CableArchiveEntry
     public Electrical.Domain.CableConstructionType ConstructionType { get; init; }
     public string? ConstructionEvidence { get; init; }
     public IReadOnlyList<SymbolPortBinding> ContactBindings { get; init; } = [];
+    public CableCadRoleAsset? ManufacturingAsset { get; init; }
+}
+
+public sealed record CableCadRoleAsset
+{
+    public required string AssetPath { get; init; }
+    public required string SourceSha256 { get; init; }
+    public required double MillimetresPerUnit { get; init; }
+    public CableCadSelection? Selection { get; init; }
+}
+
+public sealed record CableCadSelection
+{
+    public Electrical.Schematic.SchematicGridBounds? Bounds { get; init; }
+    public string? BlockName { get; init; }
+    public required string GeometrySha256 { get; init; }
 }
 
 public sealed record SymbolBoundingBox(

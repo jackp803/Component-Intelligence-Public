@@ -10,6 +10,7 @@ public sealed class SymbolArchiveRepository
     public const string MultiRepresentationSchemaVersion = "ci-symbol-archive.v2";
     public const string CableTemplateSchemaVersion = "ci-symbol-archive.v3";
     public const string SchematicLayoutSchemaVersion = "ci-symbol-archive.v4";
+    public const string CableManufacturingSchemaVersion = "ci-symbol-archive.v5";
     public const string FileName = "SymbolArchive.json";
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -78,7 +79,8 @@ public sealed class SymbolArchiveRepository
     public SymbolArchiveDocument ValidateAndNormalize(SymbolArchiveDocument document)
     {
         if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion &&
-            document.SchemaVersion != CableTemplateSchemaVersion && document.SchemaVersion != SchematicLayoutSchemaVersion)
+            document.SchemaVersion != CableTemplateSchemaVersion && document.SchemaVersion != SchematicLayoutSchemaVersion &&
+            document.SchemaVersion != CableManufacturingSchemaVersion)
             throw new InvalidDataException($"Unsupported Symbol Archive schema '{document.SchemaVersion}'.");
 
         var bindingKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -155,7 +157,23 @@ public sealed class SymbolArchiveRepository
                 if (!pins.Contains(binding.EngineeringEndpointId) || !bindingsByPin.Add(binding.EngineeringEndpointId) ||
                     string.IsNullOrWhiteSpace(binding.ConnectionPointId) || !contacts.Add(binding.ConnectionPointId))
                     throw new InvalidDataException("Cable CAD binding must identify unique exact source pins and contacts.");
-            return entry with { AssetPath = NormalizeArchiveRelativePath(entry.AssetPath) };
+            var manufacturing = entry.ManufacturingAsset;
+            if (manufacturing is not null)
+            {
+                if (!double.IsFinite(manufacturing.MillimetresPerUnit) || manufacturing.MillimetresPerUnit <= 0)
+                    throw new InvalidDataException("Manufacturing CAD requires finite positive units.");
+                if (manufacturing.Selection is { } selection)
+                {
+                    if (selection.Bounds is { } bounds && (!double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y) ||
+                        !double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) || bounds.Width <= 0 || bounds.Height <= 0) ||
+                        (selection.Bounds is null) == string.IsNullOrWhiteSpace(selection.BlockName))
+                        throw new InvalidDataException("CAD selection requires one valid region or named block.");
+                    manufacturing = manufacturing with { Selection = selection with { GeometrySha256 = NormalizeSha256(selection.GeometrySha256) } };
+                }
+                manufacturing = manufacturing with { AssetPath = NormalizeArchiveRelativePath(manufacturing.AssetPath),
+                    SourceSha256 = NormalizeSha256(manufacturing.SourceSha256) };
+            }
+            return entry with { AssetPath = NormalizeArchiveRelativePath(entry.AssetPath), ManufacturingAsset = manufacturing };
         }).OrderBy(e => e.Template.TemplateId, StringComparer.Ordinal).ThenBy(e => e.Template.TemplateRevision, StringComparer.Ordinal).ToArray();
 
         var layoutKeys = new HashSet<(string ComponentId, string Revision)>();
@@ -201,7 +219,9 @@ public sealed class SymbolArchiveRepository
         return document with
         {
             // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
-            SchemaVersion = document.SchemaVersion == SchematicLayoutSchemaVersion || layouts.Length > 0 ? SchematicLayoutSchemaVersion :
+            SchemaVersion = document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null)
+                ? CableManufacturingSchemaVersion :
+                document.SchemaVersion == SchematicLayoutSchemaVersion || layouts.Length > 0 ? SchematicLayoutSchemaVersion :
                 document.SchemaVersion == CableTemplateSchemaVersion || cables.Length > 0 ? CableTemplateSchemaVersion :
                 document.SchemaVersion == MultiRepresentationSchemaVersion || bindings.Any(b => b.RepresentationId != "default")
                 ? MultiRepresentationSchemaVersion : SchemaVersion,

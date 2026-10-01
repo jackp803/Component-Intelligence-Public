@@ -86,6 +86,38 @@ public sealed class ArchiveGovernanceDocumentTests
         Assert.Contains("readback", continuity, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Readme_ExplainsArchiveCapabilityAuthorityAndImplementationStatus()
+    {
+        var path = Path.Combine(RepoRoot, "README.md");
+        var text = File.ReadAllText(path);
+
+        foreach (var required in new[]
+                 {
+                     "AI / Chat / Codex / Local Agent",
+                     "Skill",
+                     "Authority",
+                     "Validator",
+                     "Google Drive",
+                     "docs/archive/AI_PORTABILITY.md",
+                     "docs/archive/AUTHORITY.md",
+                     "skills/component-intelligence-archive/SKILL.md",
+                     "docs/COMPONENT_ARCHIVE_SPEC_V2.md",
+                     "archive/validator/README.md",
+                     "archive/contracts/",
+                     "archive/evals/",
+                     "archive/manifests/CENTRAL_ARCHIVE.md",
+                     "archive-validate",
+                     "VALIDATED_NOT_WRITTEN"
+                 })
+            Assert.Contains(required, text, StringComparison.Ordinal);
+
+        Assert.Contains("not a second component database", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not implemented", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("readback", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("sync", text, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

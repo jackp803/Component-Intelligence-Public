@@ -141,6 +141,21 @@
 
 ## Execution Environment Note
 
+### Verified Implementation Evidence
+
+- Tasks 1-5 implemented and pushed as scoped commits, without staging unrelated
+  Drawing Planning work.
+- Task 6 focused persistence/output tests: 12 passed. Full suite: 1266 passed,
+  zero skipped or failed, before independent final review.
+- Real Windows offscreen smoke creates and reopens a two-page PDF from the actual
+  saved-sheet WPF renderer; SQLite reload, selected sketch, independent instances,
+  failed-export cleanup and no rendering mutation pass.
+- PDFsharp saved-document regression was observed in the real smoke and fixed by
+  capturing page count before saving.
+- Owner mouse UAT, installer and project Save As are not claimed complete.
+- Final review and isolated owner package evidence will be appended after their
+  verification.
+
 The repository has `.agent-orchestrator.json` with `enabled: true`. The instructed
 Python bridge invocation currently fails with `ModuleNotFoundError` before a
 request can execute. Native product mutation requires separate owner authorization

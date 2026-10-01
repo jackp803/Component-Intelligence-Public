@@ -7,8 +7,6 @@ using System.Windows.Media.Imaging;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Schematic;
 using Microsoft.Win32;
-using PdfSharp.Drawing;
-using PdfSharp.Pdf;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -68,48 +66,16 @@ public partial class SchematicWorkspaceControl
             FileName = "schematic-draft.pdf", AddExtension = true };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         _outputBusy = true; IsEnabled = false;
-        string? temporary = null;
         try
         {
             if (File.Exists(dialog.FileName)) throw new IOException("輸出檔已存在，請選擇新的檔名。");
             var project = await PrepareOutputAsync(); if (project is null) return;
-            using var document = new PdfDocument();
-            document.Info.Title = (project.Name ?? "Electrical schematic") + " - DRAFT";
-            document.Info.Subject = "Saved schematic draft; engineering acceptance pending; 300 DPI page rendering";
-            foreach (var sheet in project.Schematic!.Pages)
-            {
-                var bitmap = RenderOutputPage(project, sheet);
-                var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
-                using var stream = new MemoryStream(); encoder.Save(stream); stream.Position = 0;
-                using var image = XImage.FromStream(stream);
-                var page = document.AddPage();
-                page.Width = XUnit.FromMillimeter(sheet.Width); page.Height = XUnit.FromMillimeter(sheet.Height);
-                using var graphics = XGraphics.FromPdfPage(page);
-                graphics.DrawImage(image, 0, 0, page.Width.Point, page.Height.Point);
-            }
-            foreach (var sheet in project.Schematic.Pages.Select((value, index) => (value, index)))
-            foreach (var link in SchematicContinuationNavigation.Links(project, sheet.value.PageId))
-            {
-                var source = document.Pages[sheet.index];
-                var target = project.Schematic.Pages[link.DestinationPageIndex];
-                var mm = 72d / 25.4;
-                var left = link.LinkTopLeft.X * mm;
-                var right = (link.LinkTopLeft.X + link.LinkWidth) * mm;
-                var bottom = (sheet.value.Height - link.LinkTopLeft.Y - link.LinkHeight) * mm;
-                var top = (sheet.value.Height - link.LinkTopLeft.Y) * mm;
-                source.AddDocumentLink(new PdfRectangle(new XPoint(left, bottom), new XPoint(right, top)),
-                    link.DestinationPageIndex + 1,
-                    new XPoint(link.Destination.X * mm, (target.Height - link.Destination.Y) * mm));
-            }
-            temporary = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dialog.FileName)!, $".schematic-{Guid.NewGuid():N}.pdf");
-            document.Save(temporary);
-            File.Move(temporary, dialog.FileName, overwrite: false);
-            Status.Text = $"已輸出 {document.PageCount} 頁 PDF 草稿（未工程核准）：{dialog.FileName}";
+            var count = SchematicPdfWriter.Write(project, dialog.FileName, RenderOutputPage);
+            Status.Text = $"已輸出 {count} 頁 PDF 草稿（未工程核准）：{dialog.FileName}";
         }
         catch (Exception error) { Status.Text = "PDF 未完成：" + error.Message; }
         finally
         {
-            if (temporary is not null && File.Exists(temporary)) File.Delete(temporary);
             _outputBusy = false; IsEnabled = true;
         }
     }

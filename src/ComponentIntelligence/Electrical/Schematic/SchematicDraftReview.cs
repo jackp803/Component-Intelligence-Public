@@ -16,6 +16,16 @@ public static class SchematicDraftReview
         {
             if (page.TemplateGeometry is null)
                 result.Add(new("NO_COMPANY_TEMPLATE", page.PageId, page.PageId, $"{page.Title}：尚未套用公司圖框。"));
+            foreach (var detail in page.InlineCableDetails.Concat(page.CableDetail is null ? [] : new[] { page.CableDetail }))
+            {
+                if (!project.Cables.Any(c => c.CableInstanceId == detail.CableInstanceId && c.ArchivedCable is not null)) continue;
+                try
+                {
+                    foreach (var code in new SchematicCableDetailService().BuildArchived(project, page, detail).Diagnostics)
+                        result.Add(new(code, page.PageId, detail.DetailId, $"{page.Title}／線材製作明細：{code}"));
+                }
+                catch (InvalidOperationException error) { result.Add(new("CABLE_DETAIL_LAYOUT_INVALID", page.PageId, detail.DetailId, error.Message)); }
+            }
             foreach (var symbol in doc.Symbols.Where(s => s.PageId == page.PageId))
             {
                 var owner = SchematicSymbolOwner.Resolve(project, symbol);

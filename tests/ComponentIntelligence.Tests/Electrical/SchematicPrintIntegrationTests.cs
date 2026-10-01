@@ -6,6 +6,21 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicPrintIntegrationTests
 {
     [Fact]
+    public void MultipagePdfContainsTableSketchFrameAndDraftStatus()
+    {
+        var desktop = ConsolidatedWorkspaceNavigationTests.Desktop();
+        var print = File.ReadAllText(Path.Combine(desktop, "SchematicWorkspaceControl.Print.cs"));
+        Assert.Contains("SchematicPdfWriter.Write", print);
+        var writer = File.ReadAllText(Path.Combine(desktop, "SchematicPdfWriter.cs"));
+        Assert.Contains("render(project, sheet)", writer);
+        Assert.Contains("document.Save(temporary)", writer);
+        Assert.Contains("DRAFT", writer);
+        var render = File.ReadAllText(Path.Combine(desktop, "SchematicWorkspaceControl.xaml.cs"));
+        Assert.Contains("BuildArchived(project, page, binding)", render);
+        Assert.Contains("if (_renderingOutput) throw", render);
+    }
+
+    [Fact]
     public void AnotherRepresentationHasSeparateNormalActionAndShortcut()
     {
         var xml = XDocument.Load(Path.Combine(ConsolidatedWorkspaceNavigationTests.Desktop(), "SchematicWorkspaceControl.xaml"));

@@ -77,6 +77,19 @@ public static class ArchivedCableInstanceFactory
         {
             var binding = cable.ArchivedCable!;
             ValidateTemplate(binding.Template);
+            if (binding.ManufacturingGeometry is { } cad)
+            {
+                bool Finite(SchematicPoint p) => double.IsFinite(p.X) && double.IsFinite(p.Y);
+                if (cad.SourceSha256.Length != 64 || !cad.SourceSha256.All(Uri.IsHexDigit) ||
+                    !double.IsFinite(cad.MillimetresPerUnit) || cad.MillimetresPerUnit <= 0 ||
+                    !double.IsFinite(cad.Width) || !double.IsFinite(cad.Height) || cad.Width <= 0 || cad.Height <= 0 ||
+                    cad.SelectionSha256 is { } selected && !string.Equals(selected, SchematicCadSelectionService.GeometryHash(cad), StringComparison.OrdinalIgnoreCase) ||
+                    cad.Primitives.Any(p => !Finite(p.Start) || p.End is not null && !Finite(p.End) ||
+                        p.Contours.SelectMany(c => c).Any(v => !Finite(v)) || !double.IsFinite(p.Radius) ||
+                        !double.IsFinite(p.Rotation) || !double.IsFinite(p.TextHeight) || !double.IsFinite(p.TextWidthFactor) ||
+                        p.Kind is "TEXT" or "MTEXT" && (p.TextHeight <= 0 || p.TextWidthFactor <= 0)))
+                    throw new InvalidOperationException("Invalid manufacturing CAD snapshot.");
+            }
             if (cable.CableDefinitionId != binding.Template.TemplateId)
                 throw new InvalidOperationException("Cable template identity does not match its physical instance.");
             if (binding.Ports.Count != binding.Template.Ports.Count)

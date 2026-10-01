@@ -42,8 +42,9 @@ public sealed class CableArchiveEditorDialog : Window
     private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
     private readonly ObservableCollection<ContactRow> _contacts = [];
     private readonly ObservableCollection<TextRow> _textBindings;
-    private readonly DataGrid _contactGrid = new() { AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false };
-    private readonly DataGrid _textGrid = new() { AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false };
+    private readonly DataGrid _contactGrid = new() { AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false, MinColumnWidth = 180 };
+    private readonly DataGrid _textGrid = new() { AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false, MinColumnWidth = 180 };
+    private readonly CheckBox _sketchOnly = new() { Content = "製作 CAD 已只保留示意圖，不含舊接法表" };
     private readonly DataGridComboBoxColumn _contactColumn;
     private readonly DataGridComboBoxColumn _tagColumn;
     private bool _saving;
@@ -98,7 +99,7 @@ public sealed class CableArchiveEditorDialog : Window
             SelectedValueBinding = new Binding("Contact") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = 300 };
         _contactGrid.Columns.Add(_contactColumn);
         var contactPanel = new DockPanel();
-        var clearContact = Icon("\uE74D", "清除所選接點綁定", (_, _) => {
+        var clearContact = IconButton("\uE74D", "清除所選接點綁定", (_, _) => {
             if (!Commit(_contactGrid)) return;
             if (_contactGrid.SelectedItem is ContactRow row) { row.Contact = null; _contactGrid.Items.Refresh(); }
         });
@@ -111,14 +112,15 @@ public sealed class CableArchiveEditorDialog : Window
             SelectedValueBinding = new Binding("Field"), Width = 240 });
         var textPanel = new DockPanel();
         var textToolbar = new StackPanel { Orientation = Orientation.Horizontal };
-        textToolbar.Children.Add(Icon("\uE710", "新增文字綁定", (_, _) => { if (Commit(_textGrid)) _textBindings.Add(new() { AttributeTag = "" }); }));
-        textToolbar.Children.Add(Icon("\uE74D", "移除所選文字綁定", (_, _) => { if (Commit(_textGrid) && _textGrid.SelectedItem is TextRow row) _textBindings.Remove(row); }));
+        textToolbar.Children.Add(IconButton("\uE710", "新增文字綁定", (_, _) => { if (Commit(_textGrid)) _textBindings.Add(new() { AttributeTag = "" }); }));
+        textToolbar.Children.Add(IconButton("\uE74D", "移除所選文字綁定", (_, _) => { if (Commit(_textGrid) && _textGrid.SelectedItem is TextRow row) _textBindings.Remove(row); }));
         DockPanel.SetDock(textToolbar, Dock.Top); textPanel.Children.Add(textToolbar); textPanel.Children.Add(_textGrid);
         tabs.Items.Add(new TabItem { Header = "Reference／長度／規格", Content = textPanel });
         var confirmation = new StackPanel();
         confirmation.Children.Add(Field("接法版本", _mappingRevision));
         confirmation.Children.Add(Field("接法來源與核對依據", _evidence));
         confirmation.Children.Add(_confirmed);
+        confirmation.Children.Add(_sketchOnly);
         confirmation.Children.Add(Field("製作方式", _construction));
         confirmation.Children.Add(Field("製作方式來源", _constructionEvidence));
         tabs.Items.Add(new TabItem { Header = "來源確認", Content = confirmation });
@@ -162,6 +164,8 @@ public sealed class CableArchiveEditorDialog : Window
         {
             if (!_table.Commit() || !Commit(_contactGrid) || !Commit(_textGrid)) return;
             _wiring.ValidateCommitted(); _sketch.ValidateCommitted();
+            if (_sketch.Geometry is not null && _sketchOnly.IsChecked != true)
+                throw new InvalidOperationException("請確認製作示意 CAD 不含舊接法表；若原圖有表格，請先選取示意圖區域或圖塊。");
             if (string.IsNullOrWhiteSpace(_revision.Text)) throw new InvalidOperationException("請填寫新版本。");
             _table.Draft.MappingRevision = _mappingRevision.Text; _table.Draft.MappingEvidence = _evidence.Text;
             _table.Draft.ConfirmMapping = _confirmed.IsChecked == true;
@@ -199,7 +203,7 @@ public sealed class CableArchiveEditorDialog : Window
 
     private static bool Commit(DataGrid grid) => grid.CommitEdit(DataGridEditingUnit.Cell, true) && grid.CommitEdit(DataGridEditingUnit.Row, true);
     private static StackPanel Field(string label, Control control) { var panel = new StackPanel { Margin = new(0, 0, 12, 8) }; panel.Children.Add(new TextBlock { Text = label, Margin = new(0, 0, 0, 4) }); panel.Children.Add(control); return panel; }
-    private static Button Icon(string glyph, string tooltip, RoutedEventHandler handler)
+    private static Button IconButton(string glyph, string tooltip, RoutedEventHandler handler)
     {
         var button = new Button { Content = glyph, FontFamily = new("Segoe MDL2 Assets"), ToolTip = tooltip, Padding = new(9, 5, 9, 5), Margin = new(0, 0, 6, 6), HorizontalAlignment = HorizontalAlignment.Left };
         button.Click += handler; return button;

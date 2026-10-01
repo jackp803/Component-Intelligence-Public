@@ -74,7 +74,7 @@ public sealed class CableManufacturingTableEditor : UserControl
         _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap, Margin = new(0, 8, 0, 0) };
         DockPanel.SetDock(_error, Dock.Bottom); root.Children.Add(_error);
         _grid = new() { ItemsSource = _rows, AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false,
-            SelectionMode = DataGridSelectionMode.Single, MinHeight = 140 };
+            SelectionMode = DataGridSelectionMode.Single, MinHeight = 140, MinColumnWidth = 120 };
         _grid.Columns.Add(TextColumn("P1 FUNCTION", "FromFunction"));
         _grid.Columns.Add(PinColumn("P1 PIN", "FromSourcePinId"));
         _grid.Columns.Add(PinColumn("P2 PIN", "ToSourcePinId"));
@@ -104,11 +104,12 @@ public sealed class CableManufacturingTableEditor : UserControl
                 if (targetCount <= 0) targetCount = port.Pins.Count;
                 if (!_allowInventoryChanges && targetCount != port.Pins.Count) throw new InvalidOperationException("變更 Pin 數需建立新模板修訂，不能替換已放入線材的接點。");
                 _service.SetPinCount(Draft, port.PortId, targetCount);
-                port.Connector = choice.Source?.Connector is { } source
-                    ? JsonSerializer.Deserialize<ConnectorDefinition>(JsonSerializer.Serialize(source))
+                var connector = choice.Source?.Connector is { } source
+                    ? JsonSerializer.Deserialize<ConnectorDefinition>(JsonSerializer.Serialize(source))!
                     : new() { ConnectorId = "custom-" + port.PortId, Family = "Custom", PinCount = port.Pins.Count };
+                port.Connector = connector;
                 refreshing = true;
-                gender.SelectedItem = port.Connector.Gender; coding.Text = port.Connector.Coding ?? "";
+                gender.SelectedItem = connector.Gender; coding.Text = connector.Coding ?? "";
                 refreshing = false;
                 _count.Text = port.Pins.Count.ToString();
                 ReloadRows(); RefreshPins(); RefreshStatus();

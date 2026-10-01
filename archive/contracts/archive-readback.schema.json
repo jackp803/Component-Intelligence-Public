@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Component Intelligence Archive Readback",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jobId", "readbackStatus", "jobStatus", "mismatches"],
+  "properties": {
+    "jobId": { "type": "string", "minLength": 1 },
+    "readbackStatus": { "enum": ["MATCH", "MISMATCH", "NOT_PERFORMED", "FAILED"] },
+    "jobStatus": { "enum": ["COMPLETE", "VALIDATED_NOT_WRITTEN", "REVIEW_REQUIRED", "REJECTED", "PARTIAL", "BLOCKED"] },
+    "expectedRevision": { "type": ["string", "null"] },
+    "observedRevision": { "type": ["string", "null"] },
+    "syncStatus": { "type": ["string", "null"] },
+    "mismatches": { "type": "array", "items": { "type": "string" } }
+  }
+}

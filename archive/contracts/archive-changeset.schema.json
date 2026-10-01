@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Component Intelligence Archive Changeset",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jobId", "policyVersion", "operation", "manufacturer", "model", "components"],
+  "properties": {
+    "jobId": { "type": "string", "minLength": 1 },
+    "policyVersion": { "type": "string", "minLength": 1 },
+    "policyRevision": { "type": ["string", "null"] },
+    "operation": { "enum": ["CREATE", "UPDATE", "REVIEW"] },
+    "manufacturer": { "type": "string", "minLength": 1 },
+    "model": { "type": "string", "minLength": 1 },
+    "existingComponentId": { "type": ["string", "null"] },
+    "components": { "type": "array", "items": { "$ref": "#/$defs/component" } },
+    "documentPaths": { "type": "array", "items": { "type": "string" } },
+    "unresolvedUnknowns": { "type": "array", "items": { "type": "string" } },
+    "conflicts": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "evidenceId": { "type": ["string", "null"] },
+        "sourceType": { "type": ["string", "null"] },
+        "sourceUrl": { "type": ["string", "null"] },
+        "documentPath": { "type": ["string", "null"] },
+        "sourcePage": { "type": ["string", "null"] },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pinId", "portId", "pinNumber", "pinStatus"],
+      "properties": {
+        "pinId": { "type": "string", "minLength": 1 },
+        "priorStablePinId": { "type": ["string", "null"] },
+        "portId": { "type": "string", "minLength": 1 },
+        "pinNumber": { "type": "string", "minLength": 1 },
+        "pinName": { "type": ["string", "null"] },
+        "pinRole": { "type": ["string", "null"] },
+        "direction": { "type": ["string", "null"] },
+        "signalType": { "type": ["string", "null"] },
+        "voltage": { "type": ["string", "null"] },
+        "function": { "type": ["string", "null"] },
+        "pinStatus": { "enum": ["Used", "Unused", "NC", "Reserved", "Optional", "Unknown", "NotApplicable"] },
+        "sourcePage": { "type": ["string", "null"] },
+        "notes": { "type": ["string", "null"] },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["portId", "componentId", "portName", "pins"],
+      "properties": {
+        "portId": { "type": "string", "minLength": 1 },
+        "priorStablePortId": { "type": ["string", "null"] },
+        "componentId": { "type": "string", "minLength": 1 },
+        "portName": { "type": "string", "minLength": 1 },
+        "portRole": { "type": ["string", "null"] },
+        "direction": { "type": ["string", "null"] },
+        "signalType": { "type": ["string", "null"] },
+        "voltage": { "type": ["string", "null"] },
+        "protocol": { "type": ["string", "null"] },
+        "connector": { "type": ["string", "null"] },
+        "connectorCoding": { "type": ["string", "null"] },
+        "gender": { "type": ["string", "null"] },
+        "pinCount": { "type": ["integer", "null"], "minimum": 0 },
+        "actualPinCount": { "type": ["integer", "null"], "minimum": 0 },
+        "physicalSide": { "type": ["string", "null"] },
+        "sourcePage": { "type": ["string", "null"] },
+        "notes": { "type": ["string", "null"] },
+        "topologyEndpointMode": { "enum": ["Connector", "Pins", null] },
+        "pins": { "type": "array", "items": { "$ref": "#/$defs/pin" } }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["componentId", "manufacturer", "model", "topologyStatus", "layoutStatus", "ports"],
+      "properties": {
+        "componentId": { "type": "string", "minLength": 1 },
+        "priorStableComponentId": { "type": ["string", "null"] },
+        "manufacturer": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "category": { "type": ["string", "null"] },
+        "description": { "type": ["string", "null"] },
+        "voltage": { "type": ["string", "null"] },
+        "ioType": { "type": ["string", "null"] },
+        "outputType": { "type": ["string", "null"] },
+        "protocol": { "type": ["string", "null"] },
+        "geometryType": { "type": ["string", "null"] },
+        "widthMm": { "type": ["number", "null"] },
+        "heightMm": { "type": ["number", "null"] },
+        "depthMm": { "type": ["number", "null"] },
+        "diameterMm": { "type": ["number", "null"] },
+        "mountingType": { "type": ["string", "null"] },
+        "fastener": { "type": ["string", "null"] },
+        "datasheetPath": { "type": ["string", "null"] },
+        "imagePath": { "type": ["string", "null"] },
+        "drawingPath": { "type": ["string", "null"] },
+        "datasheetUrl": { "type": ["string", "null"] },
+        "drawingUrl": { "type": ["string", "null"] },
+        "topologyStatus": { "enum": ["Ready", "Review", "NeedsData"] },
+        "layoutStatus": { "enum": ["Ready", "Review", "NeedsData"] },
+        "ports": { "type": "array", "items": { "$ref": "#/$defs/port" } },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    }
+  }
+}

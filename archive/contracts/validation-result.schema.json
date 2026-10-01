@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Component Intelligence Archive Validation Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jobId", "status", "issues"],
+  "properties": {
+    "jobId": { "type": "string" },
+    "status": { "enum": ["PASS", "REJECT", "REVIEW_REQUIRED", "TOOL_FAILURE"] },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "severity", "message", "objectIds"],
+        "properties": {
+          "ruleId": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["ERROR", "REVIEW", "WARNING", "INFO"] },
+          "message": { "type": "string" },
+          "objectIds": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

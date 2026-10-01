@@ -9,6 +9,42 @@ public sealed class CableManufacturingEditorTests
     private readonly CableManufacturingEditorService _service = new();
 
     [Fact]
+    public void CatalogConnectorUsesExactTerminalLabelsAndStableIdentities()
+    {
+        var draft = _service.Prepare(Template()); var ids = draft.Ends[0].Pins.Select(p => p.PinId).ToArray();
+        var source = new ComponentPort { PortId = "catalog", Name = "Power", Connector = new() { ConnectorId = "power", Family = "Terminal", PinCount = 2 },
+            Pins = [new() { PinId = "catalog-a", PinNumber = "L+", PinName = "Supply" }, new() { PinId = "catalog-b", PinNumber = "PE", PinName = "Earth" }] };
+        _service.SetConnector(draft, "P1", source);
+        Assert.Equal(new[] { "L+", "PE" }, draft.Ends[0].Pins.Select(p => p.PinNumber));
+        Assert.Equal(new[] { "Supply", "Earth" }, draft.Ends[0].Pins.Select(p => p.PinName));
+        Assert.Equal(ids, draft.Ends[0].Pins.Select(p => p.PinId));
+        Assert.Empty(_service.Apply(Template(), draft).Mapping);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CatalogRelabelRequiresExplicitReconciliationWhenMappedOrBound(bool bound)
+    {
+        var draft = _service.Prepare(Template() with { Mapping = bound ? [] : [new("p1.1", "p2.1")] });
+        var source = new ComponentPort { PortId = "catalog", Name = "Power",
+            Pins = [new() { PinId = "a", PinNumber = "L+" }, new() { PinId = "b", PinNumber = "PE" }] };
+        var before = JsonSerializer.Serialize(draft);
+        Assert.Throws<InvalidOperationException>(() => _service.SetConnector(draft, "P1", source, bound ? new HashSet<string> { "p1.1" } : null));
+        Assert.Equal(before, JsonSerializer.Serialize(draft));
+    }
+
+    [Fact]
+    public void IncompleteCatalogInventoryCannotInventTerminalNumbers()
+    {
+        var draft = _service.Prepare(Template()); var before = JsonSerializer.Serialize(draft);
+        var source = new ComponentPort { PortId = "catalog", Name = "unknown",
+            Connector = new() { ConnectorId = "missing-pins", Family = "Custom", PinCount = 5 } };
+        Assert.Throws<InvalidOperationException>(() => _service.SetConnector(draft, "P1", source));
+        Assert.Equal(before, JsonSerializer.Serialize(draft));
+    }
+
+    [Fact]
     public void PinCountCreatesPinsWithoutMapping()
     {
         var template = Template(); var before = JsonSerializer.Serialize(template);

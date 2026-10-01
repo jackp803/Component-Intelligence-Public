@@ -148,14 +148,14 @@ public partial class SchematicWorkspaceControl : UserControl
                 var detail = binding == page.CableDetail ? detailService.Build(project, page) : detailService.BuildArchived(project, page, binding);
                 var geometry = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height, Primitives = detail.Primitives });
                 geometry.IsHitTestVisible = false; Sheet.Children.Add(geometry);
-                if (!_renderingOutput && project.Cables.Single(c => c.CableInstanceId == binding.CableInstanceId).ArchivedCable is not null)
-                    RenderDetailHandles(page, binding);
             }
             catch (InvalidOperationException error)
             {
                 if (_renderingOutput) throw;
                 Text(error.Message, page.Margin + 8, page.Margin + 10, 12, Brushes.Firebrick);
             }
+            if (!_renderingOutput && project.Cables.Single(c => c.CableInstanceId == binding.CableInstanceId).ArchivedCable is not null)
+                RenderDetailHandles(page, binding);
         }
         var crossings = SchematicCrossingService.Analyze(doc.Wires.Where(w => w.PageId == page.PageId).ToArray());
         foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))

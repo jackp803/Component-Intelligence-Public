@@ -23,7 +23,14 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        var root = Path.GetFullPath(args.Single());
+        try { return Run(args); }
+        catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+    }
+
+    private static int Run(string[] args)
+    {
+        var root = Path.GetFullPath(args.First());
+        var regression = args.Skip(1).SingleOrDefault() ?? "all";
         Directory.CreateDirectory(root);
         SQLitePCL.Batteries_V2.Init();
         var data = Path.Combine(root, "data"); Directory.CreateDirectory(data);
@@ -59,12 +66,30 @@ internal static class Program
         var sketch = SchematicCadSelectionService.Select(fullSketch, selection);
         selection = selection with { GeometrySha256 = sketch.SelectionSha256! };
         Require(sketch.Primitives.All(p => p.Text?.Contains("OLD STATIC TABLE") != true), "Static CAD table was not excluded.");
-        var template = new ArchivedCableTemplate { TemplateId = "synthetic-cable", TemplateRevision = "r1", DisplayName = "SYNTHETIC TEST CABLE",
-            AssetSha256 = wire.SourceSha256, TextBindings = [new("REF", CableTextField.Reference), new("LENGTH", CableTextField.LengthMm)],
-            Ports = Enumerable.Range(1, 2).Select(i => new ComponentIntelligence.Electrical.Domain.ComponentPort {
-                PortId = "P" + i, Name = "P" + i, Connector = new() { ConnectorId = "test-" + i, Family = "TEST", PinCount = 2 },
+        if (regression is "all" or "selection")
+        {
+            var loader = new SchematicCadFileLoader(stagingRoot: Path.Combine(root, "loader-staging"));
+            var restore = typeof(SchematicCadFileLoader).GetMethod("ReadArchivedAsync");
+            var task = restore is null ? loader.ReadAsync(sketchPath, 1) :
+                (Task<SchematicCadAsset>)restore.Invoke(loader, [sketchPath, 1d, selection, null, CancellationToken.None])!;
+            var loadedSketch = task.GetAwaiter().GetResult();
+            Require(JsonSerializer.Serialize(loadedSketch) == JsonSerializer.Serialize(sketch), "Legacy selected CAD was reloaded as a full drawing.");
+        }
+        var template = new ArchivedCableTemplate
+        {
+            TemplateId = "synthetic-cable",
+            TemplateRevision = "r1",
+            DisplayName = "SYNTHETIC TEST CABLE",
+            AssetSha256 = wire.SourceSha256,
+            TextBindings = [new("REF", CableTextField.Reference), new("LENGTH", CableTextField.LengthMm)],
+            Ports = Enumerable.Range(1, 2).Select(i => new ComponentIntelligence.Electrical.Domain.ComponentPort
+            {
+                PortId = "P" + i,
+                Name = "P" + i,
+                Connector = new() { ConnectorId = "test-" + i, Family = "TEST", PinCount = 2 },
                 Pins = Enumerable.Range(1, 2).Select(j => new ComponentIntelligence.Electrical.Domain.ComponentPin { PinId = $"p{i}.{j}", PinNumber = j.ToString() }).ToList()
-            }).ToList() };
+            }).ToList()
+        };
         var editorService = new CableManufacturingEditorService(); var draft = editorService.Prepare(template);
         draft.Rows.Clear();
         draft.Rows.Add(new() { FromSourcePinId = "p1.1", ToSourcePinId = "p2.1", FromFunction = "+24V", ToFunction = "+24V" });
@@ -73,27 +98,51 @@ internal static class Program
         var repository = new SymbolArchiveRepository(data);
         var contacts = wire.ConnectionPoints.OrderBy(c => c.Tag, StringComparer.Ordinal).ToArray();
         Require(contacts.Length == 4, "Expected four exact CAD contacts.");
-        var entry = new CableArchiveCreationService(repository).CreateAsync(new() { Entry = new() {
-            Template = template, AssetPath = "source.dxf", MillimetresPerUnit = 1, ConstructionType = CableConstructionType.Custom,
-            ConstructionEvidence = "Generated test fixture, not an engineering-approved cable",
-            ContactBindings = template.Ports.SelectMany(p => p.Pins).Select((pin, i) => new SymbolPortBinding {
-                EngineeringEndpointId = pin.PinId, ConnectionPointId = contacts[i].Tag }).ToArray(),
-            ManufacturingAsset = new() { AssetPath = "source-sketch.dxf", SourceSha256 = sketch.SourceSha256, MillimetresPerUnit = 1, Selection = selection }
-        }, WiringSourcePath = wirePath, WiringGeometry = wire, ManufacturingSourcePath = sketchPath, ManufacturingGeometry = sketch }).GetAwaiter().GetResult();
-        var p = new ElectricalProject { ProjectId = "synthetic-cable-mvp", Name = "SYNTHETIC TEST - NOT ENGINEERING APPROVED",
-            Schematic = new() { Pages = [new() { PageId = "sheet", Title = "Wiring test" }] } };
+        var entry = new CableArchiveCreationService(repository).CreateAsync(new()
+        {
+            Entry = new()
+            {
+                Template = template,
+                AssetPath = "source.dxf",
+                MillimetresPerUnit = 1,
+                ConstructionType = CableConstructionType.Custom,
+                ConstructionEvidence = "Generated test fixture, not an engineering-approved cable",
+                ContactBindings = template.Ports.SelectMany(p => p.Pins).Select((pin, i) => new SymbolPortBinding
+                {
+                    EngineeringEndpointId = pin.PinId,
+                    ConnectionPointId = contacts[i].Tag
+                }).ToArray(),
+                ManufacturingAsset = new() { AssetPath = "source-sketch.dxf", SourceSha256 = sketch.SourceSha256, MillimetresPerUnit = 1, Selection = selection }
+            },
+            WiringSourcePath = wirePath,
+            WiringGeometry = wire,
+            ManufacturingSourcePath = sketchPath,
+            ManufacturingGeometry = sketch
+        }).GetAwaiter().GetResult();
+        var p = new ElectricalProject
+        {
+            ProjectId = "synthetic-cable-mvp",
+            Name = "SYNTHETIC TEST - NOT ENGINEERING APPROVED",
+            Schematic = new() { Pages = [new() { PageId = "sheet", Title = "Wiring test" }] }
+        };
         var author = new SchematicAuthoringService();
         var bindings = entry.ContactBindings.ToDictionary(b => b.EngineeringEndpointId, b => b.ConnectionPointId);
         p = author.AddArchivedCable(p, entry.Template, CableConstructionType.Custom, wire, bindings, "sheet", new(40, 60), manufacturingGeometry: sketch);
         p = author.AddArchivedCable(p, entry.Template, CableConstructionType.Custom, wire, bindings, "sheet", new(220, 60), manufacturingGeometry: sketch);
         for (var i = 0; i < 2; i++)
             p = author.SetArchivedCableDetails(p, p.Cables[i].CableInstanceId, "CB-0" + (i + 1), 1000 + i * 200, "TEST 2 CORE", CableConstructionType.Custom, p.Cables[i].ArchivedCable!.Mapping);
-        var frame = new SchematicCadAsset { SourceSha256 = new('c', 64), MillimetresPerUnit = 1, Width = 420, Height = 297,
+        var frame = new SchematicCadAsset
+        {
+            SourceSha256 = new('c', 64),
+            MillimetresPerUnit = 1,
+            Width = 420,
+            Height = 297,
             Primitives = [new() { Kind = "LINE", Start = new(10, 10), End = new(410, 10) },
                 new() { Kind = "LINE", Start = new(410, 10), End = new(410, 287) },
                 new() { Kind = "LINE", Start = new(410, 287), End = new(10, 287) },
                 new() { Kind = "LINE", Start = new(10, 287), End = new(10, 10) },
-                new() { Kind = "TEXT", Start = new(230, 280), Text = "SYNTHETIC COMPANY FRAME", TextHeight = 4 }] };
+                new() { Kind = "TEXT", Start = new(230, 280), Text = "SYNTHETIC COMPANY FRAME", TextHeight = 4 }]
+        };
         p.Schematic!.Pages[0] = p.Schematic.Pages[0] with { TemplateGeometry = frame, TemplateSha256 = frame.SourceSha256 };
         var detailService = new SchematicCableDetailService(); p = detailService.AddArchivedDetail(p, p.Cables[0].CableInstanceId, "sheet");
         var db = new ElectricalProjectRepository(new SqliteConnectionFactory(), Path.Combine(data, "project.db"));
@@ -109,11 +158,61 @@ internal static class Program
         var table = new CableManufacturingTableEditor(editorService.Prepare(p.Cables[0]), [new("TEST", null)], false);
         Render(table, 900, 500, Path.Combine(root, "table-editor.png"));
         Require(FindGrid(table).Columns.All(c => c.ActualWidth >= 100), "Table columns are clipped.");
+        if (regression is "all" or "usage")
+        {
+            var tableGrid = FindGrid(table);
+            var usageSelector = Descendants(table).OfType<ComboBox>().First(c => c.Items.Count > 0 && c.Items[0] is CablePinUsage);
+            tableGrid.SelectedItem = tableGrid.Items[0];
+            usageSelector.SelectedItem = CablePinUsage.Unused;
+            tableGrid.SelectedItem = tableGrid.Items[1];
+            Require((CablePinUsage)usageSelector.SelectedItem == CablePinUsage.Pending, "Pin usage selector did not follow the selected table row.");
+            Require(((CableManufacturingRow)tableGrid.Items[1]).FromUsage == CablePinUsage.Pending, "Selecting another row changed its usage.");
+            usageSelector.SelectedItem = CablePinUsage.Unused;
+            tableGrid.SelectedItem = tableGrid.Items[0];
+            Require((CablePinUsage)usageSelector.SelectedItem == CablePinUsage.Unused, "Existing usage was lost on reselection.");
+            tableGrid.SelectedItem = tableGrid.Items[1];
+            Require(((CableManufacturingRow)tableGrid.Items[1]).FromUsage == CablePinUsage.Unused, "Consecutive unused declarations failed.");
+        }
+        if (regression is "all" or "custom" or "catalog")
+        {
+            var customDraft = editorService.Prepare(template);
+            customDraft.Ends[0].Connector = null; customDraft.Rows.Clear();
+            foreach (var pin in customDraft.Ends.SelectMany(e => e.Pins)) pin.Function = null;
+            var catalogPort = new ComponentIntelligence.Electrical.Domain.ComponentPort
+            {
+                PortId = "catalog",
+                Name = "Power",
+                Connector = new() { ConnectorId = "catalog-power", Family = "Terminal", PinCount = 2 },
+                Pins = [new() { PinId = "catalog-1", PinNumber = "L+", PinName = "Supply" }, new() { PinId = "catalog-2", PinNumber = "PE", PinName = "Earth" }]
+            };
+            var custom = new CableManufacturingTableEditor(customDraft, [new("Custom", null), new("Power", catalogPort)]);
+            Render(custom, 900, 500, Path.Combine(root, "custom-editor.png"));
+            var gender = Descendants(custom).OfType<ComboBox>().Single(c => c.Items.Count > 0 && c.Items[0] is ConnectorGender);
+            gender.SelectedItem = Enum.GetValues<ConnectorGender>().First(v => v != ConnectorGender.Unknown);
+            var coding = Descendants(custom).OfType<TextBox>().Single(t => t.Width == 90);
+            coding.Text = "A";
+            if (regression != "catalog") Require(custom.Draft.Ends[0].Connector?.Gender == (ConnectorGender)gender.SelectedItem &&
+                custom.Draft.Ends[0].Connector?.Coding == "A", "Custom connector gender/coding was lost.");
+            var connectorSelector = Descendants(custom).OfType<ComboBox>().Single(c => c.Items.Count > 0 && c.Items[0] is CableConnectorChoice);
+            connectorSelector.SelectedIndex = 1;
+            if (regression != "custom") Require(custom.Draft.Ends[0].Pins.Select(pin => pin.PinNumber).SequenceEqual(new[] { "L+", "PE" }),
+                "Catalog connector did not import exact terminal numbers.");
+        }
         var archiveDialog = new CableArchiveEditorDialog(repository, [], entry);
         Render((FrameworkElement)archiveDialog.Content, 940, 720, Path.Combine(root, "archive-editor.png")); archiveDialog.Close();
         var workspace = new SchematicWorkspaceControl(() => p, (_, _) => throw new InvalidOperationException("Unexpected UI mutation."),
             () => Task.FromResult<IReadOnlyList<ComponentIR>>([]), _ => Task.FromResult<Uri?>(null), () => { }, () => { }, data);
         var render = typeof(SchematicWorkspaceControl).GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        if (regression is "all" or "recovery")
+        {
+            var invalid = JsonSerializer.Deserialize<ElectricalProject>(snapshot)!;
+            invalid.Cables[0].Specification = new string('X', 4000);
+            typeof(SchematicWorkspaceControl).GetMethod("RenderPage", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(workspace, [invalid, invalid.Schematic!.Pages[1]]);
+            var sheet = (Canvas)typeof(SchematicWorkspaceControl).GetProperty("Sheet", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(workspace)!;
+            Require(sheet.Children.OfType<Button>().Count(b => b.ToolTip?.ToString()?.EndsWith("位置／尺寸") == true) == 2,
+                "Invalid detail lost its recovery controls.");
+        }
         BitmapSource Page(ElectricalProject project, SchematicPage page) => (BitmapSource)render.Invoke(workspace, [project, page])!;
         for (var i = 0; i < p.Schematic!.Pages.Count; i++)
             Save(Page(p, p.Schematic.Pages[i]), Path.Combine(root, $"page-{i + 1}.png"));
@@ -145,6 +244,14 @@ internal static class Program
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
             try { return FindGrid(VisualTreeHelper.GetChild(root, i)); } catch (InvalidOperationException) { }
         throw new InvalidOperationException("Grid not found.");
+    }
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i); yield return child;
+            foreach (var descendant in Descendants(child)) yield return descendant;
+        }
     }
     private static void Save(BitmapSource bitmap, string path) { var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using var output = File.Create(path); encoder.Save(output); }
 }

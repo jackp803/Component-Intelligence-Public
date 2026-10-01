@@ -21,6 +21,7 @@ public sealed partial class SchematicAuthoringService
                     return a with { Label = $"{port.Name} / {pin.PinNumber} {pin.PinName}".Trim() };
                 }).ToList() };
             }
+            SchematicCableDetailService.ValidateEditedLayouts(project, draft, cableId);
         });
 
     public ElectricalProject SetCableContactBindings(ElectricalProject project, string symbolId,
@@ -64,6 +65,7 @@ public sealed partial class SchematicAuthoringService
             if (cable.ProvidedLengthMm != lengthMm)
             { cable.ProvidedLengthMm = lengthMm; cable.LengthSource = lengthMm is null ? CableLengthSource.Unknown : CableLengthSource.User; }
             draft.Cables[index] = cable;
+            SchematicCableDetailService.ValidateEditedLayouts(project, draft, cableId);
         });
 
     public ElectricalProject AddArchivedCable(ElectricalProject project, ArchivedCableTemplate template,

@@ -89,6 +89,47 @@ public sealed class ArchivedCableManufacturingDetailTests
         Assert.Throws<InvalidOperationException>(() => new SchematicCableDetailService().AddArchivedDetail(p, p.Cables[0].CableInstanceId));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EditingDetailsRejectsNewOverflowAtomically(bool manufacturing)
+    {
+        var p = Project(); var details = new SchematicCableDetailService();
+        p = details.AddArchivedDetail(p, p.Cables[0].CableInstanceId);
+        var before = JsonSerializer.Serialize(p); var cable = p.Cables[0];
+        var author = new SchematicAuthoringService();
+        if (manufacturing)
+        {
+            var draft = new CableManufacturingEditorService().Prepare(cable);
+            draft.Rows[0].FromFunction = new string('X', 4000);
+            Assert.Throws<InvalidOperationException>(() => author.SetArchivedCableManufacturing(p, cable.CableInstanceId, draft));
+        }
+        else
+            Assert.Throws<InvalidOperationException>(() => author.SetArchivedCableDetails(p, cable.CableInstanceId,
+                "CB-01", 1000, new string('X', 4000), CableConstructionType.Custom, cable.ArchivedCable!.Mapping));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
+
+    [Theory]
+    [InlineData(95, 5, 0, "BaselineLeft", "TEXT", "REF", 0, true)]
+    [InlineData(50, 10, 0, "BaselineCenter", "TEXT", "REF", 0, false)]
+    [InlineData(50, 5, -90, "BaselineLeft", "TEXT", "REF", 0, true)]
+    [InlineData(50, 10, 90, "BaselineCenter", "TEXT", "REF", 0, false)]
+    [InlineData(10, 2, 0, "TopLeft", "MTEXT", "ABCDEFGHIJKLMN", 5, true)]
+    [InlineData(10, 2, 0, "TopLeft", "MTEXT", "ABCD", 30, false)]
+    public void SketchTextBoundsIncludePositionRotationAndWrapping(double x, double y, double angle,
+        string attachment, string kind, string text, double width, bool overflow)
+    {
+        var p = Project(); p.Cables[0].ReferenceDesignator = "CB-01";
+        var binding = p.Cables[0].ArchivedCable!;
+        p.Cables[0].ArchivedCable = binding with { ManufacturingGeometry = binding.ManufacturingGeometry! with {
+            Primitives = [new() { Kind = kind, Start = new(x, y), Text = text, AttributeTag = kind == "TEXT" ? "REF" : null,
+                TextHeight = 3, Rotation = angle, TextAttachment = attachment, TextWidth = width }] } };
+        var service = new SchematicCableDetailService();
+        if (overflow) Assert.Throws<InvalidOperationException>(() => service.AddArchivedDetail(p, p.Cables[0].CableInstanceId));
+        else Assert.NotNull(service.AddArchivedDetail(p, p.Cables[0].CableInstanceId));
+    }
+
     internal static ElectricalProject Project()
     {
         var template = CableManufacturingEditorTests.Template() with { TextBindings = [new("REF", CableTextField.Reference)] };

@@ -130,8 +130,7 @@ public sealed partial class SchematicCableDetailService
             foreach (var p in sketch.Primitives)
             {
                 var text = p.AttributeTag is { } tag && fields.TryGetValue(tag, out var field) ? SchematicSymbolPresentation.CableFieldValue(cable, field) : p.Text;
-                if (p.Kind is "TEXT" or "MTEXT" && text is not null &&
-                    (text.Length * p.TextHeight * p.TextWidthFactor > sketch.Width || p.TextHeight > sketch.Height))
+                if (p.Kind is "TEXT" or "MTEXT" && text is not null && !TextFits(p with { Text = text }, sketch.Width, sketch.Height))
                     throw new InvalidOperationException("製作示意 CAD 文字超出範圍；請擴大文字區或調整來源圖塊。");
                 primitives.Add(p with { Start = Point(p.Start), End = p.End is null ? null : Point(p.End), Radius = p.Radius * scale,
                     Text = text, AttributeTag = null, TextHeight = p.TextHeight * scale, TextWidth = p.TextWidth * scale,
@@ -141,6 +140,46 @@ public sealed partial class SchematicCableDetailService
         else Text("製作示意 CAD 待匯入", binding.SketchPosition.X, binding.SketchPosition.Y);
         return new(primitives, project.Connections.Where(c => c.CableInstanceId == cable.CableInstanceId).Select(c => c.ConnectionId).ToArray(),
             diagnostics.Distinct().ToArray());
+    }
+
+    public static void ValidateEditedLayouts(ElectricalProject before, ElectricalProject after, string cableId)
+    {
+        if (before.Schematic is null || after.Schematic is null) return;
+        var service = new SchematicCableDetailService();
+        foreach (var page in before.Schematic.Pages)
+            foreach (var binding in page.InlineCableDetails.Concat(page.CableDetail is null ? [] : new[] { page.CableDetail })
+                .Where(b => b.CableInstanceId == cableId))
+            {
+                // Existing invalid drafts must remain editable and savable for recovery.
+                try { service.BuildArchived(before, page, binding); }
+                catch (InvalidOperationException) { continue; }
+                service.BuildArchived(after, after.Schematic.Pages.Single(p => p.PageId == page.PageId), binding);
+            }
+    }
+
+    private static bool TextFits(SchematicCadPrimitive p, double width, double height)
+    {
+        if (!double.IsFinite(p.TextHeight) || p.TextHeight <= 0 || !double.IsFinite(p.TextWidthFactor) || p.TextWidthFactor <= 0)
+            return false;
+        // Conservative font-independent extents; actual glyph metrics still need CAD visual review.
+        var lines = (p.DisplayText ?? "").Replace("\r", "").Split('\n');
+        var glyphWidth = p.TextHeight * (p.Kind == "TEXT" ? p.TextWidthFactor : 1);
+        var textWidth = lines.Max(l => l.Length) * glyphWidth;
+        var lineCount = lines.Length;
+        if (p.Kind == "MTEXT" && p.TextWidth > 0)
+        {
+            textWidth = p.TextWidth;
+            var capacity = Math.Max(1, (int)(p.TextWidth / glyphWidth));
+            lineCount = lines.Sum(l => Math.Max(1, (int)Math.Ceiling((double)l.Length / capacity)));
+        }
+        var textHeight = p.TextHeight * 1.5 * lineCount;
+        var offset = p.TextAnchorOffset(textWidth, textHeight, p.Kind == "TEXT" ? p.TextHeight : 0);
+        var angle = p.Rotation * Math.PI / 180;
+        return new[] { new SchematicPoint(offset.X, offset.Y), new(offset.X + textWidth, offset.Y),
+            new(offset.X, offset.Y + textHeight), new(offset.X + textWidth, offset.Y + textHeight) }
+            .Select(v => new SchematicPoint(p.Start.X + v.X * Math.Cos(angle) - v.Y * Math.Sin(angle),
+                p.Start.Y + v.X * Math.Sin(angle) + v.Y * Math.Cos(angle)))
+            .All(v => double.IsFinite(v.X) && double.IsFinite(v.Y) && v.X >= -.001 && v.Y >= -.001 && v.X <= width + .001 && v.Y <= height + .001);
     }
 
     public static void ValidateBindings(ElectricalProject project, SchematicPage page)

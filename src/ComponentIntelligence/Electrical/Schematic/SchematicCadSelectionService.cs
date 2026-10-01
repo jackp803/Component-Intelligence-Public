@@ -6,6 +6,15 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public static class SchematicCadSelectionService
 {
+    public static SchematicCadAsset Restore(SchematicCadAsset asset, CableCadSelection? selection)
+    {
+        if (selection is null) return asset;
+        var restored = Select(asset, selection);
+        if (!string.Equals(restored.SelectionSha256, selection.GeometrySha256, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("重新讀取的 CAD 區域與歸檔版本不一致；請重新歸檔，不會使用整張來源圖。");
+        return restored;
+    }
+
     public static SchematicCadAsset Select(SchematicCadAsset asset, CableCadSelection selection)
     {
         ArgumentNullException.ThrowIfNull(asset); ArgumentNullException.ThrowIfNull(selection);

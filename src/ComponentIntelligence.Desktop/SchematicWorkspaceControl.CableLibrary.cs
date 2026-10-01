@@ -99,9 +99,11 @@ public partial class SchematicWorkspaceControl
             SchematicCadAsset? manufacturing = null;
             try
             {
-                geometry = source.Entry.WiringGeometry ?? await new SchematicCadFileLoader().ReadAsync(source.AbsolutePath, source.Entry.MillimetresPerUnit);
+                geometry = await new SchematicCadFileLoader().ReadArchivedAsync(source.AbsolutePath, source.Entry.MillimetresPerUnit,
+                    source.Entry.WiringSelection, source.Entry.WiringGeometry);
                 if (source.Entry.ManufacturingAsset is { } role)
-                    manufacturing = role.Geometry ?? await new SchematicCadFileLoader().ReadAsync(source.ManufacturingPath!, role.MillimetresPerUnit);
+                    manufacturing = await new SchematicCadFileLoader().ReadArchivedAsync(source.ManufacturingPath!, role.MillimetresPerUnit,
+                        role.Selection, role.Geometry);
             }
             finally { IsEnabled = true; }
             if (!geometry.Complete && MessageBox.Show(Window.GetWindow(this), string.Join("\n", geometry.Diagnostics),

@@ -98,6 +98,32 @@ public sealed class CableManufacturingEditorService
         if (port.Connector is not null) port.Connector.PinCount = count;
     }
 
+    public void SetConnector(CableManufacturingDraft draft, string sourcePortId, ComponentPort source,
+        IReadOnlySet<string>? boundPins = null, bool allowInventoryChanges = true)
+    {
+        var port = draft.Ends.Single(p => p.PortId == sourcePortId);
+        if (source.Pins.Count == 0 || source.Connector is { PinCount: > 0 } definition && definition.PinCount != source.Pins.Count)
+            throw new InvalidOperationException("接頭的實際腳位資料不完整；請先確認腳位，不會自動編造端子號碼。");
+        if (!allowInventoryChanges && source.Pins.Count != port.Pins.Count)
+            throw new InvalidOperationException("變更 Pin 數需建立新模板修訂，不能替換已放入線材的接點。");
+        var ids = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
+        if (boundPins?.Overlaps(ids) == true || port.Pins.Any(p => !string.IsNullOrWhiteSpace(p.Function)) ||
+            draft.Rows.Any(r => r.FromSourcePinId is { } f && ids.Contains(f) &&
+                (r.ToSourcePinId is not null || r.FromUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.FromFunction)) ||
+                r.ToSourcePinId is { } t && ids.Contains(t) &&
+                (r.FromSourcePinId is not null || r.ToUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.ToFunction))))
+            throw new InvalidOperationException("此接頭已有接法、狀態或 CAD 綁定。請先明確核對及解除相關設定，再換用接頭；可用腳位編輯保留身分並修改標示。");
+        SetPinCount(draft, sourcePortId, source.Pins.Count);
+        for (var i = 0; i < port.Pins.Count; i++)
+        {
+            port.Pins[i].PinNumber = source.Pins[i].PinNumber;
+            port.Pins[i].PinName = source.Pins[i].PinName;
+        }
+        port.Connector = source.Connector is null
+            ? new() { ConnectorId = "custom-" + port.PortId, Family = "Custom", PinCount = port.Pins.Count }
+            : Clone(source.Connector);
+    }
+
     public IReadOnlyList<string> Validate(CableManufacturingDraft draft)
     {
         var errors = new List<string>();

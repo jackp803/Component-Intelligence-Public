@@ -64,7 +64,11 @@ public sealed class CableArchiveEditorDialog : Window
             }).ToList()
         } : JsonSerializer.Deserialize<ArchivedCableTemplate>(JsonSerializer.Serialize(existing.Template))!;
         _textBindings = new(_source.TextBindings.Select(b => new TextRow { AttributeTag = b.AttributeTag, Field = b.Field }));
-        _table = new(new CableManufacturingEditorService().Prepare(_source), CableConnectorCatalog.Choices(catalog));
+        _table = new(new CableManufacturingEditorService().Prepare(_source), CableConnectorCatalog.Choices(catalog),
+            boundPins: () => {
+                if (!Commit(_contactGrid)) throw new InvalidOperationException("請先完成接點綁定欄位編輯。");
+                return _contacts.Where(c => !string.IsNullOrWhiteSpace(c.Contact)).Select(c => c.PinId).ToHashSet(StringComparer.Ordinal);
+            });
         Title = existing is null ? "新增自製線材模板" : "線材模板：建立新版本";
         Width = 1000; Height = 800; MinWidth = 750; MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;

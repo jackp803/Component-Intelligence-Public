@@ -20,6 +20,19 @@ public sealed class SchematicCadSelectionTests
     };
 
     [Fact]
+    public void ReloadedCadAppliesPinnedSelectionAndExcludesOldTable()
+    {
+        var selection = Region(55, 25, 30, 20);
+        var expected = SchematicCadSelectionService.Select(Combined, selection);
+        selection = selection with { GeometrySha256 = expected.SelectionSha256! };
+        var restored = SchematicCadSelectionService.Restore(Combined, selection);
+        Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(restored));
+        Assert.DoesNotContain(restored.Primitives, p => p.Text == "OLD TABLE");
+        Assert.Throws<InvalidDataException>(() => SchematicCadSelectionService.Restore(Combined with {
+            Primitives = [new() { Kind = "LINE", Start = new(60, 30), End = new(79, 40) }] }, selection));
+    }
+
+    [Fact]
     public void CombinedRegionsKeepContactTransforms()
     {
         var selected = SchematicCadSelectionService.Select(Combined, Region(5, 5, 30, 20));

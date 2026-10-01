@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using ComponentIntelligence.Electrical.Schematic;
+using ComponentIntelligence.SymbolArchive;
 
 namespace ComponentIntelligence.Desktop;
 
@@ -16,6 +17,17 @@ public sealed class SchematicCadFileLoader
         _executor = executor ?? new SystemBlockInspectionProcessExecutor();
         _stagingRoot = Path.GetFullPath(stagingRoot ?? Path.Combine(AutocadBlockDeepInspector.DefaultStagingRoot, "schematic-geometry"));
         _executable = executable;
+    }
+
+    public async Task<SchematicCadAsset> ReadArchivedAsync(string source, double millimetresPerUnit,
+        CableCadSelection? selection, SchematicCadAsset? snapshot, CancellationToken cancellationToken = default)
+    {
+        if (snapshot is null)
+            return SchematicCadSelectionService.Restore(await ReadAsync(source, millimetresPerUnit, cancellationToken), selection);
+        if (selection is not null && (!string.Equals(snapshot.SelectionSha256, selection.GeometrySha256, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(SchematicCadSelectionService.GeometryHash(snapshot), selection.GeometrySha256, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("歸檔的 CAD 區域快照不一致。");
+        return snapshot;
     }
 
     public async Task<SchematicCadAsset> ReadAsync(string source, double millimetresPerUnit, CancellationToken cancellationToken = default)

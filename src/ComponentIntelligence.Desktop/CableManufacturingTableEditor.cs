@@ -22,13 +22,17 @@ public sealed class CableManufacturingTableEditor : UserControl
     private readonly ComboBox _count;
     private readonly TextBlock _error;
     private readonly bool _allowInventoryChanges;
+    private readonly Dictionary<bool, ComboBox> _usages = [];
+    private readonly Func<IReadOnlySet<string>>? _boundPins;
+    private bool _syncingUsage;
     public CableManufacturingDraft Draft { get; }
 
     public CableManufacturingTableEditor(CableManufacturingDraft draft, IReadOnlyList<CableConnectorChoice> choices,
-        bool allowInventoryChanges = true)
+        bool allowInventoryChanges = true, Func<IReadOnlySet<string>>? boundPins = null)
     {
         Draft = JsonSerializer.Deserialize<CableManufacturingDraft>(JsonSerializer.Serialize(draft))!;
         _allowInventoryChanges = allowInventoryChanges;
+        _boundPins = boundPins;
         _rows = new(Draft.Rows);
         var root = new DockPanel();
         var top = new StackPanel();
@@ -55,6 +59,7 @@ public sealed class CableManufacturingTableEditor : UserControl
         foreach (var (label, field) in new[] { ("名稱", (FrameworkElement)name), ("公母", gender), ("Coding", coding) })
         { details.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 6, 0) }); details.Children.Add(field); }
         top.Children.Add(details);
+        details.Children.Add(Icon("\uE70F", "編輯腳位標示 (Ctrl+Alt+P)", (_, _) => EditPinLabels()));
         var toolbar = new WrapPanel { Margin = new(0, 0, 0, 8) };
         toolbar.Children.Add(Icon("\uE710", "新增接法列 (Ctrl+Insert)", (_, _) => { if (Commit()) _rows.Add(new()); }));
         toolbar.Children.Add(Icon("\uE74D", "移除接法列 (Ctrl+Delete)", (_, _) => RemoveRow()));
@@ -62,9 +67,10 @@ public sealed class CableManufacturingTableEditor : UserControl
         {
             toolbar.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new(12, 0, 6, 0) });
             var usage = new ComboBox { ItemsSource = Enum.GetValues<CablePinUsage>(), Width = 95, SelectedItem = CablePinUsage.Pending };
+            _usages[from] = usage;
             usage.SelectionChanged += (_, _) =>
             {
-                if (_grid?.SelectedItem is not CableManufacturingRow row || usage.SelectedItem is not CablePinUsage value) return;
+                if (_syncingUsage || _grid?.SelectedItem is not CableManufacturingRow row || usage.SelectedItem is not CablePinUsage value) return;
                 if (from) row.FromUsage = value; else row.ToUsage = value;
                 _grid.Items.Refresh(); RefreshStatus();
             };
@@ -80,6 +86,7 @@ public sealed class CableManufacturingTableEditor : UserControl
         _grid.Columns.Add(PinColumn("P2 PIN", "ToSourcePinId"));
         _grid.Columns.Add(TextColumn("P2 FUNCTION", "ToFunction"));
         _grid.CellEditEnding += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshStatus));
+        _grid.SelectionChanged += (_, _) => SyncUsages();
         root.Children.Add(_grid); Content = root;
         var refreshing = false;
         _ends.SelectionChanged += (_, _) =>
@@ -92,22 +99,17 @@ public sealed class CableManufacturingTableEditor : UserControl
             refreshing = false;
         };
         name.TextChanged += (_, _) => { if (!refreshing && _ends.SelectedItem is ComponentPort port) { port.Name = name.Text; RefreshPins(); } };
-        gender.SelectionChanged += (_, _) => { if (!refreshing && _ends.SelectedItem is ComponentPort { Connector: { } connector } && gender.SelectedItem is ConnectorGender value) connector.Gender = value; };
-        coding.TextChanged += (_, _) => { if (!refreshing && _ends.SelectedItem is ComponentPort { Connector: { } connector }) connector.Coding = string.IsNullOrWhiteSpace(coding.Text) ? null : coding.Text.Trim(); };
+        gender.SelectionChanged += (_, _) => { if (!refreshing && _ends.SelectedItem is ComponentPort port && gender.SelectedItem is ConnectorGender value) EnsureConnector(port).Gender = value; };
+        coding.TextChanged += (_, _) => { if (!refreshing && _ends.SelectedItem is ComponentPort port) EnsureConnector(port).Coding = string.IsNullOrWhiteSpace(coding.Text) ? null : coding.Text.Trim(); };
         connectors.SelectionChanged += (_, _) =>
         {
             if (refreshing || _ends.SelectedItem is not ComponentPort port || connectors.SelectedItem is not CableConnectorChoice choice) return;
             try
             {
                 if (!Commit()) return;
-                var targetCount = choice.Source?.Connector?.PinCount ?? choice.Source?.Pins.Count ?? port.Pins.Count;
-                if (targetCount <= 0) targetCount = port.Pins.Count;
-                if (!_allowInventoryChanges && targetCount != port.Pins.Count) throw new InvalidOperationException("變更 Pin 數需建立新模板修訂，不能替換已放入線材的接點。");
-                _service.SetPinCount(Draft, port.PortId, targetCount);
-                var connector = choice.Source?.Connector is { } source
-                    ? JsonSerializer.Deserialize<ConnectorDefinition>(JsonSerializer.Serialize(source))!
-                    : new() { ConnectorId = "custom-" + port.PortId, Family = "Custom", PinCount = port.Pins.Count };
-                port.Connector = connector;
+                if (choice.Source is { } source) _service.SetConnector(Draft, port.PortId, source, _boundPins?.Invoke(), _allowInventoryChanges);
+                else port.Connector = new() { ConnectorId = "custom-" + port.PortId, Family = "Custom", PinCount = port.Pins.Count };
+                var connector = port.Connector!;
                 refreshing = true;
                 gender.SelectedItem = connector.Gender; coding.Text = connector.Coding ?? "";
                 refreshing = false;
@@ -123,8 +125,53 @@ public sealed class CableManufacturingTableEditor : UserControl
             if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.Insert) { AddEnd(); e.Handled = true; }
             if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.Delete) { DeleteEnd(); e.Handled = true; }
             if (Keyboard.Modifiers == ModifierKeys.Alt && e.SystemKey == Key.Return) { ApplyCount(); e.Handled = true; }
+            if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Alt) && e.Key == Key.P) { EditPinLabels(); e.Handled = true; }
         };
         RefreshPins(); _ends.SelectedIndex = 0; RefreshStatus();
+    }
+
+    private static ConnectorDefinition EnsureConnector(ComponentPort port) => port.Connector ??=
+        new() { ConnectorId = "custom-" + port.PortId, Family = "Custom", PinCount = port.Pins.Count };
+
+    private void SyncUsages()
+    {
+        _syncingUsage = true;
+        try
+        {
+            var row = _grid.SelectedItem as CableManufacturingRow;
+            foreach (var (from, selector) in _usages)
+            {
+                selector.IsEnabled = row is not null;
+                selector.SelectedItem = row is null ? CablePinUsage.Pending : from ? row.FromUsage : row.ToUsage;
+            }
+        }
+        finally { _syncingUsage = false; }
+    }
+
+    private void EditPinLabels()
+    {
+        if (!Commit() || _ends.SelectedItem is not ComponentPort port) return;
+        var pins = JsonSerializer.Deserialize<List<ComponentPin>>(JsonSerializer.Serialize(port.Pins))!;
+        var grid = new DataGrid { ItemsSource = pins, AutoGenerateColumns = false, CanUserAddRows = false,
+            CanUserDeleteRows = false, MinColumnWidth = 140 };
+        grid.Columns.Add(new DataGridTextColumn { Header = "來源 Pin ID", Binding = new Binding("PinId"), IsReadOnly = true });
+        grid.Columns.Add(TextColumn("腳位號碼", "PinNumber")); grid.Columns.Add(TextColumn("腳位名稱", "PinName"));
+        var dialog = new Window { Title = port.Name + " / 腳位標示", Width = 660, Height = 420,
+            Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var root = new DockPanel { Margin = new(12) }; var footer = new StackPanel { Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right }; var error = new TextBlock { Foreground = Brushes.Firebrick };
+        var cancel = new Button { Content = "取消", IsCancel = true, Padding = new(12, 5, 12, 5) };
+        var apply = new Button { Content = "套用", Padding = new(12, 5, 12, 5), Margin = new(8, 0, 0, 0) };
+        apply.Click += (_, _) =>
+        {
+            if (!grid.CommitEdit(DataGridEditingUnit.Cell, true) || !grid.CommitEdit(DataGridEditingUnit.Row, true)) return;
+            if (pins.Any(p => string.IsNullOrWhiteSpace(p.PinNumber)) || pins.Select(p => p.PinNumber.Trim()).Distinct(StringComparer.Ordinal).Count() != pins.Count)
+            { error.Text = "腳位號碼不能空白或重複。"; return; }
+            for (var i = 0; i < pins.Count; i++) { port.Pins[i].PinNumber = pins[i].PinNumber.Trim(); port.Pins[i].PinName = pins[i].PinName; }
+            RefreshPins(); dialog.DialogResult = true;
+        };
+        footer.Children.Add(cancel); footer.Children.Add(apply); DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
+        DockPanel.SetDock(error, Dock.Bottom); root.Children.Add(error); root.Children.Add(grid); dialog.Content = root; dialog.ShowDialog();
     }
 
     public bool Commit()

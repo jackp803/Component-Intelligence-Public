@@ -68,6 +68,10 @@ public sealed partial class SchematicAuthoringService
         var binding = cable.ArchivedCable ?? throw new InvalidOperationException("Cable has no archived definition.");
         if (!string.Equals(binding.Template.AssetSha256, geometry.SourceSha256, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Cable geometry hash differs from the pinned template.");
+        if (!string.Equals(binding.Template.WiringSelectionSha256, geometry.SelectionSha256, StringComparison.OrdinalIgnoreCase) ||
+            geometry.SelectionSha256 is { } selectionHash && !string.Equals(selectionHash,
+                SchematicCadSelectionService.GeometryHash(geometry), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Cable geometry differs from the pinned CAD selection.");
         var pins = binding.Ports.SelectMany(port => port.Pins.Select(pin => (port, pin))).ToArray();
         if (contacts.Keys.Any(id => !pins.Any(p => p.pin.SourcePinId == id)) ||
             contacts.Values.Distinct(StringComparer.Ordinal).Count() != contacts.Count)

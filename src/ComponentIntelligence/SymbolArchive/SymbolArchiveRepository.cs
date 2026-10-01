@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 
 namespace ComponentIntelligence.SymbolArchive;
 
@@ -54,11 +55,20 @@ public sealed class SymbolArchiveRepository
         return ValidateAndNormalize(document);
     }
 
-    public void Save(SymbolArchiveDocument document)
+    public string? GetContentHash() => File.Exists(_path) ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_path))) : null;
+
+    public void Save(SymbolArchiveDocument document) => SaveCore(document, null, false);
+
+    public void SaveIfUnchanged(SymbolArchiveDocument document, string? expectedHash) => SaveCore(document, expectedHash, true);
+
+    private void SaveCore(SymbolArchiveDocument document, string? expectedHash, bool compareOriginal)
     {
         ArgumentNullException.ThrowIfNull(document);
         var normalized = ValidateAndNormalize(document);
         Directory.CreateDirectory(_archiveRoot);
+        using var guard = new FileStream(Path.Combine(_archiveRoot, ".SymbolArchive.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        if (compareOriginal && !string.Equals(expectedHash, GetContentHash(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Archive changed while editing; reload before saving.");
         var temp = Path.Combine(_archiveRoot, $".{FileName}.{Guid.NewGuid():N}.tmp");
         try
         {
@@ -162,18 +172,16 @@ public sealed class SymbolArchiveRepository
             {
                 if (!double.IsFinite(manufacturing.MillimetresPerUnit) || manufacturing.MillimetresPerUnit <= 0)
                     throw new InvalidDataException("Manufacturing CAD requires finite positive units.");
-                if (manufacturing.Selection is { } selection)
-                {
-                    if (selection.Bounds is { } bounds && (!double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y) ||
-                        !double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) || bounds.Width <= 0 || bounds.Height <= 0) ||
-                        (selection.Bounds is null) == string.IsNullOrWhiteSpace(selection.BlockName))
-                        throw new InvalidDataException("CAD selection requires one valid region or named block.");
-                    manufacturing = manufacturing with { Selection = selection with { GeometrySha256 = NormalizeSha256(selection.GeometrySha256) } };
-                }
+                manufacturing = manufacturing with { Selection = ValidateSelection(manufacturing.Selection) };
                 manufacturing = manufacturing with { AssetPath = NormalizeArchiveRelativePath(manufacturing.AssetPath),
                     SourceSha256 = NormalizeSha256(manufacturing.SourceSha256) };
+                ValidateGeometry(manufacturing.Geometry, manufacturing.SourceSha256, manufacturing.MillimetresPerUnit, manufacturing.Selection);
             }
-            return entry with { AssetPath = NormalizeArchiveRelativePath(entry.AssetPath), ManufacturingAsset = manufacturing };
+            var wiringSelection = ValidateSelection(entry.WiringSelection);
+            if (!string.Equals(entry.Template.WiringSelectionSha256, wiringSelection?.GeometrySha256, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Cable template must pin the wiring selection identity.");
+            ValidateGeometry(entry.WiringGeometry, entry.Template.AssetSha256, entry.MillimetresPerUnit, wiringSelection);
+            return entry with { AssetPath = NormalizeArchiveRelativePath(entry.AssetPath), ManufacturingAsset = manufacturing, WiringSelection = wiringSelection };
         }).OrderBy(e => e.Template.TemplateId, StringComparer.Ordinal).ThenBy(e => e.Template.TemplateRevision, StringComparer.Ordinal).ToArray();
 
         var layoutKeys = new HashSet<(string ComponentId, string Revision)>();
@@ -219,7 +227,7 @@ public sealed class SymbolArchiveRepository
         return document with
         {
             // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
-            SchemaVersion = document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null)
+            SchemaVersion = document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null || c.WiringSelection is not null || c.WiringGeometry is not null)
                 ? CableManufacturingSchemaVersion :
                 document.SchemaVersion == SchematicLayoutSchemaVersion || layouts.Length > 0 ? SchematicLayoutSchemaVersion :
                 document.SchemaVersion == CableTemplateSchemaVersion || cables.Length > 0 ? CableTemplateSchemaVersion :
@@ -236,6 +244,27 @@ public sealed class SymbolArchiveRepository
     }
 
     private static bool ValidSide(string side) => side is "Left" or "Right" or "Top" or "Bottom";
+
+    private static CableCadSelection? ValidateSelection(CableCadSelection? selection)
+    {
+        if (selection is null) return null;
+        if (selection.Bounds is { } bounds && (!double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y) || bounds.X < 0 || bounds.Y < 0 ||
+            !double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) || bounds.Width <= 0 || bounds.Height <= 0) ||
+            (selection.Bounds is null) == string.IsNullOrWhiteSpace(selection.BlockName))
+            throw new InvalidDataException("CAD selection requires one valid region or named block.");
+        return selection with { GeometrySha256 = NormalizeSha256(selection.GeometrySha256) };
+    }
+
+    private static void ValidateGeometry(Electrical.Schematic.SchematicCadAsset? geometry, string sourceHash, double units, CableCadSelection? selection)
+    {
+        if (geometry is null) return;
+        if (!string.Equals(geometry.SourceSha256, sourceHash, StringComparison.OrdinalIgnoreCase) || geometry.MillimetresPerUnit != units ||
+            !double.IsFinite(geometry.Width) || !double.IsFinite(geometry.Height) || geometry.Width <= 0 || geometry.Height <= 0 ||
+            selection is not null && (!string.Equals(geometry.SelectionSha256, selection.GeometrySha256, StringComparison.OrdinalIgnoreCase) ||
+                geometry.SelectionBounds != selection.Bounds || geometry.SelectionBlockName != selection.BlockName ||
+                !string.Equals(Electrical.Schematic.SchematicCadSelectionService.GeometryHash(geometry), selection.GeometrySha256, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("CAD geometry snapshot does not match its source, selection or units.");
+    }
 
     public string ResolveArchivePath(string assetPath)
     {

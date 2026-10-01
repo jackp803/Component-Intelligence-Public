@@ -105,6 +105,8 @@ public sealed record CableArchiveEntry
     public string? ConstructionEvidence { get; init; }
     public IReadOnlyList<SymbolPortBinding> ContactBindings { get; init; } = [];
     public CableCadRoleAsset? ManufacturingAsset { get; init; }
+    public CableCadSelection? WiringSelection { get; init; }
+    public Electrical.Schematic.SchematicCadAsset? WiringGeometry { get; init; }
 }
 
 public sealed record CableCadRoleAsset
@@ -113,6 +115,7 @@ public sealed record CableCadRoleAsset
     public required string SourceSha256 { get; init; }
     public required double MillimetresPerUnit { get; init; }
     public CableCadSelection? Selection { get; init; }
+    public Electrical.Schematic.SchematicCadAsset? Geometry { get; init; }
 }
 
 public sealed record CableCadSelection

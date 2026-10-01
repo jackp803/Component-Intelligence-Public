@@ -43,6 +43,7 @@ public sealed record SchematicCadPrimitive
     public double TextWidthFactor { get; init; } = 1;
     public string? TextAttachment { get; init; }
     public IReadOnlyList<IReadOnlyList<SchematicPoint>> Contours { get; init; } = [];
+    public IReadOnlyList<string> SourceBlocks { get; init; } = [];
 
     public SchematicPoint TextAnchorOffset(double width, double height, double baseline)
     {
@@ -64,11 +65,15 @@ public sealed record SchematicCadPrimitive
     }
 }
 
-public sealed record SchematicCadContact(string Tag, string Value, SchematicPoint Position, string? SourcePinId = null, string? Direction = null);
+public sealed record SchematicCadContact(string Tag, string Value, SchematicPoint Position, string? SourcePinId = null,
+    string? Direction = null, IReadOnlyList<string>? SourceBlocks = null);
 
 public sealed record SchematicCadAsset
 {
     public required string SourceSha256 { get; init; }
+    public string? SelectionSha256 { get; init; }
+    public SchematicGridBounds? SelectionBounds { get; init; }
+    public string? SelectionBlockName { get; init; }
     public double MillimetresPerUnit { get; init; }
     public double Width { get; init; }
     public double Height { get; init; }
@@ -97,8 +102,10 @@ public sealed class SchematicCadImporter
                 throw new InvalidDataException("Only finite planar XY geometry is supported.");
             var point = new SchematicPoint(p.X, p.Y); bounds.Add(point); return point;
         }
-        void Read(EntityObject e, int depth)
+        void Read(EntityObject e, int depth, IReadOnlyList<string>? sourceBlocks = null)
         {
+            sourceBlocks ??= [];
+            var firstPrimitive = raw.Count;
             if (depth > 32) throw new InvalidDataException("Block nesting exceeds 32 levels.");
             if (!e.IsVisible || !e.Layer.IsVisible) return;
             if (e.Normal != Vector3.UnitZ) { diagnostics.Add($"Unsupported normal: {e.Type}"); return; }
@@ -128,22 +135,23 @@ public sealed class SchematicCadImporter
                     {
                         if (attribute.Tag.StartsWith("X", StringComparison.Ordinal) && attribute.Tag.Contains("TERM", StringComparison.Ordinal))
                             contacts.Add(new(attribute.Tag, attribute.Value ?? "", Point(attribute.Position),
-                                Direction: InsertContactDirection(attribute.Tag, insert)));
+                                Direction: InsertContactDirection(attribute.Tag, insert), SourceBlocks: [..sourceBlocks, insert.Block.Name]));
                         // Explode discards attribute identity. Preserve tagged text before flattening.
                         if (attribute.IsVisible && attribute.Layer.IsVisible && !attribute.Flags.HasFlag(AttributeFlags.Hidden) && !string.IsNullOrEmpty(attribute.Value))
                         {
                             raw.Add(new() { Kind = "TEXT", Start = Point(attribute.Position), Text = attribute.Value,
                                 AttributeTag = attribute.Tag, TextHeight = attribute.Height, Rotation = attribute.Rotation,
-                                TextAttachment = attribute.Alignment.ToString(), TextWidthFactor = attribute.WidthFactor });
+                                TextAttachment = attribute.Alignment.ToString(), TextWidthFactor = attribute.WidthFactor,
+                                SourceBlocks = [..sourceBlocks, insert.Block.Name] });
                             if (attribute.Alignment != TextAlignment.BaselineLeft || attribute.WidthFactor != 1 || attribute.ObliqueAngle != 0)
                                 diagnostics.Add("Attribute text formatting requires visual review.");
                         }
                         attribute.IsVisible = false;
                     }
-                    foreach (var child in insert.Explode()) Read(child, depth + 1);
+                    foreach (var child in insert.Explode()) Read(child, depth + 1, [..sourceBlocks, insert.Block.Name]);
                     break;
                 case Polyline2D polyline:
-                    foreach (var child in polyline.Explode()) Read(child, depth + 1);
+                    foreach (var child in polyline.Explode()) Read(child, depth + 1, sourceBlocks);
                     break;
                 case Line line:
                     raw.Add(new() { Kind = "LINE", Start = Point(line.StartPoint), End = Point(line.EndPoint) });
@@ -175,6 +183,9 @@ public sealed class SchematicCadImporter
                     diagnostics.Add($"Unsupported entity: {e.Type}");
                     break;
             }
+            for (var i = firstPrimitive; i < raw.Count; i++)
+                if (raw[i].SourceBlocks.Count == 0 && sourceBlocks.Count > 0)
+                    raw[i] = raw[i] with { SourceBlocks = sourceBlocks.ToArray() };
         }
         foreach (var entity in doc.Entities.All) Read(entity, 0);
         // Standalone ACADE symbols store contacts as model-space ATTDEFs, not INSERT attributes.

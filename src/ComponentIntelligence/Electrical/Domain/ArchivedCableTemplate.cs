@@ -6,6 +6,7 @@ public sealed record ArchivedCableTemplate
     public required string TemplateId { get; init; }
     public required string TemplateRevision { get; init; }
     public required string AssetSha256 { get; init; }
+    public string? WiringSelectionSha256 { get; init; }
     public string? DisplayName { get; init; }
     public List<ComponentPort> Ports { get; init; } = [];
     public string? MappingRevision { get; init; }

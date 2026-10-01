@@ -52,6 +52,8 @@ public static class ArchivedCableInstanceFactory
         if (string.IsNullOrWhiteSpace(template.TemplateId) || string.IsNullOrWhiteSpace(template.TemplateRevision) ||
             string.IsNullOrWhiteSpace(template.AssetSha256) || template.AssetSha256.Length != 64 || !template.AssetSha256.All(Uri.IsHexDigit))
             throw new InvalidOperationException("Cable template requires exact identity, revision and SHA-256.");
+        if (template.WiringSelectionSha256 is { } selected && (selected.Length != 64 || !selected.All(Uri.IsHexDigit)))
+            throw new InvalidOperationException("Cable selection requires an exact SHA-256.");
         var ids = template.Ports.Select(p => p.PortId).Concat(template.Ports.SelectMany(p => p.Pins).Select(p => p.PinId)).ToArray();
         if (template.Ports.Count == 0 || ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct(StringComparer.OrdinalIgnoreCase).Count() != ids.Length ||
             template.Ports.Any(p => p.Pins.Count == 0))

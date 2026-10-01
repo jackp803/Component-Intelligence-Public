@@ -140,15 +140,22 @@ public partial class SchematicWorkspaceControl : UserControl
             RenderTitleBlock(project, page);
         }
         DrawFrame(page, doc.Pages.IndexOf(page) + 1, project.Name);
-        if (page.CableDetail is not null)
+        foreach (var binding in page.InlineCableDetails.Concat(page.CableDetail is null ? [] : new[] { page.CableDetail }))
         {
             try
             {
-                var detail = new SchematicCableDetailService().Build(project, page);
+                var detailService = new SchematicCableDetailService();
+                var detail = binding == page.CableDetail ? detailService.Build(project, page) : detailService.BuildArchived(project, page, binding);
                 var geometry = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height, Primitives = detail.Primitives });
                 geometry.IsHitTestVisible = false; Sheet.Children.Add(geometry);
+                if (!_renderingOutput && project.Cables.Single(c => c.CableInstanceId == binding.CableInstanceId).ArchivedCable is not null)
+                    RenderDetailHandles(page, binding);
             }
-            catch (InvalidOperationException error) { Text(error.Message, page.Margin + 8, page.Margin + 10, 12, Brushes.Firebrick); }
+            catch (InvalidOperationException error)
+            {
+                if (_renderingOutput) throw;
+                Text(error.Message, page.Margin + 8, page.Margin + 10, 12, Brushes.Firebrick);
+            }
         }
         var crossings = SchematicCrossingService.Analyze(doc.Wires.Where(w => w.PageId == page.PageId).ToArray());
         foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))

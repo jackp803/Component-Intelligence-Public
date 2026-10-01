@@ -26,7 +26,7 @@ public sealed class SchematicPageFormatTests
         Assert.NotEqual(source.PageId, added.PageId);
         Assert.Equal("Next", added.Title);
         Assert.Equal(source with { PageId = added.PageId, Title = "Next", TemplateGeometry = added.TemplateGeometry,
-            TitleBlockContentOverride = null, TitleBlockSlots = added.TitleBlockSlots }, added);
+            TitleBlockContentOverride = null, TitleBlockSlots = added.TitleBlockSlots, InlineCableDetails = added.InlineCableDetails }, added);
         Assert.Null(added.TitleBlockContentOverride);
         Assert.Equal(source.TitleBlockSlots, added.TitleBlockSlots);
         Assert.NotSame(source.TitleBlockSlots, added.TitleBlockSlots);

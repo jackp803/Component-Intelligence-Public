@@ -30,6 +30,7 @@ public sealed record ArchivedCableBinding
     public bool MappingConfirmed { get; init; }
     public bool HasMappingOverride { get; init; }
     public CableManufacturingDefinition? Manufacturing { get; init; }
+    public Schematic.SchematicCadAsset? ManufacturingGeometry { get; init; }
 }
 
 public enum CablePinUsage { Pending, Unused, Nc }

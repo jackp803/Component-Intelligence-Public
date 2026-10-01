@@ -85,7 +85,7 @@ public static class SchematicSymbolPresentation
         owner.Cable?.ArchivedCable?.Template.TextBindings.Any(b => b.Field == field &&
             symbol.Geometry?.Primitives.Any(p => p.AttributeTag == b.AttributeTag && p.Kind is "TEXT" or "MTEXT") == true) == true;
 
-    private static string CableFieldValue(CableInstance cable, CableTextField field) => field switch
+    public static string CableFieldValue(CableInstance cable, CableTextField field) => field switch
     {
         CableTextField.Reference => cable.ReferenceDesignator ?? "Reference 待填",
         CableTextField.LengthMm => cable.ProvidedLengthMm is double length ? length.ToString("0.###", CultureInfo.InvariantCulture) + " mm" : "長度待填",

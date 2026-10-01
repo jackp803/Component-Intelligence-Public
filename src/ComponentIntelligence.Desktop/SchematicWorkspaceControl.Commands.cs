@@ -81,6 +81,15 @@ public partial class SchematicWorkspaceControl
 
     private void DeleteSelectedObject()
     {
+        if (SelectedCableDetail() is { } detail && _pageId is not null)
+        {
+            if (MessageBox.Show(Window.GetWindow(this), "只移除這份製作明細？實體線材與所有接線保留。", "移除明細",
+                MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            var page = _getProject().Schematic!.Pages.Single(p => p.PageId == _pageId);
+            if (Apply(p => new SchematicCableDetailService().RemoveDetail(p, page.PageId, detail.DetailId), "已移除明細；實體線材保留"))
+                _selectionId = null;
+            return;
+        }
         var doc = _getProject().Schematic;
         var symbol = doc?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
         if (symbol is not null)

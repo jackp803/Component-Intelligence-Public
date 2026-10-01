@@ -11,8 +11,11 @@ public partial class SchematicWorkspaceControl
     private void CableDetail_Click(object sender, RoutedEventArgs e)
     {
         if (!FinishPendingDraft()) return;
-        if (TryEditSelectedArchivedCable()) return;
         var current = _getProject();
+        var archivedId = current.Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId)?.CableInstanceId ??
+            SelectedCableDetail()?.CableInstanceId ?? current.Schematic?.Pages.SingleOrDefault(p => p.PageId == _pageId)?.CableDetail?.CableInstanceId;
+        if (archivedId is not null && current.Cables.Any(c => c.CableInstanceId == archivedId && c.ArchivedCable is not null))
+        { EditArchivedDetailLayout(archivedId, SelectedCableDetail()); return; }
         var selected = current.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId)?.ConnectionId;
         if (selected is null)
         {

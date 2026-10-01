@@ -296,7 +296,7 @@ public sealed partial class SchematicAuthoringService
             ?? throw new InvalidOperationException("Source page format no longer exists.");
         // Edit cloned the document; reuse only its format, never a cable-detail binding.
         doc.Pages.Add(format with { PageId = $"sheet-{Guid.NewGuid():N}", Title = title.Trim(),
-            TitleBlockContentOverride = null, CableDetail = null });
+            TitleBlockContentOverride = null, CableDetail = null, InlineCableDetails = [] });
     });
 
     public ElectricalProject ReorderPages(ElectricalProject project, IReadOnlyList<string> pageIds) => Edit(project, (_, doc) =>
@@ -819,6 +819,7 @@ public sealed partial class SchematicAuthoringService
             throw new InvalidOperationException("Schematic identities must be unique.");
         foreach (var page in doc.Pages)
         {
+            SchematicCableDetailService.ValidateBindings(project, page);
             if (!double.IsFinite(page.Width) || !double.IsFinite(page.Height) || !double.IsFinite(page.Margin) ||
                 page.Margin < 0 || page.Width <= 2 * page.Margin || page.Height <= 2 * page.Margin ||
                 page.GridColumns is < 1 or > 100 || page.GridRows is < 1 or > 26)

@@ -68,9 +68,13 @@ public sealed partial class SchematicAuthoringService
 
     public ElectricalProject AddArchivedCable(ElectricalProject project, ArchivedCableTemplate template,
         CableConstructionType construction, SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts,
-        string pageId, SchematicPoint position, string? assetPath = null, bool assetApproved = false) => Edit(project, (draft, doc) =>
+        string pageId, SchematicPoint position, string? assetPath = null, bool assetApproved = false,
+        SchematicCadAsset? manufacturingGeometry = null) => Edit(project, (draft, doc) =>
     {
         var cable = ArchivedCableInstanceFactory.Create(template, construction);
+        if (manufacturingGeometry is not null)
+            cable.ArchivedCable = cable.ArchivedCable! with { ManufacturingGeometry =
+                System.Text.Json.JsonSerializer.Deserialize<SchematicCadAsset>(System.Text.Json.JsonSerializer.Serialize(manufacturingGeometry)) };
         draft.Cables.Add(cable);
         doc.Symbols.Add(CreateCableSymbol(cable, geometry, contacts, pageId, position) with {
             AssetPath = assetPath, AssetRevision = assetApproved ? template.TemplateRevision : null });

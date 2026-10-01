@@ -8,7 +8,7 @@ public sealed record SchematicCableDetailPresentation(IReadOnlyList<SchematicCad
     IReadOnlyList<string> ConnectionIds, IReadOnlyList<string> Diagnostics);
 
 // A detail is another view of existing cable authority, never a second cable or electrical graph.
-public sealed class SchematicCableDetailService
+public sealed partial class SchematicCableDetailService
 {
     public ElectricalProject AddPage(ElectricalProject project, string connectionId, string? templatePageId = null)
     {
@@ -43,6 +43,7 @@ public sealed class SchematicCableDetailService
         var binding = page.CableDetail ?? throw new InvalidOperationException("此頁不是線材明細。");
         var cable = project.Cables.SingleOrDefault(c => c.CableInstanceId == binding.CableInstanceId)
             ?? throw new InvalidOperationException("線材明細的來源線材不存在。");
+        if (cable.ArchivedCable is not null) return BuildArchived(project, page, binding);
         var assembly = binding.CableAssemblyId is null ? null : project.CableAssemblies.SingleOrDefault(a => a.CableAssemblyId == binding.CableAssemblyId)
             ?? throw new InvalidOperationException("線材明細的來源組合不存在。");
         var physical = assembly?.PhysicalTopology;

@@ -62,9 +62,18 @@ public sealed record SchematicPage
     public string? TemplateSha256 { get; init; }
     public SchematicCadAsset? TemplateGeometry { get; init; }
     public SchematicCableDetailBinding? CableDetail { get; init; }
+    public List<SchematicCableDetailBinding> InlineCableDetails { get; init; } = [];
 }
 
-public sealed record SchematicCableDetailBinding(string CableInstanceId, string? CableAssemblyId);
+public sealed record SchematicCableDetailBinding(string CableInstanceId, string? CableAssemblyId)
+{
+    public string DetailId { get; init; } = "";
+    public SchematicPoint TablePosition { get; init; } = new(20, 30);
+    public SchematicPoint SketchPosition { get; init; } = new(20, 110);
+    public double TableWidth { get; init; } = 180;
+    public double SketchWidth { get; init; } = 180;
+    public double SketchHeight { get; init; } = 70;
+}
 
 public sealed record SchematicSymbol
 {

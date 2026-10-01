@@ -12,7 +12,7 @@ public partial class SchematicWorkspaceControl
     private sealed record CableChoice(CableArchiveEntry Entry, string Label);
     private sealed record ConstructionChoice(CableConstructionType Value, string Label);
     private sealed record PendingCable(ResolvedCableArchive Source, SchematicCadAsset Geometry,
-        CableConstructionType Construction, CableArchiveResolver Resolver);
+        CableConstructionType Construction, CableArchiveResolver Resolver, SchematicCadAsset? ManufacturingGeometry);
     private PendingCable? _pendingCable;
     private bool _placingCable;
     private string? _pendingCableRepresentation;
@@ -96,14 +96,20 @@ public partial class SchematicWorkspaceControl
                 throw new InvalidOperationException("歸檔模板已變更，請重新選取。");
             IsEnabled = false;
             SchematicCadAsset geometry;
-            try { geometry = source.Entry.WiringGeometry ?? await new SchematicCadFileLoader().ReadAsync(source.AbsolutePath, source.Entry.MillimetresPerUnit); }
+            SchematicCadAsset? manufacturing = null;
+            try
+            {
+                geometry = source.Entry.WiringGeometry ?? await new SchematicCadFileLoader().ReadAsync(source.AbsolutePath, source.Entry.MillimetresPerUnit);
+                if (source.Entry.ManufacturingAsset is { } role)
+                    manufacturing = role.Geometry ?? await new SchematicCadFileLoader().ReadAsync(source.ManufacturingPath!, role.MillimetresPerUnit);
+            }
             finally { IsEnabled = true; }
             if (!geometry.Complete && MessageBox.Show(Window.GetWindow(this), string.Join("\n", geometry.Diagnostics),
                 "部分 CAD 內容不支援；僅繼續為草稿？", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
             CancelCommand();
             var preview = _service.AddArchivedCable(_getProject(), source.Entry.Template, construction, geometry,
-                CableContacts(source.Entry), _pageId!, new(20, 20), source.AbsolutePath, source.Entry.Status == SymbolRevisionStatus.Approved);
-            _placementPreview = preview; _pendingCable = new(source, geometry, construction, resolver);
+                CableContacts(source.Entry), _pageId!, new(20, 20), source.AbsolutePath, source.Entry.Status == SymbolRevisionStatus.Approved, manufacturing);
+            _placementPreview = preview; _pendingCable = new(source, geometry, construction, resolver, manufacturing);
             _placeMode = true; Status.Text = "線材待放置；點畫布新增一條實體線材，Escape 取消。";
             Focus(); Render(_getProject());
         }
@@ -136,7 +142,7 @@ public partial class SchematicWorkspaceControl
             if (JsonSerializer.Serialize(current.Entry) != JsonSerializer.Serialize(pending.Source.Entry))
                 throw new InvalidOperationException("歸檔模板已變更，請重新選取。" );
             if (Apply(p => _service.AddArchivedCable(p, current.Entry.Template, pending.Construction, pending.Geometry,
-                CableContacts(current.Entry), pageId, point, current.AbsolutePath, current.Entry.Status == SymbolRevisionStatus.Approved), "已新增一條實體線材"))
+                CableContacts(current.Entry), pageId, point, current.AbsolutePath, current.Entry.Status == SymbolRevisionStatus.Approved, pending.ManufacturingGeometry), "已新增一條實體線材"))
             { _pendingCable = null; _placeMode = false; _placementPreview = null; Render(_getProject()); }
         }
         catch (Exception error) { Status.Text = "無法放置線材：" + error.Message; }

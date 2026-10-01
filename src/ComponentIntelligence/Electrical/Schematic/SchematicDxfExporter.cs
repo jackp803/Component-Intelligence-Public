@@ -145,9 +145,10 @@ public sealed class SchematicDxfExporter
             Label($"{project.Name}   |   {page.Title}   |   {number}", new(page.Margin + 2, page.Height - page.Margin - 8), "SCHEMATIC_FRAME", 4);
         }
 
-        if (page.CableDetail is not null)
+        foreach (var binding in page.InlineCableDetails.Concat(page.CableDetail is null ? [] : new[] { page.CableDetail }))
         {
-            var detail = new SchematicCableDetailService().Build(project, page);
+            var detailService = new SchematicCableDetailService();
+            var detail = binding == page.CableDetail ? detailService.Build(project, page) : detailService.BuildArchived(project, page, binding);
             foreach (var primitive in detail.Primitives) Primitive(primitive, "SCHEMATIC_CABLE_DETAIL", .25);
             diagnostics.AddRange(detail.Diagnostics);
         }

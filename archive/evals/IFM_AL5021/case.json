@@ -1,0 +1,152 @@
+{
+  "referenceComponent": "IFM AL5021",
+  "policyFocus": [
+    "fixed multi-core field cable uses Pins endpoint mode",
+    "every independently wired conductor remains explicit"
+  ],
+  "expectedValidatorStatus": "PASS",
+  "assertions": [
+    "FIELD_IO exposes exactly 18 conductors",
+    "X1.0 through X1.15 plus L- and L+ are explicit"
+  ],
+  "changeset": {
+    "jobId": "eval-ifm-al5021",
+    "policyVersion": "v2",
+    "operation": "CREATE",
+    "manufacturer": "IFM",
+    "model": "AL5021",
+    "components": [
+      {
+        "componentId": "IFM_AL5021",
+        "manufacturer": "IFM",
+        "model": "AL5021",
+        "category": "IO-Link Device",
+        "topologyStatus": "Review",
+        "layoutStatus": "Review",
+        "ports": [
+          {
+            "portId": "IFM_AL5021_FIELD_IO",
+            "componentId": "IFM_AL5021",
+            "portName": "FIELD_IO",
+            "portRole": "Field I/O",
+            "direction": "Mixed",
+            "pinCount": 18,
+            "actualPinCount": 18,
+            "topologyEndpointMode": "Pins",
+            "pins": [
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_0",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.0",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_1",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.1",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_2",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.2",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_3",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.3",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_4",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.4",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_5",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.5",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_6",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.6",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_7",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.7",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_8",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.8",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_9",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.9",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_10",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.10",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_11",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.11",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_12",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.12",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_13",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.13",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_14",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.14",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_X1_15",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "X1.15",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_L_MINUS",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "L-",
+                "direction": "Return",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "IFM_AL5021_FIELD_IO_L_PLUS",
+                "portId": "IFM_AL5021_FIELD_IO",
+                "pinNumber": "L+",
+                "pinStatus": "Used"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

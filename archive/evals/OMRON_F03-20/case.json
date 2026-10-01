@@ -1,0 +1,63 @@
+{
+  "referenceComponent": "OMRON F03-20",
+  "policyFocus": [
+    "functional PortRole and truthful electrical Direction are separate",
+    "passive terminals remain explicit"
+  ],
+  "expectedValidatorStatus": "PASS",
+  "assertions": [
+    "INPUT port role may coexist with Passive direction",
+    "OUTPUT port role may coexist with Passive direction"
+  ],
+  "changeset": {
+    "jobId": "eval-omron-f03-20",
+    "policyVersion": "v2",
+    "operation": "CREATE",
+    "manufacturer": "OMRON",
+    "model": "F03-20",
+    "components": [
+      {
+        "componentId": "OMRON_F03-20",
+        "manufacturer": "OMRON",
+        "model": "F03-20",
+        "category": "Passive Component",
+        "topologyStatus": "Review",
+        "layoutStatus": "Review",
+        "ports": [
+          {
+            "portId": "OMRON_F03-20_INPUT",
+            "componentId": "OMRON_F03-20",
+            "portName": "INPUT",
+            "portRole": "Input Port",
+            "direction": "Passive",
+            "topologyEndpointMode": "Pins",
+            "pins": [
+              {
+                "pinId": "OMRON_F03-20_INPUT_1",
+                "portId": "OMRON_F03-20_INPUT",
+                "pinNumber": "1",
+                "pinStatus": "Used"
+              }
+            ]
+          },
+          {
+            "portId": "OMRON_F03-20_OUTPUT",
+            "componentId": "OMRON_F03-20",
+            "portName": "OUTPUT",
+            "portRole": "Output Port",
+            "direction": "Passive",
+            "topologyEndpointMode": "Pins",
+            "pins": [
+              {
+                "pinId": "OMRON_F03-20_OUTPUT_1",
+                "portId": "OMRON_F03-20_OUTPUT",
+                "pinNumber": "1",
+                "pinStatus": "Used"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

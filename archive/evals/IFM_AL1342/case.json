@@ -1,0 +1,44 @@
+{
+  "referenceComponent": "IFM AL1342",
+  "policyFocus": [
+    "whole-mated IO-Link connector stays Connector mode",
+    "real mixed electrical behavior is not rewritten for UI placement"
+  ],
+  "expectedValidatorStatus": "PASS",
+  "assertions": [
+    "X01 is IO-Link Port Class A",
+    "Direction remains Mixed",
+    "M12 A coding and Connector endpoint mode are preserved"
+  ],
+  "changeset": {
+    "jobId": "eval-ifm-al1342",
+    "policyVersion": "v2",
+    "operation": "CREATE",
+    "manufacturer": "IFM",
+    "model": "AL1342",
+    "components": [
+      {
+        "componentId": "IFM_AL1342",
+        "manufacturer": "IFM",
+        "model": "AL1342",
+        "category": "IO-Link Master",
+        "topologyStatus": "Review",
+        "layoutStatus": "Review",
+        "ports": [
+          {
+            "portId": "IFM_AL1342_X01",
+            "componentId": "IFM_AL1342",
+            "portName": "X01",
+            "portRole": "IO-Link Port Class A",
+            "direction": "Mixed",
+            "protocol": "IO-Link",
+            "connector": "M12",
+            "connectorCoding": "A",
+            "topologyEndpointMode": "Connector",
+            "pins": []
+          }
+        ]
+      }
+    ]
+  }
+}

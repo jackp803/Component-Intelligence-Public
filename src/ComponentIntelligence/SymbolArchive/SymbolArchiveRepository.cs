@@ -181,7 +181,12 @@ public sealed class SymbolArchiveRepository
             if (!string.Equals(entry.Template.WiringSelectionSha256, wiringSelection?.GeometrySha256, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Cable template must pin the wiring selection identity.");
             ValidateGeometry(entry.WiringGeometry, entry.Template.AssetSha256, entry.MillimetresPerUnit, wiringSelection);
-            return entry with { AssetPath = NormalizeArchiveRelativePath(entry.AssetPath), ManufacturingAsset = manufacturing, WiringSelection = wiringSelection };
+            if (entry.WiringAssetPending && (entry.Status != SymbolRevisionStatus.Candidate || entry.AssetPath != "" ||
+                entry.WiringGeometry is not null || wiringSelection is not null || entry.ContactBindings.Count != 0 ||
+                entry.Template.AssetSha256 != new string('0', 64)))
+                throw new InvalidDataException("Pending wiring CAD must be a candidate without asset, selection or bindings.");
+            return entry with { AssetPath = entry.WiringAssetPending ? "" : NormalizeArchiveRelativePath(entry.AssetPath),
+                ManufacturingAsset = manufacturing, WiringSelection = wiringSelection };
         }).OrderBy(e => e.Template.TemplateId, StringComparer.Ordinal).ThenBy(e => e.Template.TemplateRevision, StringComparer.Ordinal).ToArray();
 
         var layoutKeys = new HashSet<(string ComponentId, string Revision)>();
@@ -228,7 +233,7 @@ public sealed class SymbolArchiveRepository
         {
             // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
             SchemaVersion = document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null ||
-                c.WiringSelection is not null || c.WiringGeometry is not null || c.Template.Manufacturing is not null)
+                c.WiringSelection is not null || c.WiringGeometry is not null || c.Template.Manufacturing is not null || c.WiringAssetPending)
                 ? CableManufacturingSchemaVersion :
                 document.SchemaVersion == SchematicLayoutSchemaVersion || layouts.Length > 0 ? SchematicLayoutSchemaVersion :
                 document.SchemaVersion == CableTemplateSchemaVersion || cables.Length > 0 ? CableTemplateSchemaVersion :

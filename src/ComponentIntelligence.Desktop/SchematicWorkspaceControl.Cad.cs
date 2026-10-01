@@ -11,7 +11,7 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class SchematicWorkspaceControl
 {
-    private static Canvas CadCanvas(SchematicCadAsset asset, Brush? stroke = null, double thickness = 1, DoubleCollection? dash = null)
+    internal static Canvas CadCanvas(SchematicCadAsset asset, Brush? stroke = null, double thickness = 1, DoubleCollection? dash = null)
     {
         var canvas = new Canvas { Width = asset.Width * 3, Height = asset.Height * 3, IsHitTestVisible = false };
         foreach (var primitive in asset.Primitives)

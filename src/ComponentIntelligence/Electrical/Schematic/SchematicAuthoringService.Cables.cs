@@ -4,6 +4,25 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed partial class SchematicAuthoringService
 {
+    public ElectricalProject SetArchivedCableManufacturing(ElectricalProject project, string cableId, CableManufacturingDraft manufacturing) =>
+        Edit(project, (draft, doc) =>
+        {
+            var index = draft.Cables.FindIndex(c => c.CableInstanceId == cableId);
+            if (index < 0) throw new InvalidOperationException("Select an archived cable.");
+            var cable = new CableManufacturingEditorService().ApplyToInstance(draft.Cables[index], manufacturing);
+            draft.Cables[index] = cable;
+            for (var i = 0; i < doc.Symbols.Count; i++)
+            {
+                var symbol = doc.Symbols[i]; if (symbol.CableInstanceId != cableId) continue;
+                doc.Symbols[i] = symbol with { Anchors = symbol.Anchors.Select(a =>
+                {
+                    var port = cable.ArchivedCable!.Ports.Single(p => p.SourcePortId == a.SourcePortId);
+                    var pin = port.Pins.Single(p => p.SourcePinId == a.SourcePinId);
+                    return a with { Label = $"{port.Name} / {pin.PinNumber} {pin.PinName}".Trim() };
+                }).ToList() };
+            }
+        });
+
     public ElectricalProject SetCableContactBindings(ElectricalProject project, string symbolId,
         IReadOnlyDictionary<string, string> contacts)
     {

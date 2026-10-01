@@ -12,6 +12,7 @@ public static class SchematicShortcutCatalog
         new("SplitRepresentation", "Ctrl+Shift+P", "拆分通用模塊表示"),
         new("ReviewDraft", "F8", "查看草稿缺口"),
         new("CableLibrary", "Ctrl+Shift+C", "從線材庫新增實體線材"),
+        new("CableArchive", "Ctrl+Alt+C", "新增自製線材模板"),
         new("Bindings", "B", "接點設定"), new("Import", "I", "圖塊外觀"), new("Template", "T", "圖框／頁面"),
         new("Rotate", "R", "旋轉 90 度"), new("Lock", "L", "鎖定／解鎖"), new("Peer", "J", "前往對端"),
         new("MovePage", "Ctrl+M", "搬元件到其他頁"), new("Cable", "C", "線材設定"), new("Gauge", "G", "導線 AWG"),

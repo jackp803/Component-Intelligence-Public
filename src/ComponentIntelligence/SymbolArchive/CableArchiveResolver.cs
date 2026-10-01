@@ -15,6 +15,8 @@ public sealed class CableArchiveResolver(SymbolArchiveRepository repository)
             ?? throw new InvalidDataException("Cable template revision was not found.");
         if (entry.Status is not (SymbolRevisionStatus.Candidate or SymbolRevisionStatus.Approved))
             throw new InvalidDataException("Rejected or superseded cable templates cannot create new instances.");
+        if (entry.WiringAssetPending)
+            throw new InvalidDataException("線材尚無接線 CAD，請先完成歸檔；不能以方框代替。");
         var path = await VerifyAssetAsync(entry.AssetPath, entry.Template.AssetSha256, cancellationToken);
         var manufacturingPath = entry.ManufacturingAsset is { } detail
             ? await VerifyAssetAsync(detail.AssetPath, detail.SourceSha256, cancellationToken) : null;

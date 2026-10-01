@@ -8,6 +8,31 @@ namespace ComponentIntelligence.Tests.SymbolArchive;
 public sealed class CableArchiveCreationTests
 {
     [Fact]
+    public async Task MissingWiringCadCanSaveCandidateButCannotBePlaced()
+    {
+        using var files = new Files();
+        var draft = files.Draft();
+        draft = draft with { WiringSourcePath = null, WiringGeometry = null,
+            Entry = draft.Entry with { WiringAssetPending = true, AssetPath = "",
+                Template = draft.Entry.Template with { AssetSha256 = new('0', 64) } } };
+        var entry = await new CableArchiveCreationService(files.Repository).CreateAsync(draft);
+        Assert.True(entry.WiringAssetPending);
+        Assert.Null(entry.WiringGeometry);
+        Assert.Equal("", entry.AssetPath);
+        Assert.NotNull(entry.ManufacturingAsset);
+        await Assert.ThrowsAsync<InvalidDataException>(() => new CableArchiveResolver(files.Repository).ResolveAsync("cable", "r1"));
+    }
+
+    [Fact]
+    public void MissingWiringCannotBeApprovedOrCarryFakeBindings()
+    {
+        using var files = new Files();
+        var entry = files.Draft().Entry with { WiringAssetPending = true, AssetPath = "",
+            Status = SymbolRevisionStatus.Approved };
+        Assert.Throws<InvalidDataException>(() => files.Repository.Save(new() { CableTemplates = [entry] }));
+    }
+
+    [Fact]
     public async Task TwoFilesCreateOneTemplateWithoutTouchingSources()
     {
         using var files = new Files();

@@ -95,6 +95,7 @@ public static class ArchivedCableInstanceFactory
                         throw new InvalidOperationException("Cable requires unique exact source Pin bindings.");
             }
             ValidateMapping(binding.Template, binding.Mapping);
+            CableManufacturingEditorService.ValidateMetadata(CableManufacturingEditorService.EffectiveTemplate(cable));
             if (binding.MappingConfirmed && (binding.HasMappingOverride || !binding.Template.MappingConfirmed ||
                 !binding.Mapping.SequenceEqual(binding.Template.Mapping)))
                 throw new InvalidOperationException("Cable instance mapping changes require explicit confirmation; archive approval cannot be inherited.");

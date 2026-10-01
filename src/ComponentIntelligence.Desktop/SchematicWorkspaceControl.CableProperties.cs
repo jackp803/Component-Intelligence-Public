@@ -1,22 +1,14 @@
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Schematic;
 
 namespace ComponentIntelligence.Desktop;
 
 public partial class SchematicWorkspaceControl
 {
-    private sealed record CablePinChoice(string Id, string Label);
-    private sealed class CableMappingRow
-    {
-        public string? FromId { get; set; }
-        public string? ToId { get; set; }
-    }
-
     private bool TryEditSelectedArchivedCable()
     {
         var project = _getProject();
@@ -25,7 +17,7 @@ public partial class SchematicWorkspaceControl
         if (symbol.Locked) { Status.Text = "請先解鎖這個線材表示。"; return true; }
         var cable = project.Cables.Single(c => c.CableInstanceId == cableId);
         var archived = cable.ArchivedCable!;
-        var dialog = new Window { Title = "實體線材設定", Width = 740, Height = 650, MinWidth = 580, MinHeight = 480,
+        var dialog = new Window { Title = "實體線材設定", Width = 980, Height = 820, MinWidth = 750, MinHeight = 640,
             Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var root = new DockPanel { Margin = new(16) };
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 10, 0, 0) };
@@ -54,24 +46,12 @@ public partial class SchematicWorkspaceControl
         properties.Children.Add(new TextBlock { Text = archived.Template.MappingEvidence ?? "尚無內部接法來源。", TextWrapping = TextWrapping.Wrap });
         properties.Children.Add(new TextBlock { Text = "實例接法變更後為待確認，不修改共用模板。", Margin = new(0, 4, 0, 10), TextWrapping = TextWrapping.Wrap });
         DockPanel.SetDock(properties, Dock.Top); root.Children.Add(properties);
-        var mappingPanel = new DockPanel();
-        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 0, 0, 6) };
-        var add = new Button { FontFamily = new("Segoe MDL2 Assets"), Content = "\uE710", ToolTip = "新增接法", Padding = new(9) };
-        var remove = new Button { FontFamily = new("Segoe MDL2 Assets"), Content = "\uE74D", ToolTip = "移除所選接法", Padding = new(9), Margin = new(6, 0, 0, 0) };
-        toolbar.Children.Add(add); toolbar.Children.Add(remove); DockPanel.SetDock(toolbar, Dock.Top); mappingPanel.Children.Add(toolbar);
-        var pins = archived.Template.Ports.SelectMany(p => p.Pins.Select(pin => new CablePinChoice(pin.PinId,
-            $"{p.Name} / {pin.PinNumber} {pin.PinName}".Trim()))).ToArray();
-        var rows = new ObservableCollection<CableMappingRow>(archived.Mapping.Select(m => new CableMappingRow { FromId = m.FromSourcePinId, ToId = m.ToSourcePinId }));
-        var grid = new DataGrid { ItemsSource = rows, AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false };
-        foreach (var (header, property) in new[] { ("端點 A", "FromId"), ("端點 B", "ToId") })
-            grid.Columns.Add(new DataGridComboBoxColumn { Header = header, ItemsSource = pins, DisplayMemberPath = "Label", SelectedValuePath = "Id",
-                SelectedValueBinding = new Binding(property) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = new(1, DataGridLengthUnitType.Star) });
-        add.Click += (_, _) => rows.Add(new());
-        remove.Click += (_, _) => { if (grid.SelectedItem is CableMappingRow selected) rows.Remove(selected); };
-        mappingPanel.Children.Add(grid); root.Children.Add(mappingPanel);
+        var editor = new CableManufacturingTableEditor(new CableManufacturingEditorService().Prepare(cable),
+            CableConnectorCatalog.Choices(_catalog), allowInventoryChanges: false);
+        root.Children.Add(editor);
         apply.Click += (_, _) =>
         {
-            if (!grid.CommitEdit(DataGridEditingUnit.Cell, true) || !grid.CommitEdit(DataGridEditingUnit.Row, true)) return;
+            if (!editor.Commit()) return;
             double? lengthMm = null;
             if (!string.IsNullOrWhiteSpace(length.Text))
             {
@@ -79,13 +59,12 @@ public partial class SchematicWorkspaceControl
                 { error.Text = "長度請輸入正數，或留空待確認。"; return; }
                 lengthMm = parsed;
             }
-            if (rows.Any(r => r.FromId is null || r.ToId is null)) { error.Text = "每列需明確選取兩端接點；未完成的列可移除。"; return; }
-            var mapping = rows.Select(r => new CablePinMapping(r.FromId!, r.ToId!)).ToArray();
             try
             {
                 var current = _getProject();
                 var next = _service.SetArchivedCableDetails(current, cableId, reference.Text, lengthMm, specification.Text,
-                    ((ConstructionChoice)construction.SelectedItem).Value, mapping);
+                    ((ConstructionChoice)construction.SelectedItem).Value, archived.Mapping);
+                next = _service.SetArchivedCableManufacturing(next, cableId, editor.Draft);
                 if (JsonSerializer.Serialize(current) == JsonSerializer.Serialize(next)) { dialog.DialogResult = true; return; }
                 if (Apply(_ => next, "已更新線材實例草稿；共用模板保持不變")) dialog.DialogResult = true;
             }

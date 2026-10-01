@@ -107,6 +107,7 @@ public sealed record CableArchiveEntry
     public CableCadRoleAsset? ManufacturingAsset { get; init; }
     public CableCadSelection? WiringSelection { get; init; }
     public Electrical.Schematic.SchematicCadAsset? WiringGeometry { get; init; }
+    public bool WiringAssetPending { get; init; }
 }
 
 public sealed record CableCadRoleAsset

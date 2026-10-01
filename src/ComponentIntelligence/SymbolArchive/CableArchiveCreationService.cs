@@ -6,8 +6,8 @@ namespace ComponentIntelligence.SymbolArchive;
 public sealed record CableArchiveDraft
 {
     public required CableArchiveEntry Entry { get; init; }
-    public required string WiringSourcePath { get; init; }
-    public required SchematicCadAsset WiringGeometry { get; init; }
+    public string? WiringSourcePath { get; init; }
+    public SchematicCadAsset? WiringGeometry { get; init; }
     public string? ManufacturingSourcePath { get; init; }
     public SchematicCadAsset? ManufacturingGeometry { get; init; }
     public string? ExpectedArchiveSha256 { get; init; }
@@ -19,6 +19,10 @@ public sealed class CableArchiveCreationService(SymbolArchiveRepository reposito
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (draft.Entry.Status != SymbolRevisionStatus.Candidate) throw new InvalidDataException("New cable revisions must be saved as candidates.");
+        if (draft.Entry.WiringAssetPending
+            ? draft.WiringSourcePath is not null || draft.WiringGeometry is not null
+            : draft.WiringSourcePath is null || draft.WiringGeometry is null)
+            throw new InvalidDataException("Wiring role requires its source and geometry, or an explicit pending state.");
         var original = repository.Load();
         if (original.CableTemplates.Any(e => e.Template.TemplateId == draft.Entry.Template.TemplateId && e.Template.TemplateRevision == draft.Entry.Template.TemplateRevision))
             throw new InvalidDataException("Cable revisions are immutable; choose a new revision.");
@@ -36,8 +40,12 @@ public sealed class CableArchiveCreationService(SymbolArchiveRepository reposito
         var saved = false;
         try
         {
-            var wiringPath = relative + "/wiring" + Extension(draft.WiringSourcePath);
-            await CopyVerifiedAsync(draft.WiringSourcePath, repository.ResolveArchivePath(wiringPath), entry.Template.AssetSha256, cancellationToken);
+            var wiringPath = "";
+            if (!entry.WiringAssetPending)
+            {
+                wiringPath = relative + "/wiring" + Extension(draft.WiringSourcePath!);
+                await CopyVerifiedAsync(draft.WiringSourcePath!, repository.ResolveArchivePath(wiringPath), entry.Template.AssetSha256, cancellationToken);
+            }
             CableCadRoleAsset? manufacturing = null;
             if (entry.ManufacturingAsset is { } role)
             {

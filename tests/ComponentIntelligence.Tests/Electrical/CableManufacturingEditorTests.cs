@@ -125,6 +125,16 @@ public sealed class CableManufacturingEditorTests
         Assert.Equal("GND", next.Ports[1].Pins[1].Function);
     }
 
+    [Fact]
+    public void CompletingAnUnpairedPinRetainsItsEnteredFunction()
+    {
+        var template = Template(); var draft = _service.Prepare(template);
+        draft.Rows[0].ToSourcePinId = "p2.1"; draft.Rows[0].ToFunction = "+24V";
+        var next = _service.Apply(template, draft);
+        Assert.Equal("+24V", next.Ports[1].Pins[0].Function);
+        Assert.Single(next.Mapping);
+    }
+
     internal static ArchivedCableTemplate Template(int ends = 2) => new()
     {
         TemplateId = "cable", TemplateRevision = "r1", AssetSha256 = new('a', 64),

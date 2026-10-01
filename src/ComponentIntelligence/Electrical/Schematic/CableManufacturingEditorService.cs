@@ -6,6 +6,53 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed class CableManufacturingEditorService
 {
+    public CableManufacturingDraft Prepare(CableInstance cable) => Prepare(EffectiveTemplate(cable));
+
+    public static ArchivedCableTemplate EffectiveTemplate(CableInstance cable)
+    {
+        var binding = cable.ArchivedCable ?? throw new InvalidOperationException("Select an archived cable.");
+        var ports = Clone(binding.Template.Ports);
+        foreach (var port in ports)
+        {
+            var runtime = binding.Ports.Single(p => p.SourcePortId == port.PortId);
+            port.Name = runtime.Name; port.Connector = Clone(runtime.Connector);
+            foreach (var pin in port.Pins)
+            {
+                var current = runtime.Pins.Single(p => p.SourcePinId == pin.PinId);
+                pin.PinNumber = current.PinNumber; pin.PinName = current.PinName; pin.Function = current.Function;
+            }
+        }
+        return binding.Template with { Ports = ports, Mapping = Clone(binding.Mapping), MappingConfirmed = binding.MappingConfirmed,
+            Manufacturing = Clone(binding.Manufacturing ?? binding.Template.Manufacturing) };
+    }
+
+    public CableInstance ApplyToInstance(CableInstance cable, CableManufacturingDraft draft)
+    {
+        var binding = cable.ArchivedCable ?? throw new InvalidOperationException("Select an archived cable.");
+        if (draft.ConfirmMapping) throw new InvalidOperationException("Instance mapping edits remain pending confirmation; they cannot inherit archive approval.");
+        var original = EffectiveTemplate(cable);
+        if (!original.Ports.Select(p => p.PortId).ToHashSet(StringComparer.Ordinal).SetEquals(draft.Ends.Select(p => p.PortId)) ||
+            original.Ports.Any(p => !draft.Ends.Single(e => e.PortId == p.PortId).Pins.Select(pin => pin.PinId).ToHashSet(StringComparer.Ordinal)
+                .SetEquals(p.Pins.Select(pin => pin.PinId))))
+            throw new InvalidOperationException("An instance cannot silently replace its Pin inventory; create a new template revision and rebind explicitly.");
+        var changed = JsonSerializer.Serialize(Prepare(original)) != JsonSerializer.Serialize(draft);
+        var result = Apply(original, draft);
+        var copy = Clone(cable);
+        foreach (var port in copy.ArchivedCable!.Ports)
+        {
+            var end = result.Ports.Single(p => p.PortId == port.SourcePortId);
+            port.Name = end.Name; port.Connector = Clone(end.Connector);
+            foreach (var pin in port.Pins)
+            {
+                var source = end.Pins.Single(p => p.PinId == pin.SourcePinId);
+                pin.PinNumber = source.PinNumber; pin.PinName = source.PinName; pin.Function = source.Function;
+            }
+        }
+        copy.ArchivedCable = copy.ArchivedCable with { Mapping = Clone(result.Mapping), Manufacturing = Clone(result.Manufacturing),
+            MappingConfirmed = !changed && binding.MappingConfirmed, HasMappingOverride = binding.HasMappingOverride || changed };
+        return copy;
+    }
+
     public CableManufacturingDraft Prepare(ArchivedCableTemplate template)
     {
         var draft = new CableManufacturingDraft { Ends = Clone(template.Ports),
@@ -71,8 +118,11 @@ public sealed class CableManufacturingEditorService
                 if (id is null) { if (usage != CablePinUsage.Pending) errors.Add("NC/unused must identify an exact Pin."); continue; }
                 if (!pins.Contains(id)) { errors.Add("Table refers to a missing Pin."); continue; }
                 var value = Normalize(function);
-                if (functions.TryGetValue(id, out var previous) && previous != value) errors.Add("One Pin has conflicting function labels.");
-                functions[id] = value;
+                if (value is not null)
+                {
+                    if (functions.TryGetValue(id, out var previous) && previous != value) errors.Add("One Pin has conflicting function labels.");
+                    functions[id] = value;
+                }
                 if (usages.TryGetValue(id, out var previousUsage) && previousUsage != usage) errors.Add("One Pin has conflicting usage declarations.");
                 usages[id] = usage;
             }
@@ -107,16 +157,23 @@ public sealed class CableManufacturingEditorService
         var mapping = new List<CablePinMapping>();
         var incomplete = new List<CableManufacturingRow>();
         var usage = new Dictionary<string, CablePinUsage>(StringComparer.Ordinal);
+        var functions = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (var row in draft.Rows)
         {
-            if (row.FromSourcePinId is { } from) { pins[from].Function = Normalize(row.FromFunction); usage[from] = row.FromUsage; }
-            if (row.ToSourcePinId is { } to) { pins[to].Function = Normalize(row.ToFunction); usage[to] = row.ToUsage; }
+            foreach (var (id, function, declaration) in new[] { (row.FromSourcePinId, row.FromFunction, row.FromUsage), (row.ToSourcePinId, row.ToFunction, row.ToUsage) })
+                if (id is not null)
+                {
+                    var value = Normalize(function);
+                    if (value is not null || !functions.ContainsKey(id)) functions[id] = value;
+                    usage[id] = declaration;
+                }
             if (row.FromSourcePinId is not null && row.ToSourcePinId is not null)
                 mapping.Add(new(row.FromSourcePinId, row.ToSourcePinId));
             else incomplete.Add(new() { FromSourcePinId = row.FromSourcePinId, ToSourcePinId = row.ToSourcePinId,
                 FromFunction = row.FromSourcePinId is null ? Normalize(row.FromFunction) : null,
                 ToFunction = row.ToSourcePinId is null ? Normalize(row.ToFunction) : null });
         }
+        foreach (var (id, function) in functions) pins[id].Function = function;
         var definition = new CableManufacturingDefinition { FromSourcePortId = draft.FromSourcePortId,
             ToSourcePortId = draft.ToSourcePortId, IncompleteRows = incomplete,
             PinUsage = usage.Where(u => u.Value != CablePinUsage.Pending).Select(u => new CablePinUsageDeclaration(u.Key, u.Value)).ToList() };

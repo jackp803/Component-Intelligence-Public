@@ -16,7 +16,7 @@ public partial class SchematicWorkspaceControl
         var selected = current.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId)?.ConnectionId;
         if (selected is null)
         {
-            var picker = new MultiEndConductorPickerDialog(current, [], minimumConnections: 1)
+            var picker = new MultiEndConductorPickerDialog(current, [], minimumConnections: 1, includePortConnections: true)
                 { Owner = Window.GetWindow(this), Title = "選取要查看明細的線材導體" };
             if (picker.ShowDialog() != true) return;
             var ids = picker.SelectedIds.ToArray();
@@ -44,7 +44,7 @@ public partial class SchematicWorkspaceControl
         var selected = current.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId)?.ConnectionId;
         if (selected is null && current.Schematic?.Pages.SingleOrDefault(p => p.PageId == _pageId)?.CableDetail is { } detail)
             selected = current.Connections.FirstOrDefault(c => c.CableInstanceId == detail.CableInstanceId)?.ConnectionId;
-        var picker = new MultiEndConductorPickerDialog(current, selected is null ? [] : [selected], minimumConnections: 1)
+        var picker = new MultiEndConductorPickerDialog(current, selected is null ? [] : [selected], minimumConnections: 1, includePortConnections: true)
             { Owner = Window.GetWindow(this), Title = "選取實體線材的導體" };
         if (picker.ShowDialog() != true) return;
         try
@@ -85,8 +85,10 @@ public partial class SchematicWorkspaceControl
                 ids = connections.Select(c => c.ConnectionId).ToArray();
                 var service = new UnifiedCableSettingsService(); var ends = service.DescribeEnds(draft, ids);
                 var existing = physicalIds.Count == 1 ? draft.Cables.SingleOrDefault(c => physicalIds.Contains(c.CableInstanceId)) : null;
-                var materials = _catalog.Where(c => ComponentMaterialRolePolicy.Classify(c) == BomTopologyDisposition.DeferredConnectionMaterial)
-                    .Select(c => new BomConnectionMaterialOption(c.Identity.ComponentId, c.Identity.Manufacturer, c.Identity.Model, c.Classification.Category ?? "", null) { CableProduct = c.CableProduct }).ToArray();
+                var materials = SchematicBomPalette.MaterialOptions(draft).Concat(_catalog
+                    .Where(c => ComponentMaterialRolePolicy.Classify(c) == BomTopologyDisposition.DeferredConnectionMaterial)
+                    .Select(c => new BomConnectionMaterialOption(c.Identity.ComponentId, c.Identity.Manufacturer, c.Identity.Model, c.Classification.Category ?? "", null) { CableProduct = c.CableProduct }))
+                    .DistinctBy(m => m.CableDefinitionId, StringComparer.Ordinal).ToArray();
                 var settings = new CableSettingsDialog(string.Join("\n", ends.Select(x => x.Label)), materials, existing, physicalIds.Count > 1, ends.Count > 2) { Owner = Window.GetWindow(this) };
                 if (settings.ShowDialog() != true) return;
                 if (settings.ChoiceValue == CableSettingsChoice.OrdinaryWire) service.ApplyOrdinaryWire(draft, ids);
@@ -100,7 +102,7 @@ public partial class SchematicWorkspaceControl
                     multi.Apply(draft, edit);
                 }
                 else service.ApplyPointToPoint(draft, ids, settings.ChoiceValue == CableSettingsChoice.Custom ? CableConstructionType.Custom : CableConstructionType.Purchased,
-                    settings.Reference, settings.DefinitionId, settings.LengthMm, settings.ConfirmConsolidation);
+                    settings.Reference, settings.DefinitionId, settings.LengthMm, settings.ConfirmConsolidation, settings.Model);
             }
             SchematicAuthoringService.Validate(draft);
             Apply(_ => draft, "已更新實體線材設定；工程端點與路線保持不變");

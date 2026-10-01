@@ -13,7 +13,7 @@ public sealed class UnifiedCableSettingsService
 
     public CableInstance ApplyPointToPoint(ElectricalProject project, IReadOnlyCollection<string> connectionIds,
         CableConstructionType construction, string? reference, string? definitionId, double? lengthMm,
-        bool confirmConsolidation)
+        bool confirmConsolidation, string? model = null)
     {
         if (construction is not (CableConstructionType.Purchased or CableConstructionType.Custom))
             throw new InvalidOperationException("請明確選擇外購成品線或自製加工線。");
@@ -35,7 +35,12 @@ public sealed class UnifiedCableSettingsService
         if (previous.Length != 1) project.Cables.Add(cable);
         cable.CableConstructionType = construction;
         if (reference is not null) cable.ReferenceDesignator = reference.Trim();
-        if (!string.IsNullOrWhiteSpace(definitionId)) cable.CableDefinitionId = definitionId.Trim();
+        if (!string.IsNullOrWhiteSpace(definitionId))
+        {
+            if (cable.CableDefinitionId != definitionId.Trim()) cable.DisplayName = null;
+            cable.CableDefinitionId = definitionId.Trim();
+            if (!string.IsNullOrWhiteSpace(model)) cable.DisplayName = model.Trim();
+        }
         if (lengthMm.HasValue) { cable.ProvidedLengthMm = lengthMm; cable.LengthSource = CableLengthSource.User; }
         foreach (var connection in connections) { connection.CableInstanceId = cable.CableInstanceId; connection.Kind = ConnectionKind.Cable; }
         foreach (var old in previous.Where(c => !ReferenceEquals(c, cable))) project.Cables.Remove(old);

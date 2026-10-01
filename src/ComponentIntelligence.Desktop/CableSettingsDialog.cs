@@ -20,6 +20,7 @@ public sealed class CableSettingsDialog : Window
     public CableSettingsChoice ChoiceValue { get; private set; }
     public string Reference => _reference.Text;
     public string? DefinitionId => _material.SelectedItem is BomConnectionMaterialOption option ? option.CableDefinitionId : null;
+    public string? Model => (_material.SelectedItem as BomConnectionMaterialOption)?.Model;
     public double? LengthMm { get; private set; }
     public bool ConfirmConsolidation => _consolidate.IsChecked == true;
 

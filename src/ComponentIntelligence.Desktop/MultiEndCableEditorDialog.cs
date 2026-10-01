@@ -135,14 +135,12 @@ public sealed class MultiEndConductorPickerDialog : Window
     private readonly List<Row> _rows = new();
     public IReadOnlyList<string> SelectedIds => _rows.Where(r => r.Check.IsChecked == true).Select(r => r.Id).ToArray();
 
-    public MultiEndConductorPickerDialog(ElectricalProject project, IEnumerable<string> selected, string? cableId = null, int minimumConnections = 2)
+    public MultiEndConductorPickerDialog(ElectricalProject project, IEnumerable<string> selected, string? cableId = null,
+        int minimumConnections = 2, bool includePortConnections = false)
     {
         Title = "選取多端線材配線"; Width = 1120; Height = 700; MinWidth = 700; MinHeight = 400;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var selectedIds = selected.ToHashSet(StringComparer.Ordinal);
-        var pins = project.Components.SelectMany(c => c.Ports.SelectMany(p => p.Pins.Select(pin =>
-            (pin.PinId, Label: $"{c.ReferenceDesignator ?? c.DisplayName ?? "未命名元件"} / {p.Name} / Pin {pin.PinNumber}"))))
-            .GroupBy(x => x.PinId).Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().Label);
         var root = new DockPanel { Margin = new Thickness(16) };
         var filter = new TextBox { MinHeight = 30, Margin = new Thickness(0, 0, 0, 8), ToolTip = "篩選元件／介面／Pin" };
         DockPanel.SetDock(filter, Dock.Top); root.Children.Add(filter);
@@ -157,16 +155,12 @@ public sealed class MultiEndConductorPickerDialog : Window
         }));
         DockPanel.SetDock(bottom, Dock.Bottom); root.Children.Add(bottom);
         var list = new StackPanel();
-        foreach (var c in project.Connections.Where(c => c.Kind is ConnectionKind.Wire or ConnectionKind.Cable &&
-                     (cableId is null || string.IsNullOrWhiteSpace(c.CableInstanceId) || c.CableInstanceId == cableId)).OrderBy(c => c.ConnectionId, StringComparer.Ordinal))
+        foreach (var row in CableConnectionSelection.Build(project, cableId, includePortConnections))
         {
-            if (!pins.TryGetValue(c.FromEndpointId, out var from) || !pins.TryGetValue(c.ToEndpointId, out var to)) continue;
-            var ownership = project.Cables.SingleOrDefault(x => x.CableInstanceId == c.CableInstanceId);
-            var label = $"{from} -> {to} | Cable: {ownership?.ReferenceDesignator ?? c.CableInstanceId ?? "未指定"}";
-            var check = new CheckBox { Content = label, IsChecked = selectedIds.Contains(c.ConnectionId), Margin = new Thickness(2, 6, 2, 6), ToolTip = c.ConnectionId };
+            var check = new CheckBox { Content = row.Label, IsChecked = selectedIds.Contains(row.ConnectionId), Margin = new Thickness(2, 6, 2, 6), ToolTip = row.ConnectionId };
             check.Checked += (_, _) => count.Text = $"已選 {SelectedIds.Count} 條";
             check.Unchecked += (_, _) => count.Text = $"已選 {SelectedIds.Count} 條";
-            _rows.Add(new Row(c.ConnectionId, label, check)); list.Children.Add(check);
+            _rows.Add(new Row(row.ConnectionId, row.Label, check)); list.Children.Add(check);
         }
         filter.TextChanged += (_, _) =>
         {

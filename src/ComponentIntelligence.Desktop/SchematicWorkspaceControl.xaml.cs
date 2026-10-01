@@ -262,6 +262,8 @@ public partial class SchematicWorkspaceControl : UserControl
                     };
                 }
         }
+        foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))
+            if (SchematicCableLabelPresentation.Resolve(project, wire, crossings) is { } cableLabel) RenderCableLabel(cableLabel, page);
         foreach (var point in crossings.Junctions) Marker(point, Brushes.Black, Brushes.Black, 5).IsHitTestVisible = false;
         foreach (var conflict in crossings.Conflicts)
         {
@@ -585,6 +587,42 @@ public partial class SchematicWorkspaceControl : UserControl
             target.Source = bitmap;
         }
         catch { target.ToolTip = "圖片無法載入"; }
+    }
+
+    private void RenderCableLabel(SchematicCableLabel caption, SchematicPage page)
+    {
+        var label = new TextBlock { Text = caption.Text, FontSize = 10.5, Foreground = Brushes.Black,
+            Background = Brushes.White, Padding = new Thickness(2, 0, 2, 0), IsHitTestVisible = false };
+        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var available = caption.AvailableLength * PixelsPerMm;
+        if (label.DesiredSize.Width > available)
+        {
+            label.FontSize = Math.Max(6, (available - 4) / (label.DesiredSize.Width - 4) * label.FontSize);
+            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        }
+        var vertical = caption.Rotation != 0;
+        var margin = page.Margin * PixelsPerMm;
+        var pageWidth = page.Width * PixelsPerMm;
+        var pageHeight = page.Height * PixelsPerMm;
+        label.MaxWidth = (vertical ? pageHeight : pageWidth) - 2 * margin;
+        label.TextWrapping = TextWrapping.Wrap;
+        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var across = (vertical ? pageWidth : pageHeight) - 2 * margin;
+        if (label.DesiredSize.Height > across)
+        {
+            label.FontSize *= across / label.DesiredSize.Height;
+            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        }
+        var offset = label.DesiredSize.Width > available ? label.DesiredSize.Height / 2 + 4 : 0;
+        var halfWidth = (vertical ? label.DesiredSize.Height : label.DesiredSize.Width) / 2;
+        var halfHeight = (vertical ? label.DesiredSize.Width : label.DesiredSize.Height) / 2;
+        var centerX = Math.Clamp(caption.Center.X * PixelsPerMm + (vertical ? offset : 0), margin + halfWidth, pageWidth - margin - halfWidth);
+        var centerY = Math.Clamp(caption.Center.Y * PixelsPerMm - (vertical ? 0 : offset), margin + halfHeight, pageHeight - margin - halfHeight);
+        label.RenderTransformOrigin = new Point(.5, .5);
+        label.RenderTransform = new RotateTransform(caption.Rotation);
+        Canvas.SetLeft(label, centerX - label.DesiredSize.Width / 2);
+        Canvas.SetTop(label, centerY - label.DesiredSize.Height / 2);
+        Sheet.Children.Add(label);
     }
 
     private void Text(string text, double x, double y, double size, Brush colour, int rotation = 0)

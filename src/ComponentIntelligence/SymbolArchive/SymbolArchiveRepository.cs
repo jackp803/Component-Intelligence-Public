@@ -227,7 +227,8 @@ public sealed class SymbolArchiveRepository
         return document with
         {
             // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
-            SchemaVersion = document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null || c.WiringSelection is not null || c.WiringGeometry is not null)
+            SchemaVersion = document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null ||
+                c.WiringSelection is not null || c.WiringGeometry is not null || c.Template.Manufacturing is not null)
                 ? CableManufacturingSchemaVersion :
                 document.SchemaVersion == SchematicLayoutSchemaVersion || layouts.Length > 0 ? SchematicLayoutSchemaVersion :
                 document.SchemaVersion == CableTemplateSchemaVersion || cables.Length > 0 ? CableTemplateSchemaVersion :

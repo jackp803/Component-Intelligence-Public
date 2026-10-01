@@ -32,6 +32,7 @@ public static class ArchivedCableInstanceFactory
             CableInstanceId = "cbl-" + Guid.NewGuid().ToString("N"), CableDefinitionId = template.TemplateId,
             DisplayName = template.DisplayName, CableConstructionType = construction,
             ArchivedCable = new() { Template = snapshot, Ports = ports,
+                Manufacturing = Clone(snapshot.Manufacturing),
                 Mapping = [..snapshot.Mapping], MappingConfirmed = snapshot.MappingConfirmed }
         };
     }
@@ -61,6 +62,7 @@ public static class ArchivedCableInstanceFactory
         if (template.MappingConfirmed && (string.IsNullOrWhiteSpace(template.MappingRevision) || string.IsNullOrWhiteSpace(template.MappingEvidence)))
             throw new InvalidOperationException("Confirmed cable mapping requires revision and source evidence.");
         ValidateMapping(template, template.Mapping);
+        CableManufacturingEditorService.ValidateMetadata(template);
         if (template.TextBindings.Any(b => string.IsNullOrWhiteSpace(b.AttributeTag) || !Enum.IsDefined(b.Field)) ||
             template.TextBindings.Select(b => b.AttributeTag).Distinct(StringComparer.Ordinal).Count() != template.TextBindings.Count)
             throw new InvalidOperationException("Cable text fields require unique explicit CAD attribute bindings.");

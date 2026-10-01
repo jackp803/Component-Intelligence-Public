@@ -37,6 +37,12 @@ public sealed class ArchiveChangeSetValidator
                 "Manufacturer + exact Model / Part Number are required for a formal archive identity.");
         }
 
+        if (changeSet.Components.Count != 1)
+        {
+            Add(issues, "ARCHIVE-IDENTITY-003", ArchiveValidationSeverity.ERROR,
+                "A changeset targets exactly one Manufacturer + Model and must contain exactly one Component row.");
+        }
+
         foreach (var component in changeSet.Components)
         {
             if (string.IsNullOrWhiteSpace(component.ComponentId) ||
@@ -105,6 +111,12 @@ public sealed class ArchiveChangeSetValidator
 
             foreach (var port in component.Ports)
             {
+                if (string.IsNullOrWhiteSpace(port.PortId) || string.IsNullOrWhiteSpace(port.PortName))
+                {
+                    Add(issues, "ARCHIVE-PORT-001", ArchiveValidationSeverity.ERROR,
+                        "PortID and PortName must be non-empty.", component.ComponentId, port.PortId);
+                }
+
                 if (!string.Equals(port.ComponentId, component.ComponentId, StringComparison.OrdinalIgnoreCase))
                 {
                     Add(issues, "ARCHIVE-OWNER-001", ArchiveValidationSeverity.ERROR,
@@ -120,6 +132,12 @@ public sealed class ArchiveChangeSetValidator
 
                 foreach (var pin in port.Pins)
                 {
+                    if (string.IsNullOrWhiteSpace(pin.PinId) || string.IsNullOrWhiteSpace(pin.PinNumber))
+                    {
+                        Add(issues, "ARCHIVE-PIN-003", ArchiveValidationSeverity.ERROR,
+                            "PinID and PinNumber/contact identifier must be non-empty.", port.PortId, pin.PinId);
+                    }
+
                     if (!string.Equals(pin.PortId, port.PortId, StringComparison.OrdinalIgnoreCase))
                     {
                         Add(issues, "ARCHIVE-OWNER-002", ArchiveValidationSeverity.ERROR,
@@ -146,12 +164,19 @@ public sealed class ArchiveChangeSetValidator
             foreach (var port in component.Ports)
             {
                 var actual = port.Pins.Count;
-                if (port.PinCount is int expected && (expected < 0 || expected != actual ||
-                    port.ActualPinCount is int declaredActual && declaredActual != actual))
+                if (port.PinCount is int expected && (expected < 0 || expected != actual))
                 {
                     componentHasCompletenessError = true;
                     Add(issues, "ARCHIVE-PIN-001", ArchiveValidationSeverity.ERROR,
                         $"Known PinCount requires exactly that many physical Pin rows: expected {expected}, actual {actual}.",
+                        component.ComponentId, port.PortId);
+                }
+
+                if (port.ActualPinCount is int declaredActual && declaredActual != actual)
+                {
+                    componentHasCompletenessError = true;
+                    Add(issues, "ARCHIVE-PIN-004", ArchiveValidationSeverity.ERROR,
+                        $"ActualPinCount must match the number of archived Pin rows: declared {declaredActual}, actual {actual}.",
                         component.ComponentId, port.PortId);
                 }
 

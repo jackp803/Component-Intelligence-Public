@@ -6,11 +6,13 @@ The Archive Validator is the deterministic enforcement layer between AI-generate
 
 The first v1 rules cover:
 
-- formal Manufacturer + Model identity;
+- formal Manufacturer + Model identity and exactly one target Component row per changeset;
+- non-empty PortID / PortName / PinID / PinNumber identity fields;
+- strict JSON input that rejects unknown/unmapped properties;
 - case-insensitive uniqueness of ComponentID / PortID / PinID;
 - Component → Port → Pin ownership;
 - stable ID mutation detection;
-- known PinCount vs physical Pin-row completeness;
+- known PinCount and declared ActualPinCount vs physical Pin-row completeness;
 - duplicate PinNumber/contact identifiers within a Port;
 - evidence review for `NC` / `Reserved`;
 - Google Drive archive relative-path rules;

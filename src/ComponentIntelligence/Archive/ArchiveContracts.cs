@@ -145,7 +145,8 @@ public static class ArchiveJson
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             WriteIndented = writeIndented,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
         };
         options.Converters.Add(new JsonStringEnumConverter());
         return options;

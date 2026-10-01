@@ -47,7 +47,7 @@ Google Drive Archive
 9. [Central archive manifest](archive/manifests/CENTRAL_ARCHIVE.md)
 10. [Data continuity](docs/archive/DATA_CONTINUITY.md)
 
-Archive policy 的正式選擇與 precedence 永遠從 `docs/archive/AUTHORITY.md` 開始。合併後，`main` 是 production archive-governance discovery branch。
+Archive policy 的正式選擇與 precedence 永遠從 `docs/archive/AUTHORITY.md` 開始；production archive-governance discovery branch 是 `main`。
 
 ### Policy / Procedure / Enforcement
 
@@ -75,7 +75,7 @@ Skill 不重新發明 `Unknown != NC`、Port/Pin、Direction、Ready Gate 等工
 | Capability | Status |
 |---|---|
 | GitHub Authority / precedence | **Implemented** |
-| `COMPONENT_ARCHIVE_SPEC_V2.md` on governance branch | **Implemented** |
+| Authoritative `docs/COMPONENT_ARCHIVE_SPEC_V2.md` path | **Implemented** |
 | Portable `component-intelligence-archive` Skill | **Implemented** |
 | Provider-neutral Tool Contract | **Implemented** |
 | Archive changeset / validation / readback schemas | **Implemented** |
@@ -103,14 +103,16 @@ VALIDATED_NOT_WRITTEN
 
 目前 Validator 會檢查例如：
 
-- Manufacturer + exact Model identity；
+- Manufacturer + exact Model identity，且每個 changeset 只能有一個 target Component row；
+- PortID / PortName / PinID / PinNumber 不可空白；
+- changeset JSON 遇到未知／拼錯欄位會拒絕，不會靜默忽略；
 - case-insensitive duplicate ComponentID / PortID / PinID；
 - Component → Port → Pin ownership；
 - stable engineering ID mutation；
-- 已知 PinCount 與 physical Pin rows 是否一致；
+- 已知 PinCount、宣告的 ActualPinCount 與 physical Pin rows 是否一致；
 - 同一 Port 內重複 PinNumber/contact identifier；
 - NC / Reserved 是否缺 explicit evidence；
-- Archive file path 是否為 `Documents/... ` 相對路徑；
+- Archive file path 是否為 `Documents/...` 相對路徑；
 - CREATE 是否與已存在 component 衝突；
 - Ready 是否與 pin completeness 明顯矛盾；
 - source conflict / unresolved unknown 是否需 Review。

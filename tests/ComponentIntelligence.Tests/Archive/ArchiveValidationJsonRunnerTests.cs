@@ -46,6 +46,26 @@ public sealed class ArchiveValidationJsonRunnerTests
     }
 
     [Fact]
+    public async Task UnknownJsonProperty_ReturnsUsageExitCode()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"archive-unknown-{Guid.NewGuid():N}.json");
+        var json = JsonSerializer.Serialize(ArchiveChangeSetValidatorTests.ValidChangeSet(), ArchiveJson.CreateOptions(true));
+        json = json.Replace("\"jobId\":", "\"unexpectedField\": 123,\n  \"jobId\":", StringComparison.Ordinal);
+        await File.WriteAllTextAsync(path, json);
+
+        try
+        {
+            var result = await RunAsync(path);
+            Assert.Equal(64, result.ExitCode);
+            Assert.Contains("TOOL_FAILURE", result.Json, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task MissingFile_ReturnsUsageExitCode()
     {
         var result = await RunAsync(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing.json"));

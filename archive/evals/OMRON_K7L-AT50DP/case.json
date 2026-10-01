@@ -1,0 +1,62 @@
+{
+  "referenceComponent": "OMRON K7L-AT50DP",
+  "policyFocus": [
+    "SENSING is one mixed physical/logical interface",
+    "independently wired terminals use Pins endpoint mode"
+  ],
+  "expectedValidatorStatus": "PASS",
+  "assertions": [
+    "SENSING PortRole is Sensor Input",
+    "Direction remains Mixed",
+    "terminals 2 3 4 are explicit"
+  ],
+  "changeset": {
+    "jobId": "eval-omron-k7l-at50dp",
+    "policyVersion": "v2",
+    "operation": "CREATE",
+    "manufacturer": "OMRON",
+    "model": "K7L-AT50DP",
+    "components": [
+      {
+        "componentId": "OMRON_K7L-AT50DP",
+        "manufacturer": "OMRON",
+        "model": "K7L-AT50DP",
+        "category": "Amplifier/Controller",
+        "topologyStatus": "Review",
+        "layoutStatus": "Review",
+        "ports": [
+          {
+            "portId": "OMRON_K7L-AT50DP_SENSING",
+            "componentId": "OMRON_K7L-AT50DP",
+            "portName": "SENSING",
+            "portRole": "Sensor Input",
+            "direction": "Mixed",
+            "pinCount": 3,
+            "actualPinCount": 3,
+            "topologyEndpointMode": "Pins",
+            "pins": [
+              {
+                "pinId": "OMRON_K7L-AT50DP_SENSING_2",
+                "portId": "OMRON_K7L-AT50DP_SENSING",
+                "pinNumber": "2",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "OMRON_K7L-AT50DP_SENSING_3",
+                "portId": "OMRON_K7L-AT50DP_SENSING",
+                "pinNumber": "3",
+                "pinStatus": "Used"
+              },
+              {
+                "pinId": "OMRON_K7L-AT50DP_SENSING_4",
+                "portId": "OMRON_K7L-AT50DP_SENSING",
+                "pinNumber": "4",
+                "pinStatus": "Used"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

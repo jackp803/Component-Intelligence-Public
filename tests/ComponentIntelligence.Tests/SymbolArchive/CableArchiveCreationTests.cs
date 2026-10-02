@@ -8,6 +8,35 @@ namespace ComponentIntelligence.Tests.SymbolArchive;
 public sealed class CableArchiveCreationTests
 {
     [Fact]
+    public async Task ExplicitCandidateUpdateKeepsOneRevisionAndStaleUpdatesAreAtomic()
+    {
+        using var files = new Files();
+        var service = new CableArchiveCreationService(files.Repository);
+        await service.CreateAsync(files.Draft());
+        var basis = files.Draft();
+        var draft = basis with { UpdateExistingCandidate = true, ExpectedArchiveSha256 = files.Repository.GetContentHash(),
+            Entry = basis.Entry with { Template = basis.Entry.Template with { DisplayName = "updated candidate" } } };
+        var entry = await service.CreateAsync(draft);
+        Assert.Equal("updated candidate", Assert.Single(files.Repository.Load().CableTemplates).Template.DisplayName);
+        Assert.Equal("r1", entry.Template.TemplateRevision);
+        var before = File.ReadAllBytes(files.Repository.ArchivePath);
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.CreateAsync(draft));
+        Assert.Equal(before, File.ReadAllBytes(files.Repository.ArchivePath));
+    }
+
+    [Fact]
+    public async Task ExplicitUpdateCannotReplaceApprovedRevision()
+    {
+        using var files = new Files(); var service = new CableArchiveCreationService(files.Repository);
+        var entry = await service.CreateAsync(files.Draft());
+        files.Repository.Save(files.Repository.Load() with { CableTemplates = [entry with { Status = SymbolRevisionStatus.Approved }] });
+        var before = File.ReadAllBytes(files.Repository.ArchivePath);
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.CreateAsync(files.Draft() with {
+            UpdateExistingCandidate = true, ExpectedArchiveSha256 = files.Repository.GetContentHash() }));
+        Assert.Equal(before, File.ReadAllBytes(files.Repository.ArchivePath));
+    }
+
+    [Fact]
     public async Task MissingWiringCadCanSaveCandidateButCannotBePlaced()
     {
         using var files = new Files();

@@ -142,10 +142,12 @@ public partial class SchematicWorkspaceControl : UserControl
         DrawFrame(page, doc.Pages.IndexOf(page) + 1, project.Name);
         foreach (var binding in page.InlineCableDetails.Concat(page.CableDetail is null ? [] : new[] { page.CableDetail }))
         {
+            SchematicCableDetailPresentation? detailView = null;
             try
             {
                 var detailService = new SchematicCableDetailService();
                 var detail = binding == page.CableDetail ? detailService.Build(project, page) : detailService.BuildArchived(project, page, binding);
+                detailView = detail;
                 var geometry = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height, Primitives = detail.Primitives });
                 geometry.IsHitTestVisible = false; Sheet.Children.Add(geometry);
             }
@@ -155,7 +157,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 Text(error.Message, page.Margin + 8, page.Margin + 10, 12, Brushes.Firebrick);
             }
             if (!_renderingOutput && project.Cables.Single(c => c.CableInstanceId == binding.CableInstanceId).ArchivedCable is not null)
-                RenderDetailHandles(page, binding);
+                RenderDetailHandles(page, binding, detailView);
         }
         var crossings = SchematicCrossingService.Analyze(doc.Wires.Where(w => w.PageId == page.PageId).ToArray());
         foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))
@@ -751,7 +753,8 @@ public partial class SchematicWorkspaceControl : UserControl
             _dragActivated = true;
             try
             {
-                if (_dragResizeSymbol is not null)
+                if (_dragDetailId is not null) PreviewDetailGesture();
+                else if (_dragResizeSymbol is not null)
                 {
                     var s = _gestureStart.Schematic!.Symbols.Single(s => s.SymbolId == _dragResizeSymbol);
                     var owner = SchematicSymbolOwner.Resolve(_gestureStart, s);
@@ -826,7 +829,7 @@ public partial class SchematicWorkspaceControl : UserControl
         Keyboard.Focus(Sheet);
     }
     private void CancelGesture()
-    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragPortSymbol = null; _dragPortId = null; _dragPinSymbol = null; _dragPinId = null; _dragResizeSymbol = null; _dragPortHasPins = false; _dragVertex = null; _dragSegment = null; _dragMarker = null; Sheet.ReleaseMouseCapture(); }
+    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragPortSymbol = null; _dragPortId = null; _dragPinSymbol = null; _dragPinId = null; _dragResizeSymbol = null; _dragPortHasPins = false; _dragVertex = null; _dragSegment = null; _dragMarker = null; _dragDetailId = null; _dragDetailResize = false; Sheet.ReleaseMouseCapture(); }
     private void CancelCommand()
     {
         CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;

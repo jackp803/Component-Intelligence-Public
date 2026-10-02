@@ -9,6 +9,34 @@ public sealed class CableManufacturingEditorTests
     private readonly CableManufacturingEditorService _service = new();
 
     [Fact]
+    public void UnchangedInstanceEditPreservesStoredMappingOrderExactly()
+    {
+        var cable = ArchivedCableManufacturingDetailTests.Project().Cables[0];
+        var binding = cable.ArchivedCable!;
+        cable.ArchivedCable = binding with { Mapping = [new("p1.2", "p2.2"), new("p1.1", "p2.1")] };
+        var before = JsonSerializer.Serialize(cable);
+        var next = _service.ApplyToInstance(cable, _service.Prepare(cable));
+        Assert.Equal(before, JsonSerializer.Serialize(next));
+    }
+
+    [Fact]
+    public void PreparingRowsSortsActualPinNumbersWithoutChangingPairs()
+    {
+        var template = Template();
+        template.Ports[0].Pins.Clear();
+        template.Ports[0].Pins.AddRange(new[] { "10", "2", "1", "5", "3", "4" }
+            .Select((number, i) => new ComponentPin { PinId = "opaque-" + i, PinNumber = number }));
+        template = template with { Mapping = [new("opaque-4", "p2.2"), new("opaque-2", "p2.1")] };
+        var before = JsonSerializer.Serialize(template);
+        var draft = _service.Prepare(template);
+        var numbers = template.Ports[0].Pins.ToDictionary(p => p.PinId, p => p.PinNumber);
+        Assert.Equal(new[] { "1", "2", "3", "4", "5", "10" },
+            draft.Rows.Where(r => r.FromSourcePinId is not null).Select(r => numbers[r.FromSourcePinId!]));
+        Assert.Equal("p2.2", draft.Rows.Single(r => r.FromSourcePinId == "opaque-4").ToSourcePinId);
+        Assert.Equal(before, JsonSerializer.Serialize(template));
+    }
+
+    [Fact]
     public void CatalogConnectorUsesExactTerminalLabelsAndStableIdentities()
     {
         var draft = _service.Prepare(Template()); var ids = draft.Ends[0].Pins.Select(p => p.PinId).ToArray();

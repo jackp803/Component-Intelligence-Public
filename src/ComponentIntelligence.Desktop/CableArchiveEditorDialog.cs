@@ -29,6 +29,7 @@ public sealed class CableArchiveEditorDialog : Window
     private readonly SymbolArchiveRepository _repository;
     private readonly string? _expectedHash;
     private readonly ArchivedCableTemplate _source;
+    private readonly bool _updateCandidate;
     private readonly CableCadRoleEditor _wiring = new();
     private readonly CableCadRoleEditor _sketch = new();
     private readonly CableManufacturingTableEditor _table;
@@ -54,6 +55,15 @@ public sealed class CableArchiveEditorDialog : Window
         CableArchiveEntry? existing = null)
     {
         _repository = repository; _expectedHash = repository.GetContentHash();
+        if (existing is not null)
+        {
+            existing = repository.Load().CableTemplates.SingleOrDefault(e => e.Template.TemplateId == existing.Template.TemplateId &&
+                e.Template.TemplateRevision == existing.Template.TemplateRevision) ??
+                throw new InvalidOperationException("線材模板已移除，請重新開啟線材庫。");
+            if (repository.GetContentHash() != _expectedHash)
+                throw new InvalidOperationException("線材庫讀取時已變更，請重新開啟編輯。");
+        }
+        _updateCandidate = existing?.Status == SymbolRevisionStatus.Candidate;
         _source = existing is null ? new()
         {
             TemplateId = "cable-" + Guid.NewGuid().ToString("N"), TemplateRevision = "draft",
@@ -74,11 +84,12 @@ public sealed class CableArchiveEditorDialog : Window
             foreach (var contact in _contacts.Where(c => pins.Contains(c.PinId)).ToArray()) _contacts.Remove(contact);
             _contactGrid.Items.Refresh(); _confirmed.IsChecked = false;
         };
-        Title = existing is null ? "新增自製線材模板" : "線材模板：建立新版本";
+        Title = existing is null ? "新增自製線材模板" : _updateCandidate ? "編輯線材候選草稿" : "線材模板：建立新版本";
         Width = 1000; Height = 800; MinWidth = 750; MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _name.Text = _source.DisplayName ?? "";
-        _revision.Text = DateTime.Now.ToString("yyyyMMdd-HHmmssfff");
+        _revision.Text = _updateCandidate ? _source.TemplateRevision : DateTime.Now.ToString("yyyyMMdd-HHmmssfff");
+        _revision.IsReadOnly = _updateCandidate;
         _mappingRevision.Text = _source.MappingRevision ?? "";
         _evidence.Text = _source.MappingEvidence ?? "";
         _construction.SelectedItem = existing?.ConstructionType ?? CableConstructionType.Unknown;
@@ -90,7 +101,7 @@ public sealed class CableArchiveEditorDialog : Window
         heading.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
         heading.ColumnDefinitions.Add(new() { Width = new(220) });
         heading.Children.Add(Field("線材名稱", _name));
-        var revisionField = Field("新版本", _revision); Grid.SetColumn(revisionField, 1); heading.Children.Add(revisionField);
+        var revisionField = Field(_updateCandidate ? "草稿版本" : "新版本", _revision); Grid.SetColumn(revisionField, 1); heading.Children.Add(revisionField);
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 10, 0, 0) };
         var cancel = new Button { Content = "取消", IsCancel = true, Padding = new(14, 6, 14, 6) };
@@ -203,7 +214,7 @@ public sealed class CableArchiveEditorDialog : Window
             _saving = true; IsEnabled = false;
             SavedEntry = await new CableArchiveCreationService(_repository).CreateAsync(new() { Entry = entry,
                 WiringSourcePath = _wiring.SourcePath, WiringGeometry = wiring, ManufacturingSourcePath = _sketch.SourcePath,
-                ManufacturingGeometry = _sketch.Geometry, ExpectedArchiveSha256 = _expectedHash });
+                ManufacturingGeometry = _sketch.Geometry, ExpectedArchiveSha256 = _expectedHash, UpdateExistingCandidate = _updateCandidate });
             _saving = false; DialogResult = true;
         }
         catch (Exception error) { _error.Text = error.Message; }

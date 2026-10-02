@@ -73,6 +73,9 @@ public sealed record SchematicCableDetailBinding(string CableInstanceId, string?
     public double TableWidth { get; init; } = 180;
     public double SketchWidth { get; init; } = 180;
     public double SketchHeight { get; init; } = 70;
+    public bool TableVisible { get; init; } = true;
+    public bool SketchVisible { get; init; } = true;
+    public double TableScale { get; init; } = 1;
 }
 
 public sealed record SchematicSymbol

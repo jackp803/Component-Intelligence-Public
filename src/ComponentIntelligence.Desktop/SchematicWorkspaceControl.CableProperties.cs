@@ -9,12 +9,13 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class SchematicWorkspaceControl
 {
-    private bool TryEditSelectedArchivedCable()
+    private bool TryEditSelectedArchivedCable(string? detailCableId = null)
     {
         var project = _getProject();
         var symbol = project.Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
-        if (symbol?.CableInstanceId is not { } cableId) return false;
-        if (symbol.Locked) { Status.Text = "請先解鎖這個線材表示。"; return true; }
+        var cableId = detailCableId ?? symbol?.CableInstanceId ?? SelectedCableDetail()?.CableInstanceId;
+        if (cableId is null) return false;
+        if (detailCableId is null && symbol?.Locked == true) { Status.Text = "請先解鎖這個線材表示。"; return true; }
         var cable = project.Cables.Single(c => c.CableInstanceId == cableId);
         var archived = cable.ArchivedCable!;
         var dialog = new Window { Title = "實體線材設定", Width = 980, Height = 820, MinWidth = 750, MinHeight = 640,

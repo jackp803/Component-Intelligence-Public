@@ -6,6 +6,66 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class ArchivedCableManufacturingDetailTests
 {
+    [Theory]
+    [InlineData("TableVisible", "P1 FUNCTION")]
+    [InlineData("SketchVisible", null)]
+    public void PartsCanBeRemovedIndependentlyAndStayRemovedAfterReopen(string property, string? header)
+    {
+        var p = Project(); var service = new SchematicCableDetailService();
+        p = service.AddArchivedDetail(p, p.Cables[0].CableInstanceId);
+        var page = p.Schematic!.Pages.Last(); var binding = page.CableDetail!;
+        var layout = property == "TableVisible" ? binding with { TableVisible = false } : binding with { SketchVisible = false };
+        var next = service.SetLayout(p, page.PageId, binding.DetailId, layout);
+        next = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(next))!;
+        var geometry = service.Build(next, next.Schematic!.Pages.Last());
+        if (header is not null)
+        {
+            Assert.DoesNotContain(geometry.Primitives, x => x.Text == header);
+            Assert.Contains(geometry.Primitives, x => x.Kind == "CIRCLE");
+        }
+        else
+        {
+            Assert.DoesNotContain(geometry.Primitives, x => x.Kind == "CIRCLE");
+            Assert.Contains(geometry.Primitives, x => x.Text == "P1 FUNCTION");
+        }
+        Assert.Equal(JsonSerializer.Serialize(p.Cables), JsonSerializer.Serialize(next.Cables));
+        Assert.Equal(JsonSerializer.Serialize(p.Connections), JsonSerializer.Serialize(next.Connections));
+    }
+
+    [Fact]
+    public void RemovingBothPartsRemovesOnlyTheViewAndUndoRestoresLayout()
+    {
+        var service = new SchematicCableDetailService(); var p = Project();
+        p = service.AddArchivedDetail(p, p.Cables[0].CableInstanceId);
+        var page = p.Schematic!.Pages.Last(); var binding = page.CableDetail!;
+        var history = new ComponentIntelligence.Electrical.Editing.ProjectMutationHistory();
+        history.RecordBeforeMutation(p, "remove table");
+        var hidden = service.RemovePart(p, page.PageId, binding.DetailId, SchematicCableDetailPart.Table);
+        Assert.False(hidden.Schematic!.Pages.Last().CableDetail!.TableVisible);
+        Assert.True(history.TryUndo(hidden, out var undo, out _));
+        Assert.Equal(JsonSerializer.Serialize(p), JsonSerializer.Serialize(undo));
+        Assert.True(history.TryRedo(undo, out var redo, out _));
+        Assert.False(redo.Schematic!.Pages.Last().CableDetail!.TableVisible);
+        var empty = service.RemovePart(redo, page.PageId, binding.DetailId, SchematicCableDetailPart.Sketch);
+        Assert.Null(empty.Schematic!.Pages.Last().CableDetail);
+        Assert.Equal(JsonSerializer.Serialize(p.Cables), JsonSerializer.Serialize(empty.Cables));
+    }
+
+    [Fact]
+    public void TableScaleChangesItsBoundsAndTextWithoutChangingTheSketchOrCable()
+    {
+        var service = new SchematicCableDetailService(); var p = Project();
+        p = service.AddArchivedDetail(p, p.Cables[0].CableInstanceId);
+        var page = p.Schematic!.Pages.Last(); var binding = page.CableDetail!;
+        var before = service.Build(p, page);
+        var next = service.SetLayout(p, page.PageId, binding.DetailId, binding with { TableWidth = 90, TableScale = .5 });
+        var after = service.Build(next, next.Schematic!.Pages.Last());
+        Assert.Equal(before.PartBounds[SchematicCableDetailPart.Table].Height / 2, after.PartBounds[SchematicCableDetailPart.Table].Height);
+        Assert.Equal(1.3, after.Primitives.Single(x => x.Text == "P1 FUNCTION").TextHeight);
+        Assert.Equal(before.PartBounds[SchematicCableDetailPart.Sketch], after.PartBounds[SchematicCableDetailPart.Sketch]);
+        Assert.Equal(JsonSerializer.Serialize(p.Cables), JsonSerializer.Serialize(next.Cables));
+    }
+
     [Fact]
     public void UnwiredArchivedCableHasDraftDetail()
     {

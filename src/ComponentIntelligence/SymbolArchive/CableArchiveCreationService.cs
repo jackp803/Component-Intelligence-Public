@@ -11,6 +11,7 @@ public sealed record CableArchiveDraft
     public string? ManufacturingSourcePath { get; init; }
     public SchematicCadAsset? ManufacturingGeometry { get; init; }
     public string? ExpectedArchiveSha256 { get; init; }
+    public bool UpdateExistingCandidate { get; init; }
 }
 
 public sealed class CableArchiveCreationService(SymbolArchiveRepository repository)
@@ -24,15 +25,23 @@ public sealed class CableArchiveCreationService(SymbolArchiveRepository reposito
             : draft.WiringSourcePath is null || draft.WiringGeometry is null)
             throw new InvalidDataException("Wiring role requires its source and geometry, or an explicit pending state.");
         var original = repository.Load();
-        if (original.CableTemplates.Any(e => e.Template.TemplateId == draft.Entry.Template.TemplateId && e.Template.TemplateRevision == draft.Entry.Template.TemplateRevision))
+        var existing = original.CableTemplates.SingleOrDefault(e => e.Template.TemplateId == draft.Entry.Template.TemplateId &&
+            e.Template.TemplateRevision == draft.Entry.Template.TemplateRevision);
+        if (draft.UpdateExistingCandidate)
+        {
+            if (existing?.Status != SymbolRevisionStatus.Candidate || string.IsNullOrWhiteSpace(draft.ExpectedArchiveSha256))
+                throw new InvalidDataException("Only an existing candidate can be updated with an archive concurrency token.");
+        }
+        else if (existing is not null)
             throw new InvalidDataException("Cable revisions are immutable; choose a new revision.");
+        var retained = original.CableTemplates.Where(e => !ReferenceEquals(e, existing)).ToArray();
         if ((draft.Entry.ManufacturingAsset is null) != (draft.ManufacturingGeometry is null) ||
             (draft.Entry.ManufacturingAsset is null) != (draft.ManufacturingSourcePath is null))
             throw new InvalidDataException("Manufacturing role requires its source file and geometry.");
         var entry = draft.Entry with { WiringGeometry = draft.WiringGeometry,
             Template = draft.Entry.Template with { WiringSelectionSha256 = draft.Entry.WiringSelection?.GeometrySha256 },
             ManufacturingAsset = draft.Entry.ManufacturingAsset is { } detail ? detail with { Geometry = draft.ManufacturingGeometry } : null };
-        repository.ValidateAndNormalize(original with { CableTemplates = [..original.CableTemplates, entry] });
+        repository.ValidateAndNormalize(original with { CableTemplates = [..retained, entry] });
         var relative = "Documents/Cables/" + Guid.NewGuid().ToString("N");
         var directory = repository.ResolveArchivePath(relative);
         EnsureNoLinks(directory);
@@ -55,7 +64,7 @@ public sealed class CableArchiveCreationService(SymbolArchiveRepository reposito
             }
             entry = entry with { AssetPath = wiringPath, ManufacturingAsset = manufacturing };
             cancellationToken.ThrowIfCancellationRequested();
-            repository.SaveIfUnchanged(original with { CableTemplates = [..original.CableTemplates, entry] }, draft.ExpectedArchiveSha256);
+            repository.SaveIfUnchanged(original with { CableTemplates = [..retained, entry] }, draft.ExpectedArchiveSha256);
             saved = true;
             return repository.Load().CableTemplates.Single(e => e.Template.TemplateId == entry.Template.TemplateId && e.Template.TemplateRevision == entry.Template.TemplateRevision);
         }

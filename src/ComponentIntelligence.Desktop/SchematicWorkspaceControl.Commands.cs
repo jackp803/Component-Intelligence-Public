@@ -83,10 +83,13 @@ public partial class SchematicWorkspaceControl
     {
         if (SelectedCableDetail() is { } detail && _pageId is not null)
         {
-            if (MessageBox.Show(Window.GetWindow(this), "只移除這份製作明細？實體線材與所有接線保留。", "移除明細",
+            var part = SelectedDetailPart();
+            var label = part == SchematicCableDetailPart.Table ? "接法表" : part == SchematicCableDetailPart.Sketch ? "製作示意圖" : "製作明細";
+            if (MessageBox.Show(Window.GetWindow(this), "只刪除此" + label + "？實體線材與所有接線保留。", "刪除" + label,
                 MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
             var page = _getProject().Schematic!.Pages.Single(p => p.PageId == _pageId);
-            if (Apply(p => new SchematicCableDetailService().RemoveDetail(p, page.PageId, detail.DetailId), "已移除明細；實體線材保留"))
+            if (Apply(p => part is { } selectedPart ? new SchematicCableDetailService().RemovePart(p, page.PageId, detail.DetailId, selectedPart) :
+                new SchematicCableDetailService().RemoveDetail(p, page.PageId, detail.DetailId), "已刪除" + label + "；實體線材保留"))
                 _selectionId = null;
             return;
         }

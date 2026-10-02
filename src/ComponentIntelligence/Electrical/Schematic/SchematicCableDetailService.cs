@@ -5,7 +5,13 @@ using ComponentIntelligence.Electrical.Editing;
 namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed record SchematicCableDetailPresentation(IReadOnlyList<SchematicCadPrimitive> Primitives,
-    IReadOnlyList<string> ConnectionIds, IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> ConnectionIds, IReadOnlyList<string> Diagnostics)
+{
+    public IReadOnlyDictionary<SchematicCableDetailPart, SchematicGridBounds> PartBounds { get; init; }
+        = new Dictionary<SchematicCableDetailPart, SchematicGridBounds>();
+}
+
+public enum SchematicCableDetailPart { Table, Sketch }
 
 // A detail is another view of existing cable authority, never a second cable or electrical graph.
 public sealed partial class SchematicCableDetailService

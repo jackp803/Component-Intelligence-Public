@@ -201,9 +201,104 @@ internal static class Program
         }
         var archiveDialog = new CableArchiveEditorDialog(repository, [], entry);
         Render((FrameworkElement)archiveDialog.Content, 940, 720, Path.Combine(root, "archive-editor.png")); archiveDialog.Close();
+        if (regression is "interaction" or "sorting")
+        {
+            var sortDraft = editorService.Prepare(template);
+            sortDraft.Ends[0].Pins[0].PinNumber = "10"; sortDraft.Ends[0].Pins[1].PinNumber = "2";
+            var sortEditor = new CableManufacturingTableEditor(sortDraft, [new("Custom", null)]);
+            Render(sortEditor, 900, 500, Path.Combine(root, "sorted-editor.png"));
+            var sortGrid = FindGrid(sortEditor);
+            Require(((CableManufacturingRow)sortGrid.Items[0]).FromSourcePinId == "p1.2", "Initial Pin order is not numeric.");
+            var onSorting = typeof(DataGrid).GetMethod("OnSorting", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            onSorting.Invoke(sortGrid, [new DataGridSortingEventArgs(sortGrid.Columns[1])]);
+            Require(((CableManufacturingRow)sortGrid.Items[0]).FromSourcePinId == "p1.2", "Pin column sorts opaque source IDs.");
+            onSorting.Invoke(sortGrid, [new DataGridSortingEventArgs(sortGrid.Columns[1])]);
+            Require(((CableManufacturingRow)sortGrid.Items[0]).FromSourcePinId == "p1.1", "Descending Pin sort is not numeric.");
+            ((CableManufacturingRow)sortGrid.Items[0]).FromFunction = "Z";
+            ((CableManufacturingRow)sortGrid.Items[1]).FromFunction = "A";
+            typeof(DataGrid).GetMethod("PerformSort", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(sortGrid, [sortGrid.Columns[0]]);
+            var ordered = sortGrid.Items.Cast<CableManufacturingRow>().Select(r => r.FromSourcePinId).ToArray();
+            typeof(CableManufacturingTableEditor).GetMethod("RefreshStatus", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(sortEditor, []);
+            Require(sortGrid.Items.Cast<CableManufacturingRow>().Select(r => r.FromSourcePinId).SequenceEqual(ordered),
+                "Editing resets FUNCTION sort to Pin sort.");
+        }
+        if (regression is "interaction" or "candidate")
+        {
+            var revision = (TextBox)typeof(CableArchiveEditorDialog).GetField("_revision", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(archiveDialog)!;
+            Require(revision.Text == entry.Template.TemplateRevision && revision.IsReadOnly, "Candidate editing defaults to a new revision.");
+            var refreshedEntry = new CableArchiveCreationService(repository).CreateAsync(new() {
+                Entry = entry with { Template = entry.Template with { DisplayName = "LATEST CANDIDATE" } },
+                WiringSourcePath = wirePath, WiringGeometry = wire, ManufacturingSourcePath = sketchPath, ManufacturingGeometry = sketch,
+                ExpectedArchiveSha256 = repository.GetContentHash(), UpdateExistingCandidate = true
+            }).GetAwaiter().GetResult();
+            var staleDialog = new CableArchiveEditorDialog(repository, [], entry);
+            var name = (TextBox)typeof(CableArchiveEditorDialog).GetField("_name", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(staleDialog)!;
+            Require(name.Text == refreshedEntry.Template.DisplayName, "Stale library selection can overwrite a newer candidate.");
+            staleDialog.Close();
+        }
         var workspace = new SchematicWorkspaceControl(() => p, (_, _) => throw new InvalidOperationException("Unexpected UI mutation."),
             () => Task.FromResult<IReadOnlyList<ComponentIR>>([]), _ => Task.FromResult<Uri?>(null), () => { }, () => { }, data);
         var render = typeof(SchematicWorkspaceControl).GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        if (regression is "interaction" or "handles")
+        {
+            typeof(SchematicWorkspaceControl).GetMethod("RenderPage", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(workspace, [p, p.Schematic!.Pages[1]]);
+            var sheet = (Canvas)typeof(SchematicWorkspaceControl).GetProperty("Sheet", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(workspace)!;
+            Require(sheet.Children.OfType<System.Windows.Shapes.Rectangle>().Count(r => r.Tag is SchematicCableDetailPart) == 2,
+                "Table and sketch have no direct selection/drag surfaces.");
+        }
+        if (regression is "interaction" or "gestures")
+        {
+            var current = JsonSerializer.Deserialize<ElectricalProject>(snapshot)!;
+            var history = new ComponentIntelligence.Electrical.Editing.ProjectMutationHistory();
+            var commits = 0;
+            var gestureWorkspace = new SchematicWorkspaceControl(() => current, (next, label) => {
+                history.RecordBeforeMutation(current, label); current = next; commits++;
+            }, () => Task.FromResult<IReadOnlyList<ComponentIR>>([]), _ => Task.FromResult<Uri?>(null), () => { }, () => { });
+            var owner = new Window { Content = gestureWorkspace };
+            var type = typeof(SchematicWorkspaceControl);
+            void Set(string field, object? value) => type.GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(gestureWorkspace, value);
+            void Call(string method, params object?[] arguments) => type.GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(gestureWorkspace, arguments);
+            var page = current.Schematic!.Pages[1]; var binding = page.CableDetail!;
+            Set("_pageId", page.PageId); Set("_selectionId", "detail:Table:" + binding.DetailId);
+            gestureWorkspace.RefreshWorkspace();
+            var sheet = (Canvas)type.GetProperty("Sheet", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(gestureWorkspace)!;
+            Require(sheet.Children.OfType<System.Windows.Shapes.Rectangle>().Count(r => r.Tag?.ToString() == "detail-resize") == 1,
+                "Selected table has no resize corner.");
+            Set("_gestureStart", current); Set("_dragStart", new SchematicPoint(30, 40));
+            Set("_dragDetailId", binding.DetailId); Set("_dragDetailPart", SchematicCableDetailPart.Table);
+            Set("_pointer", new SchematicPoint(50, 50));
+            Call("PreviewDetailGesture");
+            Require(commits == 0 && !history.CanUndo, "Drag preview committed a mutation.");
+            Call("Sheet_Up", sheet, new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0,
+                System.Windows.Input.MouseButton.Left));
+            Require(commits == 1 && current.Schematic!.Pages[1].CableDetail!.TablePosition == new SchematicPoint(40, 40),
+                "Release did not commit exactly one table move.");
+            Require(current.Schematic.Pages[1].CableDetail!.SketchPosition == binding.SketchPosition, "Table move also moved sketch.");
+            Require(history.TryUndo(current, out var undo, out _) && JsonSerializer.Serialize(undo) == snapshot, "Move undo lost saved layout.");
+            Require(history.TryRedo(undo, out current, out _), "Move redo failed.");
+            binding = current.Schematic!.Pages[1].CableDetail!;
+            Set("_gestureStart", current); Set("_dragStart", new SchematicPoint(220, 100));
+            Set("_dragDetailId", binding.DetailId); Set("_dragDetailPart", SchematicCableDetailPart.Table); Set("_dragDetailResize", true);
+            var size = detailService.Build(current, current.Schematic.Pages[1]).PartBounds[SchematicCableDetailPart.Table];
+            Set("_pointer", new SchematicPoint(size.X + size.Width * .75, size.Y + size.Height * .75));
+            Call("PreviewDetailGesture");
+            var resized = (ElectricalProject)type.GetField("_gesturePreview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(gestureWorkspace)!;
+            Require(Math.Abs(resized.Schematic!.Pages[1].CableDetail!.TableScale - .75) < .001, "Corner resize did not scale table text.");
+            Call("CancelGesture");
+            Require(commits == 1, "Cancelled resize created an undo record.");
+            var removed = detailService.RemovePart(current, page.PageId, binding.DetailId, SchematicCableDetailPart.Sketch);
+            db.SaveAsync(removed).GetAwaiter().GetResult();
+            var reopened = db.GetAsync(removed.ProjectId).GetAwaiter().GetResult()!;
+            Require(reopened.Schematic!.Pages[1].CableDetail!.TablePosition == new SchematicPoint(40, 40) &&
+                !reopened.Schematic.Pages[1].CableDetail!.SketchVisible, "Move/removal did not survive SQLite reopen.");
+            var image = (BitmapSource)render.Invoke(gestureWorkspace, [reopened, reopened.Schematic.Pages[1]])!;
+            Save(image, Path.Combine(root, "edited-detail.png"));
+            SchematicPdfWriter.Write(reopened, Path.Combine(root, "edited-detail.pdf"),
+                (project, sheetPage) => (BitmapSource)render.Invoke(gestureWorkspace, [project, sheetPage])!);
+            Require(JsonSerializer.Serialize(reopened.Cables) == JsonSerializer.Serialize(p.Cables), "Detail gestures changed physical cables.");
+            owner.Content = null; owner.Close();
+        }
         if (regression is "all" or "recovery")
         {
             var invalid = JsonSerializer.Deserialize<ElectricalProject>(snapshot)!;

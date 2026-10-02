@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Drawing;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
@@ -36,6 +37,7 @@ public sealed class CableManufacturingEditorService
                 .SetEquals(p.Pins.Select(pin => pin.PinId))))
             throw new InvalidOperationException("An instance cannot silently replace its Pin inventory; create a new template revision and rebind explicitly.");
         var changed = JsonSerializer.Serialize(Prepare(original)) != JsonSerializer.Serialize(draft);
+        if (!changed) return Clone(cable);
         var result = Apply(original, draft);
         var copy = Clone(cable);
         foreach (var port in copy.ArchivedCable!.Ports)
@@ -76,7 +78,20 @@ public sealed class CableManufacturingEditorService
             if (row.ToSourcePinId is { } to && pins.TryGetValue(to, out var toPin))
             { row.ToFunction = toPin.Function; row.ToUsage = usages.GetValueOrDefault(to); }
         }
+        draft.Rows = SortRows(draft).ToList();
         return draft;
+    }
+
+    public static IOrderedEnumerable<CableManufacturingRow> SortRows(CableManufacturingDraft draft, bool from = true, bool descending = false)
+    {
+        var pins = draft.Ends.SelectMany(p => p.Pins.Select(pin => (pin.PinId, Port: p.Name, pin.PinNumber)))
+            .ToDictionary(p => p.PinId, StringComparer.Ordinal);
+        string? Id(CableManufacturingRow row) => from ? row.FromSourcePinId : row.ToSourcePinId;
+        var comparer = descending ? Comparer<string>.Create((a, b) => DrawingContactDisplayOrder.NumberComparer.Compare(b, a)) :
+            DrawingContactDisplayOrder.NumberComparer;
+        return draft.Rows.OrderBy(row => Id(row) is not { } id || !pins.ContainsKey(id))
+            .ThenBy(row => Id(row) is { } id && pins.TryGetValue(id, out var pin) ? pin.Port : "", comparer)
+            .ThenBy(row => Id(row) is { } id && pins.TryGetValue(id, out var pin) ? pin.PinNumber : "", comparer);
     }
 
     public void SetPinCount(CableManufacturingDraft draft, string sourcePortId, int count,

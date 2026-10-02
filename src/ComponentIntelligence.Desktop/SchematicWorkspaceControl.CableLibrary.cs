@@ -42,10 +42,16 @@ public partial class SchematicWorkspaceControl
         {
             var repository = new SymbolArchiveRepository(_archiveRoot);
             CableChoice[] Choices() => repository.Load().CableTemplates.Where(c => c.Status is SymbolRevisionStatus.Candidate or SymbolRevisionStatus.Approved)
-                .Select(c => new CableChoice(c, $"{c.Template.DisplayName ?? c.Template.TemplateId} / {c.Template.TemplateRevision} / {(c.Status == SymbolRevisionStatus.Approved ? "已核准" : "候選草稿")}" )).ToArray();
+                .Select(c => new CableChoice(c, $"{c.Template.DisplayName ?? c.Template.TemplateId} / {c.Template.TemplateRevision} / {(c.Status == SymbolRevisionStatus.Approved ? "已核准" : "候選草稿")}")).ToArray();
             var choices = Choices();
-            var dialog = new Window { Title = "線材庫：新增一條實體線材", Width = 640, Height = 530,
-                Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var dialog = new Window
+            {
+                Title = "線材庫：新增一條實體線材",
+                Width = 640,
+                Height = 530,
+                Owner = Window.GetWindow(this),
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
             var panel = new DockPanel { Margin = new(16) };
             var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 0, 0, 8) };
             var create = new Button { Content = "\uE710", FontFamily = new("Segoe MDL2 Assets"), ToolTip = "新增線材模板 (Ctrl+Alt+C)", Padding = new(9, 5, 9, 5) };
@@ -58,8 +64,13 @@ public partial class SchematicWorkspaceControl
             var details = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new(0, 10, 0, 10) };
             var constructionChoices = new[] { new ConstructionChoice(CableConstructionType.Unknown, "未確認（草稿）"),
                 new ConstructionChoice(CableConstructionType.Purchased, "Purchased／外購成品"), new ConstructionChoice(CableConstructionType.Custom, "Custom／自製") };
-            var classification = new ComboBox { ItemsSource = constructionChoices, DisplayMemberPath = "Label",
-                Margin = new(0, 4, 0, 10), IsEnabled = false };
+            var classification = new ComboBox
+            {
+                ItemsSource = constructionChoices,
+                DisplayMemberPath = "Label",
+                Margin = new(0, 4, 0, 10),
+                IsEnabled = false
+            };
             var lower = new StackPanel(); lower.Children.Add(details);
             lower.Children.Add(new TextBlock { Text = "製作方式（未知可保留草稿）" }); lower.Children.Add(classification);
             DockPanel.SetDock(lower, Dock.Bottom); panel.Children.Add(lower);
@@ -74,15 +85,20 @@ public partial class SchematicWorkspaceControl
                     $"內部接法：{(entry.Template.MappingConfirmed ? entry.Template.MappingRevision : "未確認")}\n" +
                     (entry.ConstructionEvidence is null ? "製作方式尚無來源證據。" : "製作方式來源：" + entry.ConstructionEvidence);
                 ok.IsEnabled = !entry.WiringAssetPending; revise.IsEnabled = true;
-                if (entry.WiringAssetPending) details.Text += "\n尚無接線 CAD：可編輯新版本，不能放置。";
+                revise.ToolTip = entry.Status == SymbolRevisionStatus.Candidate ? "編輯所選候選草稿" : "以所選模板建立新版本";
+                if (entry.WiringAssetPending) details.Text += "\n尚無接線 CAD：可編輯草稿，不能放置。";
             };
             void EditTemplate(CableArchiveEntry? entry)
             {
-                var editor = new CableArchiveEditorDialog(repository, _catalog, entry) { Owner = dialog };
-                if (editor.ShowDialog() != true) return;
-                choices = Choices(); list.ItemsSource = choices;
-                list.SelectedItem = choices.Single(c => c.Entry.Template.TemplateId == editor.SavedEntry!.Template.TemplateId &&
-                    c.Entry.Template.TemplateRevision == editor.SavedEntry.Template.TemplateRevision);
+                try
+                {
+                    var editor = new CableArchiveEditorDialog(repository, _catalog, entry) { Owner = dialog };
+                    if (editor.ShowDialog() != true) return;
+                    choices = Choices(); list.ItemsSource = choices;
+                    list.SelectedItem = choices.Single(c => c.Entry.Template.TemplateId == editor.SavedEntry!.Template.TemplateId &&
+                        c.Entry.Template.TemplateRevision == editor.SavedEntry.Template.TemplateRevision);
+                }
+                catch (Exception error) { details.Text = "無法編輯線材：" + error.Message; }
             }
             create.Click += (_, _) => EditTemplate(null);
             revise.Click += (_, _) => { if (list.SelectedItem is CableChoice current) EditTemplate(current.Entry); };
@@ -142,7 +158,7 @@ public partial class SchematicWorkspaceControl
             var current = await pending.Resolver.ResolveAsync(pending.Source.Entry.Template.TemplateId, pending.Source.Entry.Template.TemplateRevision);
             if (!ReferenceEquals(pending, _pendingCable) || _pageId != pageId) return;
             if (JsonSerializer.Serialize(current.Entry) != JsonSerializer.Serialize(pending.Source.Entry))
-                throw new InvalidOperationException("歸檔模板已變更，請重新選取。" );
+                throw new InvalidOperationException("歸檔模板已變更，請重新選取。");
             if (Apply(p => _service.AddArchivedCable(p, current.Entry.Template, pending.Construction, pending.Geometry,
                 CableContacts(current.Entry), pageId, point, current.AbsolutePath, current.Entry.Status == SymbolRevisionStatus.Approved, pending.ManufacturingGeometry), "已新增一條實體線材"))
             { _pendingCable = null; _placeMode = false; _placementPreview = null; Render(_getProject()); }

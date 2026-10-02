@@ -189,8 +189,9 @@ internal static class Program
             Render(custom, 900, 500, Path.Combine(root, "custom-editor.png"));
             var gender = Descendants(custom).OfType<ComboBox>().Single(c => c.Items.Count > 0 && c.Items[0] is ConnectorGender);
             gender.SelectedItem = Enum.GetValues<ConnectorGender>().First(v => v != ConnectorGender.Unknown);
-            var coding = Descendants(custom).OfType<TextBox>().Single(t => t.Width == 90);
+            var coding = Descendants(custom).OfType<ComboBox>().Single(t => t.ToolTip?.ToString() == "接頭 Coding");
             coding.Text = "A";
+            Require(custom.Commit(), "Custom connector editor could not commit.");
             if (regression != "catalog") Require(custom.Draft.Ends[0].Connector?.Gender == (ConnectorGender)gender.SelectedItem &&
                 custom.Draft.Ends[0].Connector?.Coding == "A", "Custom connector gender/coding was lost.");
             var connectorSelector = Descendants(custom).OfType<ComboBox>().Single(c => c.Items.Count > 0 && c.Items[0] is CableConnectorChoice);

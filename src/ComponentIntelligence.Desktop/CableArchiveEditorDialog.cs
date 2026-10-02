@@ -69,6 +69,11 @@ public sealed class CableArchiveEditorDialog : Window
                 if (!Commit(_contactGrid)) throw new InvalidOperationException("請先完成接點綁定欄位編輯。");
                 return _contacts.Where(c => !string.IsNullOrWhiteSpace(c.Contact)).Select(c => c.PinId).ToHashSet(StringComparer.Ordinal);
             });
+        _table.PinsRemoved += pins =>
+        {
+            foreach (var contact in _contacts.Where(c => pins.Contains(c.PinId)).ToArray()) _contacts.Remove(contact);
+            _contactGrid.Items.Refresh(); _confirmed.IsChecked = false;
+        };
         Title = existing is null ? "新增自製線材模板" : "線材模板：建立新版本";
         Width = 1000; Height = 800; MinWidth = 750; MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;

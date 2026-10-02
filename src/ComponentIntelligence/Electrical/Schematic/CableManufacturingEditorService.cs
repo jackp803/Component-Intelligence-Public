@@ -79,23 +79,78 @@ public sealed class CableManufacturingEditorService
         return draft;
     }
 
-    public void SetPinCount(CableManufacturingDraft draft, string sourcePortId, int count)
+    public void SetPinCount(CableManufacturingDraft draft, string sourcePortId, int count,
+        IReadOnlySet<string>? boundPins = null, bool confirmRemoval = false)
     {
         if (count is < 1 or > 512) throw new InvalidOperationException("Pin count must be between 1 and 512.");
         var port = draft.Ends.Single(p => p.PortId == sourcePortId);
         var removed = port.Pins.Skip(count).Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
-        if (draft.Rows.Any(r => r.FromSourcePinId is not null && removed.Contains(r.FromSourcePinId) ||
-            r.ToSourcePinId is not null && removed.Contains(r.ToSourcePinId)))
-            throw new InvalidOperationException("Remove or explicitly rebind affected table rows before reducing Pin count.");
+        RemovePinReferences(draft, removed, boundPins, confirmRemoval);
+        if (port.Pins.Count != count) draft.ConfirmMapping = false;
         if (removed.Count > 0) port.Pins.RemoveRange(count, port.Pins.Count - count);
         while (port.Pins.Count < count)
         {
+            var number = port.Pins.Count + 1;
+            while (port.Pins.Any(p => p.PinNumber == number.ToString(CultureInfo.InvariantCulture))) number++;
             var pin = new ComponentPin { PinId = sourcePortId + ".pin-" + Guid.NewGuid().ToString("N"),
-                PinNumber = (port.Pins.Count + 1).ToString(CultureInfo.InvariantCulture) };
+                PinNumber = number.ToString(CultureInfo.InvariantCulture) };
             port.Pins.Add(pin);
             draft.Rows.Add(sourcePortId == draft.ToSourcePortId ? new() { ToSourcePinId = pin.PinId } : new() { FromSourcePinId = pin.PinId });
         }
         if (port.Connector is not null) port.Connector.PinCount = count;
+    }
+
+    public ComponentPort AddEnd(CableManufacturingDraft draft)
+    {
+        var index = 1;
+        while (draft.Ends.Any(p => p.Name == "P" + index)) index++;
+        var id = "end-" + Guid.NewGuid().ToString("N");
+        var port = new ComponentPort { PortId = id, Name = "P" + index,
+            Pins = [new() { PinId = id + ".1", PinNumber = "1" }] };
+        draft.Ends.Add(port);
+        draft.Rows.Add(new() { FromSourcePinId = port.Pins[0].PinId });
+        draft.ConfirmMapping = false;
+        return port;
+    }
+
+    public void RemoveEnd(CableManufacturingDraft draft, string sourcePortId,
+        IReadOnlySet<string>? boundPins = null, bool confirmRemoval = false)
+    {
+        if (draft.Ends.Count <= 1) throw new InvalidOperationException("Keep at least one cable endpoint.");
+        var port = draft.Ends.Single(p => p.PortId == sourcePortId);
+        RemovePinReferences(draft, port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal), boundPins, confirmRemoval);
+        draft.Ends.Remove(port);
+        if (draft.FromSourcePortId == sourcePortId)
+            draft.FromSourcePortId = draft.Ends.FirstOrDefault(p => p.PortId != draft.ToSourcePortId)?.PortId ?? draft.Ends[0].PortId;
+        if (draft.ToSourcePortId == sourcePortId || draft.ToSourcePortId == draft.FromSourcePortId)
+            draft.ToSourcePortId = draft.Ends.FirstOrDefault(p => p.PortId != draft.FromSourcePortId)?.PortId;
+        draft.ConfirmMapping = false;
+    }
+
+    public static bool HasRemovalImpact(CableManufacturingDraft draft, IReadOnlySet<string> pins, IReadOnlySet<string>? boundPins = null) =>
+        boundPins?.Overlaps(pins) == true || draft.Ends.SelectMany(p => p.Pins).Any(p => pins.Contains(p.PinId) && !string.IsNullOrWhiteSpace(p.Function)) ||
+        draft.Rows.Any(r => r.FromSourcePinId is { } f && pins.Contains(f) &&
+            (r.ToSourcePinId is not null || r.FromUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.FromFunction) || !string.IsNullOrWhiteSpace(r.ToFunction)) ||
+            r.ToSourcePinId is { } t && pins.Contains(t) &&
+            (r.FromSourcePinId is not null || r.ToUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.ToFunction) || !string.IsNullOrWhiteSpace(r.FromFunction)));
+
+    private static void RemovePinReferences(CableManufacturingDraft draft, IReadOnlySet<string> removed,
+        IReadOnlySet<string>? boundPins, bool confirmRemoval)
+    {
+        if (removed.Count == 0) return;
+        if (HasRemovalImpact(draft, removed, boundPins) && !confirmRemoval)
+            throw new InvalidOperationException("Confirm removal of affected mapping, function, usage and CAD bindings first.");
+        foreach (var row in draft.Rows.ToArray())
+        {
+            var affected = false;
+            if (row.FromSourcePinId is { } from && removed.Contains(from))
+            { row.FromSourcePinId = null; row.FromFunction = null; row.FromUsage = CablePinUsage.Pending; affected = true; }
+            if (row.ToSourcePinId is { } to && removed.Contains(to))
+            { row.ToSourcePinId = null; row.ToFunction = null; row.ToUsage = CablePinUsage.Pending; affected = true; }
+            if (affected && row.FromSourcePinId is null && row.ToSourcePinId is null &&
+                string.IsNullOrWhiteSpace(row.FromFunction) && string.IsNullOrWhiteSpace(row.ToFunction)) draft.Rows.Remove(row);
+        }
+        foreach (var id in removed.Except(draft.ExplicitlyRemovedPinIds, StringComparer.Ordinal)) draft.ExplicitlyRemovedPinIds.Add(id);
     }
 
     public void SetConnector(CableManufacturingDraft draft, string sourcePortId, ComponentPort source,
@@ -131,6 +186,9 @@ public sealed class CableManufacturingEditorService
         if (draft.Ends.Count == 0 || draft.Ends.Any(e => e.Pins.Count == 0) || ids.Any(string.IsNullOrWhiteSpace) || ids.Distinct(StringComparer.OrdinalIgnoreCase).Count() != ids.Length)
             errors.Add("Cable ends and Pins require unique identities and at least one Pin per end.");
         var pins = draft.Ends.SelectMany(e => e.Pins).Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
+        if (draft.ExplicitlyRemovedPinIds.Any(p => string.IsNullOrWhiteSpace(p) || pins.Contains(p)) ||
+            draft.ExplicitlyRemovedPinIds.Distinct(StringComparer.Ordinal).Count() != draft.ExplicitlyRemovedPinIds.Count)
+            errors.Add("Explicitly removed Pins must be unique and absent from the current inventory.");
         foreach (var portId in new[] { draft.FromSourcePortId, draft.ToSourcePortId }.Where(p => p is not null))
             if (!draft.Ends.Any(p => p.PortId == portId)) errors.Add("Table end refers to a missing Port.");
         var pairs = new HashSet<(string, string)>();
@@ -179,7 +237,8 @@ public sealed class CableManufacturingEditorService
         var ports = Clone(draft.Ends);
         var pins = ports.SelectMany(e => e.Pins).ToDictionary(p => p.PinId, StringComparer.Ordinal);
         var oldMapped = template.Mapping.SelectMany(m => new[] { m.FromSourcePinId, m.ToSourcePinId });
-        if (oldMapped.Any(p => !pins.ContainsKey(p))) throw new InvalidOperationException("A mapped Pin cannot be silently removed.");
+        if (oldMapped.Any(p => !pins.ContainsKey(p) && !draft.ExplicitlyRemovedPinIds.Contains(p, StringComparer.Ordinal)))
+            throw new InvalidOperationException("A mapped Pin cannot be silently removed.");
         var mapping = new List<CablePinMapping>();
         var incomplete = new List<CableManufacturingRow>();
         var usage = new Dictionary<string, CablePinUsage>(StringComparer.Ordinal);

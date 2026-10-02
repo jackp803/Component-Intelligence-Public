@@ -11,4 +11,5 @@ public sealed class CableManufacturingDraft
     public string? MappingRevision { get; set; }
     public string? MappingEvidence { get; set; }
     public bool ConfirmMapping { get; set; }
+    public List<string> ExplicitlyRemovedPinIds { get; set; } = [];
 }

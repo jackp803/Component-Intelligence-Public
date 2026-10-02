@@ -58,6 +58,111 @@ public sealed class CableManufacturingEditorTests
     }
 
     [Fact]
+    public void ReducingEmptyPinCountRemovesAutomaticRowsAndPreservesRemainingIdentities()
+    {
+        var draft = _service.Prepare(Template());
+        _service.SetPinCount(draft, "P1", 1);
+        Assert.Equal("p1.1", Assert.Single(draft.Ends[0].Pins).PinId);
+        Assert.DoesNotContain(draft.Rows, r => r.FromSourcePinId == "p1.2" || r.ToSourcePinId == "p1.2");
+        Assert.Empty(_service.Validate(draft));
+    }
+
+    [Fact]
+    public void AddingPinAfterManualLabelEditsDoesNotDuplicatePinNumbers()
+    {
+        var draft = _service.Prepare(Template());
+        draft.Ends[0].Pins[1].PinNumber = "3";
+        _service.SetPinCount(draft, "P1", 3);
+        Assert.Equal(3, draft.Ends[0].Pins.Select(p => p.PinNumber).Distinct().Count());
+        Assert.Equal("3", draft.Ends[0].Pins[1].PinNumber);
+    }
+
+    [Fact]
+    public void AddedEmptyEndCanBeRemovedWithoutChangingOriginalPins()
+    {
+        var template = Template(); var draft = _service.Prepare(template);
+        var pins = draft.Ends.SelectMany(p => p.Pins).Select(p => p.PinId).ToArray();
+        var added = _service.AddEnd(draft);
+        _service.RemoveEnd(draft, added.PortId);
+        var next = _service.Apply(template, draft);
+        Assert.Equal(pins, next.Ports.SelectMany(p => p.Pins).Select(p => p.PinId));
+        Assert.Empty(next.Mapping);
+    }
+
+    [Fact]
+    public void MappedEndRemovalNeedsExplicitConfirmationAndLeavesOtherEndIncomplete()
+    {
+        var template = Template() with { Mapping = [new("p1.1", "p2.1")], MappingConfirmed = true,
+            MappingRevision = "m1", MappingEvidence = "fixture" };
+        template.Ports[1].Pins[0].Function = "keep destination";
+        var original = JsonSerializer.Serialize(template);
+        var draft = _service.Prepare(template); var before = JsonSerializer.Serialize(draft);
+        Assert.Throws<InvalidOperationException>(() => _service.RemoveEnd(draft, "P1"));
+        Assert.Equal(before, JsonSerializer.Serialize(draft));
+        _service.RemoveEnd(draft, "P1", confirmRemoval: true);
+        var next = _service.Apply(template, draft);
+        Assert.Single(next.Ports); Assert.Empty(next.Mapping); Assert.False(next.MappingConfirmed);
+        Assert.Equal("keep destination", next.Ports[0].Pins[0].Function);
+        Assert.Contains(next.Manufacturing!.IncompleteRows, r => r.ToSourcePinId == "p2.1" && r.FromSourcePinId is null);
+        Assert.Equal(original, JsonSerializer.Serialize(template));
+    }
+
+    [Theory]
+    [InlineData(CablePinUsage.Nc)]
+    [InlineData(CablePinUsage.Unused)]
+    public void DeclaredPinUsageCannotDisappearWithoutConfirmation(CablePinUsage usage)
+    {
+        var draft = _service.Prepare(Template());
+        draft.Rows.Single(r => r.FromSourcePinId == "p1.2").FromUsage = usage;
+        var before = JsonSerializer.Serialize(draft);
+        Assert.Throws<InvalidOperationException>(() => _service.SetPinCount(draft, "P1", 1));
+        Assert.Equal(before, JsonSerializer.Serialize(draft));
+    }
+
+    [Fact]
+    public void CadBoundPinRemovalRequiresConfirmationAndPreservesRemainingIds()
+    {
+        var draft = _service.Prepare(Template()); var bound = new HashSet<string> { "p1.2" };
+        var before = JsonSerializer.Serialize(draft);
+        Assert.Throws<InvalidOperationException>(() => _service.SetPinCount(draft, "P1", 1, bound));
+        Assert.Equal(before, JsonSerializer.Serialize(draft));
+        _service.SetPinCount(draft, "P1", 1, bound, confirmRemoval: true);
+        Assert.Equal("p1.1", Assert.Single(draft.Ends[0].Pins).PinId);
+        Assert.Contains("p1.2", draft.ExplicitlyRemovedPinIds);
+        Assert.Empty(_service.Validate(draft));
+    }
+
+    [Fact]
+    public void ReducingMappedPinCountExplicitlyRevokesConfirmation()
+    {
+        var template = Template() with { Mapping = [new("p1.2", "p2.1")], MappingConfirmed = true,
+            MappingRevision = "m1", MappingEvidence = "fixture" };
+        var draft = _service.Prepare(template);
+        _service.SetPinCount(draft, "P1", 1, confirmRemoval: true);
+        var next = _service.Apply(template, draft);
+        Assert.Empty(next.Mapping); Assert.False(next.MappingConfirmed);
+        Assert.Equal("p1.1", Assert.Single(next.Ports[0].Pins).PinId);
+    }
+
+    [Fact]
+    public void LastEndpointCannotBeRemoved()
+    {
+        var draft = _service.Prepare(Template(1)); var before = JsonSerializer.Serialize(draft);
+        Assert.Throws<InvalidOperationException>(() => _service.RemoveEnd(draft, "P1", confirmRemoval: true));
+        Assert.Equal(before, JsonSerializer.Serialize(draft));
+    }
+
+    [Fact]
+    public void RepeatedEndCreationDoesNotDuplicateNames()
+    {
+        var draft = _service.Prepare(Template(3));
+        _service.RemoveEnd(draft, "P2");
+        var added = _service.AddEnd(draft);
+        Assert.Equal("P2", added.Name);
+        Assert.Equal(draft.Ends.Count, draft.Ends.Select(p => p.Name).Distinct().Count());
+    }
+
+    [Fact]
     public void BlankTargetIsNotNc()
     {
         var next = _service.Apply(Template(), _service.Prepare(Template()));

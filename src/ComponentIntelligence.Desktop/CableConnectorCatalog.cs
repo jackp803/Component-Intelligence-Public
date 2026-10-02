@@ -1,5 +1,4 @@
 using ComponentIntelligence.Contracts;
-using ComponentIntelligence.Electrical.Bridging;
 using ComponentIntelligence.Electrical.Domain;
 
 namespace ComponentIntelligence.Desktop;
@@ -8,18 +7,14 @@ internal static class CableConnectorCatalog
 {
     public static IReadOnlyList<CableConnectorChoice> Choices(IReadOnlyList<ComponentIR> catalog)
     {
-        var choices = new List<CableConnectorChoice> { new("自訂／待確認", null),
-            new("散線端", new() { PortId = "loose", Name = "Loose leads", Connector = new() { ConnectorId = "loose", Family = "Loose leads" } }) };
-        var bridge = new ComponentProjectBridge();
-        foreach (var component in catalog)
-        {
-            var instance = bridge.CreateInstance(component, "connector-choice-" + component.Identity.ComponentId);
-            foreach (var port in instance.Ports.Where(p => p.Connector is not null))
-            {
-                var connector = port.Connector!;
-                choices.Add(new($"{component.Identity.Model} / {port.Name} / {connector.Family} {connector.Coding} {connector.PinCount}P {connector.Gender}".Trim(), port));
-            }
-        }
-        return choices.DistinctBy(c => c.Label, StringComparer.Ordinal).ToArray();
+        return new[] { ("Custom", "自訂／待確認"), ("M8", "M8"), ("M12", "M12"), ("RJ45", "RJ45"),
+            ("USB", "USB"), ("D-sub", "D-sub"), ("Heavy Duty", "Heavy Duty"),
+            ("Terminal", "端子接頭"), ("Loose leads", "散線端") }
+            .Select(f => new CableConnectorChoice(f.Item2, new() { PortId = "family-" + f.Item1, Name = f.Item1,
+                Connector = new() { ConnectorId = "family-" + f.Item1, Family = f.Item1 } })).ToArray();
     }
+
+    public static IReadOnlyList<string> CodingOptions(string? family) => string.Equals(family, "M12", StringComparison.OrdinalIgnoreCase)
+        ? ["未確認", "A-code", "B-code", "D-code", "X-code", "K-code", "L-code", "M-code", "S-code", "T-code", "Y-code"]
+        : ["未確認"];
 }

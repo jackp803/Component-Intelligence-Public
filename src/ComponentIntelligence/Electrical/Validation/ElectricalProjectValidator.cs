@@ -41,6 +41,13 @@ public sealed class ElectricalProjectValidator
         ValidateTerminalCapacity(project, results);
         ValidateBusAddresses(project, results);
         ValidateCableAssemblies(project, results);
+        foreach (var cable in project.Cables.Where(c => c.ArchivedCable is { MappingConfirmed: false }))
+            results.Add(new ValidationResult {
+                RuleId = "RULE-CABLE-MAPPING-001", Severity = ValidationSeverity.Warning,
+                Message = $"{cable.ReferenceDesignator ?? cable.DisplayName ?? cable.CableInstanceId}：內部接法未確認；外部接線不代表內部導通。",
+                SourceObjectIds = [cable.CableInstanceId], RequiresConfirmation = true,
+                RequiresPreExportReview = true, AffectsDrawingExport = false
+            });
 
         var readiness = results.Any(result => result.Severity == ValidationSeverity.Block && result.AffectsDrawingExport)
             ? DrawingReadiness.Blocked
@@ -475,6 +482,10 @@ public sealed class ElectricalProjectValidator
             foreach (var pin in port.Pins)
                 endpoints[pin.PinId] = new EndpointInfo(pin.PinId, pin, port, null);
         }
+
+        foreach (var port in project.Cables.Where(c => c.ArchivedCable is not null).SelectMany(c => c.ArchivedCable!.Ports))
+        foreach (var pin in port.Pins)
+            endpoints.Add(pin.PinId, new EndpointInfo(pin.PinId, pin, port, null));
 
         foreach (var block in project.TerminalBlocks)
         foreach (var position in block.Positions)

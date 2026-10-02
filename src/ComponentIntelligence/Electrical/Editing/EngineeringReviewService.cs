@@ -61,7 +61,7 @@ public sealed class EngineeringReviewService
 
     public async Task<EngineeringCoverage> InspectAsync(ElectricalProject original, CancellationToken ct = default)
     {
-        var project = Clone(original);
+        var project = CableConstructionAuthority.ApplyDefinitions(original, _catalog.Values);
         var rows = new List<ComponentEngineeringReview>();
         var used = project.Connections.SelectMany(c => new[] { c.FromEndpointId, c.ToEndpointId })
             .Concat(project.Cables.SelectMany(c => c.CoreAssignments.SelectMany(a => new[] { a.FromEndpointId, a.ToEndpointId })))

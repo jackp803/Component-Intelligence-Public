@@ -16,7 +16,11 @@ public partial class ElectricalWorkspaceWindow
         if (_workingBomSyncScheduled) return;
 
         _workingBomSyncScheduled = true;
-        Loaded += async (_, _) => await SynchronizeWorkingBomAsync(_workingBomSnapshot);
+        var initialProject = _project;
+        Loaded += async (_, _) =>
+        {
+            if (ReferenceEquals(_project, initialProject)) await SynchronizeWorkingBomAsync(_workingBomSnapshot);
+        };
     }
 
     private async Task SynchronizeWorkingBomAsync(IReadOnlyList<BomRow> workingBom)
@@ -59,7 +63,7 @@ public partial class ElectricalWorkspaceWindow
 
             // Loading a saved project can replace _project while an earlier initial sync is still
             // resolving Component IR. Never repaint that newer project with stale sync results;
-            // LoadProject_Click immediately performs a fresh sync against the loaded snapshot.
+            // A saved project restores its own BOM instead of merging the main window's working BOM.
             if (!ReferenceEquals(targetProject, _project)) return;
 
             TopologyCanvas.SetAvailableCableMaterials(result.ConnectionMaterials);

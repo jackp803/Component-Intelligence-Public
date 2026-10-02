@@ -4,10 +4,12 @@ namespace ComponentIntelligence.Electrical.Domain;
 
 public sealed class ElectricalProject
 {
-    public string SchemaVersion { get; init; } = "0.5";
+    public string SchemaVersion { get; init; } = "0.7";
     public required string ProjectId { get; init; }
     public string? Name { get; set; }
     public DrawingPlanDocument? DrawingPlan { get; set; }
+    public Schematic.SchematicDocument? Schematic { get; set; }
+    public List<ProjectBomItem> BomItems { get; init; } = new();
     public List<ComponentInstance> Components { get; init; } = new();
     public List<NetDefinition> Nets { get; init; } = new();
     public List<ElectricalConnection> Connections { get; init; } = new();
@@ -158,6 +160,8 @@ public sealed class CableCoreDefinition
 
 public sealed class CableInstance
 {
+    public ArchivedCableBinding? ArchivedCable { get; set; }
+    public string? Specification { get; set; }
     public required string CableInstanceId { get; init; }
     public required string CableDefinitionId { get; set; }
     public string? DisplayName { get; set; }

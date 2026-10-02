@@ -255,24 +255,6 @@ public partial class TopologyCanvasControl
             .First();
     }
 
-    private void AutoRouteConnections_Click(object sender, RoutedEventArgs e)
-    {
-        if (_project is null) return;
-        MutationStarting?.Invoke(this, new TopologyMutationEventArgs("Auto layout topology and route all connections"));
-        var arrangement = _projection.ArrangeConnectedPlacements(_project);
-        Surface.Width = Math.Max(3200d, arrangement.RequiredWidth + 160d);
-        Surface.Height = Math.Max(2000d, arrangement.RequiredHeight + 160d);
-        _manualRouteWaypoints.Clear();
-        _selectedRouteConnectionId = null;
-        _hoveredRouteConnectionId = null;
-        RemoveRouteHandle();
-        Render();
-        SelectionText.Text = $"已排版 {arrangement.NodeCount} 個元件 / {_project.Connections.Count} 條線路";
-        HintBanner.Visibility = Visibility.Visible;
-        HintText.Text = $"自動排版完成：{arrangement.GraphGroupCount} 個連線群組、{arrangement.LayerCount} 層。元件已依接線方向排列，線路已重新配置水平／垂直通道；不滿意可按 Undo 復原。";
-        ProjectChanged?.Invoke(this, EventArgs.Empty);
-    }
-
     private static IReadOnlyList<Point> BuildManualOrthogonalRoute(Point start, Point end, Point waypoint) =>
         CompactOrthogonalPoints([
             start,

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "component-intelligence-archive",
+  "version": "1.0.0",
+  "description": "Portable workflow for researching, validating, and preparing Component Intelligence archive changes against the production GitHub authority.",
+  "author": {
+    "name": "jackp803"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Component Intelligence Archive",
+        "shortDescription": "Portable component archiving",
+        "longDescription": "Research, review, and validate Component Intelligence archive work using jackp803/Component-Intelligence-Public main as the authoritative governance source. Central write actions remain capability-gated and must follow validation, readback, and sync rules.",
+        "developerName": "jackp803",
+        "category": "Productivity",
+        "capabilities": [
+          "Interactive"
+        ],
+        "defaultPrompt": [
+          "Archive a new component using the Component Intelligence rules.",
+          "Review an existing Components / Ports / Pins record for archive readiness.",
+          "Prepare and validate an archive changeset without writing it."
+        ]
+      }
+    }
+  }
+}

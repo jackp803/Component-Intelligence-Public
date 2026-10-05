@@ -11,7 +11,10 @@ This Skill owns the archive **procedure**. Engineering truth remains in the auth
 
 ## Required Start
 
-1. Read `docs/archive/AUTHORITY.md` from the production repository/checkout.
+Production repository: `jackp803/Component-Intelligence-Public`  
+Production discovery branch: `main`
+
+1. Read `docs/archive/AUTHORITY.md` from that production repository/checkout.
 2. Read the archive policy and only the supporting documents that the task needs.
 3. Discover available capabilities against `references/TOOL_CONTRACT.md`.
 4. If authority cannot be resolved, stop with `BLOCKED`. Chat history is never a substitute.

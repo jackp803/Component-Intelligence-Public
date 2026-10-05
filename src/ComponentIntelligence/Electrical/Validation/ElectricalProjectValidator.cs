@@ -41,6 +41,13 @@ public sealed class ElectricalProjectValidator
         ValidateTerminalCapacity(project, results);
         ValidateBusAddresses(project, results);
         ValidateCableAssemblies(project, results);
+        foreach (var wire in project.Schematic?.Wires.Where(w => w.SizingProposal is not null) ?? [])
+            results.Add(new ValidationResult {
+                RuleId = "RULE-WIRE-SIZE-PROPOSAL", Severity = ValidationSeverity.Warning,
+                Message = $"{wire.Designation ?? wire.WireId}：自動線徑建議待核對。{wire.SizingProposal!.Review}",
+                SourceObjectIds = [wire.WireId], RequiresConfirmation = true,
+                RequiresPreExportReview = true, AffectsDrawingExport = false
+            });
         foreach (var cable in project.Cables.Where(c => c.ArchivedCable is { MappingConfirmed: false }))
             results.Add(new ValidationResult {
                 RuleId = "RULE-CABLE-MAPPING-001", Severity = ValidationSeverity.Warning,

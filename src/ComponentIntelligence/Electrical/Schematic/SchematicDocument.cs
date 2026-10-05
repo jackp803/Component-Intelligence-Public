@@ -9,6 +9,8 @@ public sealed class SchematicDocument
     public List<SchematicSymbol> Symbols { get; init; } = [];
     public List<SchematicWire> Wires { get; init; } = [];
     public List<SchematicContinuation> Continuations { get; init; } = [];
+    public Dictionary<string, string> WireNamingReferences { get; init; } = new(StringComparer.Ordinal);
+    public List<string> UsedWireDesignations { get; init; } = [];
 }
 
 public sealed record SchematicPoint(double X, double Y);
@@ -148,6 +150,11 @@ public sealed record SchematicWire
     public required string PageId { get; init; }
     public string? ConnectionId { get; init; }
     public int? Awg { get; init; }
+    public double? AreaMm2 { get; init; }
+    public bool ManualSpecification { get; init; }
+    public string? Designation { get; init; }
+    public bool ManualDesignation { get; init; }
+    public SchematicWireSizingProposal? SizingProposal { get; init; }
     public SchematicAttachment Start { get; init; } = SchematicAttachment.Free();
     public SchematicAttachment End { get; init; } = SchematicAttachment.Free();
     public List<SchematicPoint> Points { get; init; } = [];

@@ -1,4 +1,5 @@
 using ComponentIntelligence.Electrical.Domain;
+using System.Globalization;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
@@ -8,14 +9,24 @@ public static class SchematicCableLabelPresentation
 {
     public static SchematicCableLabel? Resolve(ElectricalProject project, SchematicWire wire, SchematicCrossingResult? crossings = null)
     {
-        if (wire.ConnectionId is null) return null;
         var connection = project.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
-        if (connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null) return null;
+        string? text;
+        if (connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null)
+        {
+            if (string.IsNullOrWhiteSpace(wire.Designation)) return null;
+            var specification = SchematicWirePresentation.Resolve(project, wire);
+            var gauge = specification.Awg is int awg ? (specification.AwgIsApproximate ? "約 AWG " : "AWG ") + awg : "AWG 待設定";
+            var area = specification.AreaMm2 is double value ? value.ToString("0.###", CultureInfo.InvariantCulture) + " mm²" : "截面積待設定";
+            text = wire.Designation + " | " + gauge + " | " + area + (wire.SizingProposal is not null ? " (待核對)" : "");
+        }
+        else
+        {
         var cable = project.Cables.SingleOrDefault(c => c.CableInstanceId == connection.CableInstanceId);
         if (cable is null) return null;
         var models = project.BomItems.Where(b => b.ConnectionMaterial && b.ComponentDefinitionId == cable.CableDefinitionId)
             .Select(b => b.Row.ModelOrPartNumber?.Trim()).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct(StringComparer.Ordinal).ToArray();
-        var text = !string.IsNullOrWhiteSpace(cable.DisplayName) ? cable.DisplayName : models.Length == 1 ? models[0] : null;
+        text = !string.IsNullOrWhiteSpace(cable.DisplayName) ? cable.DisplayName : models.Length == 1 ? models[0] : null;
+        }
         if (string.IsNullOrWhiteSpace(text)) return null;
 
         // Derive the caption from the saved route; never add bends or change electrical endpoints.

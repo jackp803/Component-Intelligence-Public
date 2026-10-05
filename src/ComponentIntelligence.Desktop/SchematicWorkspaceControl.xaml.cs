@@ -169,6 +169,7 @@ public partial class SchematicWorkspaceControl : UserControl
             var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
             var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
             line.ToolTip = (_wireMode ? "點選既有導線，建立明確分支" : wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
+            line.ToolTip += "\n" + wire.Designation + (wire.SizingProposal is { } proposal ? "\n線徑待核對：" + proposal.Review : "");
             line.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) return;
@@ -917,11 +918,13 @@ public partial class SchematicWorkspaceControl : UserControl
         if (w is not null)
         {
             var spec = SchematicWirePresentation.Resolve(p, w);
-            SelectionState.Text += "\n" + (spec.Awg is int awg ? $"AWG {awg}" : "AWG 未指定");
+            SelectionState.Text += "\n" + w.Designation;
+            SelectionState.Text += "\n" + (spec.Awg is int awg ? $"{(spec.AwgIsApproximate ? "約 " : "")}AWG {awg}" : "AWG 未指定");
             if (spec.AreaMm2 is double area) SelectionState.Text += $" / {area:0.###} mm²";
             var evidence = SchematicWireEvidence.Resolve(p, w);
             SelectionState.Text += "\n接點額定資料\n" + evidence.Description;
             if (evidence.Category == "CONFLICT") SelectionState.Text += "\n兩端分類衝突，需確認";
+            if (w.SizingProposal is { } proposal) SelectionState.Text += "\n線徑建議待核對：" + proposal.Review;
         }
     }
     private void Reference_Click(object sender, RoutedEventArgs e)

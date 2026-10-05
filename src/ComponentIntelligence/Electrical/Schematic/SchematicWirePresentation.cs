@@ -3,7 +3,10 @@ using ComponentIntelligence.Electrical.Domain;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
-public sealed record SchematicWireSpecification(int? Awg, double? AreaMm2, string? PhysicalColor);
+public sealed record SchematicWireSpecification(int? Awg, double? AreaMm2, string? PhysicalColor)
+{
+    public bool AwgIsApproximate { get; init; }
+}
 
 public static class SchematicWirePresentation
 {
@@ -17,9 +20,14 @@ public static class SchematicWirePresentation
                 .SingleOrDefault(c => c.CoreId == connection.CableCoreId);
         if (core?.Awg is int catalogAwg && wire.Awg is int selectedAwg && catalogAwg != selectedAwg)
             throw new InvalidOperationException("Selected AWG conflicts with the exact catalog core.");
-        var awg = core?.Awg ?? wire.Awg;
-        var area = core?.AreaMm2 ?? (awg is int value ? WireSize.AwgToAreaMm2(value) : connection?.ConductorAreaMm2);
-        return new(awg, area, core?.ColorCode);
+        var authoritativeArea = core?.AreaMm2 ?? (core?.Awg is int coreGauge ? WireSize.AwgToAreaMm2(coreGauge) :
+            connection?.Kind == ConnectionKind.Cable ? connection.ConductorAreaMm2 : null);
+        var catalog = connection?.Kind == ConnectionKind.Cable;
+        var awg = core?.Awg ?? (catalog ? null : wire.Awg);
+        var area = catalog ? authoritativeArea : authoritativeArea ?? wire.AreaMm2 ?? (awg is int value ? WireSize.AwgToAreaMm2(value) : connection?.ConductorAreaMm2);
+        var approximate = awg is null && area is > 0;
+        awg ??= area is > 0 ? SchematicWireIdentification.ApproximateAwg(area.Value) : null;
+        return new(awg, area, core?.ColorCode) { AwgIsApproximate = approximate };
     }
 
     // Preview weights only; conductor cross-section is stored separately.

@@ -154,21 +154,8 @@ public partial class SchematicWorkspaceControl
     {
         var wire = _getProject().Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
         if (wire is null) { Status.Text = "請先選取導線"; return; }
-        var dialog = new Window { Title = "導線規格", Width = 360, Height = 220,
-            Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var panel = new StackPanel { Margin = new(16) };
-        panel.Children.Add(new TextBlock { Text = "AWG", Margin = new(0, 0, 0, 8) });
-        var choices = new ComboBox { ItemsSource = new[] { "未指定" }.Concat(Enumerable.Range(0, 41).Select(i => $"AWG {i}")).ToArray(),
-            SelectedIndex = wire.Awg is int awg ? awg + 1 : 0 };
-        panel.Children.Add(choices);
-        var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 16, 0, 0) };
-        var cancel = new Button { Content = "取消", IsCancel = true, Padding = new(12, 5, 12, 5) };
-        var apply = new Button { Content = "套用", IsDefault = true, Padding = new(12, 5, 12, 5), Margin = new(8, 0, 0, 0) };
-        apply.Click += (_, _) =>
-        {
-            if (Apply(p => _service.SetWireAwg(p, wire.WireId, choices.SelectedIndex > 0 ? choices.SelectedIndex - 1 : null), "已更新導線規格"))
-                dialog.DialogResult = true;
-        };
-        row.Children.Add(cancel); row.Children.Add(apply); panel.Children.Add(row); dialog.Content = panel; dialog.ShowDialog();
+        var dialog = new SchematicWireSettingsDialog(_getProject(), wire.WireId,
+            edit => Apply(edit, "已更新導線線號／規格")) { Owner = Window.GetWindow(this) };
+        dialog.ShowDialog();
     }
 }

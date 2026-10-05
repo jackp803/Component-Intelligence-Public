@@ -248,6 +248,10 @@ public sealed class ComponentProjectBridge
             else
             {
                 requiredCurrent = ToDouble(sourcePower.CurrentConsumptionAmp ?? sourcePower.MaximumCurrentAmp);
+                if (requiredCurrent is null && role == PowerRole.Input &&
+                    sourcePower.PowerConsumptionWatt is > 0 && sourcePower.OperatingVoltage is { Min: > 0 } operating &&
+                    string.Equals(operating.Type, "DC", StringComparison.OrdinalIgnoreCase))
+                    requiredCurrent = ToDouble(sourcePower.PowerConsumptionWatt / operating.Min);
             }
         }
 

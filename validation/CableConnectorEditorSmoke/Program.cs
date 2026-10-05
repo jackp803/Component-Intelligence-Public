@@ -9,6 +9,7 @@ using ComponentIntelligence.Contracts;
 using ComponentIntelligence.Desktop;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Schematic;
+using PdfSharp.Pdf.IO;
 using ComponentPort = ComponentIntelligence.Electrical.Domain.ComponentPort;
 
 internal static class Program
@@ -20,6 +21,7 @@ internal static class Program
         {
             var mode = args.FirstOrDefault() ?? "all";
             var root = args.Skip(1).FirstOrDefault();
+            if (mode == "wire") { WireSmoke(root); Console.WriteLine("PASS wire"); return 0; }
             var catalog = typeof(CableManufacturingTableEditor).Assembly.GetType("ComponentIntelligence.Desktop.CableConnectorCatalog")!;
             var choices = (IReadOnlyList<CableConnectorChoice>)catalog.GetMethod("Choices", BindingFlags.Static | BindingFlags.Public)!
                 .Invoke(null, [Array.Empty<ComponentIR>()])!;
@@ -30,6 +32,18 @@ internal static class Program
             var initialDraft = new CableManufacturingEditorService().Prepare(template);
             var editor = new CableManufacturingTableEditor(initialDraft, choices);
             editor.Measure(new Size(920, 460)); editor.Arrange(new Rect(0, 0, 920, 460)); editor.UpdateLayout();
+            if (mode is "panels")
+            {
+                var counts = Children(editor).OfType<ComboBox>().Where(c => c.ToolTip?.ToString() == "Pin 數 (Alt+Enter)").ToArray();
+                Require(counts.Length == 2, "P1/P2 must both have a visible Pin count selector.");
+                Require(!Children(editor).OfType<ComboBox>().Any(c => c.ToolTip?.ToString() == "接頭端"), "Port selection is still a dropdown.");
+                counts[0].SelectedItem = 4; counts[1].SelectedItem = 8;
+                Require(editor.Draft.Ends[0].Pins.Count == 4 && editor.Draft.Ends[1].Pins.Count == 8, "Editing a visible panel changed another Port.");
+                Call(editor, "AddEnd"); editor.UpdateLayout();
+                Require(Children(editor).OfType<ComboBox>().Count(c => c.ToolTip?.ToString() == "Pin 數 (Alt+Enter)") == 3, "Adding P3 did not add its own visible panel.");
+                Call(editor, "DeleteEnd"); editor.UpdateLayout();
+                Require(editor.Draft.Ends.Count == 2, "Removing P3 affected another Port.");
+            }
             if (mode is "all" or "noop")
             {
                 Require(JsonSerializer.Serialize(initialDraft) == JsonSerializer.Serialize(editor.Draft), "Opening the editor modified connector metadata.");
@@ -59,8 +73,9 @@ internal static class Program
                 Require(typed.Draft.Ends[0].Pins.Count == 4, "Typed Pin count applied before commit.");
                 typeof(CableManufacturingTableEditor).GetMethod("ApplyCount", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(typed, [null]);
                 Require(typed.Draft.Ends[0].Pins.Count == 12 && ids.SequenceEqual(typed.Draft.Ends[0].Pins.Take(4).Select(p => p.PinId)), "Committing typed count did not preserve original Pin IDs.");
-                Field<ComboBox>(typed, "_ends").SelectedIndex = 1;
-                Require(numeric.SelectedItem is int value && value == 1, "Switching endpoints retained another endpoint's numeric selection.");
+                var other = Children(typed).OfType<ComboBox>().Where(c => c.ToolTip?.ToString() == "Pin 數 (Alt+Enter)").Skip(1).First();
+                Require(other.SelectedItem is int value && value == 1 && typed.Draft.Ends[0].Pins.Count == 12,
+                    "Another endpoint reused the first endpoint's numeric selection.");
             }
             if (mode is "all" or "count")
             {
@@ -103,9 +118,9 @@ internal static class Program
             {
                 Require(choices.Any(c => c.Label == "M12") && choices.Any(c => c.Label == "RJ45"), "Common connector families are missing without a BOM.");
                 Require(choices.All(c => !c.Label.Contains(" / ")), "Connector choices still contain BOM models or Ports.");
-                var coding = Children(editor).OfType<ComboBox>().SingleOrDefault(c => c.ToolTip?.ToString() == "接頭 Coding");
+                var coding = Children(editor).OfType<ComboBox>().FirstOrDefault(c => c.ToolTip?.ToString() == "接頭 Coding");
                 Require(coding is not null, "Coding is not a dropdown.");
-                var families = Children(editor).OfType<ComboBox>().Single(c => c.ToolTip?.ToString() == "接頭形式");
+                var families = Children(editor).OfType<ComboBox>().First(c => c.ToolTip?.ToString() == "接頭形式");
                 families.SelectedItem = families.Items.Cast<CableConnectorChoice>().Single(c => c.Label == "M12");
                 Require(coding!.Items.Cast<object>().Any(c => c.ToString() == "D-code"), "M12 Coding dropdown lacks D-code.");
                 coding.SelectedItem = "D-code";
@@ -128,6 +143,70 @@ internal static class Program
             Console.WriteLine("PASS " + mode); return 0;
         }
         catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+    }
+
+    private static void WireSmoke(string? root)
+    {
+        var project = new ElectricalProject { ProjectId = "offscreen-wire", Name = "Wire settings draft",
+            Schematic = new() { Pages = [new() { PageId = "page", Title = "Supply" }] } };
+        project.Components.Add(new() { ComponentInstanceId = "io", ComponentDefinitionId = "io", TypeKey = "IO-Link Master",
+            Ports = [new() { PortId = "X1", Name = "X1", Pins = [new() { PinId = "A", PinNumber = "1", Layer = ElectricalLayer.Power,
+                Power = new() { Role = PowerRole.Source, Voltage = new() { Type = VoltageType.Dc, NominalVoltage = 24 } } }] }] });
+        project.Components.Add(new() { ComponentInstanceId = "sensor", ComponentDefinitionId = "sensor", TypeKey = "Sensor",
+            Ports = [new() { PortId = "P1", Name = "P1", Pins = [new() { PinId = "B", PinNumber = "1", Layer = ElectricalLayer.Power,
+                Power = new() { Role = PowerRole.Input, RequiredCurrentAmp = .2, Voltage = new() { Type = VoltageType.Dc, NominalVoltage = 24 } } }] }] });
+        project.Schematic.Symbols.Add(new() { SymbolId = "S1", PageId = "page", ComponentInstanceId = "io", Position = new(20, 40), Width = 40, Height = 30,
+            Anchors = [new() { EndpointId = "A", Position = new(40, 15), Direction = "Right" }] });
+        project.Schematic.Symbols.Add(new() { SymbolId = "S2", PageId = "page", ComponentInstanceId = "sensor", Position = new(190, 40), Width = 40, Height = 30,
+            Anchors = [new() { EndpointId = "B", Position = new(0, 15), Direction = "Left" }] });
+        var service = new SchematicAuthoringService();
+        project = service.DrawWire(project, "page", SchematicAttachment.Pin("S1", "A"), SchematicAttachment.Pin("S2", "B"), [new(60, 55), new(190, 55)]);
+        var wireId = project.Schematic!.Wires[0].WireId;
+        var before = JsonSerializer.Serialize(project); var commits = 0;
+        var dialog = new SchematicWireSettingsDialog(project, wireId, update => { project = update(project); commits++; return true; });
+        var mode = Field<ComboBox>(dialog, "_mode"); var area = Field<ComboBox>(dialog, "_area");
+        mode.SelectedIndex = 3; area.Text = ".75";
+        Require(before == JsonSerializer.Serialize(project) && commits == 0, "Size preview mutated the project.");
+        Field<TextBox>(dialog, "_name").Text = "IOLink1_X1_1";
+        Require(dialog.TryApply() && commits == 1 && project.Schematic!.Wires[0].AreaMm2 == .75, "Metric/name apply did not commit once.");
+        var applied = JsonSerializer.Serialize(project); area.Text = "invalid";
+        Require(!dialog.TryApply() && applied == JsonSerializer.Serialize(project) && commits == 1, "Invalid area changed saved data.");
+        mode.SelectedIndex = 1;
+        area.Text = ".5";
+        Require(dialog.TryApply() && project.Schematic!.Wires[0].SizingProposal is not null && project.Schematic.Wires[0].AreaMm2 == .5,
+            "Automatic selection did not restore a pending proposal.");
+        project = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(project))!;
+        before = JsonSerializer.Serialize(project);
+        var workspace = new SchematicWorkspaceControl(() => project, (_, _) => throw new InvalidOperationException("Unexpected mutation"),
+            () => Task.FromResult<IReadOnlyList<ComponentIR>>([]), _ => Task.FromResult<Uri?>(null), () => { }, () => { });
+        workspace.RefreshWorkspace();
+        var sheet = (Canvas)typeof(SchematicWorkspaceControl).GetProperty("Sheet", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(workspace)!;
+        Require(Children(sheet).OfType<TextBlock>().Any(t => t.Text.Contains("IOLink1_X1_1") && t.Text.Contains("mm²") && t.Text.Contains("AWG")),
+            "Actual canvas did not render the general wire specification.");
+        if (root is not null)
+        {
+            Directory.CreateDirectory(root);
+            var content = (FrameworkElement)dialog.Content;
+            content.Measure(new Size(490, 440)); content.Arrange(new Rect(0, 0, 490, 440)); content.UpdateLayout();
+            var settings = new RenderTargetBitmap(490, 440, 96, 96, PixelFormats.Pbgra32); settings.Render(content);
+            SaveBitmap(settings, Path.Combine(root, "wire-settings.png"));
+            var render = typeof(SchematicWorkspaceControl).GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            BitmapSource Page(ElectricalProject p, SchematicPage page) => (BitmapSource)render.Invoke(workspace, [p, page])!;
+            var pageImage = Page(project, project.Schematic!.Pages[0]);
+            SaveBitmap(pageImage, Path.Combine(root, "wire-page.png"));
+            var pdf = Path.Combine(root, "wire-specification.pdf");
+            Require(SchematicPdfWriter.Write(project, pdf, Page) == 1, "Wire PDF page missing.");
+            using var saved = PdfReader.Open(pdf, PdfDocumentOpenMode.Import);
+            Require(saved.PageCount == 1 && saved.Info.Title.Contains("DRAFT"), "Wire PDF lost draft status.");
+            Require(before == JsonSerializer.Serialize(project), "Rendering changed saved wire metadata.");
+        }
+        dialog.Close();
+    }
+
+    private static void SaveBitmap(BitmapSource bitmap, string path)
+    {
+        var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
+        using var output = File.Create(path); png.Save(output);
     }
 
     private static T Field<T>(object target, string name) => (T)target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target)!;

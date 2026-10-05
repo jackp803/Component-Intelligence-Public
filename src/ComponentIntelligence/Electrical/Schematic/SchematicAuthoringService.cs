@@ -24,15 +24,17 @@ public sealed partial class SchematicAuthoringService
         return Edit(project, (draft, doc) =>
         {
             var wire = doc.Wires.Single(w => w.WireId == wireId);
-            var members = wire.ConnectionId is null ? [wire] : doc.Wires.Where(w => w.ConnectionId == wire.ConnectionId).ToArray();
+            var members = SchematicWireIdentification.Segments(doc, wire);
             if (members.Any(w => w.Locked)) throw new InvalidOperationException("A route segment is locked.");
             var connection = draft.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
             if (connection?.CableCoreId is not null)
                 throw new InvalidOperationException("Edit the authoritative cable core specification before overriding its wire size.");
+            if (awg is null && connection is not null && members.Any(w => w.SizingProposal is not null &&
+                w.SizingProposal.AreaMm2 == connection.ConductorAreaMm2)) connection.ConductorAreaMm2 = null;
             foreach (var member in members)
             {
                 var index = doc.Wires.FindIndex(w => w.WireId == member.WireId);
-                doc.Wires[index] = member with { Awg = awg };
+                doc.Wires[index] = member with { Awg = awg, AreaMm2 = null, ManualSpecification = true, SizingProposal = null };
             }
             if (connection is not null && awg is int value)
                 connection.ConductorAreaMm2 = Cables.WireSize.AwgToAreaMm2(value);
@@ -285,6 +287,7 @@ public sealed partial class SchematicAuthoringService
         draft.Schematic ??= new();
         change(draft, draft.Schematic);
         Validate(draft);
+        SchematicWireIdentification.Reconcile(draft);
         return draft;
     }
 

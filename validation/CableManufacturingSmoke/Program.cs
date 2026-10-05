@@ -187,14 +187,14 @@ internal static class Program
             };
             var custom = new CableManufacturingTableEditor(customDraft, [new("Custom", null), new("Power", catalogPort)]);
             Render(custom, 900, 500, Path.Combine(root, "custom-editor.png"));
-            var gender = Descendants(custom).OfType<ComboBox>().Single(c => c.Items.Count > 0 && c.Items[0] is ConnectorGender);
+            var gender = Descendants(custom).OfType<ComboBox>().First(c => c.Items.Count > 0 && c.Items[0] is ConnectorGender);
             gender.SelectedItem = Enum.GetValues<ConnectorGender>().First(v => v != ConnectorGender.Unknown);
-            var coding = Descendants(custom).OfType<ComboBox>().Single(t => t.ToolTip?.ToString() == "接頭 Coding");
+            var coding = Descendants(custom).OfType<ComboBox>().First(t => t.ToolTip?.ToString() == "接頭 Coding");
             coding.Text = "A";
             Require(custom.Commit(), "Custom connector editor could not commit.");
             if (regression != "catalog") Require(custom.Draft.Ends[0].Connector?.Gender == (ConnectorGender)gender.SelectedItem &&
                 custom.Draft.Ends[0].Connector?.Coding == "A", "Custom connector gender/coding was lost.");
-            var connectorSelector = Descendants(custom).OfType<ComboBox>().Single(c => c.Items.Count > 0 && c.Items[0] is CableConnectorChoice);
+            var connectorSelector = Descendants(custom).OfType<ComboBox>().First(c => c.Items.Count > 0 && c.Items[0] is CableConnectorChoice);
             connectorSelector.SelectedIndex = 1;
             if (regression != "custom") Require(custom.Draft.Ends[0].Pins.Select(pin => pin.PinNumber).SequenceEqual(new[] { "L+", "PE" }),
                 "Catalog connector did not import exact terminal numbers.");

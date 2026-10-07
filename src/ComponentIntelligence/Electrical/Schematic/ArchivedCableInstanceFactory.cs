@@ -46,7 +46,7 @@ public static class ArchivedCableInstanceFactory
         var copy = Clone(cable);
         copy.ArchivedCable = copy.ArchivedCable! with { Mapping = pairs, MappingConfirmed = false, HasMappingOverride = true,
             Manufacturing = (copy.ArchivedCable.Manufacturing ?? copy.ArchivedCable.Template.Manufacturing) is { } manufacturing
-                ? manufacturing with { Rows = null } : null };
+                ? manufacturing with { Rows = null, WiringDiagram = manufacturing.WiringDiagram is { } diagram ? diagram with { Routes = [] } : null } : null };
         return copy;
     }
 

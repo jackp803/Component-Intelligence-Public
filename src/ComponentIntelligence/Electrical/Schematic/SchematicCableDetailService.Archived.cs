@@ -100,7 +100,7 @@ public sealed partial class SchematicCableDetailService
         if (string.IsNullOrWhiteSpace(cable.ReferenceDesignator)) diagnostics.Add("CABLE_REFERENCE_UNKNOWN");
         if (string.IsNullOrWhiteSpace(cable.Specification)) diagnostics.Add("CABLE_SPECIFICATION_UNKNOWN");
         if (cable.CableConstructionType == CableConstructionType.Unknown) diagnostics.Add("CABLE_CONSTRUCTION_UNKNOWN");
-        var mapped = draft.Rows.SelectMany(CableManufacturingCells.Pairs).SelectMany(p => new[] { p.FromSourcePinId, p.ToSourcePinId }).ToHashSet(StringComparer.Ordinal);
+        var mapped = CableWiringEditorService.Mapping(draft).SelectMany(p => new[] { p.FromSourcePinId, p.ToSourcePinId }).ToHashSet(StringComparer.Ordinal);
         var declared = draft.Rows.SelectMany(CableManufacturingCells.All).Where(c => c.SourcePinId is not null && c.Usage != CablePinUsage.Pending)
             .Select(c => c.SourcePinId!).ToHashSet(StringComparer.Ordinal);
         if (pins.Keys.Any(id => !mapped.Contains(id) && !declared.Contains(id)) ||

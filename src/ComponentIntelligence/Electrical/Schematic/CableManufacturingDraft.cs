@@ -8,6 +8,9 @@ public sealed class CableManufacturingDraft
     public string? FromSourcePortId { get; set; }
     public string? ToSourcePortId { get; set; }
     public List<CableManufacturingRow> Rows { get; set; } = [];
+    public bool InventoryOnly { get; set; }
+    public List<CablePinMapping>? ExplicitMapping { get; set; }
+    public CableWiringDiagram? WiringDiagram { get; set; }
     public string? MappingRevision { get; set; }
     public string? MappingEvidence { get; set; }
     public bool ConfirmMapping { get; set; }

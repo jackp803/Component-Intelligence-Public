@@ -56,9 +56,18 @@ public sealed class CableManufacturingCell
 
 public sealed record CableManufacturingDefinition
 {
+    public bool InventoryOnly { get; init; }
+    public CableWiringDiagram? WiringDiagram { get; init; }
     public string? FromSourcePortId { get; init; }
     public string? ToSourcePortId { get; init; }
     public List<CableManufacturingRow> IncompleteRows { get; init; } = [];
     public List<CablePinUsageDeclaration> PinUsage { get; init; } = [];
     public List<CableManufacturingRow>? Rows { get; init; }
+}
+
+public sealed record CableWiringDiagram
+{
+    public Dictionary<string, Schematic.SchematicGridBounds> PortBounds { get; init; } = [];
+    public Dictionary<string, Schematic.SchematicPoint> PinPositions { get; init; } = [];
+    public Dictionary<string, List<Schematic.SchematicPoint>> Routes { get; init; } = [];
 }

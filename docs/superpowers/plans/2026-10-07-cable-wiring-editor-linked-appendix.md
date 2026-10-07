@@ -113,3 +113,5 @@
 ## Execution Evidence
 
 Spec approved in chat on 2026-10-07; direct execution without further approval was explicitly selected. Existing linked worktree reused. Baseline: `dotnet test tests/ComponentIntelligence.Tests/ComponentIntelligence.Tests.csproj -c Release --no-restore --nologo --verbosity minimal` PASS 1336/1336. Abstract Antigravity advice was reviewed; no private files were sent. Deduplication by model/topology hash was rejected: physical identity is the required key.
+
+Task 1: domain tests RED (missing CableWiringEditorService), then GREEN 77/77 including wiring, manufacturing, multi-Port and CAD bindings. Diagram geometry is not stored as another electrical graph. Existing SchematicDraftRoute handles orthogonal simplification. Instance layout edits preserve confirmation and template snapshots.

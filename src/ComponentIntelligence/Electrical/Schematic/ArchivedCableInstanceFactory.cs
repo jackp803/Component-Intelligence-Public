@@ -44,7 +44,9 @@ public static class ArchivedCableInstanceFactory
         var pairs = mapping.ToList();
         ValidateMapping(binding.Template, pairs);
         var copy = Clone(cable);
-        copy.ArchivedCable = copy.ArchivedCable! with { Mapping = pairs, MappingConfirmed = false, HasMappingOverride = true };
+        copy.ArchivedCable = copy.ArchivedCable! with { Mapping = pairs, MappingConfirmed = false, HasMappingOverride = true,
+            Manufacturing = (copy.ArchivedCable.Manufacturing ?? copy.ArchivedCable.Template.Manufacturing) is { } manufacturing
+                ? manufacturing with { Rows = null } : null };
         return copy;
     }
 

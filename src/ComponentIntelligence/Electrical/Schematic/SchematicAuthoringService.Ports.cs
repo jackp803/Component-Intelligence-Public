@@ -94,6 +94,7 @@ public sealed partial class SchematicAuthoringService
             if (symbol.Geometry is null && !symbol.ManualSize)
                 next = FitGenericPortEdges(next, owner.Ports, symbol.Width, symbol.Height);
         }
+        next = next with { CadPortBindings = next.CadPortBindings.Where(b => b.PortId != portId).ToList() };
         if (symbol.ManualSize)
         {
             var extent = side is "Left" or "Right" ? symbol.Height : symbol.Width;

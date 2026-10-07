@@ -3,12 +3,14 @@ using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ComponentIntelligence.Contracts;
 using ComponentIntelligence.Desktop;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Schematic;
+using ComponentIntelligence.SymbolArchive;
 using PdfSharp.Pdf.IO;
 using ComponentPort = ComponentIntelligence.Electrical.Domain.ComponentPort;
 
@@ -22,6 +24,7 @@ internal static class Program
             var mode = args.FirstOrDefault() ?? "all";
             var root = args.Skip(1).FirstOrDefault();
             if (mode == "wire") { WireSmoke(root); Console.WriteLine("PASS wire"); return 0; }
+            if (mode == "bindings") { BindingModeSmoke(root); Console.WriteLine("PASS bindings"); return 0; }
             var catalog = typeof(CableManufacturingTableEditor).Assembly.GetType("ComponentIntelligence.Desktop.CableConnectorCatalog")!;
             var choices = (IReadOnlyList<CableConnectorChoice>)catalog.GetMethod("Choices", BindingFlags.Static | BindingFlags.Public)!
                 .Invoke(null, [Array.Empty<ComponentIR>()])!;
@@ -30,8 +33,35 @@ internal static class Program
                     Pins = [new() { PinId = "pin" + i, PinNumber = "1" }] }).ToList() };
             var original = JsonSerializer.Serialize(template);
             var initialDraft = new CableManufacturingEditorService().Prepare(template);
-            var editor = new CableManufacturingTableEditor(initialDraft, choices);
+            var editor = new CableManufacturingTableEditor(initialDraft, choices, confirmRemoval: mode == "columns" ? _ => true : null);
             editor.Measure(new Size(920, 460)); editor.Arrange(new Rect(0, 0, 920, 460)); editor.UpdateLayout();
+            if (mode is "columns")
+            {
+                Call(editor, "AddEnd"); editor.UpdateLayout();
+                var grid = Children(editor).OfType<DataGrid>().First();
+                Require(grid.Columns.Count == 6, "P3 did not append its two manufacturing columns.");
+                Require(grid.Columns[4].Header?.ToString() == "P3 PIN" && grid.Columns[5].Header?.ToString() == "P3 FUNCTION", "P3 headers are wrong.");
+                var pinColumn = (DataGridComboBoxColumn)grid.Columns[4];
+                var choicesForPort = pinColumn.ItemsSource.Cast<object>().Select(p => p.GetType().GetProperty("Id")!.GetValue(p)?.ToString()).ToArray();
+                Require(choicesForPort.Length == 2 && choicesForPort.Contains(editor.Draft.Ends[2].Pins[0].PinId), "P3 dropdown contains another Port's Pins.");
+                var row = editor.Draft.Rows.First(r => r.FromSourcePinId == "pin1");
+                var selectedPin = new ComboBox { DataContext = row, ItemsSource = pinColumn.ItemsSource, SelectedValuePath = "Id" };
+                selectedPin.SetBinding(ComboBox.SelectedValueProperty, pinColumn.SelectedValueBinding);
+                selectedPin.SelectedValue = editor.Draft.Ends[2].Pins[0].PinId;
+                selectedPin.GetBindingExpression(ComboBox.SelectedValueProperty)!.UpdateSource();
+                var text = new TextBox { DataContext = row };
+                text.SetBinding(TextBox.TextProperty, ((DataGridTextColumn)grid.Columns[5]).Binding);
+                text.Text = "P3 signal"; text.GetBindingExpression(TextBox.TextProperty)!.UpdateSource();
+                Require(editor.Commit(), "P3 edit could not commit.");
+                var saved = new CableManufacturingEditorService().Apply(template, editor.Draft);
+                var reopened = new CableManufacturingTableEditor(new CableManufacturingEditorService().Prepare(saved), choices);
+                Require(Field<DataGrid>(reopened, "_grid").Columns.Count == 6 &&
+                    reopened.Draft.Rows.Any(r => r.AdditionalEnds.Values.Any(c => c.Function == "P3 signal")), "P3 edits were lost on reopen.");
+                Require(saved.Mapping.Count == 1, "Explicit P3 choice did not persist separately from empty Pin inventory.");
+                if (root is not null) SaveControl(editor, Path.Combine(root, "multi-port-editor.png"), 1100, 500);
+                Call(editor, "DeleteEnd"); editor.UpdateLayout();
+                Require(grid.Columns.Count == 4, "Removing P3 left orphan columns.");
+            }
             if (mode is "panels")
             {
                 var counts = Children(editor).OfType<ComboBox>().Where(c => c.ToolTip?.ToString() == "Pin 數 (Alt+Enter)").ToArray();
@@ -143,6 +173,43 @@ internal static class Program
             Console.WriteLine("PASS " + mode); return 0;
         }
         catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+    }
+
+    private static void BindingModeSmoke(string? output)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "cad-binding-mode-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var dialog = new CableArchiveEditorDialog(new SymbolArchiveRepository(root), []);
+            var table = Field<CableManufacturingTableEditor>(dialog, "_table");
+            Field<ComboBox>(table, "_count").SelectedItem = 3;
+            Call(dialog, "RefreshBindings");
+            var grid = Field<DataGrid>(dialog, "_contactGrid"); var mode = Field<ComboBox>(dialog, "_contactKind");
+            Require(mode.SelectedItem?.ToString() == "Port" && grid.Items.Count == 2, "CAD binding did not open with Port contacts.");
+            var row = grid.Items[0]; var contact = row.GetType().GetProperty("Contact")!;
+            contact.SetValue(row, "synthetic-CAD-contact");
+            mode.SelectedItem = "Pin";
+            Require(grid.Items.Count == 4, "Pin binding did not expose separately editable virtual Pins.");
+            mode.SelectedItem = "全部";
+            Require(grid.Items.Count == 6 && contact.GetValue(row)?.ToString() == "synthetic-CAD-contact", "Changing modes discarded a hidden Port binding.");
+            mode.SelectedItem = "Port";
+            var tabs = Children((DependencyObject)dialog.Content).OfType<TabControl>().Single();
+            tabs.SelectedIndex = 3;
+            if (output is not null) SaveControl((FrameworkElement)dialog.Content, Path.Combine(output, "cad-port-bindings.png"), 1000, 650);
+            dialog.Close();
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    private static void SaveControl(FrameworkElement control, string path, int width, int height)
+    {
+        if (control is Control item) item.Background = Brushes.White;
+        else if (control is Panel panel) panel.Background = Brushes.White;
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        control.Measure(new Size(width, height)); control.Arrange(new Rect(0, 0, width, height)); control.UpdateLayout();
+        var image = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32); image.Render(control);
+        SaveBitmap(image, path);
     }
 
     private static void WireSmoke(string? root)

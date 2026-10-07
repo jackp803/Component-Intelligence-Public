@@ -58,17 +58,21 @@ public sealed class CableManufacturingEditorService
     public CableManufacturingDraft Prepare(ArchivedCableTemplate template)
     {
         var draft = new CableManufacturingDraft { Ends = Clone(template.Ports),
-            FromSourcePortId = template.Manufacturing?.FromSourcePortId ?? template.Ports.FirstOrDefault()?.PortId,
-            ToSourcePortId = template.Manufacturing?.ToSourcePortId ?? template.Ports.Skip(1).FirstOrDefault()?.PortId,
+            FromSourcePortId = template.Manufacturing is { } fromMetadata ? fromMetadata.FromSourcePortId : template.Ports.FirstOrDefault()?.PortId,
+            ToSourcePortId = template.Manufacturing is { } toMetadata ? toMetadata.ToSourcePortId : template.Ports.Skip(1).FirstOrDefault()?.PortId,
             MappingRevision = template.MappingRevision, MappingEvidence = template.MappingEvidence };
         var metadata = template.Manufacturing;
-        draft.Rows.AddRange(template.Mapping.Select(m => new CableManufacturingRow { FromSourcePinId = m.FromSourcePinId, ToSourcePinId = m.ToSourcePinId }));
-        draft.Rows.AddRange(Clone(metadata?.IncompleteRows ?? []));
-        var represented = draft.Rows.SelectMany(r => new[] { r.FromSourcePinId, r.ToSourcePinId }).Where(s => s is not null).ToHashSet(StringComparer.Ordinal);
+        if (metadata?.Rows is { } rows) draft.Rows.AddRange(Clone(rows));
+        else
+        {
+            draft.Rows.AddRange(template.Mapping.Select(m => new CableManufacturingRow { FromSourcePinId = m.FromSourcePinId, ToSourcePinId = m.ToSourcePinId }));
+            draft.Rows.AddRange(Clone(metadata?.IncompleteRows ?? []));
+            foreach (var row in draft.Rows) NormalizeLegacyColumns(draft, row);
+        }
+        var represented = draft.Rows.SelectMany(CableManufacturingCells.All).Select(c => c.SourcePinId).Where(s => s is not null).ToHashSet(StringComparer.Ordinal);
         foreach (var port in draft.Ends)
             foreach (var pin in port.Pins.Where(p => !represented.Contains(p.PinId)))
-                draft.Rows.Add(port.PortId == draft.ToSourcePortId
-                    ? new() { ToSourcePinId = pin.PinId } : new() { FromSourcePinId = pin.PinId });
+                AddPinRow(draft, port.PortId, pin.PinId);
         var pins = draft.Ends.SelectMany(e => e.Pins).ToDictionary(p => p.PinId, StringComparer.Ordinal);
         var usages = metadata?.PinUsage.ToDictionary(p => p.SourcePinId, p => p.Usage, StringComparer.Ordinal) ?? [];
         foreach (var row in draft.Rows)
@@ -77,16 +81,47 @@ public sealed class CableManufacturingEditorService
             { row.FromFunction = fromPin.Function; row.FromUsage = usages.GetValueOrDefault(from); }
             if (row.ToSourcePinId is { } to && pins.TryGetValue(to, out var toPin))
             { row.ToFunction = toPin.Function; row.ToUsage = usages.GetValueOrDefault(to); }
+            foreach (var cell in row.AdditionalEnds.Values)
+                if (cell.SourcePinId is { } id && pins.TryGetValue(id, out var pin))
+                { cell.Function = pin.Function; cell.Usage = usages.GetValueOrDefault(id); }
         }
+        CableManufacturingCells.EnsureColumns(draft);
         draft.Rows = SortRows(draft).ToList();
         return draft;
     }
 
+    private static void AddPinRow(CableManufacturingDraft draft, string portId, string pinId)
+    {
+        var row = new CableManufacturingRow();
+        CableManufacturingCells.Set(draft, row, portId, new() { SourcePinId = pinId });
+        draft.Rows.Add(row);
+    }
+
+    private static void NormalizeLegacyColumns(CableManufacturingDraft draft, CableManufacturingRow row)
+    {
+        var cells = CableManufacturingCells.All(row).Where(c => c.SourcePinId is not null).ToArray();
+        if (cells.Length == 0) return;
+        var ports = cells.Select(c => draft.Ends.SingleOrDefault(p => p.Pins.Any(pin => pin.PinId == c.SourcePinId))).ToArray();
+        // Preserve unusual historical same-Port pairs instead of silently dropping a Pin.
+        if (ports.Any(p => p is null) || ports.Select(p => p!.PortId).Distinct().Count() != cells.Length) return;
+        var unbound = draft.Ends.Select(p => (p.PortId, Cell: CableManufacturingCells.Get(draft, row, p.PortId)))
+            .Where(c => c.Cell.SourcePinId is null && (c.Cell.Function is not null || c.Cell.Usage != CablePinUsage.Pending)).ToArray();
+        if (unbound.Any(c => ports.Any(p => p!.PortId == c.PortId))) return;
+        row.FromSourcePinId = null; row.ToSourcePinId = null;
+        row.FromFunction = null; row.ToFunction = null; row.FromUsage = CablePinUsage.Pending; row.ToUsage = CablePinUsage.Pending;
+        row.AdditionalEnds.Clear();
+        foreach (var cell in unbound) CableManufacturingCells.Set(draft, row, cell.PortId, cell.Cell);
+        for (var i = 0; i < cells.Length; i++) CableManufacturingCells.Set(draft, row, ports[i]!.PortId, cells[i]);
+    }
+
     public static IOrderedEnumerable<CableManufacturingRow> SortRows(CableManufacturingDraft draft, bool from = true, bool descending = false)
+        => SortRows(draft, from ? draft.FromSourcePortId : draft.ToSourcePortId, descending);
+
+    public static IOrderedEnumerable<CableManufacturingRow> SortRows(CableManufacturingDraft draft, string? portId, bool descending = false)
     {
         var pins = draft.Ends.SelectMany(p => p.Pins.Select(pin => (pin.PinId, Port: p.Name, pin.PinNumber)))
             .ToDictionary(p => p.PinId, StringComparer.Ordinal);
-        string? Id(CableManufacturingRow row) => from ? row.FromSourcePinId : row.ToSourcePinId;
+        string? Id(CableManufacturingRow row) => portId is null ? row.FromSourcePinId ?? row.ToSourcePinId : CableManufacturingCells.Get(draft, row, portId).SourcePinId;
         var comparer = descending ? Comparer<string>.Create((a, b) => DrawingContactDisplayOrder.NumberComparer.Compare(b, a)) :
             DrawingContactDisplayOrder.NumberComparer;
         return draft.Rows.OrderBy(row => Id(row) is not { } id || !pins.ContainsKey(id))
@@ -110,8 +145,9 @@ public sealed class CableManufacturingEditorService
             var pin = new ComponentPin { PinId = sourcePortId + ".pin-" + Guid.NewGuid().ToString("N"),
                 PinNumber = number.ToString(CultureInfo.InvariantCulture) };
             port.Pins.Add(pin);
-            draft.Rows.Add(sourcePortId == draft.ToSourcePortId ? new() { ToSourcePinId = pin.PinId } : new() { FromSourcePinId = pin.PinId });
+            AddPinRow(draft, sourcePortId, pin.PinId);
         }
+        CableManufacturingCells.EnsureColumns(draft);
         if (port.Connector is not null) port.Connector.PinCount = count;
     }
 
@@ -123,7 +159,10 @@ public sealed class CableManufacturingEditorService
         var port = new ComponentPort { PortId = id, Name = "P" + index,
             Pins = [new() { PinId = id + ".1", PinNumber = "1" }] };
         draft.Ends.Add(port);
-        draft.Rows.Add(new() { FromSourcePinId = port.Pins[0].PinId });
+        if (draft.FromSourcePortId is null) draft.FromSourcePortId = port.PortId;
+        else if (draft.ToSourcePortId is null) draft.ToSourcePortId = port.PortId;
+        AddPinRow(draft, port.PortId, port.Pins[0].PinId);
+        CableManufacturingCells.EnsureColumns(draft);
         draft.ConfirmMapping = false;
         return port;
     }
@@ -135,10 +174,9 @@ public sealed class CableManufacturingEditorService
         var port = draft.Ends.Single(p => p.PortId == sourcePortId);
         RemovePinReferences(draft, port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal), boundPins, confirmRemoval);
         draft.Ends.Remove(port);
-        if (draft.FromSourcePortId == sourcePortId)
-            draft.FromSourcePortId = draft.Ends.FirstOrDefault(p => p.PortId != draft.ToSourcePortId)?.PortId ?? draft.Ends[0].PortId;
-        if (draft.ToSourcePortId == sourcePortId || draft.ToSourcePortId == draft.FromSourcePortId)
-            draft.ToSourcePortId = draft.Ends.FirstOrDefault(p => p.PortId != draft.FromSourcePortId)?.PortId;
+        foreach (var row in draft.Rows) row.AdditionalEnds.Remove(sourcePortId);
+        if (draft.FromSourcePortId == sourcePortId) draft.FromSourcePortId = null;
+        if (draft.ToSourcePortId == sourcePortId) draft.ToSourcePortId = null;
         draft.ConfirmMapping = false;
     }
 
@@ -147,7 +185,9 @@ public sealed class CableManufacturingEditorService
         draft.Rows.Any(r => r.FromSourcePinId is { } f && pins.Contains(f) &&
             (r.ToSourcePinId is not null || r.FromUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.FromFunction) || !string.IsNullOrWhiteSpace(r.ToFunction)) ||
             r.ToSourcePinId is { } t && pins.Contains(t) &&
-            (r.FromSourcePinId is not null || r.ToUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.ToFunction) || !string.IsNullOrWhiteSpace(r.FromFunction)));
+            (r.FromSourcePinId is not null || r.ToUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.ToFunction) || !string.IsNullOrWhiteSpace(r.FromFunction)) ||
+            CableManufacturingCells.All(r).Any(c => c.SourcePinId is { } id && pins.Contains(id) &&
+                (CableManufacturingCells.All(r).Count(v => v.SourcePinId is not null) > 1 || c.Usage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(c.Function))));
 
     private static void RemovePinReferences(CableManufacturingDraft draft, IReadOnlySet<string> removed,
         IReadOnlySet<string>? boundPins, bool confirmRemoval)
@@ -162,8 +202,10 @@ public sealed class CableManufacturingEditorService
             { row.FromSourcePinId = null; row.FromFunction = null; row.FromUsage = CablePinUsage.Pending; affected = true; }
             if (row.ToSourcePinId is { } to && removed.Contains(to))
             { row.ToSourcePinId = null; row.ToFunction = null; row.ToUsage = CablePinUsage.Pending; affected = true; }
+            foreach (var cell in row.AdditionalEnds.Values.Where(c => c.SourcePinId is { } id && removed.Contains(id)))
+            { cell.SourcePinId = null; cell.Function = null; cell.Usage = CablePinUsage.Pending; affected = true; }
             if (affected && row.FromSourcePinId is null && row.ToSourcePinId is null &&
-                string.IsNullOrWhiteSpace(row.FromFunction) && string.IsNullOrWhiteSpace(row.ToFunction)) draft.Rows.Remove(row);
+                CableManufacturingCells.All(row).All(c => c.SourcePinId is null && string.IsNullOrWhiteSpace(c.Function))) draft.Rows.Remove(row);
         }
         foreach (var id in removed.Except(draft.ExplicitlyRemovedPinIds, StringComparer.Ordinal)) draft.ExplicitlyRemovedPinIds.Add(id);
     }
@@ -177,7 +219,7 @@ public sealed class CableManufacturingEditorService
         if (!allowInventoryChanges && source.Pins.Count != port.Pins.Count)
             throw new InvalidOperationException("變更 Pin 數需建立新模板修訂，不能替換已放入線材的接點。");
         var ids = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
-        if (boundPins?.Overlaps(ids) == true || port.Pins.Any(p => !string.IsNullOrWhiteSpace(p.Function)) ||
+        if (HasRemovalImpact(draft, ids, boundPins) || port.Pins.Any(p => !string.IsNullOrWhiteSpace(p.Function)) ||
             draft.Rows.Any(r => r.FromSourcePinId is { } f && ids.Contains(f) &&
                 (r.ToSourcePinId is not null || r.FromUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.FromFunction)) ||
                 r.ToSourcePinId is { } t && ids.Contains(t) &&
@@ -211,8 +253,12 @@ public sealed class CableManufacturingEditorService
         var usages = new Dictionary<string, CablePinUsage>(StringComparer.Ordinal);
         foreach (var row in draft.Rows)
         {
-            foreach (var (id, function, usage) in new[] { (row.FromSourcePinId, row.FromFunction, row.FromUsage), (row.ToSourcePinId, row.ToFunction, row.ToUsage) })
+            foreach (var (portId, cell) in row.AdditionalEnds)
+                if (draft.Ends.SingleOrDefault(p => p.PortId == portId) is not { } port || portId == draft.FromSourcePortId || portId == draft.ToSourcePortId ||
+                    cell.SourcePinId is { } pinId && !port.Pins.Any(p => p.PinId == pinId)) errors.Add("Table cell must belong to its exact Port.");
+            foreach (var cell in CableManufacturingCells.All(row))
             {
+                var (id, function, usage) = (cell.SourcePinId, cell.Function, cell.Usage);
                 if (!Enum.IsDefined(usage)) { errors.Add("Unknown Pin usage."); continue; }
                 if (id is null) { if (usage != CablePinUsage.Pending) errors.Add("NC/unused must identify an exact Pin."); continue; }
                 if (!pins.Contains(id)) { errors.Add("Table refers to a missing Pin."); continue; }
@@ -225,21 +271,25 @@ public sealed class CableManufacturingEditorService
                 if (usages.TryGetValue(id, out var previousUsage) && previousUsage != usage) errors.Add("One Pin has conflicting usage declarations.");
                 usages[id] = usage;
             }
-            if (row.FromSourcePinId is not { } from || row.ToSourcePinId is not { } to) continue;
-            if (from == to) errors.Add("Mapping requires two distinct Pins.");
-            if (row.FromUsage != CablePinUsage.Pending || row.ToUsage != CablePinUsage.Pending) errors.Add("NC/unused Pins cannot have a mapping pair.");
-            var key = string.CompareOrdinal(from, to) < 0 ? (from, to) : (to, from);
-            if (!pairs.Add(key)) errors.Add("Duplicate Pin mapping pair.");
+            var mappedCells = CableManufacturingCells.All(row).Where(c => c.SourcePinId is not null).ToArray();
+            if (mappedCells.Length > 1 && mappedCells.Any(c => c.Usage != CablePinUsage.Pending)) errors.Add("NC/unused Pins cannot have a mapping pair.");
+            foreach (var pair in CableManufacturingCells.Pairs(row))
+            {
+                var (from, to) = (pair.FromSourcePinId, pair.ToSourcePinId);
+                if (from == to) errors.Add("Mapping requires two distinct Pins.");
+                var key = string.CompareOrdinal(from, to) < 0 ? (from, to) : (to, from);
+                if (!pairs.Add(key)) errors.Add("Duplicate Pin mapping pair.");
+            }
         }
         if (draft.ConfirmMapping && (string.IsNullOrWhiteSpace(draft.MappingRevision) || string.IsNullOrWhiteSpace(draft.MappingEvidence)))
             errors.Add("Mapping confirmation requires a revision and source evidence.");
         if (draft.ConfirmMapping)
         {
-            var mapped = draft.Rows.Where(r => r.FromSourcePinId is not null && r.ToSourcePinId is not null)
-                .SelectMany(r => new[] { r.FromSourcePinId!, r.ToSourcePinId! }).ToHashSet(StringComparer.Ordinal);
+            var mapped = draft.Rows.SelectMany(CableManufacturingCells.Pairs)
+                .SelectMany(p => new[] { p.FromSourcePinId, p.ToSourcePinId }).ToHashSet(StringComparer.Ordinal);
             if (pins.Any(p => !mapped.Contains(p) && usages.GetValueOrDefault(p) == CablePinUsage.Pending))
                 errors.Add("Unmapped Pins need explicit NC/unused confirmation or remain a draft.");
-            if (draft.Rows.Any(r => r.FromSourcePinId is null && r.ToSourcePinId is null))
+            if (draft.Rows.Any(r => CableManufacturingCells.All(r).All(c => c.SourcePinId is null)))
                 errors.Add("Unbound table rows remain unfinished.");
         }
         return errors.Distinct(StringComparer.Ordinal).ToArray();
@@ -260,22 +310,23 @@ public sealed class CableManufacturingEditorService
         var functions = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (var row in draft.Rows)
         {
-            foreach (var (id, function, declaration) in new[] { (row.FromSourcePinId, row.FromFunction, row.FromUsage), (row.ToSourcePinId, row.ToFunction, row.ToUsage) })
+            foreach (var cell in CableManufacturingCells.All(row))
+            {
+                var (id, function, declaration) = (cell.SourcePinId, cell.Function, cell.Usage);
                 if (id is not null)
                 {
                     var value = Normalize(function);
                     if (value is not null || !functions.ContainsKey(id)) functions[id] = value;
                     usage[id] = declaration;
                 }
-            if (row.FromSourcePinId is not null && row.ToSourcePinId is not null)
-                mapping.Add(new(row.FromSourcePinId, row.ToSourcePinId));
-            else incomplete.Add(new() { FromSourcePinId = row.FromSourcePinId, ToSourcePinId = row.ToSourcePinId,
-                FromFunction = row.FromSourcePinId is null ? Normalize(row.FromFunction) : null,
-                ToFunction = row.ToSourcePinId is null ? Normalize(row.ToFunction) : null });
+            }
+            var rowPairs = CableManufacturingCells.Pairs(row).ToArray();
+            mapping.AddRange(rowPairs);
+            if (rowPairs.Length == 0) incomplete.Add(Clone(row));
         }
         foreach (var (id, function) in functions) pins[id].Function = function;
         var definition = new CableManufacturingDefinition { FromSourcePortId = draft.FromSourcePortId,
-            ToSourcePortId = draft.ToSourcePortId, IncompleteRows = incomplete,
+            ToSourcePortId = draft.ToSourcePortId, IncompleteRows = incomplete, Rows = Clone(draft.Rows),
             PinUsage = usage.Where(u => u.Value != CablePinUsage.Pending).Select(u => new CablePinUsageDeclaration(u.Key, u.Value)).ToList() };
         var changed = JsonSerializer.Serialize(Prepare(template)) != JsonSerializer.Serialize(draft);
         var next = template with { Ports = ports, Mapping = mapping, Manufacturing = definition,
@@ -293,10 +344,21 @@ public sealed class CableManufacturingEditorService
         var mapped = template.Mapping.SelectMany(m => new[] { m.FromSourcePinId, m.ToSourcePinId }).ToHashSet(StringComparer.Ordinal);
         if (metadata.PinUsage.Any(u => !pins.Contains(u.SourcePinId) || !usages.Add(u.SourcePinId) || !Enum.IsDefined(u.Usage) ||
                 u.Usage != CablePinUsage.Pending && mapped.Contains(u.SourcePinId)) ||
-            metadata.IncompleteRows.Any(r => r.FromSourcePinId is not null && r.ToSourcePinId is not null ||
-                r.FromSourcePinId is not null && !pins.Contains(r.FromSourcePinId) || r.ToSourcePinId is not null && !pins.Contains(r.ToSourcePinId)) ||
+            metadata.IncompleteRows.Any(r => CableManufacturingCells.Pairs(r).Any() ||
+                CableManufacturingCells.All(r).Any(c => c.SourcePinId is { } id && !pins.Contains(id))) ||
             new[] { metadata.FromSourcePortId, metadata.ToSourcePortId }.Any(id => id is not null && !template.Ports.Any(p => p.PortId == id)))
             throw new InvalidOperationException("Manufacturing draft has conflicting or missing exact Pin/Port identities.");
+        if (metadata.Rows is not null)
+        {
+            var draft = new CableManufacturingDraft { Ends = template.Ports, FromSourcePortId = metadata.FromSourcePortId,
+                ToSourcePortId = metadata.ToSourcePortId, Rows = metadata.Rows };
+            var errors = new CableManufacturingEditorService().Validate(draft);
+            string Key(CablePinMapping pair) => string.CompareOrdinal(pair.FromSourcePinId, pair.ToSourcePinId) < 0
+                ? pair.FromSourcePinId + "\0" + pair.ToSourcePinId : pair.ToSourcePinId + "\0" + pair.FromSourcePinId;
+            if (errors.Count > 0 || !draft.Rows.SelectMany(CableManufacturingCells.Pairs).Select(Key).ToHashSet(StringComparer.Ordinal)
+                .SetEquals(template.Mapping.Select(Key)))
+                throw new InvalidOperationException("Manufacturing table and exact Pin mapping disagree.");
+        }
     }
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

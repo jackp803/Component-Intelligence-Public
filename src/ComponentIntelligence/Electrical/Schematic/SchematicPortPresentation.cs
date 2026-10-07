@@ -54,6 +54,8 @@ public static class SchematicPortPresentation
     public static (SchematicPoint Position, string Side) GroupContact(SchematicDocument doc,
         SchematicSymbol symbol, SchematicSymbolOwner owner, ComponentPort port, SchematicGridBounds body)
     {
+        if (symbol.CadPortBindings.SingleOrDefault(b => b.PortId == port.PortId) is { } cad)
+            return (CadPortPoint(symbol, cad), RotatedSide(cad.Direction, symbol.Rotation));
         var side = PortSide(symbol, port);
         var sameSide = owner.Ports.Where(p => IsRepresented(symbol, p) && (IsPortCollapsed(symbol, p) ||
             HasPortRoute(doc, symbol, p.PortId)) &&
@@ -171,9 +173,23 @@ public static class SchematicPortPresentation
     {
         var pinIds = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
         var direction = symbol.PortPlacements.FirstOrDefault(p => p.PortId == port.PortId)?.Side ??
+            symbol.CadPortBindings.FirstOrDefault(p => p.PortId == port.PortId)?.Direction ??
             symbol.Anchors.FirstOrDefault(a => pinIds.Contains(a.EndpointId))?.Direction ??
             (port.PhysicalLocation?.Side is "Left" or "Right" or "Top" or "Bottom" ? port.PhysicalLocation.Side : "Right");
         return RotatedSide(direction, symbol.Rotation);
+    }
+
+    public static SchematicPoint CadPortPoint(SchematicSymbol symbol, SchematicCadPortBinding binding)
+    {
+        var p = binding.Position;
+        var local = symbol.Rotation switch
+        {
+            90 => new SchematicPoint(symbol.Height - p.Y, p.X),
+            180 => new SchematicPoint(symbol.Width - p.X, symbol.Height - p.Y),
+            270 => new SchematicPoint(p.Y, symbol.Width - p.X),
+            _ => p
+        };
+        return new(symbol.Position.X + local.X, symbol.Position.Y + local.Y);
     }
     public static bool IsCollapsedPin(SchematicDocument doc, SchematicSymbol symbol,
         SchematicSymbolOwner owner, SchematicAnchor anchor) =>

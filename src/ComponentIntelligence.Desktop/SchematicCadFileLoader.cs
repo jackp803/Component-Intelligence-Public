@@ -48,9 +48,8 @@ public sealed class SchematicCadFileLoader
             dxf = Path.Combine(run, "display.dxf");
             var script = Path.Combine(run, "convert.scr");
             // All paths are generated inside a new staging directory; no source drawing is opened.
-            var escaped = dxf.Replace('\\', '/').Replace("\"", "\\\"");
             await File.WriteAllTextAsync(script,
-                $"(setvar \"FILEDIA\" 0)\n(setvar \"CMDECHO\" 0)\n(command \"_.DXFOUT\" \"{escaped}\" \"_Version\" \"2013\" \"16\")\n_.QUIT\n_N\n", cancellationToken);
+                "(setvar \"FILEDIA\" 0)\n(setvar \"CMDECHO\" 0)\n(command \"_.DXFOUT\" \"display.dxf\" \"_Version\" \"2013\" \"16\")\n_.QUIT\n_N\n", cancellationToken);
             var start = new ProcessStartInfo(executable) { WorkingDirectory = run, UseShellExecute = false, CreateNoWindow = true,
                 RedirectStandardOutput = true, RedirectStandardError = true };
             start.ArgumentList.Add("/i"); start.ArgumentList.Add(input); start.ArgumentList.Add("/s"); start.ArgumentList.Add(script);

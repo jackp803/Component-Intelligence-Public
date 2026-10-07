@@ -99,11 +99,15 @@ public sealed record SchematicSymbol
     public string ArchiveRepresentationId { get; init; } = "default";
     public SchematicCadAsset? Geometry { get; init; }
     public List<SchematicAnchor> Anchors { get; init; } = [];
+    public List<SchematicCadPortBinding> CadPortBindings { get; init; } = [];
     public List<string> CollapsedPortIds { get; init; } = [];
     public List<SchematicPortPlacement> PortPlacements { get; init; } = [];
     public int SectionIndex { get; init; } = 1;
     public int SectionCount { get; init; } = 1;
 }
+
+public sealed record SchematicCadPortBinding(string PortId, string SourcePortId, string CadContactId,
+    SchematicPoint Position, string Direction);
 
 public sealed record SchematicPortPlacement
 {

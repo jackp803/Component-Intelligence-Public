@@ -100,8 +100,11 @@ public sealed partial class SchematicCableDetailService
         if (string.IsNullOrWhiteSpace(cable.ReferenceDesignator)) diagnostics.Add("CABLE_REFERENCE_UNKNOWN");
         if (string.IsNullOrWhiteSpace(cable.Specification)) diagnostics.Add("CABLE_SPECIFICATION_UNKNOWN");
         if (cable.CableConstructionType == CableConstructionType.Unknown) diagnostics.Add("CABLE_CONSTRUCTION_UNKNOWN");
-        if (draft.Rows.Any(r => r.FromSourcePinId is null && r.FromUsage == CablePinUsage.Pending ||
-            r.ToSourcePinId is null && r.ToUsage == CablePinUsage.Pending)) diagnostics.Add("CABLE_TABLE_INCOMPLETE");
+        var mapped = draft.Rows.SelectMany(CableManufacturingCells.Pairs).SelectMany(p => new[] { p.FromSourcePinId, p.ToSourcePinId }).ToHashSet(StringComparer.Ordinal);
+        var declared = draft.Rows.SelectMany(CableManufacturingCells.All).Where(c => c.SourcePinId is not null && c.Usage != CablePinUsage.Pending)
+            .Select(c => c.SourcePinId!).ToHashSet(StringComparer.Ordinal);
+        if (pins.Keys.Any(id => !mapped.Contains(id) && !declared.Contains(id)) ||
+            draft.Rows.Any(r => CableManufacturingCells.All(r).All(c => c.SourcePinId is null))) diagnostics.Add("CABLE_TABLE_INCOMPLETE");
         if (archived.ManufacturingGeometry is null) diagnostics.Add("CABLE_MANUFACTURING_CAD_MISSING");
         else diagnostics.AddRange(archived.ManufacturingGeometry.Diagnostics);
         var primitives = new List<SchematicCadPrimitive>();
@@ -124,7 +127,15 @@ public sealed partial class SchematicCableDetailService
                 Wrapped(end.Name + ": " + (end.Connector is { } c
                     ? $"{c.Family} {c.Coding} {end.Pins.Count}P {c.Gender}" : "接頭待確認"));
             if (diagnostics.Count > 0) Wrapped("草稿／未完成：" + string.Join(" / ", diagnostics));
-            var columns = new[] { left, left + binding.TableWidth * .35, left + binding.TableWidth * .5, left + binding.TableWidth * .65, right };
+            var fields = draft.Ends.SelectMany(port => port.PortId == draft.FromSourcePortId
+                ? new[] { (port.PortId, Header: port.Name + " FUNCTION", Function: true), (port.PortId, Header: port.Name + " PIN", Function: false) }
+                : new[] { (port.PortId, Header: port.Name + " PIN", Function: false), (port.PortId, Header: port.Name + " FUNCTION", Function: true) }).ToArray();
+            var weight = fields.Sum(f => f.Function ? 7d / 3 : 1);
+            var minimumWidth = (4 + 2.7) * unit * weight;
+            if (binding.TableWidth + .001 < minimumWidth)
+                throw new InvalidOperationException($"線材接法表太窄；目前 Port 數與文字比例需要至少 {Math.Ceiling(minimumWidth)} mm 寬，請加寬表格或調小文字比例。");
+            var columns = new List<double> { left };
+            foreach (var field in fields) columns.Add(columns[^1] + binding.TableWidth * (field.Function ? 7d / 3 : 1) / weight);
             var top = y;
             Line(left, y, right, y);
             void Row(string[] cells)
@@ -133,15 +144,16 @@ public sealed partial class SchematicCableDetailService
                 var height = (lines.Max(v => v.Length) * 5 + 2) * unit;
                 if (y + height > page.Height - page.Margin - 18)
                     throw new InvalidOperationException("線材明細表超出圖面；請增加紙張或調整位置，不能省略接法列。");
-                for (var col = 0; col < 4; col++)
+                for (var col = 0; col < cells.Length; col++)
                     for (var row = 0; row < lines[col].Length; row++) Text(lines[col][row], columns[col] + 2 * unit, y + unit + row * 5 * unit);
                 y += height; Line(left, y, right, y);
             }
-            Row(["P1 FUNCTION", "P1 PIN", "P2 PIN", "P2 FUNCTION"]);
+            Row(fields.Select(f => f.Header).ToArray());
             string Pin(string? id) => id is not null && pins.TryGetValue(id, out var p) ? p.port.Name + "/" + p.pin.PinNumber : "待填";
             string Function(string? value, CablePinUsage usage) => usage switch { CablePinUsage.Nc => "NC", CablePinUsage.Unused => "未使用", _ => value ?? "待確認" };
             foreach (var row in CableManufacturingEditorService.SortRows(draft))
-                Row([Function(row.FromFunction, row.FromUsage), Pin(row.FromSourcePinId), Pin(row.ToSourcePinId), Function(row.ToFunction, row.ToUsage)]);
+                Row(fields.Select(f => { var cell = CableManufacturingCells.Get(draft, row, f.PortId);
+                    return f.Function ? Function(cell.Function, cell.Usage) : Pin(cell.SourcePinId); }).ToArray());
             foreach (var x in columns) Line(x, top, x, y);
             bounds.Add(SchematicCableDetailPart.Table, new(left, binding.TablePosition.Y, binding.TableWidth, y - binding.TablePosition.Y));
             if (binding.SketchVisible && y > binding.SketchPosition.Y && left < binding.SketchPosition.X + binding.SketchWidth && right > binding.SketchPosition.X &&

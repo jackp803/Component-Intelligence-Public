@@ -18,6 +18,7 @@ public sealed class CableArchiveEditorDialog : Window
     private sealed class ContactRow
     {
         public required string PinId { get; init; }
+        public string Kind { get; init; } = "Pin";
         public required string Label { get; set; }
         public string? Contact { get; set; }
     }
@@ -44,6 +45,7 @@ public sealed class CableArchiveEditorDialog : Window
     private readonly ObservableCollection<ContactRow> _contacts = [];
     private readonly ObservableCollection<TextRow> _textBindings;
     private readonly DataGrid _contactGrid = new() { AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false, MinColumnWidth = 180 };
+    private readonly ComboBox _contactKind = new() { ItemsSource = new[] { "Port", "Pin", "全部" }, SelectedIndex = 0, Width = 110 };
     private readonly DataGrid _textGrid = new() { AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false, MinColumnWidth = 180 };
     private readonly CheckBox _sketchOnly = new() { Content = "製作 CAD 已只保留示意圖，不含舊接法表" };
     private readonly DataGridComboBoxColumn _contactColumn;
@@ -77,11 +79,15 @@ public sealed class CableArchiveEditorDialog : Window
         _table = new(new CableManufacturingEditorService().Prepare(_source), CableConnectorCatalog.Choices(catalog),
             boundPins: () => {
                 if (!Commit(_contactGrid)) throw new InvalidOperationException("請先完成接點綁定欄位編輯。");
-                return _contacts.Where(c => !string.IsNullOrWhiteSpace(c.Contact)).Select(c => c.PinId).ToHashSet(StringComparer.Ordinal);
+                var bound = _contacts.Where(c => !string.IsNullOrWhiteSpace(c.Contact)).Select(c => c.PinId).ToHashSet(StringComparer.Ordinal);
+                foreach (var port in (_table?.Draft.Ends ?? _source.Ports).Where(p => bound.Contains(p.PortId)))
+                    bound.UnionWith(port.Pins.Select(p => p.PinId));
+                return bound;
             });
         _table.PinsRemoved += pins =>
         {
-            foreach (var contact in _contacts.Where(c => pins.Contains(c.PinId)).ToArray()) _contacts.Remove(contact);
+            var current = _table.Draft.Ends.SelectMany(p => p.Pins.Select(pin => pin.PinId).Prepend(p.PortId)).ToHashSet(StringComparer.Ordinal);
+            foreach (var contact in _contacts.Where(c => pins.Contains(c.PinId) || !current.Contains(c.PinId)).ToArray()) _contacts.Remove(contact);
             _contactGrid.Items.Refresh(); _confirmed.IsChecked = false;
         };
         Title = existing is null ? "新增自製線材模板" : _updateCandidate ? "編輯線材候選草稿" : "線材模板：建立新版本";
@@ -114,7 +120,7 @@ public sealed class CableArchiveEditorDialog : Window
         tabs.Items.Add(new TabItem { Header = "製作示意 CAD", Content = _sketch });
         tabs.Items.Add(new TabItem { Header = "接頭／接法表", Content = _table });
         _contactGrid.ItemsSource = _contacts;
-        _contactGrid.Columns.Add(new DataGridTextColumn { Header = "來源 Pin", Binding = new Binding("Label"), IsReadOnly = true, Width = new(1, DataGridLengthUnitType.Star) });
+        _contactGrid.Columns.Add(new DataGridTextColumn { Header = "來源 Port／Pin", Binding = new Binding("Label"), IsReadOnly = true, Width = new(1, DataGridLengthUnitType.Star) });
         _contactColumn = new() { Header = "CAD 接點", SelectedValuePath = "Tag", DisplayMemberPath = "Tag",
             SelectedValueBinding = new Binding("Contact") { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = 300 };
         _contactGrid.Columns.Add(_contactColumn);
@@ -123,7 +129,10 @@ public sealed class CableArchiveEditorDialog : Window
             if (!Commit(_contactGrid)) return;
             if (_contactGrid.SelectedItem is ContactRow row) { row.Contact = null; _contactGrid.Items.Refresh(); }
         });
-        DockPanel.SetDock(clearContact, Dock.Top); contactPanel.Children.Add(clearContact); contactPanel.Children.Add(_contactGrid);
+        var contactToolbar = new StackPanel { Orientation = Orientation.Horizontal };
+        contactToolbar.Children.Add(_contactKind); contactToolbar.Children.Add(clearContact);
+        _contactKind.SelectionChanged += (_, _) => { if (Commit(_contactGrid)) FilterContacts(); };
+        DockPanel.SetDock(contactToolbar, Dock.Top); contactPanel.Children.Add(contactToolbar); contactPanel.Children.Add(_contactGrid);
         tabs.Items.Add(new TabItem { Header = "CAD 接點綁定", Content = contactPanel });
         _textGrid.ItemsSource = _textBindings;
         _tagColumn = new() { Header = "CAD 屬性", SelectedValueBinding = new Binding("AttributeTag"), Width = new(1, DataGridLengthUnitType.Star) };
@@ -150,7 +159,8 @@ public sealed class CableArchiveEditorDialog : Window
         if (existing is not null)
         {
             foreach (var binding in existing.ContactBindings)
-                _contacts.Add(new() { PinId = binding.EngineeringEndpointId, Label = binding.EngineeringEndpointId, Contact = binding.ConnectionPointId });
+                _contacts.Add(new() { PinId = binding.EngineeringEndpointId, Label = binding.EngineeringEndpointId, Contact = binding.ConnectionPointId,
+                    Kind = _source.Ports.Any(p => p.PortId == binding.EngineeringEndpointId) ? "Port" : "Pin" });
             if (!existing.WiringAssetPending)
                 _wiring.Restore(repository.ResolveArchivePath(existing.AssetPath), existing.WiringGeometry, existing.WiringSelection, existing.MillimetresPerUnit);
             if (existing.ManufacturingAsset is { } sketch)
@@ -164,17 +174,25 @@ public sealed class CableArchiveEditorDialog : Window
     private void RefreshBindings()
     {
         if (!_table.Commit() || !Commit(_contactGrid) || !Commit(_textGrid)) return;
-        var pins = _table.Draft.Ends.SelectMany(p => p.Pins.Select(pin => (Id: pin.PinId, Label: $"{p.Name} / {pin.PinNumber} {pin.Function}"))).ToArray();
+        var pins = _table.Draft.Ends.SelectMany(p => new[] { (Id: p.PortId, Kind: "Port", Label: $"Port: {p.Name} ({p.Pins.Count} Pin)" ) }
+            .Concat(p.Pins.Select(pin => (Id: pin.PinId, Kind: "Pin", Label: $"Pin: {p.Name} / {pin.PinNumber} {pin.Function}")))).ToArray();
         foreach (var row in _contacts.Where(r => pins.All(p => p.Id != r.PinId) && r.Contact is null).ToArray()) _contacts.Remove(row);
         foreach (var pin in pins)
         {
             if (_contacts.SingleOrDefault(r => r.PinId == pin.Id) is { } row) row.Label = pin.Label;
-            else _contacts.Add(new() { PinId = pin.Id, Label = pin.Label });
+            else _contacts.Add(new() { PinId = pin.Id, Kind = pin.Kind, Label = pin.Label });
         }
-        _contactGrid.Items.Refresh();
+        FilterContacts();
         _contactColumn.ItemsSource = _wiring.Geometry?.ConnectionPoints;
         _tagColumn.ItemsSource = new[] { _wiring.Geometry, _sketch.Geometry }.Where(a => a is not null)
             .SelectMany(a => a!.Primitives).Select(p => p.AttributeTag).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToArray();
+    }
+
+    private void FilterContacts()
+    {
+        var kind = _contactKind.SelectedItem as string;
+        CollectionViewSource.GetDefaultView(_contacts).Filter = item => kind == "全部" || item is ContactRow row && row.Kind == kind;
+        _contactGrid.Items.Refresh();
     }
 
     private async Task SaveAsync()

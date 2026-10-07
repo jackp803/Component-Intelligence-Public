@@ -848,6 +848,17 @@ public sealed partial class SchematicAuthoringService
                 !string.Equals(symbol.Geometry.SourceSha256, cableBinding.Template.AssetSha256, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException("Cable representation requires its pinned CAD geometry, not a generic box.");
             var pins = owner.Ports.SelectMany(p => p.Pins).Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
+            var cadEndpoints = new HashSet<string>(StringComparer.Ordinal);
+            var cadTags = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var binding in symbol.CadPortBindings)
+            {
+                var port = owner.Ports.SingleOrDefault(p => p.PortId == binding.PortId);
+                var matches = symbol.Geometry?.ConnectionPoints.Where(c => c.Tag == binding.CadContactId).ToArray() ?? [];
+                if (port is null || port.SourcePortId != binding.SourcePortId || !cadEndpoints.Add(binding.PortId) || !cadTags.Add(binding.CadContactId) ||
+                    matches.Length != 1 || matches[0].Position != binding.Position || binding.Direction is not ("Left" or "Right" or "Top" or "Bottom") ||
+                    !SchematicPortPresentation.IsRepresented(symbol, port))
+                    throw new InvalidOperationException("CAD Port binding must retain exact source Port identity and geometry position.");
+            }
             if (symbol.Anchors.Select(a => a.EndpointId).Distinct(StringComparer.Ordinal).Count() != symbol.Anchors.Count)
                 throw new InvalidOperationException("Duplicate pin binding in representation.");
             foreach (var anchor in symbol.Anchors)
@@ -856,7 +867,7 @@ public sealed partial class SchematicAuthoringService
                 if (anchor.CadContactId is { } cadId)
                 {
                     var contacts = symbol.Geometry?.ConnectionPoints.Where(c => c.Tag == cadId).ToArray() ?? [];
-                    if (contacts.Length != 1 || contacts[0].Position != anchor.Position)
+                    if (contacts.Length != 1 || contacts[0].Position != anchor.Position || !cadTags.Add(cadId))
                         throw new InvalidOperationException("CAD contact binding must retain its exact geometry position.");
                 }
                 if (!pins.Contains(anchor.EndpointId)) throw new InvalidOperationException("Anchor must bind an exact existing component PinId.");

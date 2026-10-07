@@ -12,6 +12,7 @@ public sealed class SymbolArchiveRepository
     public const string CableTemplateSchemaVersion = "ci-symbol-archive.v3";
     public const string SchematicLayoutSchemaVersion = "ci-symbol-archive.v4";
     public const string CableManufacturingSchemaVersion = "ci-symbol-archive.v5";
+    public const string CablePortTableSchemaVersion = "ci-symbol-archive.v6";
     public const string FileName = "SymbolArchive.json";
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -90,7 +91,7 @@ public sealed class SymbolArchiveRepository
     {
         if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion &&
             document.SchemaVersion != CableTemplateSchemaVersion && document.SchemaVersion != SchematicLayoutSchemaVersion &&
-            document.SchemaVersion != CableManufacturingSchemaVersion)
+            document.SchemaVersion != CableManufacturingSchemaVersion && document.SchemaVersion != CablePortTableSchemaVersion)
             throw new InvalidDataException($"Unsupported Symbol Archive schema '{document.SchemaVersion}'.");
 
         var bindingKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -160,13 +161,13 @@ public sealed class SymbolArchiveRepository
                 throw new InvalidDataException("Cable template requires valid units, status and construction classification.");
             if (entry.ConstructionType != Electrical.Domain.CableConstructionType.Unknown && string.IsNullOrWhiteSpace(entry.ConstructionEvidence))
                 throw new InvalidDataException("Cable construction classification requires explicit source evidence.");
-            var pins = entry.Template.Ports.SelectMany(p => p.Pins).Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
+            var pins = entry.Template.Ports.SelectMany(p => p.Pins.Select(pin => pin.PinId).Prepend(p.PortId)).ToHashSet(StringComparer.Ordinal);
             var bindingsByPin = new HashSet<string>(StringComparer.Ordinal);
             var contacts = new HashSet<string>(StringComparer.Ordinal);
             foreach (var binding in entry.ContactBindings)
                 if (!pins.Contains(binding.EngineeringEndpointId) || !bindingsByPin.Add(binding.EngineeringEndpointId) ||
                     string.IsNullOrWhiteSpace(binding.ConnectionPointId) || !contacts.Add(binding.ConnectionPointId))
-                    throw new InvalidDataException("Cable CAD binding must identify unique exact source pins and contacts.");
+                    throw new InvalidDataException("Cable CAD binding must identify unique exact source Ports/Pins and contacts.");
             var manufacturing = entry.ManufacturingAsset;
             if (manufacturing is not null)
             {
@@ -232,7 +233,10 @@ public sealed class SymbolArchiveRepository
         return document with
         {
             // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
-            SchemaVersion = document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null ||
+            SchemaVersion = document.SchemaVersion == CablePortTableSchemaVersion || cables.Any(c => c.Template.Manufacturing?.Rows is not null ||
+                c.ContactBindings.Any(b => c.Template.Ports.Any(p => p.PortId == b.EngineeringEndpointId)))
+                ? CablePortTableSchemaVersion :
+                document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null ||
                 c.WiringSelection is not null || c.WiringGeometry is not null || c.Template.Manufacturing is not null || c.WiringAssetPending)
                 ? CableManufacturingSchemaVersion :
                 document.SchemaVersion == SchematicLayoutSchemaVersion || layouts.Length > 0 ? SchematicLayoutSchemaVersion :

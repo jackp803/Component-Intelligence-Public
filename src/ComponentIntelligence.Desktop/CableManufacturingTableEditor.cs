@@ -30,7 +30,9 @@ public sealed class CableManufacturingTableEditor : UserControl
     private ComboBox _count = null!;
     private readonly TextBlock _error;
     private readonly bool _allowInventoryChanges;
-    private readonly Dictionary<bool, ComboBox> _usages = [];
+    private readonly Dictionary<string, ComboBox> _usages = [];
+    private readonly WrapPanel _usageToolbar = new();
+    private readonly Dictionary<DataGridColumn, string> _columnPorts = [];
     private readonly Func<IReadOnlySet<string>>? _boundPins;
     private readonly Func<string, bool> _confirmRemoval;
     private ComboBox _connectors = null!, _coding = null!, _gender = null!;
@@ -38,7 +40,8 @@ public sealed class CableManufacturingTableEditor : UserControl
     private bool _refreshing;
     private string _codingBaselineText = "";
     private bool _syncingUsage;
-    private bool _sortFrom = true, _sortDescending;
+    private string? _sortPortId;
+    private bool _sortDescending;
     private bool _pinSortActive = true;
     public CableManufacturingDraft Draft { get; }
     public event Action<IReadOnlySet<string>>? PinsRemoved;
@@ -66,39 +69,23 @@ public sealed class CableManufacturingTableEditor : UserControl
                 Connector = new() { ConnectorId = "family-" + f, Family = f! } }));
         _choices = choices.Concat(preserved).ToArray();
         var toolbar = new WrapPanel { Margin = new(0, 0, 0, 8) };
-        toolbar.Children.Add(Icon("\uE710", "新增接法列 (Ctrl+Insert)", (_, _) => { if (Commit()) _rows.Add(new()); }));
+        toolbar.Children.Add(Icon("\uE710", "新增接法列 (Ctrl+Insert)", (_, _) => AddRow()));
         toolbar.Children.Add(Icon("\uE74D", "移除接法列 (Ctrl+Delete)", (_, _) => RemoveRow()));
-        foreach (var (label, from) in new[] { ("P1 狀態", true), ("P2 狀態", false) })
-        {
-            toolbar.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new(12, 0, 6, 0) });
-            var usage = new ComboBox { ItemsSource = Enum.GetValues<CablePinUsage>(), Width = 95, SelectedItem = CablePinUsage.Pending };
-            _usages[from] = usage;
-            usage.SelectionChanged += (_, _) =>
-            {
-                if (_syncingUsage || _grid?.SelectedItem is not CableManufacturingRow row || usage.SelectedItem is not CablePinUsage value) return;
-                if (from) row.FromUsage = value; else row.ToUsage = value;
-                _grid.Items.Refresh(); RefreshStatus();
-            };
-            toolbar.Children.Add(usage);
-        }
+        toolbar.Children.Add(_usageToolbar);
         top.Children.Add(toolbar); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap, Margin = new(0, 8, 0, 0) };
         DockPanel.SetDock(_error, Dock.Bottom); root.Children.Add(_error);
         _grid = new() { ItemsSource = _rows, AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false,
             SelectionMode = DataGridSelectionMode.Single, MinHeight = 140, MinColumnWidth = 120 };
-        _grid.Columns.Add(TextColumn("P1 FUNCTION", "FromFunction"));
-        _grid.Columns.Add(PinColumn("P1 PIN", "FromSourcePinId"));
-        _grid.Columns.Add(PinColumn("P2 PIN", "ToSourcePinId"));
-        _grid.Columns.Add(TextColumn("P2 FUNCTION", "ToFunction"));
         _grid.CellEditEnding += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshStatus));
         _grid.SelectionChanged += (_, _) => SyncUsages();
         _grid.Sorting += (_, e) =>
         {
-            if (e.Column.SortMemberPath is not ("FromSourcePinId" or "ToSourcePinId")) { _pinSortActive = false; return; }
+            if (e.Column is not DataGridComboBoxColumn || !_columnPorts.TryGetValue(e.Column, out var portId)) { _pinSortActive = false; return; }
             e.Handled = true;
             if (!Commit()) return;
             _pinSortActive = true;
-            _sortFrom = e.Column.SortMemberPath == "FromSourcePinId";
+            _sortPortId = portId;
             _sortDescending = e.Column.SortDirection == ListSortDirection.Ascending;
             foreach (var column in _grid.Columns) column.SortDirection = null;
             e.Column.SortDirection = _sortDescending ? ListSortDirection.Descending : ListSortDirection.Ascending;
@@ -107,7 +94,7 @@ public sealed class CableManufacturingTableEditor : UserControl
         root.Children.Add(_grid); Content = root;
         PreviewKeyDown += (_, e) =>
         {
-            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Insert) { if (Commit()) _rows.Add(new()); e.Handled = true; }
+            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Insert) { AddRow(); e.Handled = true; }
             if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Delete) { RemoveRow(); e.Handled = true; }
             if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.Insert) { AddEnd(); e.Handled = true; }
             if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.Delete) { DeleteEnd(); e.Handled = true; }
@@ -115,7 +102,42 @@ public sealed class CableManufacturingTableEditor : UserControl
             if (Keyboard.Modifiers == ModifierKeys.None && e.Key == Key.Return && _count.IsKeyboardFocusWithin) { ApplyCount(); e.Handled = true; }
             if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Alt) && e.Key == Key.P) { EditPinLabels(); e.Handled = true; }
         };
-        BuildPortPanels(); RefreshPins(); RefreshStatus();
+        _sortPortId = Draft.FromSourcePortId ?? Draft.Ends.FirstOrDefault()?.PortId;
+        BuildPortPanels(); BuildColumns(); RefreshPins(); RefreshStatus();
+    }
+
+    private void AddRow()
+    {
+        if (!Commit()) return;
+        var row = new CableManufacturingRow();
+        foreach (var port in Draft.Ends.Where(p => p.PortId != Draft.FromSourcePortId && p.PortId != Draft.ToSourcePortId))
+            row.AdditionalEnds[port.PortId] = new();
+        _rows.Add(row);
+    }
+
+    private void BuildColumns()
+    {
+        CableManufacturingCells.EnsureColumns(Draft);
+        _grid.Columns.Clear(); _columnPorts.Clear(); _usages.Clear(); _usageToolbar.Children.Clear();
+        foreach (var port in Draft.Ends)
+        {
+            var pin = PinColumn(port.Name + " PIN", CableManufacturingCells.Path(Draft, port.PortId, "SourcePinId"));
+            var function = TextColumn(port.Name + " FUNCTION", CableManufacturingCells.Path(Draft, port.PortId, "Function"));
+            if (port.PortId == Draft.FromSourcePortId) { _grid.Columns.Add(function); _grid.Columns.Add(pin); }
+            else { _grid.Columns.Add(pin); _grid.Columns.Add(function); }
+            _columnPorts[pin] = port.PortId; _columnPorts[function] = port.PortId;
+            _usageToolbar.Children.Add(new TextBlock { Text = port.Name + " 狀態", VerticalAlignment = VerticalAlignment.Center, Margin = new(12, 0, 6, 0) });
+            var usage = new ComboBox { ItemsSource = Enum.GetValues<CablePinUsage>(), Width = 95, SelectedItem = CablePinUsage.Pending };
+            _usages[port.PortId] = usage;
+            usage.SelectionChanged += (_, _) =>
+            {
+                if (_syncingUsage || _grid.SelectedItem is not CableManufacturingRow row || usage.SelectedItem is not CablePinUsage value) return;
+                var cell = CableManufacturingCells.Get(Draft, row, port.PortId); cell.Usage = value;
+                CableManufacturingCells.Set(Draft, row, port.PortId, cell); _grid.Items.Refresh(); RefreshStatus();
+            };
+            _usageToolbar.Children.Add(usage);
+        }
+        SyncUsages();
     }
 
     private void SelectPanel(PortPanel panel)
@@ -231,10 +253,10 @@ public sealed class CableManufacturingTableEditor : UserControl
         try
         {
             var row = _grid.SelectedItem as CableManufacturingRow;
-            foreach (var (from, selector) in _usages)
+            foreach (var (portId, selector) in _usages)
             {
                 selector.IsEnabled = row is not null;
-                selector.SelectedItem = row is null ? CablePinUsage.Pending : from ? row.FromUsage : row.ToUsage;
+                selector.SelectedItem = row is null ? CablePinUsage.Pending : CableManufacturingCells.Get(Draft, row, portId).Usage;
             }
         }
         finally { _syncingUsage = false; }
@@ -301,7 +323,7 @@ public sealed class CableManufacturingTableEditor : UserControl
     {
         if (!_allowInventoryChanges || !Commit()) return;
         var port = _service.AddEnd(Draft);
-        _selectedEnd = port; BuildPortPanels(); ReloadRows(); RefreshPins(); RefreshStatus();
+        _selectedEnd = port; BuildPortPanels(); ReloadRows(); BuildColumns(); RefreshPins(); RefreshStatus();
     }
 
     private void DeleteEnd()
@@ -315,7 +337,7 @@ public sealed class CableManufacturingTableEditor : UserControl
             if (!ConfirmRemoval(port, ids, bound)) return;
             _service.RemoveEnd(Draft, port.PortId, bound, confirmRemoval: true);
             PinsRemoved?.Invoke(ids);
-            ReloadRows(); _selectedEnd = Draft.Ends[0]; BuildPortPanels(); RefreshPins(); RefreshStatus();
+            ReloadRows(); _selectedEnd = Draft.Ends[0]; BuildPortPanels(); BuildColumns(); RefreshPins(); RefreshStatus();
         }
         catch (Exception error) { _error.Text = error.Message; }
     }
@@ -323,7 +345,7 @@ public sealed class CableManufacturingTableEditor : UserControl
     private bool ConfirmRemoval(ComponentPort port, IReadOnlySet<string> pins, IReadOnlySet<string>? bound)
     {
         if (!CableManufacturingEditorService.HasRemovalImpact(Draft, pins, bound)) return true;
-        var affectedRows = Draft.Rows.Count(r => r.FromSourcePinId is { } f && pins.Contains(f) || r.ToSourcePinId is { } t && pins.Contains(t));
+        var affectedRows = Draft.Rows.Count(r => CableManufacturingCells.All(r).Any(c => c.SourcePinId is { } id && pins.Contains(id)));
         return _confirmRemoval($"{port.Name}：移除 {string.Join(", ", port.Pins.Where(p => pins.Contains(p.PinId)).Select(p => p.PinNumber))}\n" +
             $"受影響接法列：{affectedRows}；CAD 綁定：{bound?.Count(pins.Contains) ?? 0}\n" +
             "將解除這些 Pin 的接法、功能、狀態及 CAD 綁定，保留對端資料並改為待確認。確定移除？");
@@ -334,7 +356,7 @@ public sealed class CableManufacturingTableEditor : UserControl
     private void SortView()
     {
         if (!_pinSortActive) return;
-        var order = CableManufacturingEditorService.SortRows(Draft, _sortFrom, _sortDescending)
+        var order = CableManufacturingEditorService.SortRows(Draft, _sortPortId, _sortDescending)
             .Select((row, i) => (row, i)).ToDictionary(p => p.row, p => p.i);
         ((ListCollectionView)CollectionViewSource.GetDefaultView(_rows)).CustomSort = new RowOrderComparer(order);
     }
@@ -345,10 +367,15 @@ public sealed class CableManufacturingTableEditor : UserControl
     }
     private void RefreshPins()
     {
-        var pins = new[] { new PinChoice(null, "未指定") }.Concat(Draft.Ends.SelectMany(p => p.Pins
-            .OrderBy(pin => pin.PinNumber, ComponentIntelligence.Electrical.Drawing.DrawingContactDisplayOrder.NumberComparer).Select(pin =>
-            new PinChoice(pin.PinId, $"{p.Name} / {pin.PinNumber} {pin.PinName}".Trim())))).ToArray();
-        foreach (var column in _grid.Columns.OfType<DataGridComboBoxColumn>()) column.ItemsSource = pins;
+        foreach (var (column, portId) in _columnPorts)
+        {
+            var port = Draft.Ends.Single(p => p.PortId == portId);
+            column.Header = port.Name + (column is DataGridComboBoxColumn ? " PIN" : " FUNCTION");
+            if (column is DataGridComboBoxColumn pins)
+                pins.ItemsSource = new[] { new PinChoice(null, "未指定") }.Concat(port.Pins
+                    .OrderBy(pin => pin.PinNumber, ComponentIntelligence.Electrical.Drawing.DrawingContactDisplayOrder.NumberComparer)
+                    .Select(pin => new PinChoice(pin.PinId, $"{port.Name} / {pin.PinNumber} {pin.PinName}".Trim()))).ToArray();
+        }
     }
     private void RefreshStatus()
     {
@@ -356,7 +383,7 @@ public sealed class CableManufacturingTableEditor : UserControl
         var errors = _service.Validate(Draft);
         SortView();
         _error.Text = errors.Count > 0 ? string.Join("\n", errors) :
-            $"接法 {Draft.Rows.Count(r => r.FromSourcePinId is not null && r.ToSourcePinId is not null)}；未完成列 {Draft.Rows.Count(r => r.FromSourcePinId is null || r.ToSourcePinId is null)}";
+            $"接法 {Draft.Rows.Sum(r => CableManufacturingCells.Pairs(r).Count())}；未完成列 {Draft.Rows.Count(r => !CableManufacturingCells.Pairs(r).Any())}";
     }
     private static DataGridTextColumn TextColumn(string header, string path) => new() { Header = header,
         Binding = new Binding(path) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = new(1, DataGridLengthUnitType.Star) };

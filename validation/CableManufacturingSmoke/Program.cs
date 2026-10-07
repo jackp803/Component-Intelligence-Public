@@ -29,6 +29,25 @@ internal static class Program
 
     private static int Run(string[] args)
     {
+        if (args.FirstOrDefault() == "inspect-cad")
+        {
+            var output = Path.GetFullPath(args[1]); Directory.CreateDirectory(output);
+            var loader = new SchematicCadFileLoader(stagingRoot: Path.Combine(output, "staging"));
+            foreach (var source in args.Skip(2))
+            {
+                var geometry = loader.ReadAsync(source, 1).GetAwaiter().GetResult();
+                var name = Path.GetFileNameWithoutExtension(source);
+                File.WriteAllText(Path.Combine(output, name + ".geometry.json"), JsonSerializer.Serialize(geometry, new JsonSerializerOptions { WriteIndented = true }));
+                var previewType = typeof(SchematicCadFileLoader).Assembly.GetType("ComponentIntelligence.Desktop.CableCadRoleEditor")!;
+                var preview = (FrameworkElement)Activator.CreateInstance(previewType)!;
+                previewType.GetMethod("Restore")!.Invoke(preview, [source, geometry, null, 1d]);
+                Render(preview, 1200, 800, Path.Combine(output, name + ".png"));
+                Console.WriteLine(JsonSerializer.Serialize(new { Source = source, geometry.SourceSha256, geometry.Width, geometry.Height,
+                    Contacts = geometry.ConnectionPoints, Text = geometry.Primitives.Where(p => p.Text is not null).Select(p => new { p.Text, p.AttributeTag, p.Start }),
+                    geometry.Diagnostics }));
+            }
+            return 0;
+        }
         var root = Path.GetFullPath(args.First());
         var regression = args.Skip(1).SingleOrDefault() ?? "all";
         Directory.CreateDirectory(root);
@@ -82,7 +101,7 @@ internal static class Program
             DisplayName = "SYNTHETIC TEST CABLE",
             AssetSha256 = wire.SourceSha256,
             TextBindings = [new("REF", CableTextField.Reference), new("LENGTH", CableTextField.LengthMm)],
-            Ports = Enumerable.Range(1, 2).Select(i => new ComponentIntelligence.Electrical.Domain.ComponentPort
+            Ports = Enumerable.Range(1, regression == "multi" ? 3 : 2).Select(i => new ComponentIntelligence.Electrical.Domain.ComponentPort
             {
                 PortId = "P" + i,
                 Name = "P" + i,
@@ -94,6 +113,12 @@ internal static class Program
         draft.Rows.Clear();
         draft.Rows.Add(new() { FromSourcePinId = "p1.1", ToSourcePinId = "p2.1", FromFunction = "+24V", ToFunction = "+24V" });
         draft.Rows.Add(new() { FromSourcePinId = "p1.2", ToSourcePinId = "p2.2", FromFunction = "0V", ToFunction = "0V" });
+        if (regression == "multi")
+        {
+            CableManufacturingCells.EnsureColumns(draft);
+            CableManufacturingCells.Set(draft, draft.Rows[0], "P3", new() { SourcePinId = "p3.1", Function = "+24V" });
+            draft.Rows.Add(new() { AdditionalEnds = new() { ["P3"] = new() { SourcePinId = "p3.2", Usage = CablePinUsage.Nc } } });
+        }
         template = editorService.Apply(template, draft);
         var repository = new SymbolArchiveRepository(data);
         var contacts = wire.ConnectionPoints.OrderBy(c => c.Tag, StringComparer.Ordinal).ToArray();
@@ -107,7 +132,9 @@ internal static class Program
                 MillimetresPerUnit = 1,
                 ConstructionType = CableConstructionType.Custom,
                 ConstructionEvidence = "Generated test fixture, not an engineering-approved cable",
-                ContactBindings = template.Ports.SelectMany(p => p.Pins).Select((pin, i) => new SymbolPortBinding
+                ContactBindings = regression == "multi" ? template.Ports.Select((port, i) => new SymbolPortBinding
+                { EngineeringEndpointId = port.PortId, ConnectionPointId = contacts[i].Tag }).ToArray() :
+                template.Ports.SelectMany(p => p.Pins).Select((pin, i) => new SymbolPortBinding
                 {
                     EngineeringEndpointId = pin.PinId,
                     ConnectionPointId = contacts[i].Tag
@@ -144,7 +171,8 @@ internal static class Program
                 new() { Kind = "TEXT", Start = new(230, 280), Text = "SYNTHETIC COMPANY FRAME", TextHeight = 4 }]
         };
         p.Schematic!.Pages[0] = p.Schematic.Pages[0] with { TemplateGeometry = frame, TemplateSha256 = frame.SourceSha256 };
-        var detailService = new SchematicCableDetailService(); p = detailService.AddArchivedDetail(p, p.Cables[0].CableInstanceId, "sheet");
+        var detailService = new SchematicCableDetailService(); p = detailService.AddArchivedDetail(p, p.Cables[0].CableInstanceId, "sheet",
+            regression == "multi" ? new(p.Cables[0].CableInstanceId, null) { TableWidth = 250, SketchPosition = new(20, 150) } : null);
         var db = new ElectricalProjectRepository(new SqliteConnectionFactory(), Path.Combine(data, "project.db"));
         db.SaveAsync(p).GetAwaiter().GetResult(); p = db.GetAsync(p.ProjectId).GetAwaiter().GetResult()!;
         var snapshot = JsonSerializer.Serialize(p);
@@ -157,6 +185,14 @@ internal static class Program
         }
         var table = new CableManufacturingTableEditor(editorService.Prepare(p.Cables[0]), [new("TEST", null)], false);
         Render(table, 900, 500, Path.Combine(root, "table-editor.png"));
+        if (regression == "multi")
+        {
+            Require(FindGrid(table).Columns.Count == 6, "P3 columns were lost after SQLite reopen.");
+            var presentation = detailService.BuildArchived(p, p.Schematic!.Pages[1], p.Schematic.Pages[1].CableDetail!);
+            Require(presentation.Primitives.Any(p => p.Text == "P3 PIN") && presentation.Primitives.Any(p => p.Text == "P3 FUNCTION"),
+                "P3 is missing in the shared canvas/PDF data.");
+            Require(p.Schematic.Symbols.All(s => s.CadPortBindings.Count == 3), "Port CAD bindings did not survive SQLite reopen.");
+        }
         Require(FindGrid(table).Columns.All(c => c.ActualWidth >= 100), "Table columns are clipped.");
         if (regression is "all" or "usage")
         {

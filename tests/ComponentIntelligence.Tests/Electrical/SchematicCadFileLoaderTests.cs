@@ -45,6 +45,8 @@ public sealed class SchematicCadFileLoaderTests
         {
             InputPath = startInfo.ArgumentList[1];
             Assert.Equal("/i", startInfo.ArgumentList[0]);
+            var script = File.ReadAllText(startInfo.ArgumentList[3]);
+            Assert.Contains("\"display.dxf\"", script);
             if (fail) return Task.FromResult(new BlockInspectionProcessResult(1, "", "conversion failed"));
             var doc = new DxfDocument(); doc.Entities.Add(new Line(new Vector2(0, 0), new Vector2(20, 20)));
             doc.Save(Path.Combine(startInfo.WorkingDirectory, "display.dxf"));

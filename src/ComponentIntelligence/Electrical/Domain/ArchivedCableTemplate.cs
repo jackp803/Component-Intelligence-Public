@@ -44,6 +44,14 @@ public sealed class CableManufacturingRow
     public string? ToFunction { get; set; }
     public CablePinUsage FromUsage { get; set; }
     public CablePinUsage ToUsage { get; set; }
+    public Dictionary<string, CableManufacturingCell> AdditionalEnds { get; set; } = [];
+}
+
+public sealed class CableManufacturingCell
+{
+    public string? SourcePinId { get; set; }
+    public string? Function { get; set; }
+    public CablePinUsage Usage { get; set; }
 }
 
 public sealed record CableManufacturingDefinition
@@ -52,4 +60,5 @@ public sealed record CableManufacturingDefinition
     public string? ToSourcePortId { get; init; }
     public List<CableManufacturingRow> IncompleteRows { get; init; } = [];
     public List<CablePinUsageDeclaration> PinUsage { get; init; } = [];
+    public List<CableManufacturingRow>? Rows { get; init; }
 }

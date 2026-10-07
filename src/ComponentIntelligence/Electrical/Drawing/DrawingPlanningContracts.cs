@@ -29,6 +29,8 @@ public sealed record DrawingPlanningInput
 public sealed record DrawingRepresentationDecision
 {
     public required string RepresentationId { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? DisplayLabel { get; init; }
     public DrawingRepresentationOwnerKind OwnerKind { get; init; }
     public required string OwnerId { get; init; }
     public DrawingRepresentationRole Role { get; init; }
@@ -56,6 +58,10 @@ public sealed record DrawingPortBinding
 {
     public required string EngineeringEndpointId { get; init; }
     public required string ConnectionPointId { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? DisplayLabel { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? PhysicalSide { get; init; }
 }
 
 public sealed record DrawingConnectionPlanningItem

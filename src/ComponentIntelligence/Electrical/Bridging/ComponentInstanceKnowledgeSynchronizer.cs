@@ -29,6 +29,10 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(source);
 
+        var lineage = new ComponentSourceIdentityRestorer().Restore(target, source);
+        var powerIdentityValid = string.Equals(target.ComponentDefinitionId, source.Identity.ComponentId, StringComparison.Ordinal)
+            && lineage.Status != SourceIdentityStatus.CONFLICT;
+
         var mapped = _bridge.CreateInstance(
             source,
             target.ComponentInstanceId,
@@ -91,7 +95,9 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
 
             foreach (var incomingPin in incomingPort.Pins)
             {
-                var existingPin = existingPort.Pins.FirstOrDefault(pin =>
+                var typedMatches = existingPort.Pins.Where(pin => !string.IsNullOrWhiteSpace(incomingPin.SourcePinId)
+                    && string.Equals(pin.SourcePinId, incomingPin.SourcePinId, StringComparison.Ordinal)).ToArray();
+                var existingPin = (typedMatches.Length == 1 ? typedMatches[0] : null) ?? existingPort.Pins.FirstOrDefault(pin =>
                     string.Equals(pin.PinId, incomingPin.PinId, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(pin.PinNumber, incomingPin.PinNumber, StringComparison.OrdinalIgnoreCase));
                 if (existingPin is null)
@@ -99,7 +105,10 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
                     existingPort.Pins.Add(incomingPin);
                     continue;
                 }
-                FillPin(existingPin, incomingPin, overwriteExistingKnowledge);
+                var powerMatch = powerIdentityValid && typedMatches.Length == 1
+                    && !string.IsNullOrWhiteSpace(existingPort.SourcePortId)
+                    && string.Equals(existingPort.SourcePortId, incomingPort.SourcePortId, StringComparison.Ordinal);
+                FillPin(existingPin, incomingPin, overwriteExistingKnowledge, powerMatch);
             }
         }
     }
@@ -131,9 +140,15 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
             target.Footprint.MountingType = incoming.MountingType;
     }
 
-    private static DomainPort? FindMatchingPort(ComponentInstance target, DomainPort incoming) =>
-        target.Ports.FirstOrDefault(port => string.Equals(port.PortId, incoming.PortId, StringComparison.OrdinalIgnoreCase))
-        ?? target.Ports.FirstOrDefault(port => string.Equals(port.Name, incoming.Name, StringComparison.OrdinalIgnoreCase));
+    private static DomainPort? FindMatchingPort(ComponentInstance target, DomainPort incoming)
+    {
+        var typed = target.Ports.Where(port => !string.IsNullOrWhiteSpace(incoming.SourcePortId)
+            && string.Equals(port.SourcePortId, incoming.SourcePortId, StringComparison.Ordinal)).ToArray();
+        // Legacy matching may still enrich display knowledge, but cannot authorize power updates.
+        return (typed.Length == 1 ? typed[0] : null)
+            ?? target.Ports.FirstOrDefault(port => string.Equals(port.PortId, incoming.PortId, StringComparison.OrdinalIgnoreCase))
+            ?? target.Ports.FirstOrDefault(port => string.Equals(port.Name, incoming.Name, StringComparison.OrdinalIgnoreCase));
+    }
 
     private static void FillConnector(ConnectorDefinition target, ConnectorDefinition incoming, bool overwriteExistingKnowledge)
     {
@@ -164,7 +179,7 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
         target.MaxTerminationAreaMm2 ??= incoming.MaxTerminationAreaMm2;
     }
 
-    private static void FillPin(DomainPin target, DomainPin incoming, bool overwriteExistingKnowledge)
+    private static void FillPin(DomainPin target, DomainPin incoming, bool overwriteExistingKnowledge, bool powerIdentityConfirmed)
     {
         if (overwriteExistingKnowledge)
         {
@@ -179,7 +194,7 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
             target.GroundReferenceType = incoming.GroundReferenceType;
             target.IsolationDomainId = incoming.IsolationDomainId;
             target.DifferentialRole = incoming.DifferentialRole;
-            target.Power = incoming.Power;
+            if (powerIdentityConfirmed) target.Power = incoming.Power;
             target.Digital = incoming.Digital;
             target.Analog = incoming.Analog;
             return;
@@ -194,7 +209,7 @@ public sealed class ComponentInstanceKnowledgeSynchronizer
             target.GroundReferenceType = incoming.GroundReferenceType;
         target.IsolationDomainId ??= incoming.IsolationDomainId;
         if (target.DifferentialRole == DifferentialRole.None) target.DifferentialRole = incoming.DifferentialRole;
-        FillPower(target, incoming.Power);
+        if (powerIdentityConfirmed) FillPower(target, incoming.Power);
         target.Digital ??= incoming.Digital;
         target.Analog ??= incoming.Analog;
     }

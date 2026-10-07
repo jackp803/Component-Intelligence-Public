@@ -48,6 +48,7 @@ public partial class ElectricalWorkspaceWindow
         if (string.IsNullOrWhiteSpace(_centralWorkbookPath) || !File.Exists(_centralWorkbookPath)) return null;
 
         var archive = await new WorkbookComponentKnowledgeStore(_centralWorkbookPath).ListAsync();
+        TopologyCanvas.SetAvailableCableDefinitions(archive);
         archive = await new CentralArchiveImageSynchronizer().SynchronizeAsync(archive);
         var preview = new CentralArchiveProjectSynchronizer().Synchronize(CloneForPreview(_project), archive);
         var result = preview;

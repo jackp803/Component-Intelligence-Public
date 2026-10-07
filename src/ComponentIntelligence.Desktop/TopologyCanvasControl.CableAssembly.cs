@@ -10,16 +10,6 @@ public partial class TopologyCanvasControl
     private readonly CableAssemblyEditorService _cableAssemblyEditor = new();
     private readonly MultiEndCableEditorService _multiEndCableEditor = new();
 
-    private void CreateMultiEndCable_Click(object sender, RoutedEventArgs e)
-    {
-        if (_project is null) return;
-        var picker = new MultiEndConductorPickerDialog(_project, _selectedTopologyConnectionIds) { Owner = Window.GetWindow(this) };
-        if (picker.ShowDialog() != true) return;
-        try { OpenMultiEndCableEditor(_multiEndCableEditor.PrepareNew(_project, picker.SelectedIds)); }
-        catch (InvalidOperationException exception)
-        { MessageBox.Show(Window.GetWindow(this), exception.Message, "無法建立多端線材"); }
-    }
-
     private void OpenMultiEndCableEditor(MultiEndCableDraft draft)
     {
         if (_project is null) return;
@@ -37,65 +27,11 @@ public partial class TopologyCanvasControl
     private ContextMenu BuildCableAssemblyContextMenu(string connectionId)
     {
         var menu = new ContextMenu();
-        var editAssembly = new MenuItem { Header = "編輯複合線" };
-        editAssembly.Click += (_, _) =>
-        {
-            if (_project is null) return;
-            var connection = _project.Connections.FirstOrDefault(item => string.Equals(
-                item.ConnectionId,
-                connectionId,
-                StringComparison.OrdinalIgnoreCase));
-            if (connection is not null) TryOpenCableAssemblyEditor(connection);
-        };
-        var createAssembly = new MenuItem { Header = "建立複合線" };
-        createAssembly.Click += CreateCableAssembly_Click;
-        menu.Items.Add(editAssembly);
-        menu.Items.Add(createAssembly);
-        var multiEnd = new MenuItem { Header = "建立多端 Cable / Y Cable" };
-        multiEnd.Click += CreateMultiEndCable_Click;
-        menu.Items.Add(multiEnd);
-        menu.Opened += (_, _) =>
-        {
-            if (_project is null)
-            {
-                editAssembly.IsEnabled = false;
-                createAssembly.IsEnabled = false;
-                return;
-            }
-
-            var connection = _project.Connections.FirstOrDefault(item => string.Equals(
-                item.ConnectionId,
-                connectionId,
-                StringComparison.OrdinalIgnoreCase));
-            editAssembly.IsEnabled = connection?.CableInstanceId is { Length: > 0 } cableId &&
-                _project.CableAssemblies.Any(assembly => assembly.Members.Any(member => string.Equals(
-                    member.CableInstanceId,
-                    cableId,
-                    StringComparison.OrdinalIgnoreCase)));
-            createAssembly.IsEnabled = _selectedTopologyConnectionIds.Count >= 2;
-        };
+        var settings = new MenuItem { Header = "線材設定" };
+        settings.Click += (_, _) => OpenCableSettingsPicker(
+            _selectedTopologyConnectionIds.Contains(connectionId) ? _selectedTopologyConnectionIds : new[] { connectionId });
+        menu.Items.Add(settings);
         return menu;
-    }
-
-    private void CreateCableAssembly_Click(object sender, RoutedEventArgs e)
-    {
-        if (_project is null) return;
-        try
-        {
-            var draft = _cableAssemblyEditor.PrepareNewFromConnections(
-                _project,
-                _selectedTopologyConnectionIds.ToArray());
-            OpenCableAssemblyEditor(draft, "Create cable assembly");
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show(
-                Window.GetWindow(this),
-                exception.Message,
-                "無法建立複合線",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-        }
     }
 
     private bool TryOpenCableAssemblyEditor(ElectricalConnection connection)

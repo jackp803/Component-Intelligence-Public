@@ -1,12 +1,18 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 
 namespace ComponentIntelligence.SymbolArchive;
 
 public sealed class SymbolArchiveRepository
 {
     public const string SchemaVersion = "ci-symbol-archive.v1";
+    public const string MultiRepresentationSchemaVersion = "ci-symbol-archive.v2";
+    public const string CableTemplateSchemaVersion = "ci-symbol-archive.v3";
+    public const string SchematicLayoutSchemaVersion = "ci-symbol-archive.v4";
+    public const string CableManufacturingSchemaVersion = "ci-symbol-archive.v5";
+    public const string CablePortTableSchemaVersion = "ci-symbol-archive.v6";
     public const string FileName = "SymbolArchive.json";
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -50,11 +56,20 @@ public sealed class SymbolArchiveRepository
         return ValidateAndNormalize(document);
     }
 
-    public void Save(SymbolArchiveDocument document)
+    public string? GetContentHash() => File.Exists(_path) ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_path))) : null;
+
+    public void Save(SymbolArchiveDocument document) => SaveCore(document, null, false);
+
+    public void SaveIfUnchanged(SymbolArchiveDocument document, string? expectedHash) => SaveCore(document, expectedHash, true);
+
+    private void SaveCore(SymbolArchiveDocument document, string? expectedHash, bool compareOriginal)
     {
         ArgumentNullException.ThrowIfNull(document);
         var normalized = ValidateAndNormalize(document);
         Directory.CreateDirectory(_archiveRoot);
+        using var guard = new FileStream(Path.Combine(_archiveRoot, ".SymbolArchive.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        if (compareOriginal && !string.Equals(expectedHash, GetContentHash(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Archive changed while editing; reload before saving.");
         var temp = Path.Combine(_archiveRoot, $".{FileName}.{Guid.NewGuid():N}.tmp");
         try
         {
@@ -74,7 +89,9 @@ public sealed class SymbolArchiveRepository
 
     public SymbolArchiveDocument ValidateAndNormalize(SymbolArchiveDocument document)
     {
-        if (!string.Equals(document.SchemaVersion, SchemaVersion, StringComparison.Ordinal))
+        if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion &&
+            document.SchemaVersion != CableTemplateSchemaVersion && document.SchemaVersion != SchematicLayoutSchemaVersion &&
+            document.SchemaVersion != CableManufacturingSchemaVersion && document.SchemaVersion != CablePortTableSchemaVersion)
             throw new InvalidDataException($"Unsupported Symbol Archive schema '{document.SchemaVersion}'.");
 
         var bindingKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -84,7 +101,8 @@ public sealed class SymbolArchiveRepository
             if (string.IsNullOrWhiteSpace(binding.ComponentId))
                 throw new InvalidDataException("Every symbol binding requires ComponentId.");
             var componentId = binding.ComponentId.Trim();
-            var key = $"{componentId}\u001f{binding.Role}";
+            var representationId = NormalizeRepresentationId(binding.RepresentationId);
+            var key = $"{componentId}\u001f{binding.Role}\u001f{representationId}";
             if (!bindingKeys.Add(key))
                 throw new InvalidDataException($"Duplicate ComponentId + SymbolRole binding: {componentId} / {binding.Role}.");
 
@@ -128,18 +146,134 @@ public sealed class SymbolArchiveRepository
             bindings.Add(binding with
             {
                 ComponentId = componentId,
+                RepresentationId = representationId,
                 Revisions = revisions.OrderBy(item => item.Revision, StringComparer.Ordinal).ToArray()
             });
         }
 
+        var cableKeys = new HashSet<(string, string)>();
+        var cables = (document.CableTemplates ?? []).Select(entry =>
+        {
+            Electrical.Schematic.ArchivedCableInstanceFactory.ValidateTemplate(entry.Template);
+            if (!cableKeys.Add((entry.Template.TemplateId, entry.Template.TemplateRevision)))
+                throw new InvalidDataException("Duplicate cable template revision.");
+            if (!double.IsFinite(entry.MillimetresPerUnit) || entry.MillimetresPerUnit <= 0 || !Enum.IsDefined(entry.Status) || !Enum.IsDefined(entry.ConstructionType))
+                throw new InvalidDataException("Cable template requires valid units, status and construction classification.");
+            if (entry.ConstructionType != Electrical.Domain.CableConstructionType.Unknown && string.IsNullOrWhiteSpace(entry.ConstructionEvidence))
+                throw new InvalidDataException("Cable construction classification requires explicit source evidence.");
+            var pins = entry.Template.Ports.SelectMany(p => p.Pins.Select(pin => pin.PinId).Prepend(p.PortId)).ToHashSet(StringComparer.Ordinal);
+            var bindingsByPin = new HashSet<string>(StringComparer.Ordinal);
+            var contacts = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var binding in entry.ContactBindings)
+                if (!pins.Contains(binding.EngineeringEndpointId) || !bindingsByPin.Add(binding.EngineeringEndpointId) ||
+                    string.IsNullOrWhiteSpace(binding.ConnectionPointId) || !contacts.Add(binding.ConnectionPointId))
+                    throw new InvalidDataException("Cable CAD binding must identify unique exact source Ports/Pins and contacts.");
+            var manufacturing = entry.ManufacturingAsset;
+            if (manufacturing is not null)
+            {
+                if (!double.IsFinite(manufacturing.MillimetresPerUnit) || manufacturing.MillimetresPerUnit <= 0)
+                    throw new InvalidDataException("Manufacturing CAD requires finite positive units.");
+                manufacturing = manufacturing with { Selection = ValidateSelection(manufacturing.Selection) };
+                manufacturing = manufacturing with { AssetPath = NormalizeArchiveRelativePath(manufacturing.AssetPath),
+                    SourceSha256 = NormalizeSha256(manufacturing.SourceSha256) };
+                ValidateGeometry(manufacturing.Geometry, manufacturing.SourceSha256, manufacturing.MillimetresPerUnit, manufacturing.Selection);
+            }
+            var wiringSelection = ValidateSelection(entry.WiringSelection);
+            if (!string.Equals(entry.Template.WiringSelectionSha256, wiringSelection?.GeometrySha256, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Cable template must pin the wiring selection identity.");
+            ValidateGeometry(entry.WiringGeometry, entry.Template.AssetSha256, entry.MillimetresPerUnit, wiringSelection);
+            if (entry.WiringAssetPending && (entry.Status != SymbolRevisionStatus.Candidate || entry.AssetPath != "" ||
+                entry.WiringGeometry is not null || wiringSelection is not null || entry.ContactBindings.Count != 0 ||
+                entry.Template.AssetSha256 != new string('0', 64)))
+                throw new InvalidDataException("Pending wiring CAD must be a candidate without asset, selection or bindings.");
+            return entry with { AssetPath = entry.WiringAssetPending ? "" : NormalizeArchiveRelativePath(entry.AssetPath),
+                ManufacturingAsset = manufacturing, WiringSelection = wiringSelection };
+        }).OrderBy(e => e.Template.TemplateId, StringComparer.Ordinal).ThenBy(e => e.Template.TemplateRevision, StringComparer.Ordinal).ToArray();
+
+        var layoutKeys = new HashSet<(string ComponentId, string Revision)>();
+        var activeLayouts = new HashSet<string>(StringComparer.Ordinal);
+        var layouts = (document.SchematicLayouts ?? []).Select(layout =>
+        {
+            if (string.IsNullOrWhiteSpace(layout.ComponentId) || string.IsNullOrWhiteSpace(layout.Revision) ||
+                !layoutKeys.Add((layout.ComponentId, layout.Revision)) ||
+                layout.Active && !activeLayouts.Add(layout.ComponentId))
+                throw new InvalidDataException("Schematic layout requires a unique component/revision and one active revision.");
+            if (!double.IsFinite(layout.Width) || !double.IsFinite(layout.Height) || layout.Width < 10 || layout.Height < 10 ||
+                layout.Rotation is not (0 or 90 or 180 or 270))
+                throw new InvalidDataException("Schematic layout requires finite positive frame dimensions.");
+            var pins = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var pin in layout.Pins)
+                if (string.IsNullOrWhiteSpace(pin.SourcePortId) || string.IsNullOrWhiteSpace(pin.SourcePinId) ||
+                    !pins.Add(pin.SourcePinId) || !ValidSide(pin.Side) ||
+                    !double.IsFinite(pin.Position.X) || !double.IsFinite(pin.Position.Y) ||
+                    pin.Position.X < 0 || pin.Position.Y < 0 ||
+                    pin.Position.X > layout.Width || pin.Position.Y > layout.Height ||
+                    !(pin.Side switch
+                    {
+                        "Left" => Math.Abs(pin.Position.X) < .01,
+                        "Right" => Math.Abs(pin.Position.X - layout.Width) < .01,
+                        "Top" => Math.Abs(pin.Position.Y) < .01,
+                        "Bottom" => Math.Abs(pin.Position.Y - layout.Height) < .01,
+                        _ => false
+                    }))
+                    throw new InvalidDataException("Schematic layout Pin must have unique exact source identity and a frame-edge position.");
+            var ports = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var port in layout.Ports)
+                if (string.IsNullOrWhiteSpace(port.SourcePortId) || !ports.Add(port.SourcePortId) ||
+                    !ValidSide(port.Side) || !double.IsFinite(port.Coordinate) || port.Coordinate < 0 ||
+                    port.Coordinate > (port.Side is "Top" or "Bottom" ? layout.Width : layout.Height))
+                    throw new InvalidDataException("Schematic layout Port position is invalid.");
+            if (layout.CollapsedSourcePortIds.Distinct(StringComparer.Ordinal).Count() != layout.CollapsedSourcePortIds.Count ||
+                layout.CollapsedSourcePortIds.Any(string.IsNullOrWhiteSpace))
+                throw new InvalidDataException("Schematic layout collapsed Port identities must be unique.");
+            return layout;
+        }).OrderBy(item => item.ComponentId, StringComparer.Ordinal)
+          .ThenBy(item => item.Revision, StringComparer.Ordinal).ToArray();
+
         return document with
         {
-            SchemaVersion = SchemaVersion,
+            // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
+            SchemaVersion = document.SchemaVersion == CablePortTableSchemaVersion || cables.Any(c => c.Template.Manufacturing?.Rows is not null ||
+                c.ContactBindings.Any(b => c.Template.Ports.Any(p => p.PortId == b.EngineeringEndpointId)))
+                ? CablePortTableSchemaVersion :
+                document.SchemaVersion == CableManufacturingSchemaVersion || cables.Any(c => c.ManufacturingAsset is not null ||
+                c.WiringSelection is not null || c.WiringGeometry is not null || c.Template.Manufacturing is not null || c.WiringAssetPending)
+                ? CableManufacturingSchemaVersion :
+                document.SchemaVersion == SchematicLayoutSchemaVersion || layouts.Length > 0 ? SchematicLayoutSchemaVersion :
+                document.SchemaVersion == CableTemplateSchemaVersion || cables.Length > 0 ? CableTemplateSchemaVersion :
+                document.SchemaVersion == MultiRepresentationSchemaVersion || bindings.Any(b => b.RepresentationId != "default")
+                ? MultiRepresentationSchemaVersion : SchemaVersion,
+            CableTemplates = cables,
+            SchematicLayouts = layouts,
             Bindings = bindings
                 .OrderBy(item => item.ComponentId, StringComparer.Ordinal)
                 .ThenBy(item => item.Role)
+                .ThenBy(item => item.RepresentationId, StringComparer.Ordinal)
                 .ToArray()
         };
+    }
+
+    private static bool ValidSide(string side) => side is "Left" or "Right" or "Top" or "Bottom";
+
+    private static CableCadSelection? ValidateSelection(CableCadSelection? selection)
+    {
+        if (selection is null) return null;
+        if (selection.Bounds is { } bounds && (!double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y) || bounds.X < 0 || bounds.Y < 0 ||
+            !double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) || bounds.Width <= 0 || bounds.Height <= 0) ||
+            (selection.Bounds is null) == string.IsNullOrWhiteSpace(selection.BlockName))
+            throw new InvalidDataException("CAD selection requires one valid region or named block.");
+        return selection with { GeometrySha256 = NormalizeSha256(selection.GeometrySha256) };
+    }
+
+    private static void ValidateGeometry(Electrical.Schematic.SchematicCadAsset? geometry, string sourceHash, double units, CableCadSelection? selection)
+    {
+        if (geometry is null) return;
+        if (!string.Equals(geometry.SourceSha256, sourceHash, StringComparison.OrdinalIgnoreCase) || geometry.MillimetresPerUnit != units ||
+            !double.IsFinite(geometry.Width) || !double.IsFinite(geometry.Height) || geometry.Width <= 0 || geometry.Height <= 0 ||
+            selection is not null && (!string.Equals(geometry.SelectionSha256, selection.GeometrySha256, StringComparison.OrdinalIgnoreCase) ||
+                geometry.SelectionBounds != selection.Bounds || geometry.SelectionBlockName != selection.BlockName ||
+                !string.Equals(Electrical.Schematic.SchematicCadSelectionService.GeometryHash(geometry), selection.GeometrySha256, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("CAD geometry snapshot does not match its source, selection or units.");
     }
 
     public string ResolveArchivePath(string assetPath)
@@ -148,6 +282,13 @@ public sealed class SymbolArchiveRepository
         var candidate = Path.GetFullPath(Path.Combine(_archiveRoot, normalized.Replace('/', Path.DirectorySeparatorChar)));
         AssertContained(candidate);
         return candidate;
+    }
+
+    public static string NormalizeRepresentationId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !Regex.IsMatch(value, "^[a-z0-9][a-z0-9_-]{0,63}$", RegexOptions.CultureInvariant))
+            throw new InvalidDataException("RepresentationId must be an explicit lowercase stable key (1-64 letters, digits, underscore or hyphen).");
+        return value;
     }
 
     public static string NormalizeSha256(string value)

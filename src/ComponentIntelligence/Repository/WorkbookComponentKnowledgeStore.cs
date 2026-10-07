@@ -192,6 +192,16 @@ public sealed class WorkbookComponentKnowledgeStore : IComponentKnowledgeStore
             {
                 Category = Meaningful(Get(componentRow, "Category"))
             },
+            CableProduct = new CableProductAuthority
+            {
+                Kind = Get(componentRow, "CableProductKind") switch
+                {
+                    "PurchasedPreassembled" => CableProductKind.PurchasedPreassembled,
+                    "BulkMaterial" => CableProductKind.BulkMaterial,
+                    _ => CableProductKind.Unknown
+                },
+                Evidence = Meaningful(Get(componentRow, "CableProductEvidence"))
+            },
             Power = new ComponentPower
             {
                 OperatingVoltage = ParseVoltage(Get(componentRow, "Voltage"))

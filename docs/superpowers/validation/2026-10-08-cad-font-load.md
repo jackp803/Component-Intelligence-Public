@@ -19,6 +19,8 @@
 - 72 TEXT/MTEXT cases: exact failing value, normal 9 DIP, 5% CAD font at .45 DIP; four rotations; top-left, middle-center and bottom-right attachments. Effective rendered font size, width factor, wrapping ratio, anchor offsets and immutable source evidence passed.
 - Both micro TEXT and MTEXT included in full CAD rendering/bitmap/PDF smoke; transparent overlap, hit testing, percentage/reset, gesture commit, undo/redo and PDF selection exclusion passed.
 - Saved database inspected locally through SQLite ReadOnly: two projects, four pages rendered offscreen without source mutation or native windows. No project names/content exported or delegated.
-- Full working-tree tests: 1425 passed. Clean-source suite and BE packaging verification recorded after publish.
+- Full working-tree tests: 1425 passed. Clean archived source suite: 1422 passed.
 - Wiring appendix fit/PDF smoke passed. Bounded independent static review: no findings.
 - Native window acceptance remains with user. Existing data remains in its original location.
+- Delivery code 12e9e951748e05ac533b670bb0226b7fa2dbf817, BE / 2026-10-08. Clean-source 72-case, saved read-only project load, CAD bitmap/PDF and appendix fit/link smokes passed. PDF rendered with Poppler and visually inspected.
+- Release publish succeeded; BE ValidateOnly verified 222 runtime hashes and original data paths, StartedSoftware=false. Five project/workbook/archive hashes unchanged. No push, merge, data replacement or native-window automation.

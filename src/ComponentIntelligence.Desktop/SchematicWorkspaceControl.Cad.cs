@@ -47,22 +47,25 @@ public partial class SchematicWorkspaceControl
                     element = new System.Windows.Shapes.Path { Data = new PathGeometry([figure]), Stroke = Brushes.Black, StrokeThickness = 1 };
                     break;
                 case "TEXT":
-                    var singleLine = new TextBlock { Text = primitive.DisplayText, FontSize = primitive.TextHeight > 0 ? primitive.TextHeight * 3 : 1,
+                    var singleFont = CadTextFont(primitive.TextHeight);
+                    var singleLine = new TextBlock { Text = primitive.DisplayText, FontSize = singleFont.Size,
                         Foreground = Brushes.Black };
                     singleLine.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                     var offset = primitive.TextAnchorOffset(singleLine.DesiredSize.Width, singleLine.DesiredSize.Height, singleLine.BaselineOffset);
                     var textTransform = new TransformGroup();
                     textTransform.Children.Add(new ScaleTransform(primitive.TextWidthFactor, 1));
                     textTransform.Children.Add(new TranslateTransform(offset.X * primitive.TextWidthFactor, offset.Y));
+                    textTransform.Children.Add(new ScaleTransform(singleFont.Scale, singleFont.Scale));
                     textTransform.Children.Add(new RotateTransform(primitive.Rotation));
                     singleLine.RenderTransform = textTransform;
                     Canvas.SetLeft(singleLine, primitive.Start.X * 3); Canvas.SetTop(singleLine, primitive.Start.Y * 3);
                     element = singleLine;
                     break;
                 case "MTEXT":
-                    var text = new TextBlock { Text = primitive.Text, FontSize = primitive.TextHeight > 0 ? primitive.TextHeight * 3 : 1,
+                    var multilineFont = CadTextFont(primitive.TextHeight);
+                    var text = new TextBlock { Text = primitive.Text, FontSize = multilineFont.Size,
                         Foreground = Brushes.Black, TextWrapping = TextWrapping.Wrap };
-                    if (primitive.TextWidth > 0) text.Width = primitive.TextWidth * 3;
+                    if (primitive.TextWidth > 0) text.Width = primitive.TextWidth * 3 / multilineFont.Scale;
                     text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                     var attachment = primitive.TextAttachment ?? "TopLeft";
                     var dx = attachment.EndsWith("Right", StringComparison.Ordinal) ? -text.DesiredSize.Width :
@@ -71,6 +74,7 @@ public partial class SchematicWorkspaceControl
                         attachment.StartsWith("Middle", StringComparison.Ordinal) ? -text.DesiredSize.Height / 2 : 0;
                     var transform = new TransformGroup();
                     transform.Children.Add(new TranslateTransform(dx, dy));
+                    transform.Children.Add(new ScaleTransform(multilineFont.Scale, multilineFont.Scale));
                     transform.Children.Add(new RotateTransform(primitive.Rotation));
                     text.RenderTransform = transform;
                     Canvas.SetLeft(text, primitive.Start.X * 3); Canvas.SetTop(text, primitive.Start.Y * 3);
@@ -87,6 +91,15 @@ public partial class SchematicWorkspaceControl
             canvas.Children.Add(element);
         }
         return canvas;
+    }
+
+    private static (double Size, double Scale) CadTextFont(double height)
+    {
+        var pixels = height * 3;
+        if (!double.IsFinite(pixels) || pixels <= 0) pixels = 1;
+        // WPF rejects very small positive fonts; transform a valid font to the exact CAD size.
+        var size = TextBlock.FontSizeProperty.IsValidValue(pixels) ? pixels : 1;
+        return (size, pixels / size);
     }
 
     private async void ImportSymbol_Click(object sender, RoutedEventArgs e)

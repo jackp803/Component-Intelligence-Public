@@ -15,12 +15,18 @@ using ComponentIntelligence.Electrical.Editing;
 using Path = System.IO.Path;
 using ComponentPort = ComponentIntelligence.Electrical.Domain.ComponentPort;
 
-internal static class Program
+internal static partial class Program
 {
     [STAThread]
     private static int Main(string[] args)
     {
-        try { Run(Path.GetFullPath(args[0])); return 0; }
+        try
+        {
+            if (args.Skip(1).FirstOrDefault() == "text") RunTextRegression();
+            else if (args.Skip(1).FirstOrDefault() == "read-only") RunReadOnlyRegression(Path.GetFullPath(args[2]));
+            else Run(Path.GetFullPath(args[0]));
+            return 0;
+        }
         catch (Exception e) { Console.Error.WriteLine(e); return 1; }
     }
 
@@ -33,7 +39,9 @@ internal static class Program
                 Pins = [new() { PinId = "p" + i + ".1", PinNumber = "1" }] }).ToList() };
         SchematicCadAsset Asset(double y) => new() { SourceSha256 = template.AssetSha256, MillimetresPerUnit = 1, Width = 100, Height = 40,
             Primitives = [new() { Kind = "LINE", Start = new(0, y), End = new(100, y) },
-                new() { Kind = "TEXT", Start = new(5, 10), Text = "CAD TEXT", TextHeight = 3 }],
+                new() { Kind = "TEXT", Start = new(5, 10), Text = "CAD TEXT", TextHeight = 3 },
+                new() { Kind = "TEXT", Start = new(20, 10), Text = "MICRO CAD TEXT", TextHeight = 8.999999977500001e-6 / 3 },
+                new() { Kind = "MTEXT", Start = new(30, 10), Text = "MICRO\nMTEXT", TextHeight = 8.999999977500001e-6 / 3, TextWidth = .00003 }],
             ConnectionPoints = [new("CAD1", "", new(0, y), Direction: "Left"), new("CAD2", "", new(100, y), Direction: "Right")] };
         var project = new ElectricalProject { ProjectId = "synthetic-cad", Schematic = new() { Pages = [new() { PageId = "page", Title = "Synthetic", Width = 210, Height = 148 }] } };
         var bindings = new Dictionary<string, string> { ["P1"] = "CAD1", ["P2"] = "CAD2" };
@@ -91,7 +99,7 @@ internal static class Program
         var cadCanvas = typeof(SchematicWorkspaceControl).GetMethod("CadCanvas", BindingFlags.Static | BindingFlags.NonPublic)!;
         var tiny = SchematicSymbolPresentation.Geometry(service.ScaleCadSymbol(project, id, .05).Schematic!.Symbols[1], null)!;
         var textCanvas = (Canvas)cadCanvas.Invoke(null, [tiny, null, 1d, null, false])!;
-        Require(Math.Abs(textCanvas.Children.OfType<TextBlock>().Single().FontSize - .45) < 1e-9, "Small CAD scale is clamped to an incorrect text size.");
+        Require(Math.Abs(textCanvas.Children.OfType<TextBlock>().Single(t => t.Text == "CAD TEXT").FontSize - .45) < 1e-9, "Small CAD scale is clamped to an incorrect text size.");
         Console.WriteLine("PASS: CAD panel, resize corner, absolute scale/reset, invalid input, undo/redo, drag preview/commit, Port position, PDF without selection outline.");
         window.Content = null;
     }

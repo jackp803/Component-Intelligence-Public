@@ -32,6 +32,7 @@ public sealed class CableManufacturingTableEditor : UserControl
     private readonly bool _allowInventoryChanges;
     private readonly Dictionary<string, ComboBox> _usages = [];
     private readonly WrapPanel _usageToolbar = new();
+    private Button _addRow = null!, _removeRow = null!;
     private readonly Dictionary<DataGridColumn, string> _columnPorts = [];
     private readonly Func<IReadOnlySet<string>>? _boundPins;
     private readonly Func<string, bool> _confirmRemoval;
@@ -69,8 +70,11 @@ public sealed class CableManufacturingTableEditor : UserControl
                 Connector = new() { ConnectorId = "family-" + f, Family = f! } }));
         _choices = choices.Concat(preserved).ToArray();
         var toolbar = new WrapPanel { Margin = new(0, 0, 0, 8) };
-        toolbar.Children.Add(Icon("\uE710", "新增接法列 (Ctrl+Insert)", (_, _) => AddRow()));
-        toolbar.Children.Add(Icon("\uE74D", "移除接法列 (Ctrl+Delete)", (_, _) => RemoveRow()));
+        _addRow = Icon("\uE710", "新增接法列 (Ctrl+Insert)", (_, _) => AddRow());
+        _removeRow = Icon("\uE74D", "移除接法列 (Ctrl+Delete)", (_, _) => RemoveRow());
+        toolbar.Children.Add(_addRow); toolbar.Children.Add(_removeRow);
+        var wiring = new Button { Content = "編輯線材接法", Padding = new(10, 5, 10, 5), Margin = new(8, 0, 8, 0) };
+        wiring.Click += (_, _) => OpenWiringEditor(); toolbar.Children.Add(wiring);
         toolbar.Children.Add(_usageToolbar);
         top.Children.Add(toolbar); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap, Margin = new(0, 8, 0, 0) };
@@ -108,7 +112,7 @@ public sealed class CableManufacturingTableEditor : UserControl
 
     private void AddRow()
     {
-        if (!Commit()) return;
+        if (Draft.InventoryOnly || !Commit()) return;
         var row = new CableManufacturingRow();
         foreach (var port in Draft.Ends.Where(p => p.PortId != Draft.FromSourcePortId && p.PortId != Draft.ToSourcePortId))
             row.AdditionalEnds[port.PortId] = new();
@@ -122,6 +126,7 @@ public sealed class CableManufacturingTableEditor : UserControl
         foreach (var port in Draft.Ends)
         {
             var pin = PinColumn(port.Name + " PIN", CableManufacturingCells.Path(Draft, port.PortId, "SourcePinId"));
+            pin.IsReadOnly = Draft.InventoryOnly;
             var function = TextColumn(port.Name + " FUNCTION", CableManufacturingCells.Path(Draft, port.PortId, "Function"));
             if (port.PortId == Draft.FromSourcePortId) { _grid.Columns.Add(function); _grid.Columns.Add(pin); }
             else { _grid.Columns.Add(pin); _grid.Columns.Add(function); }
@@ -132,11 +137,20 @@ public sealed class CableManufacturingTableEditor : UserControl
             usage.SelectionChanged += (_, _) =>
             {
                 if (_syncingUsage || _grid.SelectedItem is not CableManufacturingRow row || usage.SelectedItem is not CablePinUsage value) return;
-                var cell = CableManufacturingCells.Get(Draft, row, port.PortId); cell.Usage = value;
-                CableManufacturingCells.Set(Draft, row, port.PortId, cell); _grid.Items.Refresh(); RefreshStatus();
+                try
+                {
+                    if (!Commit()) return;
+                    var cell = CableManufacturingCells.Get(Draft, row, port.PortId);
+                    if (Draft.InventoryOnly && cell.SourcePinId is { } id) new CableWiringEditorService().SetUsage(Draft, id, value);
+                    else { cell.Usage = value; CableManufacturingCells.Set(Draft, row, port.PortId, cell); }
+                    _grid.Items.Refresh(); RefreshStatus();
+                }
+                catch (InvalidOperationException error) { SyncUsages(); _error.Text = error.Message; }
             };
             _usageToolbar.Children.Add(usage);
         }
+        _grid.CanUserSortColumns = !Draft.InventoryOnly;
+        _addRow.IsEnabled = _removeRow.IsEnabled = !Draft.InventoryOnly;
         SyncUsages();
     }
 
@@ -255,7 +269,7 @@ public sealed class CableManufacturingTableEditor : UserControl
             var row = _grid.SelectedItem as CableManufacturingRow;
             foreach (var (portId, selector) in _usages)
             {
-                selector.IsEnabled = row is not null;
+                selector.IsEnabled = row is not null && (!Draft.InventoryOnly || CableManufacturingCells.Get(Draft, row, portId).SourcePinId is not null);
                 selector.SelectedItem = row is null ? CablePinUsage.Pending : CableManufacturingCells.Get(Draft, row, portId).Usage;
             }
         }
@@ -282,6 +296,7 @@ public sealed class CableManufacturingTableEditor : UserControl
             if (pins.Any(p => string.IsNullOrWhiteSpace(p.PinNumber)) || pins.Select(p => p.PinNumber.Trim()).Distinct(StringComparer.Ordinal).Count() != pins.Count)
             { error.Text = "腳位號碼不能空白或重複。"; return; }
             for (var i = 0; i < pins.Count; i++) { port.Pins[i].PinNumber = pins[i].PinNumber.Trim(); port.Pins[i].PinName = pins[i].PinName; }
+            if (Draft.InventoryOnly) { CableWiringEditorService.RebuildInventory(Draft); ReloadRows(); }
             RefreshPins(); dialog.DialogResult = true;
         };
         footer.Children.Add(cancel); footer.Children.Add(apply); DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
@@ -351,7 +366,7 @@ public sealed class CableManufacturingTableEditor : UserControl
             "將解除這些 Pin 的接法、功能、狀態及 CAD 綁定，保留對端資料並改為待確認。確定移除？");
     }
 
-    private void RemoveRow() { if (Commit() && _grid.SelectedItem is CableManufacturingRow row) { _rows.Remove(row); RefreshStatus(); } }
+    private void RemoveRow() { if (!Draft.InventoryOnly && Commit() && _grid.SelectedItem is CableManufacturingRow row) { _rows.Remove(row); RefreshStatus(); } }
     private void ReloadRows() { _rows.Clear(); foreach (var row in CableManufacturingEditorService.SortRows(Draft)) _rows.Add(row); }
     private void SortView()
     {
@@ -383,7 +398,38 @@ public sealed class CableManufacturingTableEditor : UserControl
         var errors = _service.Validate(Draft);
         SortView();
         _error.Text = errors.Count > 0 ? string.Join("\n", errors) :
+            Draft.InventoryOnly ? $"Pin 順序表 / 接線 {CableWiringEditorService.Mapping(Draft).Count}" :
             $"接法 {Draft.Rows.Sum(r => CableManufacturingCells.Pairs(r).Count())}；未完成列 {Draft.Rows.Count(r => !CableManufacturingCells.Pairs(r).Any())}";
+    }
+
+    private void OpenWiringEditor()
+    {
+        if (!Commit()) return;
+        try
+        {
+            var staged = JsonSerializer.Deserialize<CableManufacturingDraft>(JsonSerializer.Serialize(Draft))!;
+            new CableWiringEditorService().EnterVisualMode(staged);
+            var editor = new CableWiringDiagramEditor(staged);
+            var dialog = new Window { Title = "線材接線圖", Width = 1120, Height = 820, MinWidth = 750, MinHeight = 500,
+                Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var root = new DockPanel { Margin = new(12) }; var footer = new StackPanel { Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 8, 0, 0) };
+            var cancel = new Button { Content = "取消", IsCancel = true, Padding = new(12, 5, 12, 5) };
+            var apply = new Button { Content = "套用接線圖", Padding = new(12, 5, 12, 5), Margin = new(8, 0, 0, 0) };
+            var error = new TextBlock { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+            apply.Click += (_, _) =>
+            {
+                var errors = _service.Validate(staged);
+                if (errors.Count > 0) { error.Text = string.Join("\n", errors); return; }
+                CableWiringDiagramEditor.CopyDraft(staged, Draft);
+                BuildPortPanels(); ReloadRows(); BuildColumns(); RefreshPins(); RefreshStatus(); dialog.DialogResult = true;
+            };
+            footer.Children.Add(cancel); footer.Children.Add(apply);
+            DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
+            DockPanel.SetDock(error, Dock.Bottom); root.Children.Add(error); root.Children.Add(editor);
+            dialog.Content = root; dialog.ShowDialog();
+        }
+        catch (InvalidOperationException error) { _error.Text = error.Message; }
     }
     private static DataGridTextColumn TextColumn(string header, string path) => new() { Header = header,
         Binding = new Binding(path) { UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged }, Width = new(1, DataGridLengthUnitType.Star) };

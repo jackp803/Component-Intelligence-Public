@@ -69,7 +69,7 @@ public sealed class CableArchiveEditorDialog : Window
         _source = existing is null ? new()
         {
             TemplateId = "cable-" + Guid.NewGuid().ToString("N"), TemplateRevision = "draft",
-            AssetSha256 = new('0', 64), Ports = Enumerable.Range(1, 2).Select(i => new ComponentIntelligence.Electrical.Domain.ComponentPort
+            AssetSha256 = new('0', 64), Manufacturing = new() { InventoryOnly = true }, Ports = Enumerable.Range(1, 2).Select(i => new ComponentIntelligence.Electrical.Domain.ComponentPort
             {
                 PortId = "source-port-" + Guid.NewGuid().ToString("N"), Name = "P" + i,
                 Pins = [new() { PinId = "source-pin-" + Guid.NewGuid().ToString("N"), PinNumber = "1" }]

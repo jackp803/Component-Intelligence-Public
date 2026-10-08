@@ -65,7 +65,14 @@ public sealed class CableWiringEditorService
                     layout.PortBounds[port.PortId] = bounds = new(n == 0 ? 10 : 10 + widths[0] + 110, y, widths[n], 24 + port.Pins.Count * 7);
                 var ordered = port.Pins.OrderBy(p => p.PinNumber, DrawingContactDisplayOrder.NumberComparer).ToArray();
                 for (var p = 0; p < ordered.Length; p++)
+                {
                     layout.PinPositions.TryAdd(ordered[p].PinId, new(n == 0 ? bounds.X + bounds.Width : bounds.X, bounds.Y + 22 + p * 7));
+                    var id = ordered[p].PinId;
+                    var attached = AttachToBorder(bounds, layout.PinPositions[id]);
+                    if (attached == layout.PinPositions[id]) continue;
+                    layout.PinPositions[id] = attached;
+                    ClearAffectedRoutes(draft, id);
+                }
             }
             y += pair.Max(p => layout.PortBounds[p.PortId].Height) + 22;
         }
@@ -123,6 +130,11 @@ public sealed class CableWiringEditorService
     public void MovePin(CableManufacturingDraft draft, string pinId, SchematicPoint position)
     {
         RequireVisual(draft); RequirePin(draft, pinId); CheckPoint(position); EnsureLayout(draft);
+        var port = draft.Ends.Single(p => p.Pins.Any(pin => pin.PinId == pinId));
+        position = AttachToBorder(draft.WiringDiagram!.PortBounds[port.PortId], position);
+        var samePort = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
+        if (draft.WiringDiagram!.PinPositions.Any(p => p.Key != pinId && samePort.Contains(p.Key) && Math.Abs(p.Value.Y - position.Y) < 5))
+            throw new InvalidOperationException("這個接頭的 Pin 標示會重疊；請保留至少 5 mm 的上下間距。");
         if (draft.WiringDiagram!.PinPositions.Any(p => p.Key != pinId && Math.Abs(p.Value.X - position.X) < 3 && Math.Abs(p.Value.Y - position.Y) < 5))
             throw new InvalidOperationException("接點位置太靠近其他 Pin，請選擇其他位置。");
         draft.WiringDiagram.PinPositions[pinId] = position; ClearAffectedRoutes(draft, pinId);
@@ -190,7 +202,7 @@ public sealed class CableWiringEditorService
                 var status = Usage(draft, pin.PinId);
                 var label = pin.PinNumber + " / " + (status == CablePinUsage.Nc ? "NC" : status == CablePinUsage.Unused ? "未使用" : cell?.Function ?? pin.Function ?? "待確認");
                 var rightSide = p.X >= b.X + b.Width / 2;
-                var x = rightSide ? p.X - Math.Min(b.Width - 5, label.Length * 1.9 + 3) : p.X + 3;
+                var x = rightSide ? b.X + 3 : p.X + 3;
                 Text(label, x, p.Y - 3);
             }
         }
@@ -213,7 +225,9 @@ public sealed class CableWiringEditorService
         foreach (var pair in Mapping(draft))
         foreach (var other in Mapping(draft).Where(p => EdgeKey(p) != EdgeKey(pair) &&
             new[] { p.FromSourcePinId, p.ToSourcePinId }.Intersect(new[] { pair.FromSourcePinId, pair.ToSourcePinId }).Any()))
-            foreach (var point in paths[EdgeKey(pair)].Intersect(paths[EdgeKey(other)]))
+            foreach (var point in paths[EdgeKey(pair)].Where(point => paths[EdgeKey(other)].Zip(paths[EdgeKey(other)].Skip(1)).Any(segment =>
+                point.X == segment.First.X && point.X == segment.Second.X && point.Y >= Math.Min(segment.First.Y, segment.Second.Y) && point.Y <= Math.Max(segment.First.Y, segment.Second.Y) ||
+                point.Y == segment.First.Y && point.Y == segment.Second.Y && point.X >= Math.Min(segment.First.X, segment.Second.X) && point.X <= Math.Max(segment.First.X, segment.Second.X))))
                 primitives.Add(new() { Kind = "CIRCLE", Start = point, Radius = .6 });
         var points = primitives.SelectMany(p => new[] { p.Start, p.End ?? p.Start }).ToArray();
         var minX = points.Min(p => p.X) - 5; var minY = points.Min(p => p.Y) - 5;
@@ -227,6 +241,15 @@ public sealed class CableWiringEditorService
         var route = new List<SchematicPoint>();
         foreach (var p in points) route = SchematicDraftRoute.Append(route, p);
         return route;
+    }
+    private static SchematicPoint AttachToBorder(SchematicGridBounds bounds, SchematicPoint point)
+    {
+        if (!Finite(point.X, point.Y)) return point;
+        var x = Math.Clamp(point.X, bounds.X, bounds.X + bounds.Width);
+        var y = Math.Clamp(point.Y, bounds.Y, bounds.Y + bounds.Height);
+        return new SchematicPoint[] { new(bounds.X, y), new(bounds.X + bounds.Width, y),
+            new(x, bounds.Y), new(x, bounds.Y + bounds.Height) }
+            .MinBy(p => (p.X - point.X) * (p.X - point.X) + (p.Y - point.Y) * (p.Y - point.Y))!;
     }
     private static CablePinUsage Usage(CableManufacturingDraft draft, string id) => draft.Rows.SelectMany(CableManufacturingCells.All)
         .FirstOrDefault(c => c.SourcePinId == id)?.Usage ?? CablePinUsage.Pending;

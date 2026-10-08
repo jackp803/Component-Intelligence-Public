@@ -349,16 +349,16 @@ internal static class Program
         for (var i = 0; i < p.Schematic!.Pages.Count; i++)
             Save(Page(p, p.Schematic.Pages[i]), Path.Combine(root, $"page-{i + 1}.png"));
         var pdf = Path.Combine(root, "synthetic-multipage-draft.pdf");
-        Require(SchematicPdfWriter.Write(p, pdf, Page) == 2, "Wrong PDF page count.");
+        Require(SchematicPdfWriter.Write(p, pdf, Page) == 4, "Expected main sheet, existing detail and two unique physical-cable wiring diagrams.");
         using (var document = PdfReader.Open(pdf, PdfDocumentOpenMode.Import))
-            Require(document.PageCount == 2 && document.Info.Title.Contains("DRAFT"), "Saved PDF invalid.");
+            Require(document.PageCount == 4 && document.Info.Title.Contains("DRAFT"), "Saved PDF invalid.");
         var failed = Path.Combine(root, "must-not-exist.pdf");
         try { SchematicPdfWriter.Write(p, failed, (_, _) => throw new InvalidOperationException("simulated failure")); throw new Exception("Failure test did not fail."); }
         catch (InvalidOperationException) { }
         Require(!File.Exists(failed) && Directory.GetFiles(root, ".schematic-*.pdf").Length == 0, "Failed PDF left a published artifact.");
         Require(JsonSerializer.Serialize(p) == snapshot, "Rendering mutated project data.");
         File.WriteAllText(Path.Combine(root, "sample-project.json"), JsonSerializer.Serialize(p, new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine("PASS: four CAD contacts; selected sketch excludes static table; SQLite reopen; 2 instances; shared WPF renderer; 2 PDF pages; failed export atomic; no project mutation.");
+        Console.WriteLine("PASS: four CAD contacts; selected sketch excludes static table; SQLite reopen; 2 instances; shared WPF renderer; 4 PDF pages including linked wiring appendices; failed export atomic; no project mutation.");
         return 0;
     }
 

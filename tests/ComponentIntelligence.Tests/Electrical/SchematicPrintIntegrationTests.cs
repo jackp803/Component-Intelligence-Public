@@ -12,7 +12,8 @@ public sealed class SchematicPrintIntegrationTests
         var print = File.ReadAllText(Path.Combine(desktop, "SchematicWorkspaceControl.Print.cs"));
         Assert.Contains("SchematicPdfWriter.Write", print);
         var writer = File.ReadAllText(Path.Combine(desktop, "SchematicPdfWriter.cs"));
-        Assert.Contains("render(project, sheet)", writer);
+        Assert.Contains("CableWiringAppendixPlan.Build(project)", writer);
+        Assert.Contains("render(snapshot, sheet)", writer);
         Assert.Contains("document.Save(temporary)", writer);
         Assert.Contains("DRAFT", writer);
         var render = File.ReadAllText(Path.Combine(desktop, "SchematicWorkspaceControl.xaml.cs"));

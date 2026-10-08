@@ -101,7 +101,8 @@ public sealed class CableWiringEditorTests
         _wiring.MovePin(draft, "p2.1", new(220, 120));
         var diagram = _wiring.Build(draft);
         Assert.Equal(before, draft.Ends.SelectMany(p => p.Pins).Select(p => p.PinId));
-        Assert.Equal(new SchematicPoint(220, 120), diagram.PinPositions["p2.1"]);
+        var bounds = diagram.PortBounds["P2"];
+        Assert.Equal(new SchematicPoint(220, bounds.Y + bounds.Height), diagram.PinPositions["p2.1"]);
         Assert.True(diagram.EdgePaths.Values.Single().Count <= 6);
         Assert.Equal(diagram.PinPositions["p2.1"], diagram.EdgePaths.Values.Single()[^1]);
     }
@@ -114,5 +115,42 @@ public sealed class CableWiringEditorTests
         draft.WiringDiagram!.PinPositions["p1.1"] = new(double.NaN, 2);
         Assert.NotEmpty(_table.Validate(draft));
         Assert.Throws<InvalidOperationException>(() => _table.Apply(template, draft));
+    }
+
+    [Fact]
+    public void DraggingPinCannotOverlapAnotherLabelInItsConnector()
+    {
+        var draft = _table.Prepare(CableManufacturingEditorTests.Template()); _wiring.EnterVisualMode(draft);
+        var other = draft.WiringDiagram!.PinPositions["p1.2"];
+        Assert.Throws<InvalidOperationException>(() => _wiring.MovePin(draft, "p1.1", new(other.X + 100, other.Y)));
+    }
+
+    [Fact]
+    public void DraggedGroundPinSnapsToItsOwnPortAndReroutesAfterSave()
+    {
+        var template = CableManufacturingEditorTests.Template(3);
+        var draft = _table.Prepare(template); _wiring.EnterVisualMode(draft);
+        _wiring.Connect(draft, "p2.1", "p3.1");
+        var bounds = draft.WiringDiagram!.PortBounds["P3"];
+        var ground = draft.WiringDiagram.PinPositions["p3.1"];
+        _wiring.MovePin(draft, "p3.1", new(bounds.X + bounds.Width + 30, ground.Y));
+        var reopened = _table.Prepare(_table.Apply(template, draft));
+        var diagram = _wiring.Build(reopened);
+        var expected = new SchematicPoint(bounds.X + bounds.Width, ground.Y);
+        Assert.Equal(expected, diagram.PinPositions["p3.1"]);
+        Assert.Equal(expected, diagram.EdgePaths.Values.Single()[^1]);
+        Assert.Single(reopened.ExplicitMapping!);
+    }
+
+    [Fact]
+    public void RenderingOlderDetachedPinRepairsPresentationWithoutChangingSource()
+    {
+        var draft = _table.Prepare(CableManufacturingEditorTests.Template(3)); _wiring.EnterVisualMode(draft);
+        var bounds = draft.WiringDiagram!.PortBounds["P3"];
+        var pin = draft.WiringDiagram.PinPositions["p3.1"];
+        draft.WiringDiagram.PinPositions["p3.1"] = pin with { X = pin.X + 30 };
+        var before = JsonSerializer.Serialize(draft);
+        Assert.Equal(new SchematicPoint(bounds.X + bounds.Width, pin.Y), _wiring.Build(draft).PinPositions["p3.1"]);
+        Assert.Equal(before, JsonSerializer.Serialize(draft));
     }
 }

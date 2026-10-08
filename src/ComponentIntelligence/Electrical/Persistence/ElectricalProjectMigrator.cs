@@ -5,17 +5,19 @@ namespace ComponentIntelligence.Electrical.Persistence;
 public static class ElectricalProjectMigrator
 {
     public const string CurrentSchemaVersion = "0.7";
+    public const string CableWiringSchemaVersion = "0.8";
 
     public static ElectricalProject Migrate(ElectricalProject project)
     {
         ArgumentNullException.ThrowIfNull(project);
-        if (string.Equals(project.SchemaVersion, CurrentSchemaVersion, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(project.SchemaVersion, CurrentSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(project.SchemaVersion, CableWiringSchemaVersion, StringComparison.OrdinalIgnoreCase))
         {
             ProjectLegacyAssemblyCompatibility(project);
-            return project;
+            return ProtectCableWiring(project);
         }
 
-        return project.SchemaVersion switch
+        var migrated = project.SchemaVersion switch
         {
             "0.1" => UpgradeFrom04(UpgradeFrom03(UpgradeFrom02(UpgradeFrom01(project)))),
             "0.2" => UpgradeFrom04(UpgradeFrom03(UpgradeFrom02(project))),
@@ -25,7 +27,14 @@ public static class ElectricalProjectMigrator
             "0.6" => Copy(project, CurrentSchemaVersion, project.DrawingPlan),
             _ => throw new NotSupportedException($"Electrical project schema '{project.SchemaVersion}' is not supported. Current schema is '{CurrentSchemaVersion}'.")
         };
+        return ProtectCableWiring(migrated);
     }
+
+    private static ElectricalProject ProtectCableWiring(ElectricalProject project) =>
+        project.SchemaVersion != CableWiringSchemaVersion && project.Cables.Any(c => c.ArchivedCable is { } cable &&
+            (cable.Manufacturing is { InventoryOnly: true } or { WiringDiagram: not null } ||
+             cable.Template.Manufacturing is { InventoryOnly: true } or { WiringDiagram: not null }))
+            ? Copy(project, CableWiringSchemaVersion, project.DrawingPlan) : project;
 
     private static ElectricalProject UpgradeFrom01(ElectricalProject source) => Copy(source, "0.2");
     private static ElectricalProject UpgradeFrom02(ElectricalProject source) => Copy(source, "0.3");

@@ -125,7 +125,7 @@ public sealed partial class SchematicAuthoringService
         for (var i = 0; i < doc.Wires.Count; i++)
         {
             var wire = doc.Wires[i];
-            if (wire.Start.SymbolId != old.SymbolId && wire.End.SymbolId != old.SymbolId) continue;
+            if (wire.Locked || wire.Start.SymbolId != old.SymbolId && wire.End.SymbolId != old.SymbolId) continue;
             var points = wire.Points.ToList();
             if (wire.Start.SymbolId == old.SymbolId) points = ReanchorSymbol(points, draft, next, wire.Start, true);
             if (wire.End.SymbolId == old.SymbolId) points = ReanchorSymbol(points, draft, next, wire.End, false);

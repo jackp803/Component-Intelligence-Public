@@ -47,7 +47,9 @@ public sealed class SchematicSymbolPresentationTests
         SchematicLabelSide side)
     {
         var anchor = new SchematicAnchor { EndpointId = "pin", Position = new(50, 6), Label = "1 L+" };
-        var symbol = Symbol() with { Position = new(100, 80), Width = 50, Height = 30,
+        var native = Symbol();
+        var symbol = native with { Position = new(100, 80), Width = 50, Height = 30,
+            Geometry = native.Geometry! with { Width = 50, Height = 30 },
             Rotation = rotation, Anchors = [anchor] };
         var before = System.Text.Json.JsonSerializer.Serialize(symbol);
         var label = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
@@ -71,7 +73,9 @@ public sealed class SchematicSymbolPresentationTests
     {
         var anchors = Enumerable.Range(1, 4).Select(n => new SchematicAnchor
             { EndpointId = $"pin-{n}", Position = new(50, 6 * n), Label = $"{n} long function" }).ToList();
-        var symbol = Symbol() with { Rotation = 90, Width = 50, Height = 30, Anchors = anchors };
+        var native = Symbol();
+        var symbol = native with { Rotation = 90, Width = 50, Height = 30, Anchors = anchors,
+            Geometry = native.Geometry! with { Width = 50, Height = 30 } };
         var labels = anchors.Select(a => SchematicSymbolPresentation.AnchorLabel(symbol, a)).ToArray();
         Assert.All(labels, l => Assert.Equal(SchematicLabelSide.Bottom, l.Side));
         for (var i = 1; i < labels.Length; i++)

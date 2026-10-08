@@ -67,7 +67,7 @@ public sealed partial class SchematicAuthoringService
             var extent = side is "Left" or "Right" ? symbol.Height : symbol.Width;
             if (extent < 6) throw new InvalidOperationException("This module edge is too short for a Port contact.");
             var placement = new SchematicPortPlacement { PortId = portId, Side = side,
-                Coordinate = Math.Clamp(coordinate, 3, extent - 3) };
+                Coordinate = Math.Clamp(coordinate, 3, extent - 3) / SchematicSymbolPresentation.CadDisplayScale(symbol) };
             next = symbol with { PortPlacements = symbol.PortPlacements.Where(p => p.PortId != portId)
                 .Append(placement).ToList(), AssetRevision = null };
         }
@@ -89,7 +89,7 @@ public sealed partial class SchematicAuthoringService
                 _ => new SchematicPoint(first + i * pitch, symbol.Height)
             })).ToDictionary(x => x.EndpointId, x => x.Position, StringComparer.Ordinal);
             next = symbol with { Anchors = symbol.Anchors.Select(a => positions.TryGetValue(a.EndpointId, out var point)
-                ? a with { Position = point, Direction = side, Confirmed = false, CadContactId = null } : a).ToList(),
+                ? a with { Position = SchematicSymbolPresentation.CadNativePoint(symbol, point), Direction = side, Confirmed = false, CadContactId = null } : a).ToList(),
                 AssetRevision = null };
             if (symbol.Geometry is null && !symbol.ManualSize)
                 next = FitGenericPortEdges(next, owner.Ports, symbol.Width, symbol.Height);
@@ -99,7 +99,7 @@ public sealed partial class SchematicAuthoringService
         {
             var extent = side is "Left" or "Right" ? symbol.Height : symbol.Width;
             var placement = new SchematicPortPlacement { PortId = portId, Side = side,
-                Coordinate = Math.Clamp(coordinate, 3, extent - 3) };
+                Coordinate = Math.Clamp(coordinate, 3, extent - 3) / SchematicSymbolPresentation.CadDisplayScale(symbol) };
             next = next with { PortPlacements = symbol.PortPlacements.Where(p => p.PortId != portId)
                 .Append(placement).ToList() };
             EnsureMovedContactsClear(draft, doc, next,
@@ -113,7 +113,7 @@ public sealed partial class SchematicAuthoringService
         for (var i = 0; i < doc.Wires.Count; i++)
         {
             var wire = doc.Wires[i];
-            if (wire.Start.SymbolId != symbolId && wire.End.SymbolId != symbolId) continue;
+            if (wire.Locked || wire.Start.SymbolId != symbolId && wire.End.SymbolId != symbolId) continue;
             var points = wire.Points.ToList();
             if (wire.Start.SymbolId == symbolId && SymbolAttachmentPoint(draft, symbol, wire.Start) != SymbolAttachmentPoint(draft, next, wire.Start))
                 points = ReanchorSymbol(points, draft, next, wire.Start, true);

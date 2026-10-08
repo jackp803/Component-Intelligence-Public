@@ -7,13 +7,15 @@ public static class ElectricalProjectMigrator
     public const string CurrentSchemaVersion = "0.7";
     public const string CableWiringSchemaVersion = "0.8";
     public const string CableFunctionAssociationSchemaVersion = "0.9";
+    public const string CadDisplayScaleSchemaVersion = "0.10";
 
     public static ElectricalProject Migrate(ElectricalProject project)
     {
         ArgumentNullException.ThrowIfNull(project);
         if (string.Equals(project.SchemaVersion, CurrentSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(project.SchemaVersion, CableWiringSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(project.SchemaVersion, CableFunctionAssociationSchemaVersion, StringComparison.OrdinalIgnoreCase))
+            string.Equals(project.SchemaVersion, CableFunctionAssociationSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(project.SchemaVersion, CadDisplayScaleSchemaVersion, StringComparison.OrdinalIgnoreCase))
         {
             ProjectLegacyAssemblyCompatibility(project);
             return ProtectCableWiring(project);
@@ -33,6 +35,9 @@ public static class ElectricalProjectMigrator
     }
 
     private static ElectricalProject ProtectCableWiring(ElectricalProject project) =>
+        project.SchemaVersion == CadDisplayScaleSchemaVersion ? project :
+        project.Schematic?.Symbols.Any(s => s.Geometry is { } g &&
+            (s.Width != g.Width || s.Height != g.Height)) == true ? Copy(project, CadDisplayScaleSchemaVersion, project.DrawingPlan) :
         project.SchemaVersion != CableFunctionAssociationSchemaVersion && project.Cables.Any(c => c.ArchivedCable is { } cable &&
             (HasFunctions(cable.Manufacturing) || HasFunctions(cable.Template.Manufacturing)))
             ? Copy(project, CableFunctionAssociationSchemaVersion, project.DrawingPlan) :

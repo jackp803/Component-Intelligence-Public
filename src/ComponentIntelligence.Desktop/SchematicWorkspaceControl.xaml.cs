@@ -359,14 +359,15 @@ public partial class SchematicWorkspaceControl : UserControl
             SchematicPortPresentation.IsRepresented(symbol, port) && SchematicPortPresentation.IsPortCollapsed(symbol, port)));
         var body = new Border { Width = (compacted ? compact.Width : symbol.Width) * 3,
             Height = (compacted ? compact.Height : symbol.Height) * 3, BorderThickness = new(0),
-            BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray, Background = Brushes.White,
+            BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray,
+            Background = symbol.Geometry is null ? Brushes.White : null,
             Cursor = _wireMode ? Cursors.Cross : portEditing ? Cursors.Arrow : Cursors.SizeAll };
         var content = new Canvas();
         var image = new Image { Stretch = Stretch.Uniform, IsHitTestVisible = false };
         content.Children.Add(image);
         body.Child = content;
         var cad = SchematicSymbolPresentation.GeometryForOwner(symbol, owner);
-        if (cad is not null) body.Child = CadCanvas(SchematicSymbolPresentation.BodyGeometry(cad));
+        if (cad is not null) body.Child = CadCanvas(SchematicSymbolPresentation.BodyGeometry(cad), interactive: !_renderingOutput);
         // Selection strokes overlay geometry; their width must not shift the CAD body away from its anchors.
         var drawing = body.Child; body.Child = null;
         var layers = new Grid(); layers.Children.Add(drawing);
@@ -393,7 +394,8 @@ public partial class SchematicWorkspaceControl : UserControl
         else
         {
             var upright = SchematicSymbolPresentation.UprightCadText(symbol, cad!);
-            var labels = CadCanvas(upright with { Width = Sheet.Width / 3, Height = Sheet.Height / 3 });
+            var labels = CadCanvas(upright with { Width = Sheet.Width / 3, Height = Sheet.Height / 3 }, interactive: !_renderingOutput);
+            labels.MouseLeftButtonDown += SelectBody;
             Sheet.Children.Add(labels);
         }
         if (symbol.Geometry is null)
@@ -406,14 +408,15 @@ public partial class SchematicWorkspaceControl : UserControl
             Sheet.Children.Add(label);
         }
         var referenceY = symbol.Position.Y - 6;
-        body.MouseLeftButtonDown += (_, e) =>
+        body.MouseLeftButtonDown += SelectBody;
+        void SelectBody(object sender, MouseButtonEventArgs e)
         {
             if (_wireMode) return;
             _selectionId = symbol.SymbolId;
             if (portEditing) { Render(project); e.Handled = true; return; }
             if (symbol.Locked) { Render(project); e.Handled = true; return; }
             BeginGesture(e); _dragSymbol = symbol.SymbolId; e.Handled = true; UpdateSelection(project);
-        };
+        }
         var placedLabels = new List<(double Left, double Top, double Right, double Bottom)>();
         foreach (var anchor in symbol.Anchors)
         {
@@ -544,12 +547,12 @@ public partial class SchematicWorkspaceControl : UserControl
             Canvas.SetTop(label, (symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2) * 3);
             Sheet.Children.Add(label);
         }
-        if (portEditing && symbol.Geometry is null && !symbol.Locked)
+        if (portEditing && !symbol.Locked && (symbol.Geometry is null || symbol.SymbolId == _selectionId))
         {
             var resize = new Border { Width = 14, Height = 14, Background = Brushes.White,
                 BorderBrush = Brushes.DarkCyan, BorderThickness = new(1), Cursor = Cursors.SizeNWSE,
                 Child = new TextBlock { Text = "↘", FontSize = 10, TextAlignment = TextAlignment.Center },
-                ToolTip = "拖曳調整模塊大小；接點和導線會跟隨" };
+                ToolTip = symbol.Geometry is null ? "拖曳調整模塊大小；接點和導線會跟隨" : "拖曳等比例縮放 CAD；接點和導線會跟隨" };
             Canvas.SetLeft(resize, (compact.X + compact.Width) * 3 - 7);
             Canvas.SetTop(resize, (compact.Y + compact.Height) * 3 - 7);
             resize.MouseLeftButtonDown += (_, e) =>
@@ -756,13 +759,7 @@ public partial class SchematicWorkspaceControl : UserControl
             {
                 if (_dragDetailId is not null) PreviewDetailGesture();
                 else if (_dragResizeSymbol is not null)
-                {
-                    var s = _gestureStart.Schematic!.Symbols.Single(s => s.SymbolId == _dragResizeSymbol);
-                    var owner = SchematicSymbolOwner.Resolve(_gestureStart, s);
-                    var bounds = SchematicPortPresentation.GenericBodyBounds(_gestureStart.Schematic, s, owner);
-                    _gesturePreview = _service.ResizeGenericSymbol(_gestureStart, s.SymbolId,
-                        _pointer.X - bounds.X, _pointer.Y - bounds.Y);
-                }
+                    PreviewSymbolResize();
                 else if (_dragPinSymbol is not null && _dragPinId is not null)
                 {
                     var s = _gestureStart.Schematic!.Symbols.Single(s => s.SymbolId == _dragPinSymbol);
@@ -907,6 +904,7 @@ public partial class SchematicWorkspaceControl : UserControl
         var w = p.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
         SelectionLabel.Text = s is null ? (w is not null ? "導線" : "") : SchematicSymbolPresentation.DisplayTitle(s, owner!);
         ReferenceText.Text = owner?.Reference ?? "";
+        UpdateCadScaleSelection(s);
         var coverage = s is null ? default : SchematicSymbolPresentation.ContactCoverage(s, owner!);
         SelectionState.Text = s is not null ? $"{(s.Locked ? "已鎖定" : "可編輯")}\n接點位置：{coverage.Confirmed} / {coverage.Total} 已確認" :
             w is not null ? $"{(w.Locked ? "已鎖定" : "可編輯")}\n{(w.ConnectionId is null ? "待接續" : "工程連線已建立")}" : "";

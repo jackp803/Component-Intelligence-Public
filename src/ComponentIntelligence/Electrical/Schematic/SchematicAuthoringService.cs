@@ -482,7 +482,7 @@ public sealed partial class SchematicAuthoringService
 
     public static SchematicPoint AnchorPoint(SchematicSymbol symbol, string endpointId)
     {
-        var point = symbol.Anchors.Single(a => a.EndpointId == endpointId).Position;
+        var point = SchematicSymbolPresentation.CadDisplayPoint(symbol, symbol.Anchors.Single(a => a.EndpointId == endpointId).Position);
         var rotated = symbol.Rotation switch
         {
             0 => point,
@@ -840,6 +840,9 @@ public sealed partial class SchematicAuthoringService
             RequirePage(doc, symbol.PageId); RequirePoint(symbol.Position);
             if (symbol.Width <= 0 || symbol.Height <= 0 || !double.IsFinite(symbol.Width) || !double.IsFinite(symbol.Height) || symbol.Rotation is not (0 or 90 or 180 or 270))
                 throw new InvalidOperationException("Invalid symbol size or orientation.");
+            if (symbol.Geometry is { } geometry && (!double.IsFinite(geometry.Width) || !double.IsFinite(geometry.Height) || geometry.Width <= 0 || geometry.Height <= 0 ||
+                Math.Abs(symbol.Height - geometry.Height * SchematicSymbolPresentation.CadDisplayScale(symbol)) > 1e-8 * Math.Max(1, symbol.Height)))
+                throw new InvalidOperationException("CAD display size must preserve the native aspect ratio.");
             var owner = SchematicSymbolOwner.Resolve(project, symbol);
             if (symbol.CollapsedPortIds.Distinct(StringComparer.Ordinal).Count() != symbol.CollapsedPortIds.Count ||
                 symbol.CollapsedPortIds.Any(id => !owner.Ports.Any(p => p.PortId == id)))

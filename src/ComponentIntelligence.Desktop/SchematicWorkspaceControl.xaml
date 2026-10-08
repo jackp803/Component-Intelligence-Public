@@ -100,6 +100,15 @@
     <Button Content="放置另一個表示" Padding="8,5" Margin="0,6,0,0" Click="AnotherRepresentation_Click" ToolTip="放置此元件的另一個表示 (Shift+P)"/>
     <Button Content="拆分模塊表示" Padding="8,5" Margin="0,6,0,0" Click="SplitRepresentation_Click" ToolTip="將通用模塊接點分段放到各頁；仍是一顆實體 (Ctrl+Shift+P)"/>
     <Button Content="保存模塊版型" Padding="8,5" Margin="0,6,0,0" Click="SaveModuleLayout_Click" ToolTip="讓同型元件在其他專案沿用目前的尺寸與接點位置；不核准 CAD 圖塊"/>
+    <StackPanel x:Name="CadScalePanel" Visibility="Collapsed" Margin="0,12,0,0">
+     <TextBlock Text="CAD 縮放 (%)"/>
+     <DockPanel Margin="0,4,0,0">
+      <Button x:Name="CadScaleReset" DockPanel.Dock="Right" Width="30" Height="28" Margin="4,0,0,0" FontFamily="Segoe MDL2 Assets" Content="&#xE72C;" Click="CadScaleReset_Click" ToolTip="還原 CAD 顯示為 100%"/>
+      <Button x:Name="CadScaleApply" DockPanel.Dock="Right" Width="30" Height="28" Margin="4,0,0,0" FontFamily="Segoe MDL2 Assets" Content="&#xE74E;" Click="CadScaleApply_Click" ToolTip="套用 CAD 顯示縮放"/>
+      <TextBox x:Name="CadScaleText" VerticalContentAlignment="Center"/>
+     </DockPanel>
+     <TextBlock x:Name="CadSizeText" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#61696B"/>
+    </StackPanel>
     <TextBlock x:Name="SelectionState" TextWrapping="Wrap" Margin="0,12,0,0" Foreground="#61696B"/>
    </StackPanel>
   </Grid>

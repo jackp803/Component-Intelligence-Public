@@ -25,6 +25,20 @@ public sealed record SchematicAnchorLabel(SchematicPoint Position, SchematicLabe
 
 public static class SchematicSymbolPresentation
 {
+    public static double CadDisplayScale(SchematicSymbol symbol) => symbol.Geometry is { } asset ? symbol.Width / asset.Width : 1;
+
+    public static SchematicPoint CadDisplayPoint(SchematicSymbol symbol, SchematicPoint point)
+    {
+        var scale = CadDisplayScale(symbol);
+        return new(point.X * scale, point.Y * scale);
+    }
+
+    public static SchematicPoint CadNativePoint(SchematicSymbol symbol, SchematicPoint point)
+    {
+        var scale = CadDisplayScale(symbol);
+        return new(point.X / scale, point.Y / scale);
+    }
+
     public static string DisplayTitle(SchematicSymbol symbol, SchematicSymbolOwner owner) =>
         symbol.SectionCount > 1 ? $"{owner.DisplayName}  {symbol.SectionIndex}/{symbol.SectionCount}" : owner.DisplayName;
 
@@ -126,7 +140,17 @@ public static class SchematicSymbolPresentation
     public static bool ShowAnchorLabel(SchematicSymbol symbol, SchematicAnchor anchor) =>
         symbol.Geometry is null || !anchor.Confirmed;
 
-    public static SchematicCadAsset? Geometry(SchematicSymbol symbol, string? reference) => symbol.Geometry is { } asset
-        ? asset with { Primitives = asset.Primitives.Select(p => p.AttributeTag == "TAG1"
-            ? p with { Text = string.IsNullOrWhiteSpace(reference) ? "?" : reference } : p).ToArray() } : null;
+    public static SchematicCadAsset? Geometry(SchematicSymbol symbol, string? reference)
+    {
+        if (symbol.Geometry is not { } asset) return null;
+        var scale = CadDisplayScale(symbol);
+        SchematicPoint Point(SchematicPoint p) => new(p.X * scale, p.Y * scale);
+        // This is a display projection, not a replacement for pinned CAD evidence.
+        return asset with { Width = asset.Width * scale, Height = asset.Height * scale,
+            ConnectionPoints = asset.ConnectionPoints.Select(c => c with { Position = Point(c.Position) }).ToArray(),
+            Primitives = asset.Primitives.Select(p => p with { Start = Point(p.Start), End = p.End is null ? null : Point(p.End),
+                Radius = p.Radius * scale, TextHeight = p.TextHeight * scale, TextWidth = p.TextWidth * scale,
+                Text = p.AttributeTag == "TAG1" ? string.IsNullOrWhiteSpace(reference) ? "?" : reference : p.Text,
+                Contours = p.Contours.Select(c => (IReadOnlyList<SchematicPoint>)c.Select(Point).ToArray()).ToArray() }).ToArray() };
+    }
 }

@@ -11,9 +11,9 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class SchematicWorkspaceControl
 {
-    internal static Canvas CadCanvas(SchematicCadAsset asset, Brush? stroke = null, double thickness = 1, DoubleCollection? dash = null)
+    internal static Canvas CadCanvas(SchematicCadAsset asset, Brush? stroke = null, double thickness = 1, DoubleCollection? dash = null, bool interactive = false)
     {
-        var canvas = new Canvas { Width = asset.Width * 3, Height = asset.Height * 3, IsHitTestVisible = false };
+        var canvas = new Canvas { Width = asset.Width * 3, Height = asset.Height * 3, IsHitTestVisible = interactive };
         foreach (var primitive in asset.Primitives)
         {
             FrameworkElement element;
@@ -47,7 +47,7 @@ public partial class SchematicWorkspaceControl
                     element = new System.Windows.Shapes.Path { Data = new PathGeometry([figure]), Stroke = Brushes.Black, StrokeThickness = 1 };
                     break;
                 case "TEXT":
-                    var singleLine = new TextBlock { Text = primitive.DisplayText, FontSize = Math.Max(1, primitive.TextHeight * 3),
+                    var singleLine = new TextBlock { Text = primitive.DisplayText, FontSize = primitive.TextHeight > 0 ? primitive.TextHeight * 3 : 1,
                         Foreground = Brushes.Black };
                     singleLine.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                     var offset = primitive.TextAnchorOffset(singleLine.DesiredSize.Width, singleLine.DesiredSize.Height, singleLine.BaselineOffset);
@@ -60,7 +60,7 @@ public partial class SchematicWorkspaceControl
                     element = singleLine;
                     break;
                 case "MTEXT":
-                    var text = new TextBlock { Text = primitive.Text, FontSize = Math.Max(1, primitive.TextHeight * 3),
+                    var text = new TextBlock { Text = primitive.Text, FontSize = primitive.TextHeight > 0 ? primitive.TextHeight * 3 : 1,
                         Foreground = Brushes.Black, TextWrapping = TextWrapping.Wrap };
                     if (primitive.TextWidth > 0) text.Width = primitive.TextWidth * 3;
                     text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));

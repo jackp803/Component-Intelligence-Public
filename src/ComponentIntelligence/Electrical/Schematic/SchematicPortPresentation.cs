@@ -141,12 +141,13 @@ public static class SchematicPortPresentation
         var placement = symbol.PortPlacements.FirstOrDefault(p => p.PortId == port.PortId);
         if (placement is not null)
         {
+            var coordinate = placement.Coordinate * SchematicSymbolPresentation.CadDisplayScale(symbol);
             var local = placement.Side switch
             {
-                "Left" => new SchematicPoint(0, placement.Coordinate),
-                "Right" => new SchematicPoint(symbol.Width, placement.Coordinate),
-                "Top" => new SchematicPoint(placement.Coordinate, 0),
-                _ => new SchematicPoint(placement.Coordinate, symbol.Height)
+                "Left" => new SchematicPoint(0, coordinate),
+                "Right" => new SchematicPoint(symbol.Width, coordinate),
+                "Top" => new SchematicPoint(coordinate, 0),
+                _ => new SchematicPoint(coordinate, symbol.Height)
             };
             var rotated = symbol.Rotation switch
             {
@@ -181,7 +182,7 @@ public static class SchematicPortPresentation
 
     public static SchematicPoint CadPortPoint(SchematicSymbol symbol, SchematicCadPortBinding binding)
     {
-        var p = binding.Position;
+        var p = SchematicSymbolPresentation.CadDisplayPoint(symbol, binding.Position);
         var local = symbol.Rotation switch
         {
             90 => new SchematicPoint(symbol.Height - p.Y, p.X),

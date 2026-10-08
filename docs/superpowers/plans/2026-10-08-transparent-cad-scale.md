@@ -31,7 +31,7 @@ Files: SchematicSymbolPresentation.cs; SchematicAuthoringService.CadScale.cs (ne
 ## Task 2: Review and Delivery
 - [x] Run full domain suite, focused CAD WPF/PDF smoke, and existing wiring/manufacturing/connector regressions.
 - [x] Obtain bounded independent review and fix verified issues with RED/GREEN tests.
-- [ ] Inspect rendered PDF, verify unchanged data hashes, and publish a clean-source BD bundle with manifest and ValidateOnly launcher. No push/merge/window launch.
+- [x] Inspect rendered PDF, verify unchanged data hashes, and publish a clean-source BD bundle with manifest and ValidateOnly launcher. No push/merge/window launch.
 
 ## Ledger
 - Root cause: RenderSymbol gives every CAD body a solid white background; CAD cannot use the generic-only resize handle. Import currently uses explicit CAD-unit-to-mm ratio and native geometry size, not an independently configurable view scale.
@@ -39,5 +39,6 @@ Files: SchematicSymbolPresentation.cs; SchematicAuthoringService.CadScale.cs (ne
 - RED: two initial domain regressions (unscaled view / missing scale API), plus real WPF output pixel showing upper CAD blank area hides the lower line. GREEN: 19 focused domain cases and CAD offscreen pixel/hit/percentage/reset/gesture/history/output checks.
 - Full working-tree suite: 1420 passed. Five older label tests initially failed because their synthetic CAD native dimensions were 30x20 while symbol dimensions were set to 50x30. Corrected fixtures to matching native dimensions, preserving every expected position/spacing assertion; scaled native-coordinate behavior has separate four-rotation tests.
 - Existing fit/wiring/manufacturing (all and interaction)/connector smoke passed. Rendered CAD PDF and fitted appendix visually inspected. No native windows were shown.
-- Independent review found four edge cases: locked stationary Pin routes were still rewritten; CAD Port drag wrote display coordinates as native; active/history schema promotion lagged behind saving; 5% CAD text was clamped to one DIP. Reproduced each with focused RED tests, then fixed locked-route skip, inverse CAD contact/placement projection, immediate scale-command migration, and exact positive text height. A bounded follow-up review is pending.
+- Independent review found four edge cases: locked stationary Pin routes were still rewritten; CAD Port drag wrote display coordinates as native; active/history schema promotion lagged behind saving; 5% CAD text was clamped to one DIP. Reproduced each with focused RED tests, then fixed locked-route skip, inverse CAD contact/placement projection, immediate scale-command migration, and exact positive text height. Bounded follow-up review reported no findings.
 - Post-review verification: 24 CAD cases and 1425 full working-tree tests passed; tiny-text WPF regression and existing manufacturing/interaction/appendix-fit smoke passed.
+- Delivered code c67fb689ed9bf90fa54afcea933fed1c90209583 from git archive; 1422 clean-source tests and clean CAD/fit/manufacturing WPF/PDF smokes passed. Release publish succeeded; 222 runtime SHA256 entries verified by BD ValidateOnly, StartedSoftware=false. Five live data file hashes unchanged. Seven unrelated dirty files preserved/excluded. Native user acceptance remains outstanding.

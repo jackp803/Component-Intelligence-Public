@@ -7,7 +7,8 @@ namespace ComponentIntelligence.Desktop;
 
 public static class CableWiringVisualRenderer
 {
-    public static void Draw(Canvas canvas, IEnumerable<SchematicCadPrimitive> primitives, double pixelsPerMm = 4, Brush? stroke = null)
+    public static void Draw(Canvas canvas, IEnumerable<SchematicCadPrimitive> primitives, double pixelsPerMm = 4, Brush? stroke = null,
+        double? textPixelsPerMm = null, double minimumTextHeight = 0)
     {
         stroke ??= Brushes.Black;
         foreach (var p in primitives)
@@ -19,8 +20,7 @@ public static class CableWiringVisualRenderer
                 "ARC" => Arc(p, pixelsPerMm, stroke),
                 "CIRCLE" => new Ellipse { Width = p.Radius * 2 * pixelsPerMm, Height = p.Radius * 2 * pixelsPerMm,
                     Fill = p.Radius < .8 ? Brushes.Black : Brushes.White, Stroke = Brushes.Black, StrokeThickness = .3 * pixelsPerMm },
-                "TEXT" or "MTEXT" => new TextBlock { Text = p.DisplayText ?? p.Text ?? "", FontSize = p.TextHeight * pixelsPerMm,
-                    FontFamily = new("Microsoft JhengHei"), Foreground = Brushes.Black, Background = Brushes.White },
+                "TEXT" or "MTEXT" => CreateText(p, textPixelsPerMm ?? pixelsPerMm, minimumTextHeight),
                 _ => null
             };
             if (shape is null) continue;
@@ -32,6 +32,10 @@ public static class CableWiringVisualRenderer
             shape.IsHitTestVisible = false; canvas.Children.Add(shape);
         }
     }
+
+    internal static TextBlock CreateText(SchematicCadPrimitive primitive, double pixelsPerMm, double minimumTextHeight) =>
+        new() { Text = primitive.DisplayText ?? primitive.Text ?? "", FontSize = Math.Max(primitive.TextHeight, minimumTextHeight) * pixelsPerMm,
+            FontFamily = new("Microsoft JhengHei"), Foreground = Brushes.Black, Background = Brushes.White };
 
     private static Path Arc(SchematicCadPrimitive p, double scale, Brush stroke)
     {

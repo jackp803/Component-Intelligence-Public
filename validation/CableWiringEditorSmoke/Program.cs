@@ -15,6 +15,7 @@ internal static class Program
     {
         try
         {
+            if (args.FirstOrDefault() == "fit") { AppendixFitProof(args.Skip(1).FirstOrDefault(), args.Contains("pdf")); return 0; }
             var template = new ArchivedCableTemplate { TemplateId = "synthetic", TemplateRevision = "r1", AssetSha256 = new('a', 64),
                 Ports = Enumerable.Range(1, 3).Select(i => new ComponentPort { PortId = "P" + i, Name = "P" + i,
                     Connector = new() { ConnectorId = "connector" + i, Family = i == 1 ? "RJ45" : "M12", Coding = i == 1 ? null : "A" },
@@ -66,6 +67,97 @@ internal static class Program
         var bytes = new byte[width * height * 4]; bitmap.CopyPixels(bytes, width * 4, 0); return bytes;
     }
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+
+    private static void AppendixFitProof(string? evidence, bool pdf)
+    {
+        var template = new ArchivedCableTemplate { TemplateId = "synthetic-fit", TemplateRevision = "r1", AssetSha256 = new('a', 64),
+            Ports = Enumerable.Range(1, 3).Select(i => new ComponentPort { PortId = "P" + i, Name = "P" + i,
+                Connector = new() { ConnectorId = "connector" + i, Family = i == 1 ? "RJ45" : "M12", Coding = i == 1 ? null : "A" },
+                Pins = (i == 3 ? new[] { 1, 2, 3, 4, 6, 7 } : Enumerable.Range(1, i == 1 ? 8 : 10)).Select(n =>
+                    new ComponentPin { PinId = $"p{i}.{n}", PinNumber = n.ToString(), Function = n == 1 ? "GND" : n == 2 ? "24V" : "Signal " + n }).ToList() }).ToList() };
+        var service = new CableWiringEditorService(); var tables = new CableManufacturingEditorService(); var draft = tables.Prepare(template);
+        service.EnterVisualMode(draft);
+        service.MovePort(draft, "P2", new(10, 114)); service.MovePort(draft, "P3", new(186, 23));
+        service.MirrorPort(draft, "P2"); service.MirrorPort(draft, "P3");
+        service.Connect(draft, "p1.1", "p3.1"); service.Connect(draft, "p2.1", "p3.1"); service.Connect(draft, "p1.4", "p3.7");
+        var a = draft.WiringDiagram!.PinPositions["p1.1"]; var b = draft.WiringDiagram.PinPositions["p3.1"]; var c = draft.WiringDiagram.PinPositions["p2.1"];
+        service.SetRoute(draft, "p1.1", "p3.1", [a, new(150, a.Y), new(150, b.Y), b]);
+        service.SetRoute(draft, "p2.1", "p3.1", [c, new(150, c.Y), new(150, b.Y), b]);
+        var signalFrom = draft.WiringDiagram.PinPositions["p1.4"]; var signalTo = draft.WiringDiagram.PinPositions["p3.7"];
+        service.SetRoute(draft, "p1.4", "p3.7", [signalFrom, new(100, signalFrom.Y), new(100, signalTo.Y), signalTo]);
+        var cable = ArchivedCableInstanceFactory.Create(tables.Apply(template, draft), CableConstructionType.Custom);
+        var frame = new SchematicCadAsset { SourceSha256 = new('b', 64), Width = 420, Height = 297, Primitives = [] };
+        var page = new SchematicPage { PageId = "framed-fit", Title = "Synthetic Company Frame", TemplateGeometry = frame };
+        var before = JsonSerializer.Serialize(cable);
+        var tiles = CableWiringAppendixRenderer.Plan(cable, page, 2);
+        Require(tiles.Count == 1, "Moderate 8/10/6-Pin diagram must fit a company-frame appendix, not spill its bottom onto an almost empty page.");
+        Require(tiles[0].Diagram.PinPositions.Count == 24 && JsonSerializer.Serialize(cable) == before, "Fitting changed the cable or omitted a Pin.");
+        var tile = tiles[0];
+        Require(tile.GeometryScale is >= .75 and < 1, "The overflow fixture must shrink geometry, not discard its bottom.");
+        var canvas = new System.Windows.Controls.Canvas();
+        CableWiringVisualRenderer.Draw(canvas, tile.Diagram.Primitives, 4 * tile.GeometryScale,
+            textPixelsPerMm: 4, minimumTextHeight: tile.MinimumTextHeight);
+        canvas.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var text = canvas.Children.OfType<System.Windows.Controls.TextBlock>().ToArray();
+        Require(text.Length == 30 && text.All(t => t.FontSize >= 12.8), "Fitted Pin labels became smaller than readable paper text.");
+        Require(text.Any(t => t.Text.StartsWith("P3 / 7 /")) && !text.Any(t => t.Text.StartsWith("P3 / 5 /")), "Fitting renumbered nonconsecutive Pins.");
+        var rectangles = text.Select(t => new Rect(System.Windows.Controls.Canvas.GetLeft(t) - tile.ViewBounds.X * tile.GeometryScale * 4,
+            System.Windows.Controls.Canvas.GetTop(t) - tile.ViewBounds.Y * tile.GeometryScale * 4, t.DesiredSize.Width, t.DesiredSize.Height)).ToArray();
+        Require(rectangles.All(r => r.Left >= 0 && r.Top >= 0 && r.Right <= tile.ContentBounds.Width * 4 && r.Bottom <= tile.ContentBounds.Height * 4), "An enlarged label is clipped by the actual rendered viewport.");
+        for (var i = 0; i < rectangles.Length; i++)
+        for (var j = i + 1; j < rectangles.Length; j++)
+            Require(!rectangles[i].IntersectsWith(rectangles[j]), "Fitting introduced overlapping connector labels.");
+        Require(tile.Diagram.Primitives.Any(p => p.Kind == "ARC"), "Fit fixture did not exercise jump symbols.");
+        var originalCanvas = new System.Windows.Controls.Canvas();
+        CableWiringVisualRenderer.Draw(originalCanvas, tile.Diagram.Primitives);
+        Require(originalCanvas.Children.OfType<System.Windows.Controls.TextBlock>().Any(t => t.FontSize == 10.8), "PDF font enlargement changed the editor's normal renderer.");
+        var crampedTemplate = template with { Ports = [new ComponentPort { PortId = "P1", Name = "P1", Pins =
+            [new ComponentPin { PinId = "p1.1", PinNumber = "1", Function = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" }] }], Manufacturing = new() { InventoryOnly = true }, Mapping = [] };
+        var crampedDraft = tables.Prepare(crampedTemplate); service.EnterVisualMode(crampedDraft);
+        crampedDraft.WiringDiagram!.PortBounds["P1"] = new(10, 10, 60, 35);
+        crampedDraft.WiringDiagram.PinPositions["p1.1"] = new(70, 32);
+        var cramped = CableWiringAppendixRenderer.Plan(ArchivedCableInstanceFactory.Create(tables.Apply(crampedTemplate, crampedDraft), CableConstructionType.Custom), page, 2)[0];
+        var crampedCanvas = new System.Windows.Controls.Canvas();
+        CableWiringVisualRenderer.Draw(crampedCanvas, cramped.Diagram.Primitives, 4 * cramped.GeometryScale, textPixelsPerMm: 4, minimumTextHeight: cramped.MinimumTextHeight);
+        crampedCanvas.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var crampedLabel = crampedCanvas.Children.OfType<System.Windows.Controls.TextBlock>().Single(t => t.Text.StartsWith("P1 / 1 /"));
+        Require(System.Windows.Controls.Canvas.GetLeft(crampedLabel) + crampedLabel.DesiredSize.Width < 70 * 4, "Enlargement fallback pushed a saved narrow connector label onto its frame and Pin.");
+        var many = template with { Ports = template.Ports.Select(p => new ComponentPort { PortId = p.PortId, Name = p.Name, Connector = p.Connector,
+            Pins = Enumerable.Range(1, 100).Select(n => new ComponentPin { PinId = p.PortId + "." + n, PinNumber = n.ToString(), Function = "Synthetic function " + n }).ToList() }).ToList(), Manufacturing = new() { InventoryOnly = true }, Mapping = [] };
+        var large = CableWiringAppendixRenderer.Plan(ArchivedCableInstanceFactory.Create(many, CableConstructionType.Custom), page, 2);
+        Require(large.Count > 1 && large.All(t => t.GeometryScale == 1), "A huge inventory was reduced to unreadable single-page geometry.");
+        Require(large[0].Diagram.PinPositions.Values.All(p => large.Any(t => p.X >= t.ViewBounds.X && p.X <= t.ViewBounds.X + t.ViewBounds.Width && p.Y >= t.ViewBounds.Y && p.Y <= t.ViewBounds.Y + t.ViewBounds.Height)), "Fallback tiling omitted a Pin.");
+        var seamTemplate = many with { Ports = [many.Ports[0], new ComponentPort { PortId = "P2", Name = "P2", Pins =
+            [new ComponentPin { PinId = "p2.1", PinNumber = "1", Function = "Pending" }] }] };
+        var seamDraft = tables.Prepare(seamTemplate); service.EnterVisualMode(seamDraft);
+        service.MovePort(seamDraft, "P2", new(240, 20));
+        var seams = CableWiringAppendixRenderer.Plan(ArchivedCableInstanceFactory.Create(tables.Apply(seamTemplate, seamDraft), CableConstructionType.Custom),
+            page with { Width = 287, Height = 210 }, 2);
+        var seamCanvas = new System.Windows.Controls.Canvas();
+        CableWiringVisualRenderer.Draw(seamCanvas, seams[0].Diagram.Primitives, 4, textPixelsPerMm: 4, minimumTextHeight: seams[0].MinimumTextHeight);
+        seamCanvas.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        foreach (var label in seamCanvas.Children.OfType<System.Windows.Controls.TextBlock>())
+        {
+            var x = System.Windows.Controls.Canvas.GetLeft(label) / 4; var y = System.Windows.Controls.Canvas.GetTop(label) / 4;
+            Require(seams.Any(t => x >= t.ViewBounds.X && y >= t.ViewBounds.Y && x + label.DesiredSize.Width / 4 <= t.ViewBounds.X + t.ViewBounds.Width &&
+                y + label.DesiredSize.Height / 4 <= t.ViewBounds.Y + t.ViewBounds.Height), "A label crossing the tile seam is clipped on every page.");
+        }
+        var longTemplate = template with { Ports = [new ComponentPort { PortId = "long", Name = "Long connector", Pins =
+            [new ComponentPin { PinId = "long.1", PinNumber = "1", Function = new string('W', 170) + " / GND" }] }], Manufacturing = new() { InventoryOnly = true }, Mapping = [] };
+        try { CableWiringAppendixRenderer.Plan(ArchivedCableInstanceFactory.Create(longTemplate, CableConstructionType.Custom), page, 2); throw new Exception("An unavoidably oversized label was silently clipped."); }
+        catch (InvalidOperationException e) when (e.Message.Contains("文字")) { }
+        if (evidence is not null)
+        {
+            Directory.CreateDirectory(evidence);
+            var empty = new ElectricalProject { ProjectId = "synthetic-background", Schematic = new() { Pages = [page] } };
+            var bitmap = CableWiringAppendixRenderer.Render(cable, page, tile, [], Page(empty, page));
+            var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
+            using (var stream = File.Create(Path.Combine(evidence, "fitted-company-frame.png"))) png.Save(stream);
+            if (pdf) PdfSmoke(tables.Apply(template, draft), evidence, frame);
+        }
+        Require(JsonSerializer.Serialize(cable) == before, "Rendering fitted output changed cable data.");
+        Console.WriteLine($"PASS single-page company frame at {tile.GeometryScale:P0}, 24 exact Pins, larger unclipped/non-overlapping text, jump arcs, safe narrow type, whole-label tile seams, large inventory, oversized-label guard, no mutation");
+    }
 
     private static ArchivedCableTemplate ConvenienceProof(ArchivedCableTemplate template, string? evidence)
     {
@@ -163,11 +255,29 @@ internal static class Program
         dialog.Close();
     }
 
-    private static void PdfSmoke(ArchivedCableTemplate template, string root)
+    private static BitmapSource Page(ElectricalProject project, SchematicPage sheet)
+    {
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, sheet.Width * 4, sheet.Height * 4));
+            if (sheet.TemplateGeometry is not null)
+            {
+                dc.DrawRectangle(null, new Pen(Brushes.Black, 1), new Rect(10 * 4, 10 * 4, (sheet.Width - 20) * 4, (sheet.Height - 20) * 4));
+                dc.DrawRectangle(null, new Pen(Brushes.Black, 1), new Rect((sheet.Width - 150) * 4, (sheet.Height - 55) * 4, 140 * 4, 45 * 4));
+            }
+            foreach (var symbol in project.Schematic!.Symbols.Where(s => s.PageId == sheet.PageId))
+                dc.DrawRectangle(null, new Pen(Brushes.Black, 2), new Rect(symbol.Position.X * 4, symbol.Position.Y * 4, symbol.Width * 4, symbol.Height * 4));
+        }
+        var bitmap = new RenderTargetBitmap((int)(sheet.Width * 4), (int)(sheet.Height * 4), 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual); bitmap.Freeze(); return bitmap;
+    }
+
+    private static void PdfSmoke(ArchivedCableTemplate template, string root, SchematicCadAsset? frame = null)
     {
         Directory.CreateDirectory(root);
         var project = new ElectricalProject { ProjectId = "wiring-pdf", Name = "Synthetic Cable Project", Schematic = new()
-            { Pages = [new() { PageId = "main1", Title = "Engineering 1" }, new() { PageId = "main2", Title = "Engineering 2" }] } };
+            { Pages = [new() { PageId = "main1", Title = "Engineering 1", TemplateGeometry = frame }, new() { PageId = "main2", Title = "Engineering 2", TemplateGeometry = frame }] } };
         var geometry = new SchematicCadAsset { SourceSha256 = template.AssetSha256, Width = 60, Height = 40,
             Primitives = [new() { Kind = "LINE", Start = new(0, 0), End = new(60, 0) }],
             ConnectionPoints = template.Ports.Select((p, i) => new SchematicCadContact(p.PortId, p.Name, new(i == 0 ? 0 : 60, 10 + i * 8), Direction: i == 0 ? "Left" : "Right")).ToArray() };
@@ -178,18 +288,6 @@ internal static class Program
         var body = project.Schematic!.Symbols[0];
         project.Schematic.Symbols.Add(body with { SymbolId = "repeated-body", PageId = "main2", Position = new(40, 60) });
         var before = JsonSerializer.Serialize(project);
-        BitmapSource Page(ElectricalProject p, SchematicPage sheet)
-        {
-            var visual = new DrawingVisual();
-            using (var dc = visual.RenderOpen())
-            {
-                dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, sheet.Width * 4, sheet.Height * 4));
-                foreach (var symbol in p.Schematic!.Symbols.Where(s => s.PageId == sheet.PageId))
-                    dc.DrawRectangle(null, new Pen(Brushes.Black, 2), new Rect(symbol.Position.X * 4, symbol.Position.Y * 4, symbol.Width * 4, symbol.Height * 4));
-            }
-            var bitmap = new RenderTargetBitmap((int)(sheet.Width * 4), (int)(sheet.Height * 4), 96, 96, PixelFormats.Pbgra32);
-            bitmap.Render(visual); bitmap.Freeze(); return bitmap;
-        }
         var file = Path.Combine(root, "synthetic-linked-cable-appendix.pdf");
         if (File.Exists(file)) File.Delete(file);
         Require(SchematicPdfWriter.Write(project, file, Page) == 4, "Expected two main sheets followed by two unique physical-cable diagrams.");

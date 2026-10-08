@@ -34,8 +34,8 @@
 ## Task 2: Verify and Deliver
 - [x] Run full domain suite and relevant WPF/editor/manufacturing/connector smoke tests.
 - [x] Obtain a bounded fresh review of the changed files, address verified findings, and repeat affected tests.
-- [ ] Commit only scoped changes locally; package a clean-source BC runtime, source archive, checksums, and launcher using the existing data path. Do not push or alter existing runtime/data.
-- [ ] Validate launcher without starting the app and provide the new launcher to the user.
+- [x] Commit only scoped changes locally; package a clean-source BC runtime, source archive, checksums, and launcher using the existing data path. Do not push or alter existing runtime/data.
+- [x] Validate launcher without starting the app and provide the new launcher to the user.
 
 ## Execution Ledger
 - Root cause: appendix planner tiles at fixed 1:1 even for small overflow; renderer does not independently preserve/enlarge font size when fitting.
@@ -45,3 +45,5 @@
 - Independent review identified two verified issues. Both reproduced RED: enlarging text in a saved 60 mm frame can cross a Pin; an 8 mm tile overlap can clip the enlarged label on every page. GREEN: unsafe enlargement falls back to original type, and tile overlap now covers measured text width/height.
 - Ruling: original readable type is retained for narrow saved layouts that cannot safely accommodate 3.2 mm labels. No source-frame resize or electrical-route change is needed. A label longer than a whole printable viewport is rejected explicitly instead of silently clipped; use a shorter label or larger paper. This preserves source geometry and avoids introducing layout damage merely for font enlargement.
 - Clean-source suite before review fixes: 1398 passed; runtime published from baseline plus four scoped files only. Republish and repeat clean-source checks after review fixes.
+- Final code commit: `ce9bff91af5abc4654bdb68d24970832f4cc72cb`. Clean-source 1398/1398 passed after both review fixes; fit/wiring/manufacturing all/interaction/connector all passed. Source zip matches published code; 222 runtime file hashes verified. Exact PDF destinations rechecked and final Poppler PNG inspected. All five existing data hashes unchanged; launcher ValidateOnly reports StartedSoftware=false.
+- Delivery: `C:/Users/jackp/Documents/ChatGPT/Bom自動探索-電路拓譜-Autocad/專案資料整理/2026-10-08_BC附頁自動縮放版/開啟BC測試版.cmd`. Keep the existing branch/worktree in place; no merge, push, new PR, or window launch performed.

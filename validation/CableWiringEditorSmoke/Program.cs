@@ -114,6 +114,15 @@ internal static class Program
         Require(copied.FunctionLinks.Count == draft.FunctionLinks.Count && copied.FunctionOverrides.SequenceEqual(draft.FunctionOverrides), "Applying staged wiring lost function provenance.");
         table = new CableManufacturingTableEditor(draft, [], false);
         draft = table.Draft;
+        var editGrid = (System.Windows.Controls.DataGrid)typeof(CableManufacturingTableEditor).GetField("_grid", flags)!.GetValue(table)!;
+        var targetRow = draft.Rows.Single(r => r.ToSourcePinId == "p2.1");
+        typeof(System.Windows.Controls.DataGrid).GetMethod("OnCellEditEnding", flags)!.Invoke(editGrid,
+            [new System.Windows.Controls.DataGridCellEditEndingEventArgs(editGrid.Columns[3],
+                new System.Windows.Controls.DataGridRow { Item = targetRow }, new System.Windows.Controls.TextBox { Text = "GND" }, System.Windows.Controls.DataGridEditAction.Commit)]);
+        Require(table.Commit() && draft.FunctionOverrides.Contains("p2.1"), "Same-value explicit table edit did not become manual.");
+        var retained = tables.Prepare(JsonSerializer.Deserialize<ArchivedCableTemplate>(JsonSerializer.Serialize(tables.Apply(template, draft)))!);
+        service.SetPinFunction(retained, "p1.1", "different");
+        Require(retained.Ends[1].Pins[0].Function == "GND", "Reopening lost same-value edit intent.");
         draft.Rows.Single(r => r.ToSourcePinId == "p2.1").ToFunction = "manual";
         Require(table.Commit() && draft.FunctionOverrides.Contains("p2.1"), "Table edit did not become a manual override.");
         draft.Rows.Single(r => r.FromSourcePinId == "p1.1").FromFunction = "0V";

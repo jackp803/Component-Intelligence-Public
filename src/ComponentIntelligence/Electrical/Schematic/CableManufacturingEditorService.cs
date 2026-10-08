@@ -332,7 +332,7 @@ public sealed class CableManufacturingEditorService
     {
         var geometryErrors = CableWiringEditorService.ValidateDiagram(draft);
         if (geometryErrors.Count > 0) throw new InvalidOperationException(string.Join("\n", geometryErrors));
-        draft = Clone(draft); CableFunctionAssociationService.Synchronize(draft);
+        draft = Clone(draft); CableFunctionAssociationService.Synchronize(draft, associateNewPins: false);
         var errors = Validate(draft);
         if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
         var ports = Clone(draft.Ends);

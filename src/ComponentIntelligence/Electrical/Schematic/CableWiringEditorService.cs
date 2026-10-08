@@ -14,7 +14,7 @@ public sealed class CableWiringEditorService
 
     public void EnterVisualMode(CableManufacturingDraft draft)
     {
-        if (draft.InventoryOnly) { EnsureLayout(draft); CableFunctionAssociationService.Synchronize(draft); return; }
+        if (draft.InventoryOnly) { EnsureLayout(draft); CableFunctionAssociationService.Synchronize(draft, associateNewPins: false); return; }
         var errors = new CableManufacturingEditorService().Validate(draft);
         if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
         if (draft.Rows.SelectMany(CableManufacturingCells.All).Any(c => c.SourcePinId is null && !string.IsNullOrWhiteSpace(c.Function)))
@@ -26,7 +26,7 @@ public sealed class CableWiringEditorService
         draft.InventoryOnly = true;
         RebuildInventory(draft);
         EnsureLayout(draft);
-        CableFunctionAssociationService.Synchronize(draft);
+        CableFunctionAssociationService.Synchronize(draft, associateNewPins: false);
     }
 
     public static void RebuildInventory(CableManufacturingDraft draft)
@@ -210,7 +210,7 @@ public sealed class CableWiringEditorService
 
     public CableWiringDiagramPresentation Build(CableManufacturingDraft source)
     {
-        var draft = Clone(source); EnsureLayout(draft); CableFunctionAssociationService.Synchronize(draft);
+        var draft = Clone(source); EnsureLayout(draft); CableFunctionAssociationService.Synchronize(draft, associateNewPins: false);
         var errors = ValidateDiagram(draft);
         if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
         var layout = draft.WiringDiagram!;
@@ -249,19 +249,28 @@ public sealed class CableWiringEditorService
         // A geometric crossing is never an electrical connection. Mark only shared
         // vertices of explicitly connected pairs, not arbitrary segment intersections.
         var junctions = new HashSet<SchematicPoint>();
+        var pinNetworks = CableFunctionAssociationService.Components(draft).SelectMany((group, net) => group.Select(id => (id, net)))
+            .ToDictionary(p => p.id, p => p.net, StringComparer.Ordinal);
+        var junctionNetworks = new Dictionary<SchematicPoint, HashSet<int>>();
         foreach (var pair in Mapping(draft))
         foreach (var other in Mapping(draft).Where(p => EdgeKey(p) != EdgeKey(pair) &&
             new[] { p.FromSourcePinId, p.ToSourcePinId }.Intersect(new[] { pair.FromSourcePinId, pair.ToSourcePinId }).Any()))
             foreach (var point in paths[EdgeKey(pair)].Where(point => paths[EdgeKey(other)].Zip(paths[EdgeKey(other)].Skip(1)).Any(segment =>
                 point.X == segment.First.X && point.X == segment.Second.X && point.Y >= Math.Min(segment.First.Y, segment.Second.Y) && point.Y <= Math.Max(segment.First.Y, segment.Second.Y) ||
                 point.Y == segment.First.Y && point.Y == segment.Second.Y && point.X >= Math.Min(segment.First.X, segment.Second.X) && point.X <= Math.Max(segment.First.X, segment.Second.X))))
+            {
                 junctions.Add(point);
+                if (!junctionNetworks.TryGetValue(point, out var nets)) junctionNetworks[point] = nets = [];
+                nets.Add(pinNetworks[pair.FromSourcePinId]);
+            }
         var wires = Mapping(draft).Select(pair => new SchematicWire { WireId = EdgeKey(pair), PageId = "cable-wiring",
             Points = paths[EdgeKey(pair)].ToList(), Start = SchematicAttachment.Pin("cable", pair.FromSourcePinId),
             End = SchematicAttachment.Pin("cable", pair.ToSourcePinId) }).ToArray();
         var crossings = SchematicCrossingService.Analyze(wires);
         crossings = crossings with { Crossovers = crossings.Crossovers.Where(c => !junctions.Contains(c.Position)).ToArray() };
-        var edgePrimitives = wires.ToDictionary(wire => wire.WireId, wire => SchematicCrossingService.RoutePrimitives(wire, crossings));
+        var edgePrimitives = wires.ToDictionary(wire => wire.WireId, wire => BridgeJunctions(
+            SchematicCrossingService.RoutePrimitives(wire, crossings), junctionNetworks
+                .Where(j => !j.Value.Contains(pinNetworks[wire.Start.EndpointId!])).Select(j => j.Key).ToArray()));
         primitives.AddRange(edgePrimitives.Values.SelectMany(p => p));
         primitives.AddRange(junctions.Select(point => new SchematicCadPrimitive { Kind = "CIRCLE", Start = point, Radius = .6 }));
         var points = primitives.SelectMany(p => new[] { p.Start, p.End ?? p.Start }).ToArray();
@@ -269,6 +278,32 @@ public sealed class CableWiringEditorService
         var maxX = primitives.Max(p => p.Kind == "TEXT" ? p.Start.X + (p.Text?.Length ?? 0) * p.TextHeight : Math.Max(p.Start.X, p.End?.X ?? p.Start.X));
         var maxY = primitives.Max(p => p.Kind == "TEXT" ? p.Start.Y + p.TextHeight * 1.5 : Math.Max(p.Start.Y, p.End?.Y ?? p.Start.Y));
         return new(primitives, new(minX, minY, maxX - minX + 5, maxY - minY + 5), layout.PortBounds, layout.PinPositions, paths) { EdgePrimitives = edgePrimitives };
+    }
+
+    private static IReadOnlyList<SchematicCadPrimitive> BridgeJunctions(IReadOnlyList<SchematicCadPrimitive> source, IReadOnlyList<SchematicPoint> points)
+    {
+        var result = new List<SchematicCadPrimitive>();
+        foreach (var primitive in source)
+        {
+            if (primitive.Kind != "LINE" || primitive.End is not { } end) { result.Add(primitive); continue; }
+            var start = primitive.Start; var horizontal = start.Y == end.Y;
+            double Axis(SchematicPoint p) => horizontal ? p.X : p.Y;
+            var direction = Math.Sign(Axis(end) - Axis(start));
+            var bridges = points.Where(p => (horizontal ? p.Y == start.Y : p.X == start.X) &&
+                Axis(p) - Math.Min(Axis(start), Axis(end)) > 1.5 && Math.Max(Axis(start), Axis(end)) - Axis(p) > 1.5)
+                .OrderBy(p => direction * Axis(p));
+            var cursor = start;
+            foreach (var p in bridges)
+            {
+                var before = horizontal ? p with { X = p.X - direction * 1.5 } : p with { Y = p.Y - direction * 1.5 };
+                var after = horizontal ? p with { X = p.X + direction * 1.5 } : p with { Y = p.Y + direction * 1.5 };
+                result.Add(new() { Kind = "LINE", Start = cursor, End = before });
+                result.Add(new() { Kind = "ARC", Start = p, Radius = 1.5, StartAngle = horizontal ? 0 : 270, EndAngle = horizontal ? 180 : 90 });
+                cursor = after;
+            }
+            result.Add(new() { Kind = "LINE", Start = cursor, End = end });
+        }
+        return result;
     }
 
     private static List<SchematicPoint> AutomaticRoute(CableManufacturingDraft draft, CablePinMapping pair, int index)

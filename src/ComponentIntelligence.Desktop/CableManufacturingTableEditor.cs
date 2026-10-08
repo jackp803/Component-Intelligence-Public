@@ -82,7 +82,14 @@ public sealed class CableManufacturingTableEditor : UserControl
         DockPanel.SetDock(_error, Dock.Bottom); root.Children.Add(_error);
         _grid = new() { ItemsSource = _rows, AutoGenerateColumns = false, CanUserAddRows = false, CanUserDeleteRows = false,
             SelectionMode = DataGridSelectionMode.Single, MinHeight = 140, MinColumnWidth = 120 };
-        _grid.CellEditEnding += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshStatus));
+        _grid.CellEditEnding += (_, e) =>
+        {
+            if (Draft.InventoryOnly && e.EditAction == DataGridEditAction.Commit && e.Column is DataGridTextColumn &&
+                _columnPorts.TryGetValue(e.Column, out var portId) && e.Row.Item is CableManufacturingRow row &&
+                e.EditingElement is TextBox text && CableManufacturingCells.Get(Draft, row, portId).SourcePinId is { } id)
+                CableFunctionAssociationService.SetFunction(Draft, id, text.Text);
+            Dispatcher.BeginInvoke(new Action(RefreshStatus));
+        };
         _grid.SelectionChanged += (_, _) => SyncUsages();
         _grid.Sorting += (_, e) =>
         {
@@ -308,7 +315,7 @@ public sealed class CableManufacturingTableEditor : UserControl
     {
         if (!_grid.CommitEdit(DataGridEditingUnit.Cell, true) || !_grid.CommitEdit(DataGridEditingUnit.Row, true)) return false;
         Draft.Rows = _rows.ToList();
-        CableFunctionAssociationService.Synchronize(Draft);
+        CableFunctionAssociationService.Synchronize(Draft, associateNewPins: false);
         _grid.Items.Refresh();
         if (!_refreshing)
         {

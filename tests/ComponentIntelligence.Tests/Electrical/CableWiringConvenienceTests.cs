@@ -180,4 +180,36 @@ public sealed class CableWiringConvenienceTests
         }
         finally { Directory.Delete(root, true); }
     }
+
+    [Fact]
+    public void UnrelatedNetBridgesAcrossAnExplicitJunctionRatherThanPassingThroughItsDot()
+    {
+        var draft = Draft();
+        _wire.Connect(draft, "p1.1", "p2.1"); _wire.Connect(draft, "p1.1", "p3.1"); _wire.Connect(draft, "p1.2", "p3.2");
+        var positions = draft.WiringDiagram!.PinPositions;
+        var a = positions["p1.1"]; var b = positions["p2.1"]; var c = positions["p3.1"]; var x = (a.X + b.X) / 2;
+        _wire.SetRoute(draft, "p1.1", "p2.1", [a, b]);
+        _wire.SetRoute(draft, "p1.1", "p3.1", [a, new(x, a.Y), new(x, c.Y), c]);
+        var start = positions["p1.2"]; var end = positions["p3.2"];
+        _wire.SetRoute(draft, "p1.2", "p3.2", [start, new(start.X + 10, start.Y), new(start.X + 10, a.Y - 10),
+            new(x, a.Y - 10), new(x, end.Y + 10), new(end.X + 10, end.Y + 10), new(end.X + 10, end.Y), end]);
+        var diagram = _wire.Build(draft); var independent = diagram.EdgePrimitives[CableWiringEditorService.EdgeKey("p1.2", "p3.2")];
+        Assert.Contains(independent, p => p.Kind == "ARC" && p.Start == new SchematicPoint(x, a.Y));
+        Assert.DoesNotContain(independent, p => p.Kind == "LINE" && p.End is { } stop && p.Start.X == x && stop.X == x &&
+            Math.Min(p.Start.Y, stop.Y) < a.Y && Math.Max(p.Start.Y, stop.Y) > a.Y);
+        Assert.Contains(diagram.Primitives, p => p.Kind == "CIRCLE" && p.Radius < 1 && p.Start == new SchematicPoint(x, a.Y));
+    }
+
+    [Fact]
+    public void PassiveLayoutAndMirrorSaveDoNotCreateAssociationsOrRevokeApproval()
+    {
+        var template = CableManufacturingEditorTests.Template(2) with { Mapping = [new("p1.1", "p2.1")],
+            Manufacturing = new() { InventoryOnly = true }, MappingConfirmed = true, MappingRevision = "approved", MappingEvidence = "synthetic" };
+        template.Ports[0].Pins[0].Function = "GND";
+        var draft = _table.Prepare(template); _wire.EnterVisualMode(draft);
+        _wire.MirrorPort(draft, "P1"); var view = _wire.Build(draft); var saved = _table.Apply(template, draft);
+        Assert.Contains(view.Primitives, p => p.Text == "P2 / 1 / 待確認");
+        Assert.Null(saved.Ports[1].Pins[0].Function); Assert.Empty(saved.Manufacturing!.FunctionLinks);
+        Assert.True(saved.MappingConfirmed);
+    }
 }

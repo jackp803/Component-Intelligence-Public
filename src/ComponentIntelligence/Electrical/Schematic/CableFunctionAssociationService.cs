@@ -14,7 +14,7 @@ public static class CableFunctionAssociationService
         Synchronize(draft);
     }
 
-    public static void Synchronize(CableManufacturingDraft draft)
+    public static void Synchronize(CableManufacturingDraft draft, bool associateNewPins = true)
     {
         if (!draft.InventoryOnly) return;
         var cells = Cells(draft);
@@ -23,6 +23,7 @@ public static class CableFunctionAssociationService
         {
             if (!cells.TryGetValue(id, out var cell)) { draft.FunctionLinks.Remove(id); continue; }
             if (Normalize(cell.Function) == link.Value) continue;
+            associateNewPins = true;
             draft.FunctionLinks.Remove(id);
             if (!draft.FunctionOverrides.Contains(id, StringComparer.Ordinal)) draft.FunctionOverrides.Add(id);
             draft.ConfirmMapping = false;
@@ -31,6 +32,7 @@ public static class CableFunctionAssociationService
         {
             if (!cells.TryGetValue(pin.PinId, out var cell) || draft.FunctionLinks.ContainsKey(pin.PinId)) continue;
             if (Normalize(pin.Function) == Normalize(cell.Function)) continue;
+            associateNewPins = true;
             if (!draft.FunctionOverrides.Contains(pin.PinId, StringComparer.Ordinal)) draft.FunctionOverrides.Add(pin.PinId);
             pin.Function = Normalize(cell.Function); draft.ConfirmMapping = false;
         }
@@ -49,6 +51,7 @@ public static class CableFunctionAssociationService
                 else { Write(draft, id, null); draft.FunctionLinks.Remove(id); draft.ConfirmMapping = false; }
             }
             cells = Cells(draft);
+            if (!associateNewPins) continue;
             var sources = component.Where(id => !draft.FunctionLinks.ContainsKey(id) && Normalize(cells[id].Function) is not null)
                 .OrderBy(id => id, StringComparer.Ordinal).ToArray();
             if (sources.Length == 0 || sources.Select(id => Normalize(cells[id].Function)).Distinct(StringComparer.OrdinalIgnoreCase).Count() != 1) continue;
@@ -86,7 +89,7 @@ public static class CableFunctionAssociationService
         .SelectMany(CableManufacturingCells.All).Where(c => c.SourcePinId is not null)
         .GroupBy(c => c.SourcePinId!, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
-    private static IReadOnlyList<HashSet<string>> Components(CableManufacturingDraft draft)
+    internal static IReadOnlyList<HashSet<string>> Components(CableManufacturingDraft draft)
     {
         var cells = Cells(draft);
         var neighbours = cells.Keys.ToDictionary(id => id, _ => new List<string>(), StringComparer.Ordinal);

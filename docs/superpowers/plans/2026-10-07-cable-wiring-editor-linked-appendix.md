@@ -107,8 +107,8 @@
 - [x] Run full Release domain suite and all affected WPF smoke programs.
 - [x] Request independent whole-feature review focused on the five Review Focus risks; reproduce Important findings with failing tests before fixing.
 - [x] Run the full suite again after fixes. Verify only intended files are committed.
-- [ ] Export a clean committed source tree and publish Desktop from it. Reuse user test-data paths without launching or modifying data.
-- [ ] Validate launcher runtime hashes, document version/entry points, and report human acceptance steps and any limits honestly.
+- [x] Export a clean committed source tree and publish Desktop from it. Reuse user test-data paths without launching or modifying data.
+- [x] Validate launcher runtime hashes, document version/entry points, and report human acceptance steps and any limits honestly.
 
 ## Execution Evidence
 
@@ -129,3 +129,5 @@ Current working-tree verification: Release domain suite PASS 1384/1384; CableCon
 Inventory growth follow-up: regression RED for 20 Pins added after an existing Pin was repositioned, then GREEN 11/11 wiring tests. Existing Port frames expand as needed, bottom-edge anchors follow the new border, and new Pins avoid occupied label rows. Full working-tree suite PASS 1385/1385; manufacturing `interaction` PASS. Clean exported 4f4fe34 source had PASS 1381/1381 before this extra regression (three unrelated worktree tests excluded), Desktop publish and wiring/PDF smoke PASS.
 
 Independent review: five Important findings reproduced with RED tests, then fixed. Migration preserves original directed pair sequence when row equivalence is unchanged; confirmation checkbox writes directly to staged approval and reflects invalidation, never overwriting it at Save; inline table/sketch bounds receive forward and return links; printed inventory explicitly states row alignment is not continuity; every Pin label carries its Port name for continuation tiles. Focused domain tests GREEN 47/47, WPF approval regression GREEN, full working-tree suite GREEN 1388/1388. Wiring/PDF and shared manufacturing renderer smokes PASS after the fixes. No private data, native window operation, AO or paid providers used.
+
+Delivery complete: clean committed source `fea5a4aa487674964867e7b64d377c5b604005b5` exported with git archive; clean Release tests PASS 1385/1385, Desktop publish PASS, clean wiring/PDF, manufacturing/shared renderer and connector editor smoke PASS. Final three real PDFs verified via pypdf, including inline-only representation `[[3],[],[1]]`; final editor PNG and rendered appendix PNG visually inspected. BA 2026-10-08 bundle contains runtime, clean source ZIP, launch scripts, user instructions and SHA-256 manifest for 222 runtime files. Windows PowerShell launcher `-ValidateOnly` PASS and reported `StartedSoftware=false`, existing AU test data and selected central archive unchanged by our tools. Runtime CodeHead remains fea5a4a; this final documentation commit does not change the built binaries. Native acceptance remains the user's responsibility. The existing managed branch/worktree and seven unrelated dirty files are preserved; no merge, cleanup or new PR performed.

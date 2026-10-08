@@ -5,4 +5,7 @@ public sealed record CableWiringDiagramPresentation(
     SchematicGridBounds Bounds,
     IReadOnlyDictionary<string, SchematicGridBounds> PortBounds,
     IReadOnlyDictionary<string, SchematicPoint> PinPositions,
-    IReadOnlyDictionary<string, IReadOnlyList<SchematicPoint>> EdgePaths);
+    IReadOnlyDictionary<string, IReadOnlyList<SchematicPoint>> EdgePaths)
+{
+    public IReadOnlyDictionary<string, IReadOnlyList<SchematicCadPrimitive>> EdgePrimitives { get; init; } = new Dictionary<string, IReadOnlyList<SchematicCadPrimitive>>();
+}

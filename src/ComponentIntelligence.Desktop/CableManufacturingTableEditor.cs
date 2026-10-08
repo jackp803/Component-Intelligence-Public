@@ -308,6 +308,8 @@ public sealed class CableManufacturingTableEditor : UserControl
     {
         if (!_grid.CommitEdit(DataGridEditingUnit.Cell, true) || !_grid.CommitEdit(DataGridEditingUnit.Row, true)) return false;
         Draft.Rows = _rows.ToList();
+        CableFunctionAssociationService.Synchronize(Draft);
+        _grid.Items.Refresh();
         if (!_refreshing)
         {
             var selected = _panels.FirstOrDefault(p => p.Port == _selectedEnd);
@@ -401,6 +403,8 @@ public sealed class CableManufacturingTableEditor : UserControl
         _error.Text = errors.Count > 0 ? string.Join("\n", errors) :
             Draft.InventoryOnly ? $"Pin 順序表 / 接線 {CableWiringEditorService.Mapping(Draft).Count}" :
             $"接法 {Draft.Rows.Sum(r => CableManufacturingCells.Pairs(r).Count())}；未完成列 {Draft.Rows.Count(r => !CableManufacturingCells.Pairs(r).Any())}";
+        var conflicts = CableFunctionAssociationService.Conflicts(Draft);
+        if (conflicts.Count > 0) _error.Text += "\n" + string.Join("\n", conflicts);
     }
 
     private void OpenWiringEditor()

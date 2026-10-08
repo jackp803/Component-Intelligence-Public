@@ -43,6 +43,7 @@ internal static class Program
             editor.PanBy(new(30, 20)); Require(editor.PanOffset != new Vector(0, 0), "Pan command failed.");
             editor.FitToView(); editor.UpdateLayout();
             InteractionProof(draft);
+            var convenience = ConvenienceProof(template, args.FirstOrDefault());
             var pixels = Render(editor, 1100, 700);
             Require(pixels.Count(b => b < 200) > 1000, "Editor is blank.");
             if (args.Length > 0)
@@ -52,7 +53,8 @@ internal static class Program
                 var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
                 using var stream = File.Create(Path.Combine(args[0], "cable-wiring-editor.png")); png.Save(stream);
             }
-            if (args.Skip(1).Contains("pdf")) PdfSmoke(tables.Apply(template, draft), args[0]);
+            if (args.Skip(1).Contains("pdf"))
+            { PdfSmoke(tables.Apply(template, draft), args[0]); PdfSmoke(convenience, Path.Combine(args[0], "jump-symbols")); }
             Console.WriteLine("PASS wiring commands, undo/redo, exact inventory, shared draft, save/reopen, zoom/pan and nonblank rendering");
             return 0;
         }
@@ -64,6 +66,61 @@ internal static class Program
         var bytes = new byte[width * height * 4]; bitmap.CopyPixels(bytes, width * 4, 0); return bytes;
     }
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+
+    private static ArchivedCableTemplate ConvenienceProof(ArchivedCableTemplate template, string? evidence)
+    {
+        var service = new CableWiringEditorService(); var tables = new CableManufacturingEditorService();
+        var draft = tables.Prepare(template);
+        foreach (var pin in draft.Ends.SelectMany(p => p.Pins)) pin.Function = null;
+        foreach (var row in draft.Rows) foreach (var port in draft.Ends)
+        { var cell = CableManufacturingCells.Get(draft, row, port.PortId); cell.Function = null; CableManufacturingCells.Set(draft, row, port.PortId, cell); }
+        service.EnterVisualMode(draft);
+        var table = new CableManufacturingTableEditor(draft, [], false);
+        draft = table.Draft;
+        draft.Rows.Single(r => r.FromSourcePinId == "p1.1").FromFunction = "GND";
+        Require(table.Commit(), "Source table commit failed.");
+        var editor = new CableWiringDiagramEditor(draft);
+        editor.ConnectPins("p1.1", "p2.1"); editor.ConnectPins("p1.1", "p3.1"); editor.ConnectPins("p1.2", "p2.2");
+        Require(draft.Rows.Single(r => r.ToSourcePinId == "p2.1").ToFunction == "GND", "Wire did not associate the target function.");
+        var original = draft.WiringDiagram!.PinPositions["p1.1"];
+        editor.SelectPort("P1");
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var mirror = (System.Windows.Controls.Button)typeof(CableWiringDiagramEditor).GetField("_mirrorButton", flags)!.GetValue(editor)!;
+        Require(mirror.IsEnabled, "Selected connector cannot mirror its contacts.");
+        mirror.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+        Require(draft.WiringDiagram.PinPositions["p1.1"].X != original.X, "Mirror toolbar did not change geometry.");
+        editor.Undo(); Require(draft.WiringDiagram.PinPositions["p1.1"] == original && draft.FunctionLinks.Count == 2, "Mirror undo lost geometry or association provenance.");
+        editor.Redo(); editor.Undo();
+        var a = draft.WiringDiagram.PinPositions["p1.1"]; var b = draft.WiringDiagram.PinPositions["p2.1"]; var c = draft.WiringDiagram.PinPositions["p3.1"];
+        var mid = (a.X + b.X) / 2;
+        service.SetRoute(draft, "p1.1", "p2.1", [a, b]);
+        service.SetRoute(draft, "p1.1", "p3.1", [a, new(mid, a.Y), new(mid, c.Y), c]);
+        service.SetRoute(draft, "p1.2", "p2.2", [draft.WiringDiagram.PinPositions["p1.2"], draft.WiringDiagram.PinPositions["p2.2"]]);
+        var diagram = service.Build(draft);
+        Require(diagram.Primitives.Any(p => p.Kind == "ARC"), "Fixture has no non-junction crossing.");
+        editor.SelectEdge(CableWiringEditorService.EdgeKey("p1.2", "p2.2"));
+        var canvas = (System.Windows.Controls.Canvas)typeof(CableWiringDiagramEditor).GetField("_canvas", flags)!.GetValue(editor)!;
+        Require(canvas.Children.OfType<System.Windows.Shapes.Path>().Any(p => p.Stroke == Brushes.DarkCyan), "Selected conductor hides its jump symbol.");
+        Require(canvas.Children.OfType<System.Windows.Shapes.Polyline>().All(p => p.Stroke == Brushes.Transparent), "Straight hit overlay fills jump gaps.");
+        if (evidence is not null)
+        {
+            Directory.CreateDirectory(evidence);
+            editor.Measure(new Size(1100, 700)); editor.Arrange(new Rect(0, 0, 1100, 700)); editor.FitToView(); editor.UpdateLayout();
+            var bitmap = new RenderTargetBitmap(1100, 700, 96, 96, PixelFormats.Pbgra32); bitmap.Render(editor);
+            var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
+            using var stream = File.Create(Path.Combine(evidence, "jump-symbol-editor.png")); png.Save(stream);
+        }
+        var copied = tables.Prepare(template); CableWiringDiagramEditor.CopyDraft(draft, copied);
+        Require(copied.FunctionLinks.Count == draft.FunctionLinks.Count && copied.FunctionOverrides.SequenceEqual(draft.FunctionOverrides), "Applying staged wiring lost function provenance.");
+        table = new CableManufacturingTableEditor(draft, [], false);
+        draft = table.Draft;
+        draft.Rows.Single(r => r.ToSourcePinId == "p2.1").ToFunction = "manual";
+        Require(table.Commit() && draft.FunctionOverrides.Contains("p2.1"), "Table edit did not become a manual override.");
+        draft.Rows.Single(r => r.FromSourcePinId == "p1.1").FromFunction = "0V";
+        Require(table.Commit() && draft.Ends[2].Pins[0].Function == "0V" && draft.Ends[1].Pins[0].Function == "manual", "Committed source edit lost association or manual override.");
+        Console.WriteLine("PASS mirror toolbar/undo, visible selected jump arcs, table association/manual override and staged provenance");
+        return tables.Apply(template, draft);
+    }
 
     private static void InteractionProof(CableManufacturingDraft source)
     {
@@ -99,6 +156,7 @@ internal static class Program
 
     private static void PdfSmoke(ArchivedCableTemplate template, string root)
     {
+        Directory.CreateDirectory(root);
         var project = new ElectricalProject { ProjectId = "wiring-pdf", Name = "Synthetic Cable Project", Schematic = new()
             { Pages = [new() { PageId = "main1", Title = "Engineering 1" }, new() { PageId = "main2", Title = "Engineering 2" }] } };
         var geometry = new SchematicCadAsset { SourceSha256 = template.AssetSha256, Width = 60, Height = 40,

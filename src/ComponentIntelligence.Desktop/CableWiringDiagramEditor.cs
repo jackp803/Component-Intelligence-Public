@@ -20,8 +20,8 @@ public sealed class CableWiringDiagramEditor : UserControl
     private readonly ComboBox _usage = new() { ItemsSource = Enum.GetValues<CablePinUsage>(), Width = 100 };
     private readonly Stack<string> _undo = new(), _redo = new();
     private readonly ToggleButton _select, _wire;
-    private readonly Button _undoButton, _redoButton;
-    private string? _selectedPin, _selectedEdge, _pendingPin, _dragId, _dragBefore;
+    private readonly Button _undoButton, _redoButton, _mirrorButton;
+    private string? _selectedPin, _selectedEdge, _selectedPort, _pendingPin, _dragId, _dragBefore;
     private bool _wireMode, _pinDrag, _pan, _dragMoved, _syncUsage;
     private Point _mouseStart;
     private SchematicPoint? _objectStart;
@@ -43,6 +43,8 @@ public sealed class CableWiringDiagramEditor : UserControl
         _select = Toggle("\uE762", "選取／移動", () => SetMode(false));
         _wire = Toggle("\uE71B", "接線：選擇起點 Pin，再選擇對端 Pin；點導線可建立分支", () => SetMode(true));
         toolbar.Children.Add(_select); toolbar.Children.Add(_wire);
+        _mirrorButton = Icon("\uE8AB", "接點左右對調", () => { if (_selectedPort is { } id) MirrorPort(id); });
+        toolbar.Children.Add(_mirrorButton);
         toolbar.Children.Add(Icon("\uE74D", "刪除所選導線 (Delete)", DeleteSelection));
         _undoButton = Icon("\uE7A7", "復原 (Ctrl+Z)", Undo); _redoButton = Icon("\uE7A6", "重做 (Ctrl+Y)", Redo);
         toolbar.Children.Add(_undoButton); toolbar.Children.Add(_redoButton);
@@ -71,7 +73,7 @@ public sealed class CableWiringDiagramEditor : UserControl
         {
             if (_wireMode && _pendingPin is not null)
             { _waypoints.Add(Point(e.GetPosition(_canvas))); Render(); }
-            else { _selectedPin = null; _selectedEdge = null; Render(); }
+            else { _selectedPin = null; _selectedEdge = null; _selectedPort = null; Render(); }
             e.Handled = true;
         };
         PreviewKeyDown += (_, e) =>
@@ -92,13 +94,16 @@ public sealed class CableWiringDiagramEditor : UserControl
         to.InventoryOnly = copy.InventoryOnly; to.ExplicitMapping = copy.ExplicitMapping; to.WiringDiagram = copy.WiringDiagram;
         to.MappingRevision = copy.MappingRevision; to.MappingEvidence = copy.MappingEvidence; to.ConfirmMapping = copy.ConfirmMapping;
         to.ExplicitlyRemovedPinIds = copy.ExplicitlyRemovedPinIds;
+        to.FunctionLinks = copy.FunctionLinks; to.FunctionOverrides = copy.FunctionOverrides;
     }
     private void SetMode(bool wire) { _wireMode = wire; _select.IsChecked = !wire; _wire.IsChecked = wire; _pendingPin = null; _waypoints.Clear(); }
     public void ConnectPins(string from, string to) => Change(() => _service.Connect(Draft, from, to));
     public void MovePort(string id, SchematicPoint point) => Change(() => _service.MovePort(Draft, id, point));
     public void MovePin(string id, SchematicPoint point) => Change(() => _service.MovePin(Draft, id, point));
+    public void MirrorPort(string id) => Change(() => _service.MirrorPort(Draft, id));
+    public void SelectPort(string id) { _selectedPort = id; _selectedPin = null; _selectedEdge = null; Render(); }
     public void SetPinUsage(string id, CablePinUsage usage) => Change(() => _service.SetUsage(Draft, id, usage));
-    public void SelectEdge(string key) { _selectedEdge = key; _selectedPin = null; Render(); }
+    public void SelectEdge(string key) { _selectedEdge = key; _selectedPin = null; _selectedPort = null; Render(); }
     public void DeleteSelection()
     {
         if (_selectedEdge is null) return;
@@ -124,7 +129,7 @@ public sealed class CableWiringDiagramEditor : UserControl
     {
         if (!source.TryPop(out var state)) return;
         target.Push(JsonSerializer.Serialize(Draft)); CopyDraft(JsonSerializer.Deserialize<CableManufacturingDraft>(state)!, Draft);
-        _selectedEdge = null; _selectedPin = null; _pendingPin = null; _waypoints.Clear();
+        _selectedEdge = null; _selectedPin = null; _selectedPort = null; _pendingPin = null; _waypoints.Clear();
         Render(); Changed?.Invoke(this, EventArgs.Empty);
     }
     public void ZoomBy(double factor, Point pivot)
@@ -150,8 +155,10 @@ public sealed class CableWiringDiagramEditor : UserControl
         CableWiringVisualRenderer.Draw(_canvas, _presentation.Primitives);
         foreach (var (key, path) in _presentation.EdgePaths)
         {
+            if (key == _selectedEdge && _presentation.EdgePrimitives.TryGetValue(key, out var primitives))
+                CableWiringVisualRenderer.Draw(_canvas, primitives, stroke: Brushes.DarkCyan);
             var hit = new Polyline { Points = new(path.Select(p => new Point(p.X * PixelsPerMm, p.Y * PixelsPerMm))),
-                Stroke = key == _selectedEdge ? Brushes.DarkCyan : Brushes.Transparent, StrokeThickness = key == _selectedEdge ? 2 : 12,
+                Stroke = Brushes.Transparent, StrokeThickness = 12,
                 Cursor = _wireMode ? Cursors.Cross : Cursors.SizeAll, ToolTip = "導線：選取後 Delete 刪除；拖曳調整彎折位置" };
             hit.MouseLeftButtonDown += (_, e) =>
             {
@@ -169,10 +176,17 @@ public sealed class CableWiringDiagramEditor : UserControl
         foreach (var port in Draft.Ends)
         {
             var b = _presentation.PortBounds[port.PortId];
+            if (_selectedPort == port.PortId)
+            {
+                var outline = new Rectangle { Width = b.Width * PixelsPerMm, Height = b.Height * PixelsPerMm,
+                    Stroke = Brushes.DarkCyan, StrokeThickness = 1.5, IsHitTestVisible = false };
+                Canvas.SetLeft(outline, b.X * PixelsPerMm); Canvas.SetTop(outline, b.Y * PixelsPerMm); _canvas.Children.Add(outline);
+            }
             var header = new Rectangle { Width = b.Width * PixelsPerMm, Height = 17 * PixelsPerMm, Fill = Brushes.Transparent,
                 Cursor = Cursors.SizeAll, ToolTip = port.Name + " / " + (port.Connector?.Family ?? "待確認") };
             Canvas.SetLeft(header, b.X * PixelsPerMm); Canvas.SetTop(header, b.Y * PixelsPerMm);
-            header.MouseLeftButtonDown += (_, e) => { if (!_wireMode) StartDrag(port.PortId, false, new(b.X, b.Y), e); e.Handled = true; };
+            header.MouseLeftButtonDown += (_, e) =>
+            { if (!_wireMode) { StartDrag(port.PortId, false, new(b.X, b.Y), e); SelectPort(port.PortId); } e.Handled = true; };
             _canvas.Children.Add(header);
             foreach (var pin in port.Pins)
             {
@@ -183,7 +197,7 @@ public sealed class CableWiringDiagramEditor : UserControl
                 Canvas.SetLeft(hit, p.X * PixelsPerMm - 6); Canvas.SetTop(hit, p.Y * PixelsPerMm - 6);
                 hit.MouseLeftButtonDown += (_, e) =>
                 {
-                    _selectedPin = pin.PinId; _selectedEdge = null;
+                    _selectedPin = pin.PinId; _selectedEdge = null; _selectedPort = port.PortId;
                     if (_wireMode) PickPin(pin.PinId);
                     else { Render(); StartDrag(pin.PinId, true, p, e); }
                     e.Handled = true;
@@ -202,8 +216,11 @@ public sealed class CableWiringDiagramEditor : UserControl
         _usage.SelectedItem = Draft.Rows.SelectMany(CableManufacturingCells.All).FirstOrDefault(c => c.SourcePinId == _selectedPin)?.Usage ?? CablePinUsage.Pending;
         _syncUsage = false;
         _undoButton.IsEnabled = _undo.Count > 0; _redoButton.IsEnabled = _redo.Count > 0;
+        _mirrorButton.IsEnabled = _selectedPort is not null;
         _status.Text = _selectedPin is { } selected ? Draft.Ends.SelectMany(p => p.Pins.Select(pin => (p, pin))).Where(x => x.pin.PinId == selected)
             .Select(x => $"{x.p.Name} / {x.pin.PinNumber} {x.pin.Function}").FirstOrDefault() : $"{Draft.Ends.Count} Port / {Draft.Ends.Sum(p => p.Pins.Count)} Pin / {CableWiringEditorService.Mapping(Draft).Count} 接線";
+        var conflicts = CableFunctionAssociationService.Conflicts(Draft);
+        if (conflicts.Count > 0) _status.Text += "\n" + string.Join("\n", conflicts);
         Transform();
     }
 

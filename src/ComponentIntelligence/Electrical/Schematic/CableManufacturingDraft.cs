@@ -11,6 +11,8 @@ public sealed class CableManufacturingDraft
     public bool InventoryOnly { get; set; }
     public List<CablePinMapping>? ExplicitMapping { get; set; }
     public CableWiringDiagram? WiringDiagram { get; set; }
+    public Dictionary<string, CableFunctionLink> FunctionLinks { get; set; } = [];
+    public List<string> FunctionOverrides { get; set; } = [];
     public string? MappingRevision { get; set; }
     public string? MappingEvidence { get; set; }
     public bool ConfirmMapping { get; set; }

@@ -66,6 +66,8 @@ public sealed class CableManufacturingEditorService
         draft.InventoryOnly = metadata?.InventoryOnly == true;
         draft.ExplicitMapping = Clone(template.Mapping);
         draft.WiringDiagram = Clone(metadata?.WiringDiagram);
+        draft.FunctionLinks = Clone(metadata?.FunctionLinks ?? []);
+        draft.FunctionOverrides = Clone(metadata?.FunctionOverrides ?? []);
         if (metadata?.Rows is { } rows) draft.Rows.AddRange(Clone(rows));
         else
         {
@@ -155,6 +157,7 @@ public sealed class CableManufacturingEditorService
         CableManufacturingCells.EnsureColumns(draft);
         if (port.Connector is not null) port.Connector.PinCount = count;
         CableWiringEditorService.RebuildInventory(draft);
+        CableFunctionAssociationService.Synchronize(draft);
     }
 
     public ComponentPort AddEnd(CableManufacturingDraft draft)
@@ -187,6 +190,7 @@ public sealed class CableManufacturingEditorService
         draft.ConfirmMapping = false;
         draft.WiringDiagram?.PortBounds.Remove(sourcePortId);
         CableWiringEditorService.RebuildInventory(draft);
+        CableFunctionAssociationService.Synchronize(draft);
     }
 
     public static bool HasRemovalImpact(CableManufacturingDraft draft, IReadOnlySet<string> pins, IReadOnlySet<string>? boundPins = null) =>
@@ -309,6 +313,7 @@ public sealed class CableManufacturingEditorService
                     errors.Add("Inventory cell must belong to its exact Port.");
         }
         errors.AddRange(CableWiringEditorService.ValidateDiagram(draft));
+        errors.AddRange(CableFunctionAssociationService.Validate(draft));
         if (draft.ConfirmMapping && (string.IsNullOrWhiteSpace(draft.MappingRevision) || string.IsNullOrWhiteSpace(draft.MappingEvidence)))
             errors.Add("Mapping confirmation requires a revision and source evidence.");
         if (draft.ConfirmMapping)
@@ -325,6 +330,9 @@ public sealed class CableManufacturingEditorService
 
     public ArchivedCableTemplate Apply(ArchivedCableTemplate template, CableManufacturingDraft draft)
     {
+        var geometryErrors = CableWiringEditorService.ValidateDiagram(draft);
+        if (geometryErrors.Count > 0) throw new InvalidOperationException(string.Join("\n", geometryErrors));
+        draft = Clone(draft); CableFunctionAssociationService.Synchronize(draft);
         var errors = Validate(draft);
         if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
         var ports = Clone(draft.Ends);
@@ -357,6 +365,7 @@ public sealed class CableManufacturingEditorService
         var definition = new CableManufacturingDefinition { FromSourcePortId = draft.FromSourcePortId,
             ToSourcePortId = draft.ToSourcePortId, IncompleteRows = incomplete, Rows = Clone(draft.Rows),
             InventoryOnly = draft.InventoryOnly, WiringDiagram = Clone(draft.WiringDiagram),
+            FunctionLinks = Clone(draft.FunctionLinks), FunctionOverrides = Clone(draft.FunctionOverrides),
             PinUsage = usage.Where(u => u.Value != CablePinUsage.Pending).Select(u => new CablePinUsageDeclaration(u.Key, u.Value)).ToList() };
         var changed = JsonSerializer.Serialize(Prepare(template)) != JsonSerializer.Serialize(draft);
         var next = template with { Ports = ports, Mapping = mapping, Manufacturing = definition,
@@ -380,11 +389,13 @@ public sealed class CableManufacturingEditorService
                 CableManufacturingCells.All(r).Any(c => c.SourcePinId is { } id && !pins.Contains(id))) ||
             new[] { metadata.FromSourcePortId, metadata.ToSourcePortId }.Any(id => id is not null && !template.Ports.Any(p => p.PortId == id)))
             throw new InvalidOperationException("Manufacturing draft has conflicting or missing exact Pin/Port identities.");
-        if (metadata.Rows is not null || metadata.InventoryOnly || metadata.WiringDiagram is not null)
+        if (metadata.Rows is not null || metadata.InventoryOnly || metadata.WiringDiagram is not null ||
+            metadata.FunctionLinks.Count > 0 || metadata.FunctionOverrides.Count > 0)
         {
             var draft = new CableManufacturingDraft { Ends = template.Ports, FromSourcePortId = metadata.FromSourcePortId,
                 ToSourcePortId = metadata.ToSourcePortId, Rows = metadata.Rows ?? [], InventoryOnly = metadata.InventoryOnly,
-                ExplicitMapping = metadata.InventoryOnly ? template.Mapping : null, WiringDiagram = metadata.WiringDiagram };
+                ExplicitMapping = metadata.InventoryOnly ? template.Mapping : null, WiringDiagram = metadata.WiringDiagram,
+                FunctionLinks = metadata.FunctionLinks, FunctionOverrides = metadata.FunctionOverrides };
             if (metadata.InventoryOnly && metadata.Rows is null) CableWiringEditorService.RebuildInventory(draft);
             var errors = new CableManufacturingEditorService().Validate(draft);
             string Key(CablePinMapping pair) => string.CompareOrdinal(pair.FromSourcePinId, pair.ToSourcePinId) < 0

@@ -14,7 +14,7 @@ public sealed class CableWiringEditorService
 
     public void EnterVisualMode(CableManufacturingDraft draft)
     {
-        if (draft.InventoryOnly) { EnsureLayout(draft); return; }
+        if (draft.InventoryOnly) { EnsureLayout(draft); CableFunctionAssociationService.Synchronize(draft); return; }
         var errors = new CableManufacturingEditorService().Validate(draft);
         if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
         if (draft.Rows.SelectMany(CableManufacturingCells.All).Any(c => c.SourcePinId is null && !string.IsNullOrWhiteSpace(c.Function)))
@@ -26,6 +26,7 @@ public sealed class CableWiringEditorService
         draft.InventoryOnly = true;
         RebuildInventory(draft);
         EnsureLayout(draft);
+        CableFunctionAssociationService.Synchronize(draft);
     }
 
     public static void RebuildInventory(CableManufacturingDraft draft)
@@ -96,6 +97,7 @@ public sealed class CableWiringEditorService
         if (new[] { from, to }.Any(id => Usage(draft, id) != CablePinUsage.Pending))
             throw new InvalidOperationException("NC／未使用的 Pin 不能接線；請先改為 Pending。");
         draft.ExplicitMapping!.Add(new(from, to)); draft.ConfirmMapping = false;
+        CableFunctionAssociationService.Synchronize(draft);
     }
 
     public void Disconnect(CableManufacturingDraft draft, string from, string to)
@@ -104,6 +106,7 @@ public sealed class CableWiringEditorService
         if (draft.ExplicitMapping!.RemoveAll(p => EdgeKey(p) == EdgeKey(from, to)) == 0)
             throw new InvalidOperationException("接線不存在。");
         draft.WiringDiagram?.Routes.Remove(EdgeKey(from, to)); draft.ConfirmMapping = false;
+        CableFunctionAssociationService.Synchronize(draft);
     }
 
     public void SetUsage(CableManufacturingDraft draft, string pinId, CablePinUsage usage)
@@ -133,6 +136,24 @@ public sealed class CableWiringEditorService
         {
             var p = draft.WiringDiagram.PinPositions[pin.PinId];
             draft.WiringDiagram.PinPositions[pin.PinId] = new(p.X + dx, p.Y + dy);
+            ClearAffectedRoutes(draft, pin.PinId);
+        }
+    }
+
+    public void SetPinFunction(CableManufacturingDraft draft, string pinId, string? function)
+    {
+        RequireVisual(draft); RequirePin(draft, pinId);
+        CableFunctionAssociationService.SetFunction(draft, pinId, function);
+    }
+
+    public void MirrorPort(CableManufacturingDraft draft, string portId)
+    {
+        RequireVisual(draft); EnsureLayout(draft);
+        var port = draft.Ends.Single(p => p.PortId == portId); var bounds = draft.WiringDiagram!.PortBounds[portId];
+        foreach (var pin in port.Pins)
+        {
+            var point = draft.WiringDiagram.PinPositions[pin.PinId];
+            draft.WiringDiagram.PinPositions[pin.PinId] = point with { X = 2 * bounds.X + bounds.Width - point.X };
             ClearAffectedRoutes(draft, pin.PinId);
         }
     }
@@ -189,7 +210,7 @@ public sealed class CableWiringEditorService
 
     public CableWiringDiagramPresentation Build(CableManufacturingDraft source)
     {
-        var draft = Clone(source); EnsureLayout(draft);
+        var draft = Clone(source); EnsureLayout(draft); CableFunctionAssociationService.Synchronize(draft);
         var errors = ValidateDiagram(draft);
         if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
         var layout = draft.WiringDiagram!;
@@ -221,29 +242,56 @@ public sealed class CableWiringEditorService
         {
             var from = layout.PinPositions[pair.FromSourcePinId]; var to = layout.PinPositions[pair.ToSourcePinId];
             if (!layout.Routes.TryGetValue(EdgeKey(pair), out var route))
-            {
-                var x = Math.Abs(from.X - to.X) < 10 ? Math.Max(from.X, to.X) + 10 + index * 3 :
-                    (from.X + to.X) / 2 + index * 2;
-                route = Simplify([from, new(x, from.Y), new(x, to.Y), to]);
-            }
+                route = AutomaticRoute(draft, pair, index);
             paths.Add(EdgeKey(pair), route);
-            for (var i = 1; i < route.Count; i++) Line(route[i - 1], route[i]);
             index++;
         }
         // A geometric crossing is never an electrical connection. Mark only shared
         // vertices of explicitly connected pairs, not arbitrary segment intersections.
+        var junctions = new HashSet<SchematicPoint>();
         foreach (var pair in Mapping(draft))
         foreach (var other in Mapping(draft).Where(p => EdgeKey(p) != EdgeKey(pair) &&
             new[] { p.FromSourcePinId, p.ToSourcePinId }.Intersect(new[] { pair.FromSourcePinId, pair.ToSourcePinId }).Any()))
             foreach (var point in paths[EdgeKey(pair)].Where(point => paths[EdgeKey(other)].Zip(paths[EdgeKey(other)].Skip(1)).Any(segment =>
                 point.X == segment.First.X && point.X == segment.Second.X && point.Y >= Math.Min(segment.First.Y, segment.Second.Y) && point.Y <= Math.Max(segment.First.Y, segment.Second.Y) ||
                 point.Y == segment.First.Y && point.Y == segment.Second.Y && point.X >= Math.Min(segment.First.X, segment.Second.X) && point.X <= Math.Max(segment.First.X, segment.Second.X))))
-                primitives.Add(new() { Kind = "CIRCLE", Start = point, Radius = .6 });
+                junctions.Add(point);
+        var wires = Mapping(draft).Select(pair => new SchematicWire { WireId = EdgeKey(pair), PageId = "cable-wiring",
+            Points = paths[EdgeKey(pair)].ToList(), Start = SchematicAttachment.Pin("cable", pair.FromSourcePinId),
+            End = SchematicAttachment.Pin("cable", pair.ToSourcePinId) }).ToArray();
+        var crossings = SchematicCrossingService.Analyze(wires);
+        crossings = crossings with { Crossovers = crossings.Crossovers.Where(c => !junctions.Contains(c.Position)).ToArray() };
+        var edgePrimitives = wires.ToDictionary(wire => wire.WireId, wire => SchematicCrossingService.RoutePrimitives(wire, crossings));
+        primitives.AddRange(edgePrimitives.Values.SelectMany(p => p));
+        primitives.AddRange(junctions.Select(point => new SchematicCadPrimitive { Kind = "CIRCLE", Start = point, Radius = .6 }));
         var points = primitives.SelectMany(p => new[] { p.Start, p.End ?? p.Start }).ToArray();
         var minX = points.Min(p => p.X) - 5; var minY = points.Min(p => p.Y) - 5;
         var maxX = primitives.Max(p => p.Kind == "TEXT" ? p.Start.X + (p.Text?.Length ?? 0) * p.TextHeight : Math.Max(p.Start.X, p.End?.X ?? p.Start.X));
         var maxY = primitives.Max(p => p.Kind == "TEXT" ? p.Start.Y + p.TextHeight * 1.5 : Math.Max(p.Start.Y, p.End?.Y ?? p.Start.Y));
-        return new(primitives, new(minX, minY, maxX - minX + 5, maxY - minY + 5), layout.PortBounds, layout.PinPositions, paths);
+        return new(primitives, new(minX, minY, maxX - minX + 5, maxY - minY + 5), layout.PortBounds, layout.PinPositions, paths) { EdgePrimitives = edgePrimitives };
+    }
+
+    private static List<SchematicPoint> AutomaticRoute(CableManufacturingDraft draft, CablePinMapping pair, int index)
+    {
+        var layout = draft.WiringDiagram!; var from = layout.PinPositions[pair.FromSourcePinId]; var to = layout.PinPositions[pair.ToSourcePinId];
+        SchematicGridBounds Bounds(string id) => layout.PortBounds[draft.Ends.Single(port => port.Pins.Any(pin => pin.PinId == id)).PortId];
+        var a = Bounds(pair.FromSourcePinId); var b = Bounds(pair.ToSourcePinId);
+        var fromLeft = from.X == a.X; var fromRight = from.X == a.X + a.Width;
+        var toLeft = to.X == b.X; var toRight = to.X == b.X + b.Width;
+        if ((fromLeft || fromRight) && (toLeft || toRight))
+        {
+            var start = new SchematicPoint(from.X + (fromLeft ? -8 : 8), from.Y);
+            var end = new SchematicPoint(to.X + (toLeft ? -8 : 8), to.Y);
+            if (fromRight && toLeft && start.X <= end.X || fromLeft && toRight && start.X >= end.X)
+            {
+                var x = Math.Clamp((start.X + end.X) / 2 + index * 2, Math.Min(start.X, end.X), Math.Max(start.X, end.X));
+                return Simplify([from, start, new(x, start.Y), new(x, end.Y), end, to]);
+            }
+            var y = Math.Min(a.Y, b.Y) - 10 - index * 3;
+            return Simplify([from, start, new(start.X, y), new(end.X, y), end, to]);
+        }
+        var middle = Math.Abs(from.X - to.X) < 10 ? Math.Max(from.X, to.X) + 10 + index * 3 : (from.X + to.X) / 2 + index * 2;
+        return Simplify([from, new(middle, from.Y), new(middle, to.Y), to]);
     }
 
     private static List<SchematicPoint> Simplify(IEnumerable<SchematicPoint> points)

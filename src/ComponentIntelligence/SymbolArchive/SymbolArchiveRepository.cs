@@ -14,6 +14,7 @@ public sealed class SymbolArchiveRepository
     public const string CableManufacturingSchemaVersion = "ci-symbol-archive.v5";
     public const string CablePortTableSchemaVersion = "ci-symbol-archive.v6";
     public const string CableWiringDiagramSchemaVersion = "ci-symbol-archive.v7";
+    public const string CableFunctionAssociationSchemaVersion = "ci-symbol-archive.v8";
     public const string FileName = "SymbolArchive.json";
 
     private static readonly Regex Sha256Pattern = new("^[0-9a-fA-F]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -93,7 +94,7 @@ public sealed class SymbolArchiveRepository
         if (document.SchemaVersion != SchemaVersion && document.SchemaVersion != MultiRepresentationSchemaVersion &&
             document.SchemaVersion != CableTemplateSchemaVersion && document.SchemaVersion != SchematicLayoutSchemaVersion &&
             document.SchemaVersion != CableManufacturingSchemaVersion && document.SchemaVersion != CablePortTableSchemaVersion &&
-            document.SchemaVersion != CableWiringDiagramSchemaVersion)
+            document.SchemaVersion != CableWiringDiagramSchemaVersion && document.SchemaVersion != CableFunctionAssociationSchemaVersion)
             throw new InvalidDataException($"Unsupported Symbol Archive schema '{document.SchemaVersion}'.");
 
         var bindingKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -235,7 +236,9 @@ public sealed class SymbolArchiveRepository
         return document with
         {
             // Older readers must reject variant-bearing archives, never mistake a coil for the default symbol.
-            SchemaVersion = document.SchemaVersion == CableWiringDiagramSchemaVersion || cables.Any(c => c.Template.Manufacturing is { InventoryOnly: true } or { WiringDiagram: not null })
+            SchemaVersion = document.SchemaVersion == CableFunctionAssociationSchemaVersion || cables.Any(c => c.Template.Manufacturing is { } m && (m.FunctionLinks.Count > 0 || m.FunctionOverrides.Count > 0))
+                ? CableFunctionAssociationSchemaVersion :
+                document.SchemaVersion == CableWiringDiagramSchemaVersion || cables.Any(c => c.Template.Manufacturing is { InventoryOnly: true } or { WiringDiagram: not null })
                 ? CableWiringDiagramSchemaVersion :
                 document.SchemaVersion == CablePortTableSchemaVersion || cables.Any(c => c.Template.Manufacturing?.Rows is not null ||
                 c.ContactBindings.Any(b => c.Template.Ports.Any(p => p.PortId == b.EngineeringEndpointId)))

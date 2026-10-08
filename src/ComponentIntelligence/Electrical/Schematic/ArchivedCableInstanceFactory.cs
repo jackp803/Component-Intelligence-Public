@@ -47,6 +47,15 @@ public static class ArchivedCableInstanceFactory
         copy.ArchivedCable = copy.ArchivedCable! with { Mapping = pairs, MappingConfirmed = false, HasMappingOverride = true,
             Manufacturing = (copy.ArchivedCable.Manufacturing ?? copy.ArchivedCable.Template.Manufacturing) is { } manufacturing
                 ? manufacturing with { Rows = null, WiringDiagram = manufacturing.WiringDiagram is { } diagram ? diagram with { Routes = [] } : null } : null };
+        if (copy.ArchivedCable.Manufacturing is { } functions && (functions.FunctionLinks.Count > 0 || functions.FunctionOverrides.Count > 0))
+        {
+            var editor = new CableManufacturingEditorService(); var draft = editor.Prepare(copy);
+            CableFunctionAssociationService.Synchronize(draft);
+            var result = editor.Apply(CableManufacturingEditorService.EffectiveTemplate(copy), draft);
+            copy.ArchivedCable = copy.ArchivedCable with { Manufacturing = result.Manufacturing };
+            foreach (var pin in copy.ArchivedCable.Ports.SelectMany(p => p.Pins))
+                pin.Function = result.Ports.SelectMany(p => p.Pins).Single(p => p.PinId == pin.SourcePinId).Function;
+        }
         return copy;
     }
 

@@ -24,3 +24,4 @@
 - Existing SQLite read-only check: two saved projects/four pages loaded without source mutation or native windows; four CAD selections rendered, two automatically smaller than native margins.
 - Working-tree domain suite: 1,425 passed. Seven unrelated dirty files preserved and excluded from release archive.
 - Initial independent review findings addressed with regression tests. Clean-source release and final review results are recorded after delivery verification.
+- Final independent review identified expanded Port edit handles being moved out of their native drag coordinate contract. Retained their original native placement (this request changes the CAD selection frame, not Port authoring coordinates); exact native DropTarget reproduction went RED, then GREEN. CAD source bindings remain unchanged on render.

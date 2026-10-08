@@ -116,7 +116,28 @@ internal static partial class Program
             window.Content = null;
         }
         RunBoundsPrimitiveCases();
+        RunExpandedPortDragFrameRegression();
         Console.WriteLine("PASS: 12 tight CAD frame cases, rotations/scales, source microtext, contacts, labels, handle tracks pointer, no-jump preview, routed Port, one commit, undo and output exclusion; 5 primitive/fallback cases.");
+    }
+
+    private static void RunExpandedPortDragFrameRegression()
+    {
+        var project = BoundsProject(narrow: true);
+        var symbol = project.Schematic!.Symbols[0];
+        var port = project.Cables[0].ArchivedCable!.Ports[1];
+        project = new SchematicAuthoringService().TogglePortCollapsed(project, symbol.SymbolId, port.PortId);
+        var before = JsonSerializer.Serialize(project);
+        var control = new SchematicWorkspaceControl(() => project, (_, _) => throw new InvalidOperationException("Unexpected commit."),
+            () => Task.FromResult<IReadOnlyList<ComponentIR>>([]), _ => Task.FromResult<Uri?>(null), () => { }, () => { });
+        Set(control, "_selectionId", symbol.SymbolId); Set(control, "_editModuleMode", true); control.RefreshWorkspace();
+        var sheet = (Canvas)GetSheet(control); Layout(sheet);
+        var handle = sheet.Children.OfType<Border>().Single(b => b.Width == 17);
+        var pointer = new SchematicPoint((Canvas.GetLeft(handle) + 8) / 3, (Canvas.GetTop(handle) + 8) / 3 - 2);
+        var current = project.Schematic.Symbols[0];
+        var target = SchematicPortPresentation.DropTarget(current, pointer);
+        Require(target.Side == "Right", "Small expanded CAD Port handle drag is reinterpreted as a different native edge.");
+        Require(before == JsonSerializer.Serialize(project), "Displaying the fitted frame changes Port bindings.");
+        Console.WriteLine("PASS: expanded Port control retains its native drag coordinate contract.");
     }
 
     private static void RunBoundsPrimitiveCases()
@@ -171,22 +192,23 @@ internal static partial class Program
         }
     }
 
-    private static ElectricalProject BoundsProject()
+    private static ElectricalProject BoundsProject(bool narrow = false)
     {
+        var left = narrow ? 50 : 20; var right = narrow ? 70 : 100;
         var template = new ArchivedCableTemplate { TemplateId = "bounds", TemplateRevision = "r1", AssetSha256 = new('a', 64),
             Ports = Enumerable.Range(1, 2).Select(i => new ComponentPort { PortId = "P" + i, Name = "P" + i,
                 Pins = [new() { PinId = "pin" + i, PinNumber = "1" }] }).ToList() };
         var asset = new SchematicCadAsset { SourceSha256 = template.AssetSha256, Width = 120, Height = 100, MillimetresPerUnit = 1,
             Primitives = [
-                new() { Kind = "LINE", Start = new(20, 40), End = new(100, 40) },
-                new() { Kind = "LINE", Start = new(100, 40), End = new(100, 60) },
-                new() { Kind = "LINE", Start = new(100, 60), End = new(20, 60) },
-                new() { Kind = "LINE", Start = new(20, 60), End = new(20, 40) },
+                new() { Kind = "LINE", Start = new(left, 40), End = new(right, 40) },
+                new() { Kind = "LINE", Start = new(right, 40), End = new(right, 60) },
+                new() { Kind = "LINE", Start = new(right, 60), End = new(left, 60) },
+                new() { Kind = "LINE", Start = new(left, 60), End = new(left, 40) },
                 new() { Kind = "TEXT", Start = new(55, 50), Text = "ID", TextHeight = 3, TextAttachment = "MiddleCenter" },
                 new() { Kind = "TEXT", Start = new(0, 0), Text = "SOURCE MICROTEXT", TextHeight = .000003 },
                 new() { Kind = "MTEXT", Start = new(120, 100), Text = "SOURCE\nMICROTEXT", TextHeight = .000003, TextWidth = .00003 }
             ],
-            ConnectionPoints = [new("c1", "", new(20, 50), Direction: "Left"), new("c2", "", new(100, 50), Direction: "Right")] };
+            ConnectionPoints = [new("c1", "", new(left, 50), Direction: "Left"), new("c2", "", new(right, 50), Direction: "Right")] };
         var project = new ElectricalProject { ProjectId = "tight-bounds", Schematic = new() {
             Pages = [new() { PageId = "page", Title = "Synthetic bounds", Width = 210, Height = 210 }] } };
         return new SchematicAuthoringService().AddArchivedCable(project, template, CableConstructionType.Unknown, asset,

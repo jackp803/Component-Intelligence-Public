@@ -520,12 +520,13 @@ public partial class SchematicWorkspaceControl : UserControl
                 Child = new TextBlock { Text = "▾", FontSize = 10, TextAlignment = TextAlignment.Center },
                 ToolTip = portEditing ? $"{port.Name}：點一下收合 Pin；拖曳到模塊四邊" : $"{port.Name}：雙擊收合 Pin" };
             var handleSide = SchematicPortPresentation.PortSide(symbol, port);
+            // Port drag targeting still uses the native frame, not the fitted CAD selection outline.
             var handlePosition = handleSide switch
             {
-                "Top" => new SchematicPoint(center.X, visibleBounds.Y + 5),
-                "Bottom" => new SchematicPoint(center.X, visibleBounds.Bottom - 5),
-                "Left" => new SchematicPoint(visibleBounds.X + 5, center.Y),
-                _ => new SchematicPoint(visibleBounds.Right - 5, center.Y)
+                "Top" => new SchematicPoint(center.X, compact.Y + 5),
+                "Bottom" => new SchematicPoint(center.X, compact.Y + compact.Height - 5),
+                "Left" => new SchematicPoint(compact.X + 5, center.Y),
+                _ => new SchematicPoint(compact.X + compact.Width - 5, center.Y)
             };
             Canvas.SetLeft(handle, handlePosition.X * 3 - 8); Canvas.SetTop(handle, handlePosition.Y * 3 - 8);
             handle.MouseLeftButtonDown += (_, e) =>

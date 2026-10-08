@@ -84,6 +84,9 @@ public sealed class CableArchiveEditorDialog : Window
                     bound.UnionWith(port.Pins.Select(p => p.PinId));
                 return bound;
             });
+        _confirmed.Checked += (_, _) => _table.Draft.ConfirmMapping = true;
+        _confirmed.Unchecked += (_, _) => _table.Draft.ConfirmMapping = false;
+        _table.WiringApplied += (_, _) => RefreshBindings();
         _table.PinsRemoved += pins =>
         {
             var current = _table.Draft.Ends.SelectMany(p => p.Pins.Select(pin => pin.PinId).Prepend(p.PortId)).ToHashSet(StringComparer.Ordinal);
@@ -174,6 +177,7 @@ public sealed class CableArchiveEditorDialog : Window
     private void RefreshBindings()
     {
         if (!_table.Commit() || !Commit(_contactGrid) || !Commit(_textGrid)) return;
+        _confirmed.IsChecked = _table.Draft.ConfirmMapping;
         var pins = _table.Draft.Ends.SelectMany(p => new[] { (Id: p.PortId, Kind: "Port", Label: $"Port: {p.Name} ({p.Pins.Count} Pin)" ) }
             .Concat(p.Pins.Select(pin => (Id: pin.PinId, Kind: "Pin", Label: $"Pin: {p.Name} / {pin.PinNumber} {pin.Function}")))).ToArray();
         foreach (var row in _contacts.Where(r => pins.All(p => p.Id != r.PinId) && r.Contact is null).ToArray()) _contacts.Remove(row);
@@ -206,7 +210,7 @@ public sealed class CableArchiveEditorDialog : Window
                 throw new InvalidOperationException("請確認製作示意 CAD 不含舊接法表；若原圖有表格，請先選取示意圖區域或圖塊。");
             if (string.IsNullOrWhiteSpace(_revision.Text)) throw new InvalidOperationException("請填寫新版本。");
             _table.Draft.MappingRevision = _mappingRevision.Text; _table.Draft.MappingEvidence = _evidence.Text;
-            _table.Draft.ConfirmMapping = _confirmed.IsChecked == true;
+            _confirmed.IsChecked = _table.Draft.ConfirmMapping;
             var wiring = _wiring.Geometry;
             if (_wiring.SourcePath is not null && wiring is null) throw new InvalidOperationException("請先載入接線 CAD。");
             if (_sketch.SourcePath is not null && _sketch.Geometry is null) throw new InvalidOperationException("請先載入製作示意 CAD。");

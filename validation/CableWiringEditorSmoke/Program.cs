@@ -83,6 +83,18 @@ internal static class Program
         Require(!grid.CanUserSortColumns && grid.Columns.OfType<System.Windows.Controls.DataGridComboBoxColumn>().All(c => c.IsReadOnly), "Pin inventory allows accidental row mapping changes.");
         typeof(CableManufacturingTableEditor).GetMethod("AddRow", flags)!.Invoke(table, null);
         Require(table.Commit() && staged.Rows.Count == source.Rows.Count, "Inventory added an accidental mapping row.");
+        var archive = new ComponentIntelligence.SymbolArchive.SymbolArchiveRepository(Path.Combine(Path.GetTempPath(), "ci-confirmation-" + Guid.NewGuid().ToString("N")));
+        var dialog = new CableArchiveEditorDialog(archive, []);
+        var checkbox = (System.Windows.Controls.CheckBox)typeof(CableArchiveEditorDialog).GetField("_confirmed", flags)!.GetValue(dialog)!;
+        var archiveTable = (CableManufacturingTableEditor)typeof(CableArchiveEditorDialog).GetField("_table", flags)!.GetValue(dialog)!;
+        checkbox.IsChecked = true;
+        Require(archiveTable.Draft.ConfirmMapping, "Confirmation checkbox is disconnected from the staged draft.");
+        var service = new CableWiringEditorService(); service.EnterVisualMode(archiveTable.Draft);
+        service.Connect(archiveTable.Draft, archiveTable.Draft.Ends[0].Pins[0].PinId, archiveTable.Draft.Ends[1].Pins[0].PinId);
+        typeof(CableArchiveEditorDialog).GetMethod("RefreshBindings", flags)!.Invoke(dialog, null);
+        Require(checkbox.IsChecked == false && !archiveTable.Draft.ConfirmMapping, "Rewiring restored a stale approval checkbox.");
+        checkbox.IsChecked = true; Require(archiveTable.Draft.ConfirmMapping, "Explicit reconfirmation is not accepted.");
+        dialog.Close();
     }
 
     private static void PdfSmoke(ArchivedCableTemplate template, string root)
@@ -128,6 +140,14 @@ internal static class Program
         var movedFile = Path.Combine(root, "synthetic-relocated-continuation.pdf");
         if (File.Exists(movedFile)) File.Delete(movedFile);
         Require(SchematicPdfWriter.Write(reordered, movedFile, Page) == 5, "Dedicated detail did not relocate ahead of its diagram.");
+        var inline = JsonSerializer.Deserialize<ElectricalProject>(before)!;
+        inline.Cables.RemoveAt(1); inline.Schematic!.Symbols.Clear();
+        inline.Schematic.Pages[0].InlineCableDetails.Add(new(inline.Cables[0].CableInstanceId, null) { DetailId = "inline", SketchVisible = false, TableWidth = 250 });
+        var inlineFile = Path.Combine(root, "synthetic-inline-linked-appendix.pdf");
+        if (File.Exists(inlineFile)) File.Delete(inlineFile);
+        Require(SchematicPdfWriter.Write(inline, inlineFile, Page) == 3, "Inline-only representation has no appendix.");
+        using var inlinePdf = PdfReader.Open(inlineFile, PdfDocumentOpenMode.Import);
+        Require(inlinePdf.Pages[0].Annotations.Count == 1 && inlinePdf.Pages[2].Annotations.Count == 1, "Inline table must link forward and back.");
         var many = template with { Ports = template.Ports.Select(p => new ComponentPort { PortId = p.PortId, Name = p.Name, Connector = p.Connector, Pins = Enumerable.Range(1, 100).Select(n => new ComponentPin { PinId = p.PortId + "." + n, PinNumber = n.ToString(), Function = "Synthetic function " + n }).ToList() }).ToList(), Manufacturing = new() { InventoryOnly = true }, Mapping = [] };
         var tiles = CableWiringAppendixRenderer.Plan(ArchivedCableInstanceFactory.Create(many, CableConstructionType.Custom), new SchematicPage { PageId = "large", Title = "Large Inventory" }, 2);
         Require(tiles.Count > 1 && tiles.All(t => t.ContentBounds.Width == t.ViewBounds.Width && t.ContentBounds.Height == t.ViewBounds.Height), "Large inventories must tile at readable 1:1 scale.");

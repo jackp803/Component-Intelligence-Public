@@ -46,6 +46,7 @@ public sealed class CableManufacturingTableEditor : UserControl
     private bool _pinSortActive = true;
     public CableManufacturingDraft Draft { get; }
     public event Action<IReadOnlySet<string>>? PinsRemoved;
+    public event EventHandler? WiringApplied;
 
     public CableManufacturingTableEditor(CableManufacturingDraft draft, IReadOnlyList<CableConnectorChoice> choices,
         bool allowInventoryChanges = true, Func<IReadOnlySet<string>>? boundPins = null, Func<string, bool>? confirmRemoval = null)
@@ -423,6 +424,7 @@ public sealed class CableManufacturingTableEditor : UserControl
                 if (errors.Count > 0) { error.Text = string.Join("\n", errors); return; }
                 CableWiringDiagramEditor.CopyDraft(staged, Draft);
                 BuildPortPanels(); ReloadRows(); BuildColumns(); RefreshPins(); RefreshStatus(); dialog.DialogResult = true;
+                WiringApplied?.Invoke(this, EventArgs.Empty);
             };
             footer.Children.Add(cancel); footer.Children.Add(apply);
             DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);

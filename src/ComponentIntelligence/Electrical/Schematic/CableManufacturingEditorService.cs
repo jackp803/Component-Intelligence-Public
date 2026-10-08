@@ -64,7 +64,7 @@ public sealed class CableManufacturingEditorService
             MappingRevision = template.MappingRevision, MappingEvidence = template.MappingEvidence };
         var metadata = template.Manufacturing;
         draft.InventoryOnly = metadata?.InventoryOnly == true;
-        draft.ExplicitMapping = draft.InventoryOnly ? Clone(template.Mapping) : null;
+        draft.ExplicitMapping = Clone(template.Mapping);
         draft.WiringDiagram = Clone(metadata?.WiringDiagram);
         if (metadata?.Rows is { } rows) draft.Rows.AddRange(Clone(rows));
         else

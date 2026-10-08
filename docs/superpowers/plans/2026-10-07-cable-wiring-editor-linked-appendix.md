@@ -41,11 +41,11 @@
 
 `CableWiringEditorService.EnterVisualMode(CableManufacturingDraft draft)` migrates a staged copy; `EnsureLayout(draft)` initializes missing positions. `Connect(draft, fromPinId, toPinId)`, `Disconnect(draft, fromPinId, toPinId)`, `SetUsage(draft, pinId, usage)`, `MovePort(draft, portId, position)`, `MovePin(draft, pinId, position)` and `SetRoute(draft, fromPinId, toPinId, points)` validate and change only their declared concerns. `Build(draft)` returns `CableWiringDiagramPresentation` with `Primitives`, `Bounds`, `PortBounds`, `PinPositions` and `EdgePaths`.
 
-- [ ] Write numeric/gapped inventory, independent row alignment, legacy branch migration, same-Port short, NC conflict, ambiguous old text, unknown endpoint, stale route, layout-only approval and instance-isolation tests.
-- [ ] Run `dotnet test tests/ComponentIntelligence.Tests -c Release --filter FullyQualifiedName~CableWiringEditorTests`; expected new tests FAIL before implementation.
-- [ ] Implement migration and canonical explicit pairs, independent table rows and diagram layout/routing. Retain legacy row semantics for old records.
-- [ ] Run the new tests and existing manufacturing/multi-Port/CAD binding tests; expected all PASS.
-- [ ] Commit only Task 1 files and record commands/results in execution evidence.
+- [x] Write numeric/gapped inventory, independent row alignment, legacy branch migration, same-Port short, NC conflict, ambiguous old text, unknown endpoint, stale route, layout-only approval and instance-isolation tests.
+- [x] Run `dotnet test tests/ComponentIntelligence.Tests -c Release --filter FullyQualifiedName~CableWiringEditorTests`; expected new tests FAIL before implementation.
+- [x] Implement migration and canonical explicit pairs, independent table rows and diagram layout/routing. Retain legacy row semantics for old records.
+- [x] Run the new tests and existing manufacturing/multi-Port/CAD binding tests; expected all PASS.
+- [x] Commit only Task 1 files and record commands/results in execution evidence.
 
 ## Task 2: Persistence and Archive Compatibility
 
@@ -57,11 +57,11 @@
 
 **Interfaces:** `CableWiringDiagramSchemaVersion = "ci-symbol-archive.v7"`; normalize schema upward only when new metadata is present or v7 already pinned. Existing Create/Prepare/Apply/ApplyToInstance APIs round-trip the new state. Explicit mapping overrides clear incompatible stale row/diagram geometry, without affecting siblings.
 
-- [ ] Write v6 readback, v7 exact layout/mapping round-trip, invalid geometry rejection, and source/instance clone tests.
-- [ ] Run archive-specific tests; expected FAIL before adding v7 support.
-- [ ] Add schema normalization, finite coordinates and exact endpoint/route validation.
-- [ ] Run archive, manufacturing and archived-instance test filters; expected PASS.
-- [ ] Commit Task 2 files and update execution evidence.
+- [x] Write v6 readback, v7 exact layout/mapping round-trip, invalid geometry rejection, and source/instance clone tests.
+- [x] Run archive-specific tests; expected FAIL before adding v7 support.
+- [x] Add schema normalization, finite coordinates and exact endpoint/route validation.
+- [x] Run archive, manufacturing and archived-instance test filters; expected PASS.
+- [x] Commit Task 2 files and update execution evidence.
 
 ## Task 3: Staged WPF Cable Wiring Editor
 
@@ -75,12 +75,12 @@
 
 **Interfaces:** `CableWiringDiagramEditor` receives the same staged manufacturing draft and emits Changed. Its host explicitly enters visual/inventory mode through an Edit Cable Wiring command, then refreshes table and diagram together. `CableWiringVisualRenderer.Draw` consumes the domain presentation only. It must not write archive or project state.
 
-- [ ] Add offscreen smoke tests for connect/delete/undo, group/Pin drag reroute, Ctrl-wheel/middle pan, numeric inventory editing, cancel and shared-draft save/reopen.
-- [ ] Run the smoke executable; expected FAIL with missing editor/behavior before implementation.
-- [ ] Implement select/wire/delete/NC/pending/unused, undo/redo, fit/zoom/pan, explicit wire-branch action, group and Pin moves, and deliberate bend editing.
-- [ ] Add library and placed-instance entry points, commit staged edits before refresh/save, and disable table row connectivity controls in inventory mode.
-- [ ] Run domain tests, Desktop build and offscreen WPF smoke; expected PASS and no native windows.
-- [ ] Commit Task 3 files and evidence.
+- [x] Add offscreen smoke tests for connect/delete/undo, group/Pin drag reroute, Ctrl-wheel/middle pan, numeric inventory editing, cancel and shared-draft save/reopen.
+- [x] Run the smoke executable; expected FAIL with missing editor/behavior before implementation.
+- [x] Implement select/wire/delete/NC/pending/unused, undo/redo, fit/zoom/pan, explicit wire-branch action, group and Pin moves, and deliberate bend editing.
+- [x] Add library and placed-instance entry points, commit staged edits before refresh/save, and disable table row connectivity controls in inventory mode.
+- [x] Run domain tests, Desktop build and offscreen WPF smoke; expected PASS and no native windows.
+- [x] Commit Task 3 files and evidence.
 
 ## Task 4: Linked Export-Only Cable Appendix
 
@@ -93,20 +93,20 @@
 
 **Interfaces:** `CableWiringAppendixPlan.Build(ElectricalProject project)` produces export main sheets, unique cable sections and forward/return link specifications by physical identity. Stable page identities, not old PDF indices, resolve existing continuation links. The appendix renderer consumes the same domain diagram presentation as the editor and an export tile; it neither infers mapping nor changes the source draft. The existing PDF Write signature and integer page-count result stay compatible.
 
-- [ ] Write main-before-appendix, repeated-view dedup, same-model distinct-instance, missing inventory, mixed-detail preservation, continuation relocation, and serialized-input-unchanged tests.
-- [ ] Run appendix filter; expected FAIL before implementation.
-- [ ] Implement export-only cloning/planning, preserved dedicated details, readable tiling for large diagrams, body/explicit-cable segment hit boxes and return destinations.
-- [ ] Modify PDF writer to render all planned pages and add document links before its one final atomic save.
-- [ ] Verify real PDF link annotations, destinations, page count and rendered synthetic appendix pixels; existing destination and injected render failure leave input/files intact.
-- [ ] Commit Task 4 files and evidence.
+- [x] Write main-before-appendix, repeated-view dedup, same-model distinct-instance, missing inventory, mixed-detail preservation, continuation relocation, and serialized-input-unchanged tests.
+- [x] Run appendix filter; expected FAIL before implementation.
+- [x] Implement export-only cloning/planning, preserved dedicated details, readable tiling for large diagrams, body/explicit-cable segment hit boxes and return destinations.
+- [x] Modify PDF writer to render all planned pages and add document links before its one final atomic save.
+- [x] Verify real PDF link annotations, destinations, page count and rendered synthetic appendix pixels; existing destination and injected render failure leave input/files intact.
+- [x] Commit Task 4 files and evidence.
 
 ## Task 5: Review, Regression and Test Bundle
 
 **Files:** delivery scripts/docs and synthetic validation evidence only; no private asset or data publication.
 
-- [ ] Run full Release domain suite and all affected WPF smoke programs.
-- [ ] Request independent whole-feature review focused on the five Review Focus risks; reproduce Important findings with failing tests before fixing.
-- [ ] Run the full suite again after fixes. Verify only intended files are committed.
+- [x] Run full Release domain suite and all affected WPF smoke programs.
+- [x] Request independent whole-feature review focused on the five Review Focus risks; reproduce Important findings with failing tests before fixing.
+- [x] Run the full suite again after fixes. Verify only intended files are committed.
 - [ ] Export a clean committed source tree and publish Desktop from it. Reuse user test-data paths without launching or modifying data.
 - [ ] Validate launcher runtime hashes, document version/entry points, and report human acceptance steps and any limits honestly.
 
@@ -127,3 +127,5 @@ Project compatibility: saved new cable semantics require project schema 0.8; exi
 Current working-tree verification: Release domain suite PASS 1384/1384; CableConnectorEditorSmoke `all` and `wire` PASS; CableManufacturingSmoke `all` and `multi` PASS; CableWiringEditorSmoke with `pdf` PASS. These use synthetic data and never launch native windows or write the user archive/database. Seven unrelated dirty files remain excluded from delivery.
 
 Inventory growth follow-up: regression RED for 20 Pins added after an existing Pin was repositioned, then GREEN 11/11 wiring tests. Existing Port frames expand as needed, bottom-edge anchors follow the new border, and new Pins avoid occupied label rows. Full working-tree suite PASS 1385/1385; manufacturing `interaction` PASS. Clean exported 4f4fe34 source had PASS 1381/1381 before this extra regression (three unrelated worktree tests excluded), Desktop publish and wiring/PDF smoke PASS.
+
+Independent review: five Important findings reproduced with RED tests, then fixed. Migration preserves original directed pair sequence when row equivalence is unchanged; confirmation checkbox writes directly to staged approval and reflects invalidation, never overwriting it at Save; inline table/sketch bounds receive forward and return links; printed inventory explicitly states row alignment is not continuity; every Pin label carries its Port name for continuation tiles. Focused domain tests GREEN 47/47, WPF approval regression GREEN, full working-tree suite GREEN 1388/1388. Wiring/PDF and shared manufacturing renderer smokes PASS after the fixes. No private data, native window operation, AO or paid providers used.

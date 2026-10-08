@@ -81,7 +81,13 @@ public sealed class CableWiringAppendixPlan
                 }
             }
 
-            foreach (var detail in page.InlineCableDetails) SectionFor(detail.CableInstanceId);
+            foreach (var detail in page.InlineCableDetails)
+            {
+                if (SectionFor(detail.CableInstanceId) is not { } section) continue;
+                foreach (var bounds in new SchematicCableDetailService().BuildArchived(snapshot, page, detail).PartBounds.Values)
+                    section.Links.Add(Link(page.PageId, new(bounds.X, bounds.Y), bounds.Width, bounds.Height,
+                        new(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2)));
+            }
             var dedicated = SectionFor(page.CableDetail?.CableInstanceId);
             if (dedicated is not null && !symbols[page.PageId].Any() && !wires[page.PageId].Any() &&
                 page.InlineCableDetails.Count == 0)

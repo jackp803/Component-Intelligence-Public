@@ -117,6 +117,8 @@ public sealed class CableWiringAppendixTests
         Assert.Equal("cable", Assert.Single(plan.Sections).CableInstanceId);
         Assert.Equal("main", Assert.Single(plan.MainPages).PageId);
         Assert.Single(plan.MainPages[0].InlineCableDetails);
+        Assert.NotEmpty(plan.Sections[0].SourceLinks);
+        Assert.All(plan.Sections[0].SourceLinks, link => { Assert.Equal("main", link.SourcePageId); AssertFinitePositive(link); });
     }
 
     [Theory]

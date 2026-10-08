@@ -19,7 +19,10 @@ public sealed class CableWiringEditorService
         if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
         if (draft.Rows.SelectMany(CableManufacturingCells.All).Any(c => c.SourcePinId is null && !string.IsNullOrWhiteSpace(c.Function)))
             throw new InvalidOperationException("舊表格有尚未綁定 Pin 的功能文字；請先指定 Pin 或整理該列，再進入接線圖。原接法保持不變。");
-        draft.ExplicitMapping = Mapping(draft).ToList();
+        var migrated = Mapping(draft).ToList();
+        if (draft.ExplicitMapping is null || draft.ExplicitMapping.Count != migrated.Count ||
+            !draft.ExplicitMapping.Select(EdgeKey).ToHashSet(StringComparer.Ordinal).SetEquals(migrated.Select(EdgeKey)))
+            draft.ExplicitMapping = migrated;
         draft.InventoryOnly = true;
         RebuildInventory(draft);
         EnsureLayout(draft);
@@ -57,7 +60,7 @@ public sealed class CableWiringEditorService
         for (var i = 0; i < draft.Ends.Count; i += 2)
         {
             var pair = draft.Ends.Skip(i).Take(2).ToArray();
-            var widths = pair.Select(p => Math.Max(60, 12 + p.Pins.Max(pin => (pin.Function ?? "").Length + pin.PinNumber.Length) * 1.9)).ToArray();
+            var widths = pair.Select(p => Math.Max(60, 12 + (p.Name.Length + 6 + p.Pins.Max(pin => (pin.Function ?? "").Length + pin.PinNumber.Length)) * 1.9)).ToArray();
             for (var n = 0; n < pair.Length; n++)
             {
                 var port = pair[n];
@@ -207,7 +210,7 @@ public sealed class CableWiringEditorService
                 primitives.Add(new() { Kind = "CIRCLE", Start = p, Radius = 1 });
                 var cell = draft.Rows.SelectMany(CableManufacturingCells.All).FirstOrDefault(c => c.SourcePinId == pin.PinId);
                 var status = Usage(draft, pin.PinId);
-                var label = pin.PinNumber + " / " + (status == CablePinUsage.Nc ? "NC" : status == CablePinUsage.Unused ? "未使用" : cell?.Function ?? pin.Function ?? "待確認");
+                var label = port.Name + " / " + pin.PinNumber + " / " + (status == CablePinUsage.Nc ? "NC" : status == CablePinUsage.Unused ? "未使用" : cell?.Function ?? pin.Function ?? "待確認");
                 var rightSide = p.X >= b.X + b.Width / 2;
                 var x = rightSide ? b.X + 3 : p.X + 3;
                 Text(label, x, p.Y - 3);

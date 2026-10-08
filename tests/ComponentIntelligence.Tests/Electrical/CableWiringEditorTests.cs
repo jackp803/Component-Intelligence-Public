@@ -168,4 +168,40 @@ public sealed class CableWiringEditorTests
         Assert.All(positions, p => Assert.Equal(bounds.X + bounds.Width, p.X));
         Assert.True(bounds.Height >= 24 + 20 * 7);
     }
+
+    [Fact]
+    public void ConfirmedLegacyMigrationRetainsOriginalPairOrientationAndOrder()
+    {
+        var template = CableManufacturingEditorTests.Template(3) with { Mapping =
+            [new("p3.1", "p1.1"), new("p3.1", "p2.1"), new("p3.2", "p2.2"), new("p3.2", "p1.2")],
+            MappingConfirmed = true, MappingRevision = "verified", MappingEvidence = "synthetic verified evidence" };
+        var instance = ArchivedCableInstanceFactory.Create(template, CableConstructionType.Custom);
+        var draft = _table.Prepare(instance); _wiring.EnterVisualMode(draft);
+        var changed = _table.ApplyToInstance(instance, draft);
+        Assert.True(changed.ArchivedCable!.MappingConfirmed);
+        Assert.False(changed.ArchivedCable.HasMappingOverride);
+        Assert.Equal(template.Mapping, changed.ArchivedCable.Mapping);
+        SchematicAuthoringService.Validate(new ElectricalProject { ProjectId = "migrated", Cables = [changed] });
+    }
+
+    [Fact]
+    public void PinLabelsRetainPortIdentityWhenTheHeadingIsOnAnEarlierTile()
+    {
+        var draft = _table.Prepare(CableManufacturingEditorTests.Template()); _wiring.EnterVisualMode(draft);
+        var diagram = _wiring.Build(draft);
+        Assert.Contains(diagram.Primitives, p => p.Text?.StartsWith("P1 / 1 /", StringComparison.Ordinal) == true);
+        Assert.Contains(diagram.Primitives, p => p.Text?.StartsWith("P2 / 2 /", StringComparison.Ordinal) == true);
+    }
+
+    [Fact]
+    public void PrintedInventoryCannotBeMistakenForRowAlignedConnections()
+    {
+        var template = CableManufacturingEditorTests.Template(); var draft = _table.Prepare(template); _wiring.EnterVisualMode(draft);
+        _wiring.Connect(draft, "p1.1", "p2.2");
+        var cable = ArchivedCableInstanceFactory.Create(_table.Apply(template, draft), CableConstructionType.Custom);
+        var project = new ElectricalProject { ProjectId = "inventory", Cables = [cable] };
+        var page = new SchematicPage { PageId = "page", Title = "Inventory" };
+        var detail = new SchematicCableDetailService().BuildArchived(project, page, new(cable.CableInstanceId, null) { SketchVisible = false });
+        Assert.Contains(detail.Primitives, p => p.Text?.Contains("同列不表示導通", StringComparison.Ordinal) == true);
+    }
 }

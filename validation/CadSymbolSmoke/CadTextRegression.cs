@@ -64,7 +64,7 @@ internal static partial class Program
         using var reader = command.ExecuteReader();
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
         options.Converters.Add(new JsonStringEnumConverter());
-        var projects = 0; var pages = 0;
+        var projects = 0; var pages = 0; var cadFrames = 0; var fittedFrames = 0;
         while (reader.Read())
         {
             var project = JsonSerializer.Deserialize<ElectricalProject>(reader.GetString(0), options)!;
@@ -72,9 +72,21 @@ internal static partial class Program
             var control = new SchematicWorkspaceControl(() => project, (_, _) => throw new InvalidOperationException("Read-only regression cannot commit."),
                 () => Task.FromResult<IReadOnlyList<ComponentIR>>([]), _ => Task.FromResult<Uri?>(null), () => { }, () => { });
             control.RefreshWorkspace();
+            foreach (var symbol in project.Schematic?.Symbols.Where(s => s.Geometry is not null) ?? [])
+            {
+                Set(control, "_pageId", symbol.PageId); Set(control, "_selectionId", symbol.SymbolId);
+                control.RefreshWorkspace();
+                var sheet = (Canvas)GetSheet(control); Layout(sheet);
+                var frame = SelectionFrame(sheet);
+                var rotated = symbol.Rotation % 180 != 0;
+                if (frame.Width < (rotated ? symbol.Height : symbol.Width) - 2 ||
+                    frame.Height < (rotated ? symbol.Width : symbol.Height) - 2) fittedFrames++;
+                cadFrames++;
+            }
             Require(before == JsonSerializer.Serialize(project), "Offscreen project loading changed project data.");
             projects++; pages += project.Schematic?.Pages.Count ?? 0;
         }
         Console.WriteLine($"PASS: {projects} saved project(s), {pages} page(s) loaded offscreen via read-only SQLite; no source mutation or native window.");
+        Console.WriteLine($"PASS: {cadFrames} saved CAD selection frame(s), {fittedFrames} automatically reduced from native margins.");
     }
 }

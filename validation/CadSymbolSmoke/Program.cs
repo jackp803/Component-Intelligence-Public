@@ -23,6 +23,7 @@ internal static partial class Program
         try
         {
             if (args.Skip(1).FirstOrDefault() == "text") RunTextRegression();
+            else if (args.Skip(1).FirstOrDefault() == "bounds") RunBoundsRegression(Path.GetFullPath(args[0]));
             else if (args.Skip(1).FirstOrDefault() == "read-only") RunReadOnlyRegression(Path.GetFullPath(args[2]));
             else Run(Path.GetFullPath(args[0]));
             return 0;
@@ -60,7 +61,10 @@ internal static partial class Program
         var x = (int)(80 / 25.4 * 300); var y = (int)(50 / 25.4 * 300);
         var pixel = new byte[4]; bitmap.CopyPixels(new Int32Rect(x, y, 1, 1), pixel, 4, 0);
         Require(pixel[0] < 160 && pixel[1] < 160 && pixel[2] < 160, "Upper CAD blank area hides the lower line in output.");
-        var hit = VisualTreeHelper.HitTest(sheet, new Point(80 * 3, 50 * 3))?.VisualHit;
+        DependencyObject? hit = null;
+        VisualTreeHelper.HitTest(sheet,
+            visual => visual is UIElement { IsHitTestVisible: false } ? HitTestFilterBehavior.ContinueSkipSelfAndChildren : HitTestFilterBehavior.Continue,
+            result => { hit = result.VisualHit; return HitTestResultBehavior.Stop; }, new PointHitTestParameters(new Point(80 * 3, 50 * 3)));
         Require(hit is Line line && line.Y1 == 90, "Upper CAD blank area blocks selecting the lower line.");
         Console.WriteLine("PASS: transparent output and blank-region hit testing.");
         var id = project.Schematic!.Symbols[1].SymbolId;
@@ -85,7 +89,10 @@ internal static partial class Program
         Require(pixel[0] > 240 && pixel[1] > 240 && pixel[2] > 240, "Selection outline leaked into exported page.");
         var wiresBefore = JsonSerializer.Serialize(project.Cables);
         Set(control, "_gestureStart", project); Set(control, "_dragResizeSymbol", id);
-        Set(control, "_dragStart", new SchematicPoint(140, 70)); Set(control, "_pointer", new SchematicPoint(100, 50));
+        Layout(sheet);
+        var frame = SelectionFrame(sheet);
+        Set(control, "_dragStart", new SchematicPoint(frame.Right, frame.Bottom));
+        Set(control, "_pointer", new SchematicPoint(92.5, frame.Bottom));
         Invoke(control, "PreviewSymbolResize");
         var preview = (ElectricalProject)Get(control, "_gesturePreview")!;
         Require(project.Schematic!.Symbols[1].Width == 100 && preview.Schematic!.Symbols[1].Width == 50, "Drag preview mutated saved project or used generic resize.");

@@ -367,12 +367,13 @@ public partial class SchematicWorkspaceControl : UserControl
         content.Children.Add(image);
         body.Child = content;
         var cad = SchematicSymbolPresentation.GeometryForOwner(symbol, owner);
-        if (cad is not null) body.Child = CadCanvas(SchematicSymbolPresentation.BodyGeometry(cad), interactive: !_renderingOutput);
+        Canvas? cadDrawing = null;
+        if (cad is not null) body.Child = cadDrawing = CadCanvas(SchematicSymbolPresentation.BodyGeometry(cad), interactive: !_renderingOutput);
         // Selection strokes overlay geometry; their width must not shift the CAD body away from its anchors.
         var drawing = body.Child; body.Child = null;
         var layers = new Grid(); layers.Children.Add(drawing);
         layers.Children.Add(new Border { BorderBrush = body.BorderBrush,
-            BorderThickness = new(symbol.SymbolId == _selectionId ? 2 : symbol.Geometry is null ? 1 : 0), IsHitTestVisible = false });
+            BorderThickness = new(symbol.Geometry is null ? symbol.SymbolId == _selectionId ? 2 : 1 : 0), IsHitTestVisible = false });
         body.Child = layers;
         if (!compacted)
         {
@@ -388,6 +389,7 @@ public partial class SchematicWorkspaceControl : UserControl
         }
         else { image.RenderTransform = new RotateTransform(symbol.Rotation); image.RenderTransformOrigin = new(.5, .5); }
         Canvas.SetLeft(body, compact.X * 3); Canvas.SetTop(body, compact.Y * 3); Sheet.Children.Add(body);
+        var visibleBounds = new Rect(compact.X, compact.Y, compact.Width, compact.Height);
         if (symbol.Geometry is null) _ = LoadImage(owner.DefinitionId, image,
             compacted ? compact.Width : symbol.Width, compacted ? compact.Height : symbol.Height,
             compacted ? symbol.Rotation : 0);
@@ -397,6 +399,14 @@ public partial class SchematicWorkspaceControl : UserControl
             var labels = CadCanvas(upright with { Width = Sheet.Width / 3, Height = Sheet.Height / 3 }, interactive: !_renderingOutput);
             labels.MouseLeftButtonDown += SelectBody;
             Sheet.Children.Add(labels);
+            visibleBounds = CadContentBounds(project.Schematic!, symbol, owner, cadDrawing!, labels);
+            if (!_renderingOutput && symbol.SymbolId == _selectionId)
+            {
+                var selection = new Border { Width = visibleBounds.Width * 3, Height = visibleBounds.Height * 3,
+                    BorderBrush = Brushes.DarkCyan, BorderThickness = new(2), IsHitTestVisible = false };
+                Canvas.SetLeft(selection, visibleBounds.X * 3); Canvas.SetTop(selection, visibleBounds.Y * 3);
+                Sheet.Children.Add(selection);
+            }
         }
         if (symbol.Geometry is null)
         {
@@ -407,7 +417,7 @@ public partial class SchematicWorkspaceControl : UserControl
             Canvas.SetTop(label, (compact.Y + compact.Height - 10) * 3);
             Sheet.Children.Add(label);
         }
-        var referenceY = symbol.Position.Y - 6;
+        var referenceY = (symbol.Geometry is null ? symbol.Position.Y : visibleBounds.Y) - 6;
         body.MouseLeftButtonDown += SelectBody;
         void SelectBody(object sender, MouseButtonEventArgs e)
         {
@@ -512,10 +522,10 @@ public partial class SchematicWorkspaceControl : UserControl
             var handleSide = SchematicPortPresentation.PortSide(symbol, port);
             var handlePosition = handleSide switch
             {
-                "Top" => new SchematicPoint(center.X, compact.Y + 5),
-                "Bottom" => new SchematicPoint(center.X, compact.Y + compact.Height - 5),
-                "Left" => new SchematicPoint(compact.X + 5, center.Y),
-                _ => new SchematicPoint(compact.X + compact.Width - 5, center.Y)
+                "Top" => new SchematicPoint(center.X, visibleBounds.Y + 5),
+                "Bottom" => new SchematicPoint(center.X, visibleBounds.Bottom - 5),
+                "Left" => new SchematicPoint(visibleBounds.X + 5, center.Y),
+                _ => new SchematicPoint(visibleBounds.Right - 5, center.Y)
             };
             Canvas.SetLeft(handle, handlePosition.X * 3 - 8); Canvas.SetTop(handle, handlePosition.Y * 3 - 8);
             handle.MouseLeftButtonDown += (_, e) =>
@@ -537,14 +547,14 @@ public partial class SchematicWorkspaceControl : UserControl
             Sheet.Children.Add(handle);
         }
         if (SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
-            Text(owner.Reference ?? "Reference 未設定", symbol.Position.X, referenceY, 11, Brushes.Black);
+            Text(owner.Reference ?? "Reference 未設定", symbol.Geometry is null ? symbol.Position.X : visibleBounds.X, referenceY, 11, Brushes.Black);
         var caption = SchematicSymbolPresentation.CableCaption(symbol, owner);
         if (caption.Length > 0)
         {
             var label = new TextBlock { Text = caption, FontSize = 10, TextWrapping = TextWrapping.Wrap,
-                Width = (symbol.Rotation % 180 == 0 ? symbol.Width : symbol.Height) * 3, IsHitTestVisible = false };
-            Canvas.SetLeft(label, symbol.Position.X * 3);
-            Canvas.SetTop(label, (symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2) * 3);
+                Width = (symbol.Geometry is null ? symbol.Rotation % 180 == 0 ? symbol.Width : symbol.Height : visibleBounds.Width) * 3, IsHitTestVisible = false };
+            Canvas.SetLeft(label, (symbol.Geometry is null ? symbol.Position.X : visibleBounds.X) * 3);
+            Canvas.SetTop(label, (symbol.Geometry is null ? symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2 : visibleBounds.Bottom + 2) * 3);
             Sheet.Children.Add(label);
         }
         if (portEditing && !symbol.Locked && (symbol.Geometry is null || symbol.SymbolId == _selectionId))
@@ -553,8 +563,8 @@ public partial class SchematicWorkspaceControl : UserControl
                 BorderBrush = Brushes.DarkCyan, BorderThickness = new(1), Cursor = Cursors.SizeNWSE,
                 Child = new TextBlock { Text = "↘", FontSize = 10, TextAlignment = TextAlignment.Center },
                 ToolTip = symbol.Geometry is null ? "拖曳調整模塊大小；接點和導線會跟隨" : "拖曳等比例縮放 CAD；接點和導線會跟隨" };
-            Canvas.SetLeft(resize, (compact.X + compact.Width) * 3 - 7);
-            Canvas.SetTop(resize, (compact.Y + compact.Height) * 3 - 7);
+            Canvas.SetLeft(resize, visibleBounds.Right * 3 - 7);
+            Canvas.SetTop(resize, visibleBounds.Bottom * 3 - 7);
             resize.MouseLeftButtonDown += (_, e) =>
             {
                 _selectionId = symbol.SymbolId; BeginGesture(e); _dragResizeSymbol = symbol.SymbolId;

@@ -63,11 +63,18 @@ public sealed class CableWiringEditorService
                 var port = pair[n];
                 if (!layout.PortBounds.TryGetValue(port.PortId, out var bounds))
                     layout.PortBounds[port.PortId] = bounds = new(n == 0 ? 10 : 10 + widths[0] + 110, y, widths[n], 24 + port.Pins.Count * 7);
+                bounds = ExpandHeight(draft, port, bounds, 24 + port.Pins.Count * 7);
                 var ordered = port.Pins.OrderBy(p => p.PinNumber, DrawingContactDisplayOrder.NumberComparer).ToArray();
                 for (var p = 0; p < ordered.Length; p++)
                 {
-                    layout.PinPositions.TryAdd(ordered[p].PinId, new(n == 0 ? bounds.X + bounds.Width : bounds.X, bounds.Y + 22 + p * 7));
                     var id = ordered[p].PinId;
+                    if (!layout.PinPositions.ContainsKey(id))
+                    {
+                        var pinY = bounds.Y + 22 + p * 7;
+                        while (port.Pins.Any(pin => layout.PinPositions.TryGetValue(pin.PinId, out var existing) && Math.Abs(existing.Y - pinY) < 5)) pinY += 7;
+                        bounds = ExpandHeight(draft, port, bounds, pinY - bounds.Y + 9);
+                        layout.PinPositions[id] = new(n == 0 ? bounds.X + bounds.Width : bounds.X, pinY);
+                    }
                     var attached = AttachToBorder(bounds, layout.PinPositions[id]);
                     if (attached == layout.PinPositions[id]) continue;
                     layout.PinPositions[id] = attached;
@@ -250,6 +257,20 @@ public sealed class CableWiringEditorService
         return new SchematicPoint[] { new(bounds.X, y), new(bounds.X + bounds.Width, y),
             new(x, bounds.Y), new(x, bounds.Y + bounds.Height) }
             .MinBy(p => (p.X - point.X) * (p.X - point.X) + (p.Y - point.Y) * (p.Y - point.Y))!;
+    }
+    private static SchematicGridBounds ExpandHeight(CableManufacturingDraft draft, ComponentPort port, SchematicGridBounds bounds, double minimumHeight)
+    {
+        if (bounds.Height >= minimumHeight) return bounds;
+        var expanded = bounds with { Height = minimumHeight };
+        foreach (var pin in port.Pins.Where(pin => draft.WiringDiagram!.PinPositions.ContainsKey(pin.PinId)))
+        {
+            var point = draft.WiringDiagram!.PinPositions[pin.PinId];
+            if (point.Y != bounds.Y + bounds.Height) continue;
+            draft.WiringDiagram.PinPositions[pin.PinId] = point with { Y = expanded.Y + expanded.Height };
+            ClearAffectedRoutes(draft, pin.PinId);
+        }
+        draft.WiringDiagram!.PortBounds[port.PortId] = expanded;
+        return expanded;
     }
     private static CablePinUsage Usage(CableManufacturingDraft draft, string id) => draft.Rows.SelectMany(CableManufacturingCells.All)
         .FirstOrDefault(c => c.SourcePinId == id)?.Usage ?? CablePinUsage.Pending;

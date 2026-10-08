@@ -153,4 +153,19 @@ public sealed class CableWiringEditorTests
         Assert.Equal(new SchematicPoint(bounds.X + bounds.Width, pin.Y), _wiring.Build(draft).PinPositions["p3.1"]);
         Assert.Equal(before, JsonSerializer.Serialize(draft));
     }
+
+    [Fact]
+    public void IncreasingInventoryExpandsExistingPortWithoutStackingNewPins()
+    {
+        var draft = _table.Prepare(CableManufacturingEditorTests.Template()); _wiring.EnterVisualMode(draft);
+        var original = draft.WiringDiagram!.PinPositions["p1.1"];
+        _wiring.MovePin(draft, "p1.1", original with { Y = original.Y + 14 });
+        _table.SetPinCount(draft, "P1", 20);
+        _wiring.EnsureLayout(draft);
+        var positions = draft.Ends[0].Pins.Select(p => draft.WiringDiagram!.PinPositions[p.PinId]).ToArray();
+        Assert.Equal(20, positions.Distinct().Count());
+        var bounds = draft.WiringDiagram!.PortBounds["P1"];
+        Assert.All(positions, p => Assert.Equal(bounds.X + bounds.Width, p.X));
+        Assert.True(bounds.Height >= 24 + 20 * 7);
+    }
 }

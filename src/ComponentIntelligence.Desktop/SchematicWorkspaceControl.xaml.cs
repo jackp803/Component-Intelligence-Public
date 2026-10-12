@@ -91,7 +91,7 @@ public partial class SchematicWorkspaceControl : UserControl
     {
         var pages = project.Schematic?.Pages ?? [];
         foreach (var id in _pageCanvases.Keys.Where(id => pages.All(p => p.PageId != id)).ToArray())
-        { PageHost.Children.Remove(_pageCanvases[id]); _pageCanvases.Remove(id); }
+        { PageHost.Children.Remove(_pageCanvases[id]); _pageCanvases.Remove(id); _wireStrokeTargets.Remove(id); }
         for (var index = 0; index < pages.Count; index++)
         {
             var page = pages[index];
@@ -134,6 +134,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void RenderPage(ElectricalProject project, SchematicPage page)
     {
         Sheet.Children.Clear();
+        _wireStrokeTargets[page.PageId] = [];
         var doc = project.Schematic!;
         Sheet.Width = page.Width * PixelsPerMm; Sheet.Height = page.Height * PixelsPerMm;
         if (page.TemplateGeometry is not null)
@@ -168,8 +169,10 @@ public partial class SchematicWorkspaceControl : UserControl
             var evidence = SchematicWireEvidence.Resolve(project, wire);
             var zoom = _renderingOutput ? 1 : Zoom.Value;
             var weight = Math.Max(1.5 / zoom, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
+            var physicalWeight = SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm;
             var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
             var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
+            TrackWireStrokes(page.PageId, line, physicalWeight, wire.WireId == _selectionId);
             line.ToolTip = (_wireMode ? "點選既有導線，建立明確分支" : wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
             line.ToolTip += "\n" + wire.Designation + (wire.SizingProposal is { } proposal ? "\n線徑待核對：" + proposal.Review : "");
             line.MouseLeftButtonDown += (_, e) =>
@@ -182,12 +185,14 @@ public partial class SchematicWorkspaceControl : UserControl
                 var outline = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
                     Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, Brushes.DimGray, weight + 2 / zoom, line.StrokeDashArray);
                 outline.IsHitTestVisible = false; Sheet.Children.Add(outline);
+                TrackWireStrokes(page.PageId, outline, physicalWeight, false, true);
             }
             if (crossings.Crossovers.Any(c => c.HorizontalWireId == wire.WireId))
             {
                 var geometry = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
                     Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, line.Stroke, line.StrokeThickness, line.StrokeDashArray);
                 Sheet.Children.Add(geometry);
+                TrackWireStrokes(page.PageId, geometry, physicalWeight, wire.WireId == _selectionId);
             }
             else Sheet.Children.Add(line);
             if (_wireMode && !_renderingOutput)
@@ -958,7 +963,11 @@ public partial class SchematicWorkspaceControl : UserControl
         if (s is not null) Apply(p => _service.SetSymbolDetails(p, s.SymbolId, reference, s.Anchors), "已更新 Reference");
     }
     private void Zoom_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
-    { if (SheetZoom is not null) SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue; }
+    {
+        if (SheetZoom is null) return;
+        SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue;
+        UpdateWireZoom(e.NewValue);
+    }
     private void Navigate_Click(object sender, RoutedEventArgs e)
     {
         if (_selectionId is not null) NavigateToMarker(_selectionId);

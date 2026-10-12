@@ -29,6 +29,7 @@ internal static partial class Program
 
     private static int Run(string[] args)
     {
+        if (args.FirstOrDefault() is "review-input" or "review-zoom") return ReviewInteractionProof(args[0]);
         if (args.FirstOrDefault() == "performance") return InteractionPerformanceProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault() == "verify");
         if (args.FirstOrDefault() == "frames") return SketchFrameProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "fit-sketch") return SketchFitProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());

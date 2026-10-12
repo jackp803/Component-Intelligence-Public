@@ -14,8 +14,8 @@ public partial class SchematicWorkspaceControl
     private void QueuePointerPreview()
     {
         if (_pendingPointerPreview is not null || _pointer == _lastPreviewPointer) return;
-        // Keep only the latest snapped pointer until the dispatcher is ready to render.
-        _pendingPointerPreview = Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
+        // Run below Input priority so queued pointer events update one pending preview.
+        _pendingPointerPreview = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
             _pendingPointerPreview = null;
             _lastPreviewPointer = _pointer;

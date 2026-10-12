@@ -32,5 +32,5 @@
 ## Task 3: Delivery
 
 - [x] Full suite, offscreen WPF regressions, PDF/link checks and independent local review. Two P2 findings were reproduced RED and fixed: Input-priority ordering and zoom-dependent wire thickness. Follow-up checks queue 100 Input events and cover selected/unselected bodies, jump arcs and DC-negative outlines.
-- [ ] Build clean BI source/runtime package, record before/after synthetic timing and invariants, validate launcher without starting software.
-- [ ] Preserve original workbooks/archives and readonly live-project access; deliver BI link with no reimport needed.
+- [x] Build clean BI source/runtime package, record before/after synthetic timing and invariants, validate launcher without starting software.
+- [x] Preserve original workbooks/archives and readonly live-project access; deliver BI link with no reimport needed.

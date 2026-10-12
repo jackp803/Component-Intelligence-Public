@@ -49,8 +49,8 @@
 - [x] Exercise layout placement, edit, SQLite reopen and offscreen WPF text/geometry ink containment at the screenshot's settings.
 - [x] Generate and visually inspect a multipage PDF using the same presentation.
 - [x] Request a bounded independent code review; fix material findings with regression tests.
-- [ ] Make a scoped local commit and build a clean BG package from its source archive, excluding unrelated changes.
-- [ ] Test the clean source and validate the launcher without starting the app. Verify original project/workbook/archive hashes remain unchanged.
+- [x] Make a scoped local commit and build a clean BG package from its source archive, excluding unrelated changes.
+- [x] Test the clean source and validate the launcher without starting the app. Verify workbook/archive hashes remain unchanged and that validation does not save or replace the live project database.
 
 ## Execution Record
 
@@ -61,3 +61,4 @@
 - User added a bounded display request during execution: give every wiring-diagram connection a different identification color for easier tracing. Extend the existing shared renderer only, keeping jump arcs the same color as their edge and retaining existing selection highlighting. Sorted endpoint keys make colors identical across movement, save/reopen and PDF; colors are not insulation specifications and are not saved into CAD/engineering data.
 - Color rendering smoke failed against the black-only renderer before implementing `DrawDiagram`; test editor and PDF parity, jump arcs, 7 unique colors, selection/hit surfaces, move/undo and saved data preservation.
 - Independent review findings fixed: word-boundary MTEXT and narrow glyph overflow, empty TEXT invalid dimensions, large finite coordinate precision. Four domain tests and actual WPF cases went RED before their fixes. Final WPF coverage170 cases; color coverage1000 distinct colors plus the seven-edge editing workflow.
+- Final working-tree tests1446 passed; clean archived source tests1443 passed, zero failures. Code commit272c39dd361e650c1c9d6d4d7ea2275dc81e15a4 produced222 published runtime files. Clean-source sketch, color/PDF, manufacturing all/interaction, wiring interaction and company-frame fit checks passed. Launcher validation resolved the existing AU project folder and configured central archive without launching a window.

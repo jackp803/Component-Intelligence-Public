@@ -18,7 +18,7 @@ using netDxf.Blocks;
 using netDxf.Entities;
 using PdfSharp.Pdf.IO;
 
-internal static class Program
+internal static partial class Program
 {
     [STAThread]
     private static int Main(string[] args)
@@ -29,6 +29,7 @@ internal static class Program
 
     private static int Run(string[] args)
     {
+        if (args.FirstOrDefault() == "fit-sketch") return SketchFitProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "inspect-cad")
         {
             var output = Path.GetFullPath(args[1]); Directory.CreateDirectory(output);

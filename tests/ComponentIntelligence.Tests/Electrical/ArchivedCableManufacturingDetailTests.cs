@@ -171,14 +171,14 @@ public sealed class ArchivedCableManufacturingDetailTests
     }
 
     [Theory]
-    [InlineData(95, 5, 0, "BaselineLeft", "TEXT", "REF", 0, true)]
-    [InlineData(50, 10, 0, "BaselineCenter", "TEXT", "REF", 0, false)]
-    [InlineData(50, 5, -90, "BaselineLeft", "TEXT", "REF", 0, true)]
-    [InlineData(50, 10, 90, "BaselineCenter", "TEXT", "REF", 0, false)]
-    [InlineData(10, 2, 0, "TopLeft", "MTEXT", "ABCDEFGHIJKLMN", 5, true)]
-    [InlineData(10, 2, 0, "TopLeft", "MTEXT", "ABCD", 30, false)]
-    public void SketchTextBoundsIncludePositionRotationAndWrapping(double x, double y, double angle,
-        string attachment, string kind, string text, double width, bool overflow)
+    [InlineData(95, 5, 0, "BaselineLeft", "TEXT", "REF", 0)]
+    [InlineData(50, 10, 0, "BaselineCenter", "TEXT", "REF", 0)]
+    [InlineData(50, 5, -90, "BaselineLeft", "TEXT", "REF", 0)]
+    [InlineData(50, 10, 90, "BaselineCenter", "TEXT", "REF", 0)]
+    [InlineData(10, 2, 0, "TopLeft", "MTEXT", "ABCDEFGHIJKLMN", 5)]
+    [InlineData(10, 2, 0, "TopLeft", "MTEXT", "ABCD", 30)]
+    public void SketchTextOutsideNativeBoundsIsFittedInsteadOfRejected(double x, double y, double angle,
+        string attachment, string kind, string text, double width)
     {
         var p = Project(); p.Cables[0].ReferenceDesignator = "CB-01";
         var binding = p.Cables[0].ArchivedCable!;
@@ -186,8 +186,12 @@ public sealed class ArchivedCableManufacturingDetailTests
             Primitives = [new() { Kind = kind, Start = new(x, y), Text = text, AttributeTag = kind == "TEXT" ? "REF" : null,
                 TextHeight = 3, Rotation = angle, TextAttachment = attachment, TextWidth = width }] } };
         var service = new SchematicCableDetailService();
-        if (overflow) Assert.Throws<InvalidOperationException>(() => service.AddArchivedDetail(p, p.Cables[0].CableInstanceId));
-        else Assert.NotNull(service.AddArchivedDetail(p, p.Cables[0].CableInstanceId));
+        var placed = service.AddArchivedDetail(p, p.Cables[0].CableInstanceId, layout:
+            new(p.Cables[0].CableInstanceId, null) { TableVisible = false });
+        var result = Assert.Single(service.Build(placed, placed.Schematic!.Pages.Last()).Primitives);
+        Assert.Equal(kind == "TEXT" ? "CB-01" : text, result.Text);
+        Assert.Equal(angle, result.Rotation);
+        Assert.True(double.IsFinite(result.TextHeight) && result.TextHeight > 0);
     }
 
     internal static ElectricalProject Project()

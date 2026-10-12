@@ -7,6 +7,54 @@ namespace ComponentIntelligence.Desktop;
 
 public static class CableWiringVisualRenderer
 {
+    private static readonly Color[] IdentificationPalette =
+    [
+        Color.FromRgb(180, 35, 24), Color.FromRgb(23, 92, 211), Color.FromRgb(24, 121, 78),
+        Color.FromRgb(158, 25, 134), Color.FromRgb(165, 79, 0), Color.FromRgb(0, 124, 145),
+        Color.FromRgb(105, 65, 198), Color.FromRgb(101, 119, 0), Color.FromRgb(151, 47, 87),
+        Color.FromRgb(63, 93, 119)
+    ];
+
+    public static void DrawDiagram(Canvas canvas, CableWiringDiagramPresentation diagram, double pixelsPerMm = 4,
+        double? textPixelsPerMm = null, double minimumTextHeight = 0)
+    {
+        // Display-only identification colors: never physical insulation or electrical authority.
+        var strokes = new Dictionary<SchematicCadPrimitive, Brush>(ReferenceEqualityComparer.Instance);
+        var used = new HashSet<Color>();
+        var index = 0;
+        foreach (var (_, parts) in diagram.EdgePrimitives.OrderBy(p => p.Key, StringComparer.Ordinal))
+        {
+            var color = IdentificationColor(index++);
+            while (!used.Add(color))
+            {
+                var rgb = ((color.R << 16 | color.G << 8 | color.B) + 1) & 0xffffff;
+                color = Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+            }
+            var brush = new SolidColorBrush(color); brush.Freeze();
+            foreach (var part in parts) strokes.Add(part, brush);
+        }
+        // Preserve primitive order so shared junction dots stay above conductor segments.
+        foreach (var primitive in diagram.Primitives)
+            Draw(canvas, [primitive], pixelsPerMm, strokes.GetValueOrDefault(primitive), textPixelsPerMm, minimumTextHeight);
+    }
+
+    private static Color IdentificationColor(int index)
+    {
+        if (index < IdentificationPalette.Length) return IdentificationPalette[index];
+        // Continue with separated dark hues rather than repeating a short palette for large harnesses.
+        var hue = ((index - IdentificationPalette.Length) * 137.50776405003785 % 360) / 60;
+        const double value = .62, saturation = .82;
+        var chroma = value * saturation;
+        var second = chroma * (1 - Math.Abs(hue % 2 - 1));
+        var (r, g, b) = (int)hue switch
+        {
+            0 => (chroma, second, 0d), 1 => (second, chroma, 0d), 2 => (0d, chroma, second),
+            3 => (0d, second, chroma), 4 => (second, 0d, chroma), _ => (chroma, 0d, second)
+        };
+        byte Channel(double c) => (byte)Math.Round((c + value - chroma) * 255);
+        return Color.FromRgb(Channel(r), Channel(g), Channel(b));
+    }
+
     public static void Draw(Canvas canvas, IEnumerable<SchematicCadPrimitive> primitives, double pixelsPerMm = 4, Brush? stroke = null,
         double? textPixelsPerMm = null, double minimumTextHeight = 0)
     {

@@ -124,7 +124,7 @@ public static class CableWiringAppendixRenderer
             Background = Brushes.White, ClipToBounds = true };
         var geometryPixelsPerMm = pixelsPerMm * tile.GeometryScale;
         var diagram = new Canvas { RenderTransform = new TranslateTransform(-tile.ViewBounds.X * geometryPixelsPerMm, -tile.ViewBounds.Y * geometryPixelsPerMm) };
-        CableWiringVisualRenderer.Draw(diagram, tile.Diagram.Primitives, geometryPixelsPerMm,
+        CableWiringVisualRenderer.DrawDiagram(diagram, tile.Diagram, geometryPixelsPerMm,
             textPixelsPerMm: pixelsPerMm, minimumTextHeight: tile.MinimumTextHeight);
         clip.Children.Add(diagram); Canvas.SetLeft(clip, tile.ContentBounds.X * pixelsPerMm); Canvas.SetTop(clip, tile.ContentBounds.Y * pixelsPerMm); canvas.Children.Add(clip);
         foreach (var link in returns) Text("返回工程圖 " + link.PageNumber, link.Bounds.X, link.Bounds.Y, 11, Brushes.DarkCyan);

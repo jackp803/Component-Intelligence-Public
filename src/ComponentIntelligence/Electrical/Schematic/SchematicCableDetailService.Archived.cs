@@ -166,26 +166,14 @@ public sealed partial class SchematicCableDetailService
             bounds.Add(SchematicCableDetailPart.Sketch, new(binding.SketchPosition.X, binding.SketchPosition.Y, binding.SketchWidth, binding.SketchHeight));
             if (archived.ManufacturingGeometry is { } sketch)
             {
-                var scale = Math.Min(binding.SketchWidth / sketch.Width, binding.SketchHeight / sketch.Height);
                 var fields = archived.Template.TextBindings.ToDictionary(b => b.AttributeTag, b => b.Field, StringComparer.Ordinal);
-                SchematicPoint Point(SchematicPoint p) => new(binding.SketchPosition.X + p.X * scale, binding.SketchPosition.Y + p.Y * scale);
-                foreach (var p in sketch.Primitives)
+                var resolved = sketch.Primitives.Select(p => p with
                 {
-                    var text = p.AttributeTag is { } tag && fields.TryGetValue(tag, out var field) ? SchematicSymbolPresentation.CableFieldValue(cable, field) : p.Text;
-                    if (p.Kind is "TEXT" or "MTEXT" && text is not null && !TextFits(p with { Text = text }, sketch.Width, sketch.Height))
-                        throw new InvalidOperationException("製作示意 CAD 文字超出範圍；請擴大文字區或調整來源圖塊。");
-                    primitives.Add(p with
-                    {
-                        Start = Point(p.Start),
-                        End = p.End is null ? null : Point(p.End),
-                        Radius = p.Radius * scale,
-                        Text = text,
-                        AttributeTag = null,
-                        TextHeight = p.TextHeight * scale,
-                        TextWidth = p.TextWidth * scale,
-                        Contours = p.Contours.Select(c => (IReadOnlyList<SchematicPoint>)c.Select(Point).ToArray()).ToArray()
-                    });
-                }
+                    Text = p.AttributeTag is { } tag && fields.TryGetValue(tag, out var field)
+                        ? SchematicSymbolPresentation.CableFieldValue(cable, field) : p.Text,
+                    AttributeTag = null
+                }).ToArray();
+                primitives.AddRange(FitSketch(resolved, binding));
             }
             else Text("製作示意 CAD 待匯入", binding.SketchPosition.X, binding.SketchPosition.Y);
         }
@@ -207,31 +195,6 @@ public sealed partial class SchematicCableDetailService
                 catch (InvalidOperationException) { continue; }
                 service.BuildArchived(after, after.Schematic.Pages.Single(p => p.PageId == page.PageId), binding);
             }
-    }
-
-    private static bool TextFits(SchematicCadPrimitive p, double width, double height)
-    {
-        if (!double.IsFinite(p.TextHeight) || p.TextHeight <= 0 || !double.IsFinite(p.TextWidthFactor) || p.TextWidthFactor <= 0)
-            return false;
-        // Conservative font-independent extents; actual glyph metrics still need CAD visual review.
-        var lines = (p.DisplayText ?? "").Replace("\r", "").Split('\n');
-        var glyphWidth = p.TextHeight * (p.Kind == "TEXT" ? p.TextWidthFactor : 1);
-        var textWidth = lines.Max(l => l.Length) * glyphWidth;
-        var lineCount = lines.Length;
-        if (p.Kind == "MTEXT" && p.TextWidth > 0)
-        {
-            textWidth = p.TextWidth;
-            var capacity = Math.Max(1, (int)(p.TextWidth / glyphWidth));
-            lineCount = lines.Sum(l => Math.Max(1, (int)Math.Ceiling((double)l.Length / capacity)));
-        }
-        var textHeight = p.TextHeight * 1.5 * lineCount;
-        var offset = p.TextAnchorOffset(textWidth, textHeight, p.Kind == "TEXT" ? p.TextHeight : 0);
-        var angle = p.Rotation * Math.PI / 180;
-        return new[] { new SchematicPoint(offset.X, offset.Y), new(offset.X + textWidth, offset.Y),
-            new(offset.X, offset.Y + textHeight), new(offset.X + textWidth, offset.Y + textHeight) }
-            .Select(v => new SchematicPoint(p.Start.X + v.X * Math.Cos(angle) - v.Y * Math.Sin(angle),
-                p.Start.Y + v.X * Math.Sin(angle) + v.Y * Math.Cos(angle)))
-            .All(v => double.IsFinite(v.X) && double.IsFinite(v.Y) && v.X >= -.001 && v.Y >= -.001 && v.X <= width + .001 && v.Y <= height + .001);
     }
 
     public static void ValidateBindings(ElectricalProject project, SchematicPage page)

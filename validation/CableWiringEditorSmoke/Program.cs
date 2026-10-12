@@ -8,13 +8,14 @@ using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Schematic;
 using PdfSharp.Pdf.IO;
 
-internal static class Program
+internal static partial class Program
 {
     [STAThread]
     private static int Main(string[] args)
     {
         try
         {
+            if (args.FirstOrDefault() == "colors") { ColorsProof(args.Skip(1).FirstOrDefault(), args.Contains("pdf")); return 0; }
             if (args.FirstOrDefault() == "fit") { AppendixFitProof(args.Skip(1).FirstOrDefault(), args.Contains("pdf")); return 0; }
             var template = new ArchivedCableTemplate { TemplateId = "synthetic", TemplateRevision = "r1", AssetSha256 = new('a', 64),
                 Ports = Enumerable.Range(1, 3).Select(i => new ComponentPort { PortId = "P" + i, Name = "P" + i,

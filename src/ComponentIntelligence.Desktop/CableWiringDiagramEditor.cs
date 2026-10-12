@@ -152,7 +152,7 @@ public sealed class CableWiringDiagramEditor : UserControl
     private void Render()
     {
         _presentation = _service.Build(Draft); _canvas.Children.Clear();
-        CableWiringVisualRenderer.Draw(_canvas, _presentation.Primitives);
+        CableWiringVisualRenderer.DrawDiagram(_canvas, _presentation);
         foreach (var (key, path) in _presentation.EdgePaths)
         {
             if (key == _selectedEdge && _presentation.EdgePrimitives.TryGetValue(key, out var primitives))

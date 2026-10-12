@@ -19,4 +19,10 @@ The user's selected manufacturing sketch had large blank space inside its edit f
 
 ## Delivery
 
-BH bundle: `2026-10-12_BH示意圖緊密外框版` in the existing project collection. Package is built from a scoped clean Git archive; actual native-window acceptance remains with the user. Clean-source build/launcher and independent review results are recorded after packaging.
+BH bundle: `2026-10-12_BH示意圖緊密外框版` in the existing project collection. Package is built from the scoped clean Git archive at `540765a4a907ffce24b76b444f7e609927d22d08`; actual native-window acceptance remains with the user.
+
+- Clean-source full xUnit:1443 passed,0 failed. Desktop publish succeeded;222 runtime files are recorded with SHA256 hashes.
+- The clean-source frame smoke passed synthetic layout/gesture/save tests and all four readonly existing sketches.
+- Independent local Codex review of the two production diffs, helper and smoke tests found no material findings. It accessed no company data and performed no edits or native-window actions. Antigravity was skipped for this short bounded task; no external service received company material.
+- `launch-bh.ps1 -ValidateOnly` verified222 runtime files and resolved the original AU data folder and selected central archive, without launching software. Source archive hash was checked against the manifest.
+- Original CAD, workbooks and archives were not edited; the live SQLite database was opened in readonly mode only and never saved/replaced. Its hash is not asserted unchanged while the user may be working.

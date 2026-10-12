@@ -3,15 +3,19 @@ namespace ComponentIntelligence.Electrical.Schematic;
 public sealed partial class SchematicCableDetailService
 {
     private static IReadOnlyList<SchematicCadPrimitive> FitSketch(IReadOnlyList<SchematicCadPrimitive> source,
-        SchematicCableDetailBinding binding)
+        SchematicCableDetailBinding binding, out SchematicGridBounds bounds)
     {
+        bounds = new(binding.SketchPosition.X, binding.SketchPosition.Y, binding.SketchWidth, binding.SketchHeight);
         if (source.Count == 0) return [];
-        var origin = source[0].Start;
+        if (source.SelectMany(p => new[] { p.Start }.Concat(p.End is null ? [] : new[] { p.End })
+            .Concat(p.Contours.SelectMany(c => c))).Any(p => !double.IsFinite(p.X) || !double.IsFinite(p.Y))) throw InvalidSketch();
+        var origin = source.FirstOrDefault(p => p.Kind is not ("TEXT" or "MTEXT") || !string.IsNullOrWhiteSpace(p.DisplayText))?.Start ?? source[0].Start;
         SchematicPoint Relative(SchematicPoint p) => new(p.X - origin.X, p.Y - origin.Y);
         // Compute local extrema before adding radii/glyph sizes; large world coordinates can erase small offsets.
         var local = source.Select(p => p with { Start = Relative(p.Start), End = p.End is null ? null : Relative(p.End),
             Contours = p.Contours.Select(c => (IReadOnlyList<SchematicPoint>)c.Select(Relative).ToArray()).ToArray() }).ToArray();
         var points = local.SelectMany(SketchBoundsPoints).ToArray();
+        if (points.Length == 0) return [];
         if (points.Any(p => !double.IsFinite(p.X) || !double.IsFinite(p.Y))) throw InvalidSketch();
         var x = points.Min(p => p.X); var y = points.Min(p => p.Y);
         var width = Math.Max(.1, points.Max(p => p.X) - x);
@@ -20,9 +24,10 @@ public sealed partial class SchematicCableDetailService
         var margin = Math.Min(.5, Math.Min(binding.SketchWidth, binding.SketchHeight) / 4);
         var scale = Math.Min((binding.SketchWidth - 2 * margin) / width, (binding.SketchHeight - 2 * margin) / height);
         if (!double.IsFinite(width) || !double.IsFinite(height) || !double.IsFinite(scale) || scale <= 0) throw InvalidSketch();
+        bounds = new(binding.SketchPosition.X, binding.SketchPosition.Y, width * scale + 2 * margin, height * scale + 2 * margin);
         SchematicPoint Point(SchematicPoint p) => new(binding.SketchPosition.X + margin + (p.X - x) * scale,
             binding.SketchPosition.Y + margin + (p.Y - y) * scale);
-        return local.Select(p => p with
+        return local.Where(p => p.Kind is not ("TEXT" or "MTEXT") || !string.IsNullOrWhiteSpace(p.DisplayText)).Select(p => p with
         {
             Start = Point(p.Start),
             End = p.End is null ? null : Point(p.End),
@@ -35,21 +40,38 @@ public sealed partial class SchematicCableDetailService
 
     private static IEnumerable<SchematicPoint> SketchBoundsPoints(SchematicCadPrimitive p)
     {
-        yield return p.Start;
-        if (p.End is not null) yield return p.End;
-        foreach (var point in p.Contours.SelectMany(c => c)) yield return point;
         if (p.Kind is "CIRCLE" or "ARC")
         {
             if (!double.IsFinite(p.Radius) || p.Radius < 0 || !double.IsFinite(p.StartAngle) || !double.IsFinite(p.EndAngle))
                 throw InvalidSketch();
-            // Match the importer's conservative curved-extrema envelope.
-            yield return new(p.Start.X - p.Radius, p.Start.Y - p.Radius);
-            yield return new(p.Start.X + p.Radius, p.Start.Y + p.Radius);
+            if (p.Kind == "CIRCLE")
+            {
+                yield return new(p.Start.X - p.Radius, p.Start.Y - p.Radius);
+                yield return new(p.Start.X + p.Radius, p.Start.Y + p.Radius);
+            }
+            else
+            {
+                static double Normalize(double angle) => (angle % 360 + 360) % 360;
+                var start = Normalize(p.StartAngle); var sweep = Normalize(p.EndAngle - p.StartAngle);
+                foreach (var arcAngle in new[] { start, start + sweep }.Concat(new[] { 0d, 90, 180, 270 }
+                    .Where(a => Normalize(a - start) <= sweep)))
+                {
+                    var radians = arcAngle * Math.PI / 180;
+                    yield return new(p.Start.X + p.Radius * Math.Cos(radians), p.Start.Y - p.Radius * Math.Sin(radians));
+                }
+            }
+            yield break;
         }
-        if (p.Kind is not ("TEXT" or "MTEXT")) yield break;
+        if (p.Kind is not ("TEXT" or "MTEXT"))
+        {
+            yield return p.Start;
+            if (p.End is not null) yield return p.End;
+            foreach (var point in p.Contours.SelectMany(c => c)) yield return point;
+            yield break;
+        }
         if (!double.IsFinite(p.TextHeight) || p.TextHeight < 0 || !double.IsFinite(p.TextWidthFactor) || p.TextWidthFactor <= 0 ||
             !double.IsFinite(p.TextWidth) || p.TextWidth < 0 || !double.IsFinite(p.Rotation)) throw InvalidSketch();
-        if (string.IsNullOrEmpty(p.Text)) yield break;
+        if (string.IsNullOrWhiteSpace(p.DisplayText)) yield break;
         if (p.TextHeight == 0) throw InvalidSketch();
 
         // A conservative font-independent envelope retains complete labels; WPF smoke tests check actual ink.

@@ -185,13 +185,13 @@ public partial class SchematicWorkspaceControl
         }
         else if (_dragDetailPart == SchematicCableDetailPart.Table)
         {
-            var bounds = new SchematicCableDetailService().BuildArchived(project, page, binding).PartBounds[_dragDetailPart];
+            var bounds = _gestureDetailBounds ??= new SchematicCableDetailService().BuildArchived(project, page, binding).PartBounds[_dragDetailPart];
             var ratio = Math.Max((pointer.X - origin.X) / bounds.Width, (pointer.Y - origin.Y) / bounds.Height);
             layout = binding with { TableWidth = binding.TableWidth * ratio, TableScale = binding.TableScale * ratio };
         }
         else
         {
-            var bounds = DetailSketchBounds(project, page, binding);
+            var bounds = _gestureDetailBounds ??= DetailSketchBounds(project, page, binding);
             var ratio = Math.Max(1 + (pointer.X - dragStart.X) / bounds.Width,
                 1 + (pointer.Y - dragStart.Y) / bounds.Height);
             layout = binding with { SketchWidth = binding.SketchWidth * ratio, SketchHeight = binding.SketchHeight * ratio };

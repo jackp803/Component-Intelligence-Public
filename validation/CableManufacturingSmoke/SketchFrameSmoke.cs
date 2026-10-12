@@ -99,8 +99,23 @@ internal static partial class Program
         var removed = details.RemovePart(current, page.PageId, binding.DetailId, SchematicCableDetailPart.Sketch);
         Require(!removed.Schematic!.Pages.Last().CableDetail!.SketchVisible && removed.Schematic.Pages.Last().CableDetail!.TableVisible,
             "Deleting the sketch also removed its table.");
+        current = details.SetLayout(current, page.PageId, binding.DetailId, binding with { TableVisible = false,
+            SketchPosition = new(200, 110), SketchWidth = 180, SketchHeight = 300 });
+        page = current.Schematic!.Pages.Last(); binding = page.CableDetail!;
+        frame = CheckFrame(workspace, current, page, binding, null);
+        start = new(frame.Right / 3, frame.Bottom / 3);
+        Set("_gestureStart", current); Set("_dragStart", start);
+        Set("_pointer", new SchematicPoint(start.X + frame.Width / 60, start.Y + frame.Height / 60));
+        Set("_dragDetailId", binding.DetailId); Set("_dragDetailPart", SchematicCableDetailPart.Sketch); Set("_dragDetailResize", true);
+        Call("PreviewDetailGesture");
+        preview = (ElectricalProject)type.GetField("_gesturePreview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(workspace)!;
+        Require(Math.Abs(preview.Schematic!.Pages.Last().CableDetail!.SketchWidth - 189) < .001,
+            "Enlarging visible content was blocked by an unused maximum height outside the page.");
+        CheckFrame(workspace, preview, preview.Schematic.Pages.Last(), preview.Schematic.Pages.Last().CableDetail!, Path.Combine(root, "edge-enlarged-frame.png"));
+        Require(JsonSerializer.Serialize(preview.Cables) == cables, "Edge enlargement changed source geometry.");
+        Call("CancelGesture");
         owner.Content = null; owner.Close();
-        Console.WriteLine("PASS tight ink frame, rotated/empty labels, independent table, no-jump corner resize, drag, undo/redo, SQLite reopen and preserved source.");
+        Console.WriteLine("PASS tight ink frame, rotated/empty labels, independent table, no-jump corner resize, edge enlargement with unused max height, drag, undo/redo, SQLite reopen and preserved source.");
         if (existingDatabase is not null) CheckSavedFrames(existingDatabase, root);
         return 0;
     }

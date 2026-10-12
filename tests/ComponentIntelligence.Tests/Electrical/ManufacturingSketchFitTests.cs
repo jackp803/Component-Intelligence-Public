@@ -8,6 +8,73 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class ManufacturingSketchFitTests
 {
+    [Fact]
+    public void UnusedMaximumHeightDoesNotPreventEnlargingContentThatFitsThePage()
+    {
+        var project = WithSketch(new SchematicCadPrimitive { Kind = "LINE", Start = new(0, 0), End = new(100, 10) });
+        var service = new SchematicCableDetailService();
+        var placed = service.AddArchivedDetail(project, project.Cables[0].CableInstanceId, "sheet", Layout(project));
+        var page = placed.Schematic!.Pages.Last(); var original = page.CableDetail!;
+        var enlarged = service.SetLayout(placed, page.PageId, original.DetailId, original with { SketchWidth = 240, SketchHeight = 300 });
+        enlarged = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(enlarged))!;
+        var view = service.Build(enlarged, enlarged.Schematic!.Pages.Last());
+        var box = view.PartBounds[SchematicCableDetailPart.Sketch];
+        Assert.InRange(box.Height, 24, 25);
+        Assert.Equal(240, box.Width, 9);
+        Assert.Equal(300, enlarged.Schematic.Pages.Last().CableDetail!.SketchHeight);
+        Assert.Equal(JsonSerializer.Serialize(project.Cables), JsonSerializer.Serialize(enlarged.Cables));
+    }
+
+    [Fact]
+    public void EmptyLabelOriginsDoNotAddInvisibleSpaceToTheFit()
+    {
+        var project = WithSketch(new() { Kind = "LINE", Start = new(0, 0), End = new(100, 0) },
+            new() { Kind = "TEXT", Start = new(10000, -10000), Text = "  ", TextHeight = 3 });
+        var view = new SchematicCableDetailService().BuildArchived(project, project.Schematic!.Pages[0], Layout(project));
+        Assert.Equal(179, view.Primitives[0].End!.X - view.Primitives[0].Start.X, 9);
+        Assert.InRange(view.PartBounds[SchematicCableDetailPart.Sketch].Height, 1, 2);
+    }
+
+    [Fact]
+    public void PartialArcFitsItsRenderedSweepInsteadOfItsEntireCircleOrCenter()
+    {
+        var project = WithSketch(new SchematicCadPrimitive { Kind = "ARC", Start = new(0, 0), Radius = 1000, StartAngle = 0, EndAngle = 5 });
+        var view = new SchematicCableDetailService().BuildArchived(project, project.Schematic!.Pages[0], Layout(project));
+        var arc = Assert.Single(view.Primitives);
+        Assert.Equal(69 / Math.Sin(5 * Math.PI / 180), arc.Radius, 8);
+        Assert.InRange(view.PartBounds[SchematicCableDetailPart.Sketch].Width, 3, 5);
+    }
+
+    [Fact]
+    public void InvisibleTextWithExtremeFiniteOriginIsNotSentToTheRenderer()
+    {
+        var project = WithSketch(new() { Kind = "LINE", Start = new(-1e308, 0), End = new(-1e308, 10) },
+            new() { Kind = "TEXT", Start = new(1e308, 0), Text = "", TextHeight = 3 });
+        var view = new SchematicCableDetailService().BuildArchived(project, project.Schematic!.Pages[0], Layout(project));
+        Assert.Single(view.Primitives);
+        Assert.All(view.Primitives, p => Assert.True(double.IsFinite(p.Start.X) && double.IsFinite(p.Start.Y)));
+    }
+
+    [Fact]
+    public void ActualSketchOverflowStillRejectsWithoutChangingTheProject()
+    {
+        var project = WithSketch(new SchematicCadPrimitive { Kind = "LINE", Start = new(0, 0), End = new(100, 10) });
+        var before = JsonSerializer.Serialize(project);
+        Assert.Throws<InvalidOperationException>(() => new SchematicCableDetailService().AddArchivedDetail(project,
+            project.Cables[0].CableInstanceId, "sheet", Layout(project) with { SketchPosition = new(300, 110) }));
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+    }
+
+    [Fact]
+    public void TableCanUseSpaceOutsideTheEffectiveSketchBounds()
+    {
+        var project = WithSketch(new SchematicCadPrimitive { Kind = "LINE", Start = new(0, 0), End = new(100, 10) });
+        var view = new SchematicCableDetailService().BuildArchived(project, project.Schematic!.Pages[0],
+            Layout(project) with { SketchHeight = 200, TableVisible = true, TablePosition = new(20, 160) });
+        Assert.True(view.PartBounds[SchematicCableDetailPart.Sketch].Y + view.PartBounds[SchematicCableDetailPart.Sketch].Height <
+            view.PartBounds[SchematicCableDetailPart.Table].Y);
+    }
+
     [Theory]
     [InlineData(95, 0, 0, "BaselineLeft", "TEXT", 0)]
     [InlineData(-5, 5, -90, "BaselineCenter", "TEXT", 0)]

@@ -109,6 +109,8 @@ public sealed partial class SchematicCableDetailService
         else diagnostics.AddRange(archived.ManufacturingGeometry.Diagnostics);
         var primitives = new List<SchematicCadPrimitive>();
         var bounds = new Dictionary<SchematicCableDetailPart, SchematicGridBounds>();
+        var sketchView = binding.SketchVisible ? BuildSketch(cable, binding) : default;
+        if (binding.SketchVisible) ValidateSketchBounds(sketchView.Bounds!, page);
         var unit = binding.TableScale;
         void Line(double x, double y, double ex, double ey) => primitives.Add(new() { Kind = "LINE", Start = new(x, y), End = new(ex, ey) });
         void Text(string text, double x, double y) => primitives.Add(new() { Kind = "TEXT", Start = new(x, y + 2.6 * unit), Text = text, TextHeight = 2.6 * unit });
@@ -157,24 +159,14 @@ public sealed partial class SchematicCableDetailService
                     return f.Function ? Function(cell.Function, cell.Usage) : Pin(cell.SourcePinId); }).ToArray());
             foreach (var x in columns) Line(x, top, x, y);
             bounds.Add(SchematicCableDetailPart.Table, new(left, binding.TablePosition.Y, binding.TableWidth, y - binding.TablePosition.Y));
-            if (binding.SketchVisible && y > binding.SketchPosition.Y && left < binding.SketchPosition.X + binding.SketchWidth && right > binding.SketchPosition.X &&
-                binding.TablePosition.Y < binding.SketchPosition.Y + binding.SketchHeight)
+            if (binding.SketchVisible && y > sketchView.Bounds!.Y && left < sketchView.Bounds.X + sketchView.Bounds.Width && right > sketchView.Bounds.X &&
+                binding.TablePosition.Y < sketchView.Bounds.Y + sketchView.Bounds.Height)
                 throw new InvalidOperationException("接法表與製作示意圖重疊；請調整各自位置。");
         }
         if (binding.SketchVisible)
         {
-            bounds.Add(SchematicCableDetailPart.Sketch, new(binding.SketchPosition.X, binding.SketchPosition.Y, binding.SketchWidth, binding.SketchHeight));
-            if (archived.ManufacturingGeometry is { } sketch)
-            {
-                var fields = archived.Template.TextBindings.ToDictionary(b => b.AttributeTag, b => b.Field, StringComparer.Ordinal);
-                var resolved = sketch.Primitives.Select(p => p with
-                {
-                    Text = p.AttributeTag is { } tag && fields.TryGetValue(tag, out var field)
-                        ? SchematicSymbolPresentation.CableFieldValue(cable, field) : p.Text,
-                    AttributeTag = null
-                }).ToArray();
-                primitives.AddRange(FitSketch(resolved, binding));
-            }
+            bounds.Add(SchematicCableDetailPart.Sketch, sketchView.Bounds!);
+            if (archived.ManufacturingGeometry is not null) primitives.AddRange(sketchView.Primitives!);
             else Text("製作示意 CAD 待匯入", binding.SketchPosition.X, binding.SketchPosition.Y);
         }
         return new(primitives, project.Connections.Where(c => c.CableInstanceId == cable.CableInstanceId).Select(c => c.ConnectionId).ToArray(),
@@ -206,7 +198,12 @@ public sealed partial class SchematicCableDetailService
         {
             if (!project.Cables.Any(c => c.CableInstanceId == binding.CableInstanceId))
                 throw new InvalidOperationException("線材明細來源不存在。");
-            if (project.Cables.Single(c => c.CableInstanceId == binding.CableInstanceId).ArchivedCable is not null) ValidateLayout(binding, page);
+            var cable = project.Cables.Single(c => c.CableInstanceId == binding.CableInstanceId);
+            if (cable.ArchivedCable is not null)
+            {
+                ValidateLayout(binding, page);
+                if (binding.SketchVisible) ValidateSketchBounds(BuildSketch(cable, binding).Bounds, page);
+            }
         }
     }
 
@@ -215,8 +212,26 @@ public sealed partial class SchematicCableDetailService
         var numbers = new[] { b.TablePosition.X, b.TablePosition.Y, b.SketchPosition.X, b.SketchPosition.Y, b.TableWidth, b.SketchWidth, b.SketchHeight, b.TableScale };
         if (numbers.Any(v => !double.IsFinite(v)) || b.TableWidth < 60 || b.SketchWidth <= 0 || b.SketchHeight <= 0 || b.TableScale < .2 || b.TableScale > 5 ||
             b.TableVisible && (b.TablePosition.X < page.Margin || b.TablePosition.Y < page.Margin || b.TablePosition.X + b.TableWidth > page.Width - page.Margin) ||
-            b.SketchVisible && (b.SketchPosition.X < page.Margin || b.SketchPosition.Y < page.Margin ||
-                b.SketchPosition.X + b.SketchWidth > page.Width - page.Margin || b.SketchPosition.Y + b.SketchHeight > page.Height - page.Margin - 18))
+            b.SketchVisible && (b.SketchPosition.X < page.Margin || b.SketchPosition.Y < page.Margin))
+            throw new InvalidOperationException("線材明細位置與尺寸超出有效圖面。");
+    }
+
+    private static (IReadOnlyList<SchematicCadPrimitive> Primitives, SchematicGridBounds Bounds) BuildSketch(CableInstance cable,
+        SchematicCableDetailBinding binding)
+    {
+        if (cable.ArchivedCable!.ManufacturingGeometry is not { } sketch)
+            return ([], new(binding.SketchPosition.X, binding.SketchPosition.Y, binding.SketchWidth, binding.SketchHeight));
+        var fields = cable.ArchivedCable.Template.TextBindings.ToDictionary(b => b.AttributeTag, b => b.Field, StringComparer.Ordinal);
+        var resolved = sketch.Primitives.Select(p => p with { Text = p.AttributeTag is { } tag && fields.TryGetValue(tag, out var field)
+            ? SchematicSymbolPresentation.CableFieldValue(cable, field) : p.Text, AttributeTag = null }).ToArray();
+        var primitives = FitSketch(resolved, binding, out var bounds);
+        return (primitives, bounds);
+    }
+
+    private static void ValidateSketchBounds(SchematicGridBounds bounds, SchematicPage page)
+    {
+        if (bounds.X + bounds.Width > page.Width - page.Margin + .000001 ||
+            bounds.Y + bounds.Height > page.Height - page.Margin - 18 + .000001)
             throw new InvalidOperationException("線材明細位置與尺寸超出有效圖面。");
     }
 

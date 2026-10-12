@@ -35,7 +35,7 @@ public partial class SchematicWorkspaceControl
         var owner = SchematicSymbolOwner.Resolve(_gestureStart, symbol);
         if (symbol.Geometry is not null)
         {
-            var visible = CadContentBounds(_gestureStart.Schematic, symbol, owner);
+            var visible = _gestureCadBounds ??= CadContentBounds(_gestureStart.Schematic, symbol, owner);
             var right = visible.Right + _pointer!.X - _dragStart!.X;
             var bottom = visible.Bottom + _pointer.Y - _dragStart.Y;
             var scale = SchematicSymbolPresentation.CadDisplayScale(symbol);

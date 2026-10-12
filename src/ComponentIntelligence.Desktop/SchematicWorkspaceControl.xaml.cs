@@ -102,11 +102,13 @@ public partial class SchematicWorkspaceControl : UserControl
                 canvas.PreviewMouseLeftButtonDown += (s, _) => { ActivatePage(pageId); Keyboard.Focus((Canvas)s); };
                 canvas.PreviewMouseRightButtonDown += (s, _) => { ActivatePage(pageId); Keyboard.Focus((Canvas)s); };
                 canvas.MouseLeftButtonDown += Sheet_Down; canvas.MouseMove += Sheet_Move; canvas.MouseLeftButtonUp += Sheet_Up;
+                canvas.LostMouseCapture += Sheet_LostMouseCapture;
                 _pageCanvases.Add(pageId, canvas);
             }
             if (PageHost.Children.IndexOf(canvas) != index)
             { PageHost.Children.Remove(canvas); PageHost.Children.Insert(index, canvas); }
             canvas.Visibility = _allPages || page.PageId == _pageId ? Visibility.Visible : Visibility.Collapsed;
+            if (canvas.Visibility != Visibility.Visible || _gestureStart is not null && page.PageId != _pageId) continue;
             _renderCanvas = canvas;
             try { RenderPage(project, page); } finally { _renderCanvas = null; }
         }
@@ -331,7 +333,6 @@ public partial class SchematicWorkspaceControl : UserControl
         }
         Text($"草稿／未完成  |  {doc.Pages.IndexOf(page) + 1} / {doc.Pages.Count}",
             page.Margin, page.Height - 5, 9, Brushes.Black);
-        if (!_renderingOutput) UpdateSelection(project);
     }
 
     private void DrawFrame(SchematicPage page, int number, string? name)
@@ -751,6 +752,7 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void BeginGesture(MouseButtonEventArgs e)
     {
+        ClearPointerPreview(); _gestureDetailBounds = null; _gestureCadBounds = null;
         _dragViewportStart = e.GetPosition(PageScroll);
         _dragActivated = false;
         Keyboard.Focus(Sheet); _gestureStart = _getProject(); _gesturePreview = null; _dragStart = Snap(e.GetPosition(Sheet)); Sheet.CaptureMouse();
@@ -766,6 +768,15 @@ public partial class SchematicWorkspaceControl : UserControl
             if (!_dragActivated && Math.Abs(viewportDelta.X) < SystemParameters.MinimumHorizontalDragDistance &&
                 Math.Abs(viewportDelta.Y) < SystemParameters.MinimumVerticalDragDistance) return;
             _dragActivated = true;
+            QueuePointerPreview();
+        }
+        else if ((_wireMode && _wireStart is not null) || _placeMode) QueuePointerPreview();
+    }
+    private void ProcessPointerPreview()
+    {
+        if (_pointer is null) return;
+        if (_gestureStart is not null && _dragStart is not null)
+        {
             try
             {
                 if (_dragDetailId is not null) PreviewDetailGesture();
@@ -824,6 +835,8 @@ public partial class SchematicWorkspaceControl : UserControl
     private void Sheet_Up(object sender, MouseButtonEventArgs e)
     {
         if (_gestureStart is null) return;
+        if (_dragActivated && Sheet.IsMouseCaptured) { _pointer = Snap(e.GetPosition(Sheet)); QueuePointerPreview(); }
+        FlushPointerPreview();
         var togglePort = _editModuleMode && !_dragActivated && _dragPortHasPins && _dragPortSymbol is not null && _dragPortId is not null
             ? (_dragPortSymbol, _dragPortId) : ((string?, string?)?)null;
         if (_gesturePreview is not null && _pointer != _dragStart) _commit(_gesturePreview, "調整圖面位置／路徑");
@@ -838,7 +851,10 @@ public partial class SchematicWorkspaceControl : UserControl
         Keyboard.Focus(Sheet);
     }
     private void CancelGesture()
-    { _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragPortSymbol = null; _dragPortId = null; _dragPinSymbol = null; _dragPinId = null; _dragResizeSymbol = null; _dragPortHasPins = false; _dragVertex = null; _dragSegment = null; _dragMarker = null; _dragDetailId = null; _dragDetailResize = false; Sheet.ReleaseMouseCapture(); }
+    {
+        ClearPointerPreview(); _gestureDetailBounds = null; _gestureCadBounds = null;
+        _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragPortSymbol = null; _dragPortId = null; _dragPinSymbol = null; _dragPinId = null; _dragResizeSymbol = null; _dragPortHasPins = false; _dragVertex = null; _dragSegment = null; _dragMarker = null; _dragDetailId = null; _dragDetailResize = false; Sheet.ReleaseMouseCapture();
+    }
     private void CancelCommand()
     {
         CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;
@@ -942,7 +958,7 @@ public partial class SchematicWorkspaceControl : UserControl
         if (s is not null) Apply(p => _service.SetSymbolDetails(p, s.SymbolId, reference, s.Anchors), "已更新 Reference");
     }
     private void Zoom_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
-    { if (SheetZoom is not null) { SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue; Render(_getProject()); } }
+    { if (SheetZoom is not null) SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue; }
     private void Navigate_Click(object sender, RoutedEventArgs e)
     {
         if (_selectionId is not null) NavigateToMarker(_selectionId);

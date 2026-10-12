@@ -86,7 +86,11 @@ internal static partial class Program
             Call("Sheet_LostMouseCapture", canvases["main"], new RoutedEventArgs());
             Require(Get("_gestureStart") is null && Get("_pendingPointerPreview") is null && commits == 1,
                 "Lost capture retained a pending mutation.");
-            Set("_pageId", "page-1"); Call("Render", current);
+            Set("_gestureStart", current); Set("_dragStart", new SchematicPoint(32.5, 122.5));
+            Set("_dragDetailId", detail.DetailId); Set("_pointer", new SchematicPoint(35, 125)); Call("QueuePointerPreview");
+            Call("ActivatePage", "page-1"); Call("FlushPointerPreview"); Call("Render", current);
+            Require(Get("_gestureStart") is null && Get("_pendingPointerPreview") is null && commits == 1,
+                "Page switch retained a pending mutation.");
             Require(canvases["page-1"].Visibility == Visibility.Visible && canvases["page-1"].Children.Count > 0,
                 "Switching to a previously hidden page did not render it.");
         }

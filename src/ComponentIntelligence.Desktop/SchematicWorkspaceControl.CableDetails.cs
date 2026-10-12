@@ -92,7 +92,21 @@ public partial class SchematicWorkspaceControl
         dialog.Content = root; dialog.ShowDialog();
     }
 
-    private void RenderDetailHandles(SchematicPage page, SchematicCableDetailBinding binding, SchematicCableDetailPresentation? presentation)
+    private static SchematicGridBounds DetailSketchBounds(ComponentIntelligence.Electrical.Domain.ElectricalProject project,
+        SchematicPage page, SchematicCableDetailBinding binding)
+    {
+        var sketch = new SchematicCableDetailService().BuildArchived(project, page, binding with { TableVisible = false });
+        var canvas = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
+            Primitives = sketch.Primitives });
+        var ink = CanvasInkBounds(canvas);
+        if (ink.IsEmpty) return sketch.PartBounds[SchematicCableDetailPart.Sketch];
+        // Selection fits rendered ink, while the saved maximum dimensions still govern the CAD fit.
+        return new(ink.X / PixelsPerMm - 1, ink.Y / PixelsPerMm - 1,
+            ink.Width / PixelsPerMm + 2, ink.Height / PixelsPerMm + 2);
+    }
+
+    private void RenderDetailHandles(ComponentIntelligence.Electrical.Domain.ElectricalProject project, SchematicPage page,
+        SchematicCableDetailBinding binding, SchematicCableDetailPresentation? presentation)
     {
         foreach (var (part, position, label, visible) in new[] {
             (SchematicCableDetailPart.Table, binding.TablePosition, "接法表", binding.TableVisible),
@@ -100,6 +114,7 @@ public partial class SchematicWorkspaceControl
         {
             if (!visible) continue;
             var selected = _selectionId == DetailSelectionId(binding.DetailId, part);
+            var handlePosition = position;
             var menu = new ContextMenu();
             if (part == SchematicCableDetailPart.Table)
             {
@@ -113,6 +128,8 @@ public partial class SchematicWorkspaceControl
             menu.Items.Add(delete);
             if (presentation?.PartBounds.TryGetValue(part, out var bounds) == true)
             {
+                if (part == SchematicCableDetailPart.Sketch) bounds = DetailSketchBounds(project, page, binding);
+                handlePosition = new(bounds.X, bounds.Y);
                 var surface = new Rectangle { Width = bounds.Width * PixelsPerMm, Height = bounds.Height * PixelsPerMm,
                     Fill = Brushes.Transparent, Stroke = selected ? Brushes.DarkCyan : Brushes.Transparent, StrokeThickness = 1,
                     Tag = part, Cursor = Cursors.SizeAll, ContextMenu = menu, IsHitTestVisible = !_wireMode && !_placeMode && !_pairMode };
@@ -144,7 +161,7 @@ public partial class SchematicWorkspaceControl
             }
             var handle = new Button { Content = "\uE70F", FontFamily = new("Segoe MDL2 Assets"), ToolTip = label + "位置／尺寸",
                 Width = 22, Height = 22, Padding = new(1), Background = Brushes.White, Cursor = Cursors.Hand };
-            Canvas.SetLeft(handle, position.X * PixelsPerMm - 24); Canvas.SetTop(handle, position.Y * PixelsPerMm);
+            Canvas.SetLeft(handle, handlePosition.X * PixelsPerMm - 24); Canvas.SetTop(handle, handlePosition.Y * PixelsPerMm);
             handle.Click += (_, _) => { _selectionId = DetailSelectionId(binding.DetailId, part); EditArchivedDetailLayout(binding.CableInstanceId, binding); };
             handle.ContextMenu = menu; Sheet.Children.Add(handle);
         }
@@ -172,7 +189,13 @@ public partial class SchematicWorkspaceControl
             var ratio = Math.Max((pointer.X - origin.X) / bounds.Width, (pointer.Y - origin.Y) / bounds.Height);
             layout = binding with { TableWidth = binding.TableWidth * ratio, TableScale = binding.TableScale * ratio };
         }
-        else layout = binding with { SketchWidth = pointer.X - origin.X, SketchHeight = pointer.Y - origin.Y };
+        else
+        {
+            var bounds = DetailSketchBounds(project, page, binding);
+            var ratio = Math.Max(1 + (pointer.X - dragStart.X) / bounds.Width,
+                1 + (pointer.Y - dragStart.Y) / bounds.Height);
+            layout = binding with { SketchWidth = binding.SketchWidth * ratio, SketchHeight = binding.SketchHeight * ratio };
+        }
         _gesturePreview = new SchematicCableDetailService().SetLayout(project, page.PageId, binding.DetailId, layout);
     }
 }

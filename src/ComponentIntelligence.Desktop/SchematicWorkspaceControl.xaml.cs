@@ -157,7 +157,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 Text(error.Message, page.Margin + 8, page.Margin + 10, 12, Brushes.Firebrick);
             }
             if (!_renderingOutput && project.Cables.Single(c => c.CableInstanceId == binding.CableInstanceId).ArchivedCable is not null)
-                RenderDetailHandles(page, binding, detailView);
+                RenderDetailHandles(project, page, binding, detailView);
         }
         var crossings = SchematicCrossingService.Analyze(doc.Wires.Where(w => w.PageId == page.PageId).ToArray());
         foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))

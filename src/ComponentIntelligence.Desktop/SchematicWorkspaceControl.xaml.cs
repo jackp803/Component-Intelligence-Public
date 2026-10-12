@@ -134,7 +134,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void RenderPage(ElectricalProject project, SchematicPage page)
     {
         Sheet.Children.Clear();
-        _wireStrokeTargets[page.PageId] = [];
+        if (!_renderingOutput) _wireStrokeTargets[page.PageId] = [];
         var doc = project.Schematic!;
         Sheet.Width = page.Width * PixelsPerMm; Sheet.Height = page.Height * PixelsPerMm;
         if (page.TemplateGeometry is not null)

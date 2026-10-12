@@ -62,6 +62,9 @@ internal static partial class Program
                 var strokes = sheet.Children.OfType<Canvas>().SelectMany(c => c.Children.OfType<Shape>()).Concat(sheet.Children.OfType<Shape>())
                     .Where(s => s is Line or Polyline or System.Windows.Shapes.Path && s.Stroke is SolidColorBrush b && b.Color == color).ToArray();
                 Require(strokes.Any(s => s is System.Windows.Shapes.Path), "Zoom fixture is missing crossing jump arcs.");
+                Set("_renderCanvas", new Canvas()); Set("_renderingOutput", true);
+                try { Call("RenderPage", current, current.Schematic!.Pages[0]); }
+                finally { Set("_renderCanvas", null); Set("_renderingOutput", false); }
                 zoom.Value = .25;
                 Require(nodes.SequenceEqual(sheet.Children.Cast<UIElement>()), "Zoom rebuilt CAD/page nodes.");
                 var expected = 1.5 / .25 + (selected is null ? 0 : 1);

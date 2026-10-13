@@ -44,5 +44,7 @@
 **Review outcome:** Six initial findings and one outlined-jump follow-up have regression coverage and fixes. The independent reviewer confirmed the final follow-up was resolved. WPF smoke covers incident-wire drag cancellation, final release flush, quarter-zoom strokes and jump arcs, visible unplaced captions, unique junction markers and unchanged circle ink bounds.
 
 ### Task 4: Delivery
-- [ ] Build a scoped source/runtime bundle without unrelated changes or live data.
-- [ ] Report measured improvements and remaining uncertainty; validate launcher without starting software.
+- [x] Build a scoped source/runtime bundle without unrelated changes or live data.
+- [x] Report measured improvements and remaining uncertainty; validate launcher without starting software.
+
+**Delivery evidence:** BJ runtime built from archived clean source; 1,476 clean-source tests / 1,479 working-tree tests passed. 222 runtime files and source ZIP verified by ValidateOnly with StartedSoftware=false. PDF, connection-editor links, 170 CAD text ink cases and pointer-preview fixtures passed. A final screenshot regression explicitly arranges layout and verifies interior ink, and output rejection for unplaceable captions is exercised. Synthetic timings are documented as CPU/test measurements, not native UI FPS.

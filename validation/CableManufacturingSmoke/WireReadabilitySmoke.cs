@@ -100,7 +100,16 @@ internal static partial class Program
         Require(!arcBox.IntersectsWith(new Rect(Canvas.GetLeft(arcLabel), Canvas.GetTop(arcLabel), arcLabel.DesiredSize.Width, arcLabel.DesiredSize.Height)),
             "A saved caption obscures an outlined crossover arc at 25 percent zoom.");
         p = baseline; zoom.Value = 1; render.Invoke(workspace, [p]);
+        sheet.Measure(new Size(sheet.Width, sheet.Height)); sheet.Arrange(new Rect(0, 0, sheet.Width, sheet.Height)); sheet.UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)sheet.Width, (int)sheet.Height, 96, 96, PixelFormats.Pbgra32); bitmap.Render(sheet);
+        var pixels = new byte[bitmap.PixelWidth * bitmap.PixelHeight * 4]; bitmap.CopyPixels(pixels, bitmap.PixelWidth * 4, 0);
+        var interiorInk = 0;
+        for (var y = 100; y < 450; y++) for (var x = 200; x < 950; x++)
+        {
+            var offset = (y * bitmap.PixelWidth + x) * 4;
+            if (pixels[offset + 3] > 0 && (pixels[offset] < 180 || pixels[offset + 1] < 180 || pixels[offset + 2] < 180)) interiorInk++;
+        }
+        Require(interiorInk > 1000, "Readability screenshot has no actual wire/module ink inside its frame.");
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using (var stream = File.Create(Path.Combine(output, "wire-readability.png"))) encoder.Save(stream);
         var count = SchematicPdfWriter.Write(p, Path.Combine(output, "wire-readability.pdf"), (project, page) =>
@@ -151,6 +160,12 @@ internal static partial class Program
         Call("Apply", new Func<ElectricalProject, ElectricalProject>(project => project), "synthetic identity edit");
         var status = (TextBlock)type.GetField("Status", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(workspace)!;
         Require(status.Text.Contains("標籤空間不足"), "Successful edit overwrote the unplaced-caption warning.");
+        try
+        {
+            Call("RenderOutputPage", p, p.Schematic!.Pages[0]);
+            throw new InvalidOperationException("Output silently omitted unplaceable captions.");
+        }
+        catch (TargetInvocationException error) when (error.InnerException is InvalidOperationException inner && inner.Message.Contains("導線標籤")) { }
         var circleAsset = new SchematicCadAsset { Width = 30, Height = 30, SourceSha256 = "synthetic",
             Primitives = Enumerable.Range(0, 48).Select(_ => new SchematicCadPrimitive { Kind = "CIRCLE", Start = new(15, 15), Radius = 4 }).ToArray() };
         var cad = type.GetMethod("CadCanvas", BindingFlags.Static | BindingFlags.NonPublic)!;
@@ -160,7 +175,8 @@ internal static partial class Program
         Require(VisualTreeHelper.GetDescendantBounds(batched) == VisualTreeHelper.GetDescendantBounds(original), "Batched circle changed its original ink bounds.");
         File.WriteAllText(Path.Combine(output, "wire-readability.json"), JsonSerializer.Serialize(new { Passed = true, CombinedLabels = labels.Length,
             FunctionsPreserved = true, LabelsDoNotOverlap = true, ZoomOutOutlineClearance = true, ManualUiRoute = true, PinOrderUi = true,
-            IncidentWireDragCancel = true, JunctionsNotDuplicated = true, UnplacedCaptionsVisible = true, CadCircleBoundsUnchanged = true,
+            IncidentWireDragCancel = true, JunctionsNotDuplicated = true, UnplacedCaptionsVisible = true, UnplacedCaptionsBlockOutput = true,
+            ScreenshotInteriorInk = interiorInk, CadCircleBoundsUnchanged = true,
             DisconnectRestoresLabels = true, PdfPages = count }));
         Console.WriteLine("PASS combined functions/colors, separate unconnected labels, non-overlap, delete restoration, PDF.");
         return 0;

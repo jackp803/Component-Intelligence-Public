@@ -1,12 +1,12 @@
 # Personal Electrical Workspace: Usability and Performance
 
-Status: approved by the user and implemented; clean-source delivery verification in progress.
+Status: approved, implemented and delivered as BL; clean-source verification complete. Native user acceptance pending.
 Date: 2026-10-13
 Baseline: BK, commit `2b138072872db39729df870e28c2d335e7fb0b0b`.
 
 ## 中文核對摘要
 
-這一輪是整理你自己每天使用的電氣設計畫面，不整套重做。使用者已核准本規格並要求開始修改；右側直接修改與下列範圍已實作，正在驗證交付版本。
+這一輪是整理你自己每天使用的電氣設計畫面，不整套重做。使用者已核准本規格並要求開始修改；右側直接修改與下列範圍已實作，BL 交付版驗證完成，實際操作待使用者驗收。
 
 1. 畫圖區放大：左側 BOM／頁面能收合、調整寬度；上方保留常用工具，其他功能仍能找到，原快捷鍵保留。
 2. 點模塊、線或表格，右側顯示對應設定。一般欄位改完按 Enter 或「套用」，一次修改可一次復原；錯誤輸入不會寫進專案，也不會套到另一個物件。

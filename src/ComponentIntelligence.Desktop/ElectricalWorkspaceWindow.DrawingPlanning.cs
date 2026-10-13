@@ -22,14 +22,17 @@ public partial class ElectricalWorkspaceWindow
                 new WorkbookComponentKnowledgeStore(_centralWorkbookPath).ListAsync().ConfigureAwait(false).GetAwaiter().GetResult());
 
         control.ProjectProvider = () => _project;
-        control.ProjectReplaced = project => { _project = project; UpdateHistoryButtons(); };
+        control.ProjectReplaced = project => { if (project.ProjectId != _project.ProjectId) return; _project = project; UpdateHistoryButtons(); };
         control.PlanningInputProvider = () => CreateBuilder().Build(_project, control.ProjectMetadataStore.Load(_project.ProjectId));
         control.CheckpointAsync = async (trigger, label) => _ = await revisionService.CreateCheckpointAsync(_project, trigger, label);
-        control.SaveProjectAsync = async () => await _repository.SaveAsync(_project);
+        control.SaveProjectAsync = async () => { if (!await SaveProjectAsync()) throw new InvalidOperationException("專案尚未儲存。"); };
         control.HistoryItemsAsync = async () => (await revisionService.ListAsync(_project.ProjectId)).Select(x => x.RevisionId).ToArray();
         control.RestoreRevisionAsync = async revisionId =>
         {
-            var restored = await revisionService.RestoreAsync(_project, revisionId); _project = restored; RefreshAll(); return restored;
+            var epoch = _saveSession.Epoch; var capture = _saveSession.Capture(_project);
+            var restored = await revisionService.RestoreAsync(capture.Snapshot, revisionId);
+            if (epoch != _saveSession.Epoch || capture.Fingerprint != ProjectSaveSession.Fingerprint(_project)) throw new InvalidOperationException("專案已變更，未恢復舊版本。");
+            _project = restored; RefreshAll(); return restored;
         };
         control.GenerationCoordinatorFactory = settings =>
         {
@@ -51,10 +54,8 @@ public partial class ElectricalWorkspaceWindow
         };
         control.LoadPlan(_project.DrawingPlan);
 
-        // TopologyCanvas raises MutationStarting before topology presentation/engineering edits are committed.
-        // Persist the durable TopologyChange checkpoint synchronously so the snapshot is truly pre-mutation.
-        TopologyCanvas.MutationStarting += (_, _) =>
-            revisionService.CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, "Topology mutation").GetAwaiter().GetResult();
+        // Capture before mutation; ordered disk I/O need not block pointer interaction.
+        TopologyCanvas.MutationStarting += (_, _) => QueueCheckpoint(ProjectRevisionTrigger.TopologyChange, "Topology mutation");
     }
 
     // Called by real project-wide import/synchronization entry points before they mutate ElectricalProject.

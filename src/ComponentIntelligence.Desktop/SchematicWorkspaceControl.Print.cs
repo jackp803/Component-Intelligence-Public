@@ -63,7 +63,7 @@ public partial class SchematicWorkspaceControl
     {
         if (_outputBusy) return;
         var dialog = new SaveFileDialog { Title = "儲存並匯出完整 PDF 草稿", Filter = "PDF (*.pdf)|*.pdf",
-            FileName = "schematic-draft.pdf", AddExtension = true };
+            FileName = "schematic-draft.pdf", AddExtension = true, InitialDirectory = DialogDirectory(false) };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         _outputBusy = true; IsEnabled = false;
         try
@@ -72,6 +72,7 @@ public partial class SchematicWorkspaceControl
             var project = await PrepareOutputAsync(); if (project is null) return;
             var count = SchematicPdfWriter.Write(project, dialog.FileName, RenderOutputPage);
             Status.Text = $"已輸出 {count} 頁 PDF 草稿（未工程核准）：{dialog.FileName}";
+            RememberDialogDirectory(dialog.FileName, false);
         }
         catch (Exception error) { Status.Text = "PDF 未完成：" + error.Message; }
         finally

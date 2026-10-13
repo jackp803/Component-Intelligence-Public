@@ -43,4 +43,4 @@ public sealed record ProjectChangeSummary
     private static bool LogicalEqual<T>(T a, T b) => JsonSerializer.Serialize(a) == JsonSerializer.Serialize(b);
 }
 
-public enum ProjectRevisionTrigger { Save, GeneratePreview, GenerateAutoCad, MajorImport, TopologyChange, ManualRestore }
+public enum ProjectRevisionTrigger { Save, GeneratePreview, GenerateAutoCad, MajorImport, TopologyChange, ManualRestore, AutoRecovery }

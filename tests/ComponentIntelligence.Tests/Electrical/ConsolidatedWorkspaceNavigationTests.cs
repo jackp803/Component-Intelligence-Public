@@ -5,12 +5,22 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class ConsolidatedWorkspaceNavigationTests
 {
     [Fact]
+    public void AcceptedCloseInvalidatesPendingImportsAndInitialBomHasRetryEntry()
+    {
+        var desktop = Desktop();
+        var session = File.ReadAllText(Path.Combine(desktop, "ElectricalWorkspaceWindow.Session.cs"));
+        Assert.Contains("StopBackgroundImports();", session);
+        var xml = XDocument.Load(Path.Combine(desktop, "ElectricalWorkspaceWindow.xaml"));
+        Assert.Single(xml.Descendants(), e => (string?)e.Attribute("Click") == "RetryWorkingBom_Click");
+    }
+
+    [Fact]
     public void WorkspaceSaveHasAwaitableSuccessBoundaryForDocumentOutput()
     {
         var source = File.ReadAllText(Path.Combine(Desktop(), "ElectricalWorkspaceWindow.xaml.cs"));
         Assert.Contains("private async Task<bool> SaveProjectAsync()", source);
         Assert.Contains("await SaveProjectAsync();", source);
-        Assert.Contains("FinishPendingDraft() == false) return false;", source);
+        Assert.Contains("FinishDraftForSave() == false) return false;", source);
     }
 
     [Fact]

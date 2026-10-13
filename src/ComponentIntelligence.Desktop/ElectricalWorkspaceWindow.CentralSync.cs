@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using ComponentIntelligence.Electrical.Bridging;
+using ComponentIntelligence.Electrical.Editing;
 using ComponentIntelligence.Repository;
 
 namespace ComponentIntelligence.Desktop;
@@ -24,6 +25,7 @@ public partial class ElectricalWorkspaceWindow
         }
         catch (Exception exception)
         {
+            if (_leavingSession) return;
             MessageBox.Show(this, App.FormatException(exception), "中央庫同步失敗", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -39,24 +41,33 @@ public partial class ElectricalWorkspaceWindow
         }
         catch (Exception exception)
         {
+            if (_leavingSession) return;
             WorkspaceStatusText.Text = $"中央庫自動同步失敗：{exception.Message}。可按「同步中央庫」重試。";
         }
     }
 
     private async Task<CentralArchiveSyncResult?> SynchronizeCentralArchiveAsync(bool recordMutation)
     {
+        if (_leavingSession) return null;
         if (string.IsNullOrWhiteSpace(_centralWorkbookPath) || !File.Exists(_centralWorkbookPath)) return null;
-
-        var archive = await new WorkbookComponentKnowledgeStore(_centralWorkbookPath).ListAsync();
+        var capture = _saveSession.Capture(_project);
+        var generation = _backgroundGeneration;
+        var archive = await Task.Run(() => new WorkbookComponentKnowledgeStore(_centralWorkbookPath).ListAsync());
+        if (!CanApplyBackgroundResult(capture, generation, false)) return null;
         TopologyCanvas.SetAvailableCableDefinitions(archive);
         archive = await new CentralArchiveImageSynchronizer().SynchronizeAsync(archive);
-        var preview = new CentralArchiveProjectSynchronizer().Synchronize(CloneForPreview(_project), archive);
+        if (!CanApplyBackgroundResult(capture, generation)) {
+            if (CanApplyBackgroundResult(capture, generation, false)) WorkspaceStatusText.Text = "同步期間專案已修改；請重試同步。";
+            return null;
+        }
+        var preview = new CentralArchiveProjectSynchronizer().Synchronize(capture.Snapshot, archive);
         var result = preview;
         if (preview.UpdatedInstances > 0)
         {
             if (recordMutation)
             {
                 await CheckpointMajorImportAsync("Before central archive project synchronization");
+                if (!CanApplyBackgroundResult(capture, generation)) return null;
                 RecordMutation("Synchronize project components from central archive");
             }
             result = new CentralArchiveProjectSynchronizer().Synchronize(_project, archive);
@@ -64,8 +75,12 @@ public partial class ElectricalWorkspaceWindow
 
         var sqlite = new SqliteComponentIrRepository(_databasePath);
         foreach (var component in archive)
+        {
+            if (!CanApplyBackgroundResult(capture, generation, false)) return null;
             await sqlite.SaveAsync(component);
+        }
 
+        if (!CanApplyBackgroundResult(capture, generation, false)) return null;
         RefreshAll();
         return result;
     }

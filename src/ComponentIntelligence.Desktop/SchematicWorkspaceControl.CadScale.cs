@@ -10,23 +10,19 @@ public partial class SchematicWorkspaceControl
     {
         CadScalePanel.Visibility = symbol?.Geometry is not null ? Visibility.Visible : Visibility.Collapsed;
         if (symbol?.Geometry is not { } geometry) return;
-        CadScaleText.Text = (SchematicSymbolPresentation.CadDisplayScale(symbol) * 100).ToString("0.###", CultureInfo.CurrentCulture);
+        CadScaleText.Text = (SchematicSymbolPresentation.CadDisplayScale(symbol) * 100).ToString("R", CultureInfo.CurrentCulture);
         CadSizeText.Text = $"原圖 {geometry.Width:0.###} x {geometry.Height:0.###} mm\n顯示 {symbol.Width:0.###} x {symbol.Height:0.###} mm";
         CadScaleText.IsEnabled = CadScaleApply.IsEnabled = CadScaleReset.IsEnabled = !symbol.Locked;
     }
 
     private void CadScaleApply_Click(object sender, RoutedEventArgs e)
     {
-        if (_selectionId is null) return;
-        if (!double.TryParse(CadScaleText.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var percent))
-        { Status.Text = "請輸入有效的 CAD 縮放百分比。"; return; }
-        Apply(p => _service.ScaleCadSymbol(p, _selectionId, percent / 100), "已調整 CAD 顯示縮放");
+        ApplyInspector();
     }
 
     private void CadScaleReset_Click(object sender, RoutedEventArgs e)
     {
-        if (_selectionId is not null)
-            Apply(p => _service.ScaleCadSymbol(p, _selectionId, 1), "已還原 CAD 顯示為 100%");
+        if (_selectionId is not null) { CadScaleText.Text = "100"; ApplyInspector(); }
     }
 
     private void PreviewSymbolResize()

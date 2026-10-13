@@ -26,7 +26,8 @@ public partial class SchematicWorkspaceControl
 
     private void FlushPointerPreview()
     {
-        if (_pendingPointerPreview is null && _dragVisualTransforms.Count == 0) return;
+        if (_pendingPointerPreview is null && _dragVisualTransforms.Count == 0 &&
+            !(_gestureStart is not null && _dragStart is not null && _pointer != _dragStart)) return;
         _pendingPointerPreview?.Abort(); _pendingPointerPreview = null;
         _lastPreviewPointer = _pointer;
         _finishingPointerPreview = true;

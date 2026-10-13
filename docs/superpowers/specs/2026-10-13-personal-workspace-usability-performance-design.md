@@ -1,12 +1,12 @@
 # Personal Electrical Workspace: Usability and Performance
 
-Status: written specification for user review; implementation has not started.
+Status: approved by the user and implemented; clean-source delivery verification in progress.
 Date: 2026-10-13
 Baseline: BK, commit `2b138072872db39729df870e28c2d335e7fb0b0b`.
 
 ## 中文核對摘要
 
-這一輪是整理你自己每天使用的電氣設計畫面，不整套重做。右側直接修改的方向已確認；以下完整範圍請再核對，尚未修改程式。
+這一輪是整理你自己每天使用的電氣設計畫面，不整套重做。使用者已核准本規格並要求開始修改；右側直接修改與下列範圍已實作，正在驗證交付版本。
 
 1. 畫圖區放大：左側 BOM／頁面能收合、調整寬度；上方保留常用工具，其他功能仍能找到，原快捷鍵保留。
 2. 點模塊、線或表格，右側顯示對應設定。一般欄位改完按 Enter 或「套用」，一次修改可一次復原；錯誤輸入不會寫進專案，也不會套到另一個物件。
@@ -18,7 +18,7 @@ Baseline: BK, commit `2b138072872db39729df870e28c2d335e7fb0b0b`.
 8. 效能先量測拖曳、拉線、放開滑鼠後的計算及記憶體，再修耗時處。已有的輕量預覽與快取保留；不先假定要換 GPU 或加記憶體，不更改電腦設定。
 9. 原有 BOM、接點編號、手動路徑、模塊版型、線材拓譜及 PDF 分組標示／跳頁功能都要保留。驗證使用測試資料，不操作正式視窗、專案、中央工作簿或原始 DWG。
 
-確認這份規格後才寫實作計畫。以下英文部分是供開發與測試使用的詳細約束。
+實作計畫已寫入同日期的 plans 文件。以下英文部分保留作為開發與測試約束。
 
 ## Intent and Agreement
 
@@ -31,7 +31,7 @@ Confirmed in conversation:
 - Keep complex cable topology editing in its existing large window.
 - No AO.
 
-The following is the proposed first-round scope, awaiting written-spec confirmation. That confirmation permits writing the implementation plan, not silently expanding to unrelated subsystems.
+The user approved this first-round scope and then requested implementation. The plan and inline execution stay within these boundaries.
 
 ## Approach
 
@@ -129,6 +129,6 @@ Measurement gate:
 - Independent review, fixes with focused regressions, full clean-source test suite, image/PDF inspection and a new sibling release bundle. Verify runtime/source hashes and launcher paths without starting the formal app.
 - User acceptance checks their actual drag/wire workflow; this must not be represented as completed by offscreen benchmarks.
 
-## Next Gate
+## Delivery Gate
 
-User reviews this specification. After confirmation, write the detailed implementation plan. Production implementation begins only after the plan/execution handoff required by the agreed workflow; approval of the right-side inspector alone does not authorize unreviewed changes to recovery or persistence behavior.
+Run the complete suite and offscreen regressions from the scoped source archive, verify runtime/source hashes, and deliver BL without launching or modifying the live application. Native drag/wire acceptance remains with the user, separate from processing benchmarks.

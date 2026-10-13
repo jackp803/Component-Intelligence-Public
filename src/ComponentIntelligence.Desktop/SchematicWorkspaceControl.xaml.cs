@@ -55,12 +55,13 @@ public partial class SchematicWorkspaceControl : UserControl
 
     public SchematicWorkspaceControl(Func<ElectricalProject> getProject, Action<ElectricalProject, string> commit,
         Func<Task<IReadOnlyList<ComponentIR>>> catalogProvider, Func<string, Task<Uri?>> imageResolver,
-        Action undo, Action redo, string? archiveRoot = null)
+        Action undo, Action redo, string? archiveRoot = null, ComponentIntelligence.Runtime.WorkspacePreferencesStore? preferences = null)
     {
         _getProject = getProject; _commit = commit; _catalogProvider = catalogProvider; _imageResolver = imageResolver;
         _undo = undo; _redo = redo;
         _archiveRoot = archiveRoot;
         InitializeComponent();
+        InitializeInspector(); InitializePanelPreferences(preferences);
         Loaded += async (_, _) =>
         {
             try { _catalog = await _catalogProvider(); FilterCatalog(); RefreshWorkspace(); }
@@ -86,7 +87,7 @@ public partial class SchematicWorkspaceControl : UserControl
 
     private bool Apply(Func<ElectricalProject, ElectricalProject> command, string label)
     {
-        try { var next = command(_getProject()); _commit(next, label); RefreshWorkspace();
+        try { var current = _getProject(); var next = command(current); if (!ReferenceEquals(next, current)) _commit(next, label); RefreshWorkspace();
             Status.Text = label + (_wireLabelWarnings.Count > 0 ? "\n" + string.Join("\n", _wireLabelWarnings.Values.Distinct()) : ""); return true; }
         catch (Exception e) { Status.Text = "未套用：" + e.Message; return false; }
     }
@@ -106,8 +107,8 @@ public partial class SchematicWorkspaceControl : UserControl
             {
                 canvas = new Canvas { Background = Brushes.White, Margin = new(12), Tag = page.PageId, Focusable = true };
                 var pageId = page.PageId;
-                canvas.PreviewMouseLeftButtonDown += (s, _) => { ActivatePage(pageId); Keyboard.Focus((Canvas)s); };
-                canvas.PreviewMouseRightButtonDown += (s, _) => { ActivatePage(pageId); Keyboard.Focus((Canvas)s); };
+                canvas.PreviewMouseLeftButtonDown += (s, e) => { if (!ResolveInspectorDraft()) { e.Handled = true; return; } ActivatePage(pageId); Keyboard.Focus((Canvas)s); };
+                canvas.PreviewMouseRightButtonDown += (s, e) => { if (!ResolveInspectorDraft()) { e.Handled = true; return; } ActivatePage(pageId); Keyboard.Focus((Canvas)s); };
                 canvas.MouseLeftButtonDown += Sheet_Down; canvas.MouseMove += Sheet_Move; canvas.MouseLeftButtonUp += Sheet_Up;
                 canvas.LostMouseCapture += Sheet_LostMouseCapture;
                 _pageCanvases.Add(pageId, canvas);
@@ -135,11 +136,12 @@ public partial class SchematicWorkspaceControl : UserControl
     private void AllPages_Click(object sender, RoutedEventArgs e)
     {
         if (!FinishPendingDraft()) return;
-        CancelGesture(); _allPages = AllPagesTool.IsChecked == true; Render(_getProject()); Sheet.BringIntoView();
+        CancelGesture(); _allPages = AllPagesTool.IsChecked == true; Render(_getProject()); Sheet.BringIntoView(); SchedulePanelPreferences();
     }
 
     private void RenderPage(ElectricalProject project, SchematicPage page)
     {
+        if (!_renderingOutput && _translationPrepared) ClearSymbolTranslation();
         Sheet.Children.Clear();
         if (!_renderingOutput) _wireStrokeTargets[page.PageId] = [];
         var doc = project.Schematic!;
@@ -685,17 +687,24 @@ public partial class SchematicWorkspaceControl : UserControl
     private void ClearPendingWire() { ClearWirePreview(); _wireStart = null; _wirePoints.Clear(); _wireWaypoints = 0; _resumeWireId = null; _resumeReversed = false; }
     public bool FinishPendingDraft()
     {
+        return ResolveInspectorDraft() && FinishPendingWireDraft();
+    }
+    public bool FinishDraftForSave() => ApplyInspector() && FinishPendingWireDraft();
+    private bool FinishPendingWireDraft()
+    {
         if (_wireStart is null || _wirePoints.Count < 2 || _pageId is null) return true;
         if (!Apply(p => SaveWire(p, _pageId, _wireStart, SchematicAttachment.Free(), _wirePoints.ToArray()), "未完成導線已保存")) return false;
         ClearPendingWire(); Render(_getProject()); return true;
     }
     private void RenderWirePreview()
     {
-        ClearWirePreview();
-        if (_wireStart is null) return;
+        if (_wireStart is null) { ClearWirePreview(); return; }
         var points = _pointer is null ? _wirePoints.ToList() : SchematicDraftRoute.Append(_wirePoints, _pointer);
-        var preview = Path(points, Brushes.DarkCyan, 1.5); preview.IsHitTestVisible = false; Sheet.Children.Add(preview);
-        _wirePreviewElement = preview; _wirePreviewOwner = Sheet;
+        if (_wirePreviewElement is null || _wirePreviewElement.Parent != Sheet) {
+            ClearWirePreview(); var preview = Path(points, Brushes.DarkCyan, 1.5); preview.IsHitTestVisible = false; Sheet.Children.Add(preview);
+            _wirePreviewElement = preview; _wirePreviewOwner = Sheet;
+        }
+        else _wirePreviewElement.Points = new PointCollection(points.Select(p => new Point(p.X * 3, p.Y * 3)));
     }
     private void Sheet_Down(object sender, MouseButtonEventArgs e)
     {
@@ -822,7 +831,7 @@ public partial class SchematicWorkspaceControl : UserControl
                     _gesturePreview = _service.MoveContinuationMarker(_gestureStart, marker.MarkerId,
                         new(marker.Position.X + _pointer.X - _dragStart.X, marker.Position.Y + _pointer.Y - _dragStart.Y));
                 }
-                if (_gesturePreview is not null) Render(_gesturePreview);
+                if (_gesturePreview is not null && !_finishingPointerPreview) Render(_gesturePreview);
             }
             catch (Exception error) { _gesturePreview = null; Status.Text = error.Message; }
         }
@@ -924,12 +933,13 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void UpdateSelection(ElectricalProject p)
     {
+        UpdateInspector(p);
         var s = p.Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId);
         var owner = s is null ? null : SchematicSymbolOwner.Resolve(p, s);
         var w = p.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
-        SelectionLabel.Text = s is null ? (w is not null ? "導線" : "") : SchematicSymbolPresentation.DisplayTitle(s, owner!);
-        ReferenceText.Text = owner?.Reference ?? "";
-        UpdateCadScaleSelection(s);
+        SelectionLabel.Text = s is not null ? SchematicSymbolPresentation.DisplayTitle(s, owner!) : w is not null ? "導線" :
+            SelectedCableDetail() is not null ? SelectedDetailPart() == SchematicCableDetailPart.Table ? "線材接法表" : "線材製作示意圖" :
+            p.Schematic?.Pages.SingleOrDefault(page => page.PageId == _pageId)?.Title ?? "尚無頁面";
         var coverage = s is null ? default : SchematicSymbolPresentation.ContactCoverage(s, owner!);
         SelectionState.Text = s is not null ? $"{(s.Locked ? "已鎖定" : "可編輯")}\n接點位置：{coverage.Confirmed} / {coverage.Total} 已確認" :
             w is not null ? $"{(w.Locked ? "已鎖定" : "可編輯")}\n{(w.ConnectionId is null ? "待接續" : "工程連線已建立")}" : "";
@@ -952,8 +962,7 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void Reference_Click(object sender, RoutedEventArgs e)
     {
-        var s = _getProject().Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId); var reference = ReferenceText.Text;
-        if (s is not null) Apply(p => _service.SetSymbolDetails(p, s.SymbolId, reference, s.Anchors), "已更新 Reference");
+        ApplyInspector();
     }
     private void Zoom_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
@@ -961,6 +970,7 @@ public partial class SchematicWorkspaceControl : UserControl
         SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue;
         UpdateWireZoom(e.NewValue);
         RelayoutWireLabels();
+        SchedulePanelPreferences();
     }
     private void Navigate_Click(object sender, RoutedEventArgs e)
     {

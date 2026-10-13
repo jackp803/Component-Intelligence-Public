@@ -213,7 +213,7 @@ public partial class SchematicWorkspaceControl
         var path = approvedPath;
         if (path is null)
         {
-            var picker = new Microsoft.Win32.OpenFileDialog { Filter = "CAD 圖面|*.dxf;*.dwg;*.dwt", CheckFileExists = true };
+            var picker = new Microsoft.Win32.OpenFileDialog { Filter = "CAD 圖面|*.dxf;*.dwg;*.dwt", CheckFileExists = true, InitialDirectory = DialogDirectory(true) };
             if (picker.ShowDialog(owner) != true) return null;
             path = picker.FileName;
         }
@@ -230,7 +230,7 @@ public partial class SchematicWorkspaceControl
             var asset = await new SchematicCadFileLoader().ReadAsync(path, factor);
             if (!asset.Complete)
                 MessageBox.Show(owner, string.Join("\n", asset.Diagnostics), "匯入有未支援項目；不可視為完整工程圖", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return (asset, path);
+            RememberDialogDirectory(path, true); return (asset, path);
         }
         catch (Exception error) { Status.Text = "匯入失敗：" + error.Message; return null; }
         finally { IsEnabled = true; }

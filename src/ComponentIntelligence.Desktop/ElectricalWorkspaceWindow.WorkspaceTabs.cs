@@ -19,7 +19,7 @@ public partial class ElectricalWorkspaceWindow
         TopologyCanvas.ComponentProductPageResolver ??= ResolveComponentProductPageAsync;
         _schematicWorkspace = new SchematicWorkspaceControl(() => _project, (project, description) =>
         {
-            EnsureDrawingRevisionService().CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, description).GetAwaiter().GetResult();
+            QueueCheckpoint(ProjectRevisionTrigger.TopologyChange, description);
             RecordMutation(description);
             _project = project;
             UpdateHistoryButtons();
@@ -27,16 +27,17 @@ public partial class ElectricalWorkspaceWindow
         }, async () => System.IO.File.Exists(_centralWorkbookPath)
             ? await new WorkbookComponentKnowledgeStore(_centralWorkbookPath!).ListAsync()
             : await new ComponentIrCatalogReader(_databasePath).ListAsync(),
-            ResolveComponentImageAsync, () => Undo_Click(this, new RoutedEventArgs()), () => Redo_Click(this, new RoutedEventArgs()), _centralWorkbookPath);
+            ResolveComponentImageAsync, () => Undo_Click(this, new RoutedEventArgs()), () => Redo_Click(this, new RoutedEventArgs()), _centralWorkbookPath, _workspacePreferences);
         SchematicTab.Content = _schematicWorkspace;
         _schematicWorkspace.SaveRequested += (_, _) => SaveProject_Click(this, new RoutedEventArgs());
+        _schematicWorkspace.PendingEditsChanged += (_, _) => ScheduleStateCheck();
         _schematicWorkspace.SaveOutputSnapshotAsync = async () =>
         {
             IsEnabled = false;
             try
             {
                 if (!await SaveProjectAsync()) return null;
-                return await _repository.GetAsync(_project.ProjectId);
+                return _lastSavedSnapshot is null ? null : ProjectSaveSession.Clone(_lastSavedSnapshot);
             }
             finally { IsEnabled = true; }
         };

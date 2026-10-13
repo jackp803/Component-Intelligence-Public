@@ -40,13 +40,14 @@ public partial class SchematicWorkspaceControl
                 (warnings.Length > 12 ? $"\n其餘 {warnings.Length - 12} 項將列入報告。" : "") + "\n\n仍要匯出草稿？",
                 "匯出 DXF 草稿", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
             var dialog = new SaveFileDialog { Title = "匯出 DXF 草稿包", Filter = "DXF 草稿包 (*.zip)|*.zip",
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                InitialDirectory = DialogDirectory(false),
                 FileName = "schematic-draft-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".zip", AddExtension = true };
             if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
             // CreateNew preserves an existing output even when a save dialog offered replacement.
             using (var stream = new FileStream(dialog.FileName, FileMode.CreateNew, FileAccess.Write))
                 exporter.WritePackage(stream, project, images);
             Status.Text = "已匯出 DXF 草稿（未驗證）：" + dialog.FileName;
+            RememberDialogDirectory(dialog.FileName, false);
         }
         catch (Exception error) { Status.Text = "DXF 草稿匯出失敗：" + error.Message; }
         finally { _exporting = false; }

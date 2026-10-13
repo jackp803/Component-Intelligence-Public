@@ -12,6 +12,8 @@ public partial class SchematicWorkspaceControl
 
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
+        InspectorPreviewKeyDown(sender, e);
+        if (e.Handled) return;
         var key = e.Key == Key.System ? e.SystemKey : e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
         var gesture = string.Join("+", new[]
         {
@@ -60,7 +62,7 @@ public partial class SchematicWorkspaceControl
             case "Rename": RenamePage_Click(this, args); break;
             case "ApplyReference": Reference_Click(this, args); break;
             case "Search": Search.Focus(); Search.SelectAll(); break;
-            case "Save": if (FinishPendingDraft()) SaveRequested?.Invoke(this, EventArgs.Empty); break;
+            case "Save": if (FinishDraftForSave()) SaveRequested?.Invoke(this, EventArgs.Empty); break;
             case "Undo": CancelCommand(); _undo(); RefreshWorkspace(); break;
             case "Redo": CancelCommand(); _redo(); RefreshWorkspace(); break;
             case "ZoomIn": Zoom.Value = Math.Min(Zoom.Maximum, Zoom.Value + .1); break;
@@ -154,8 +156,6 @@ public partial class SchematicWorkspaceControl
     {
         var wire = _getProject().Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
         if (wire is null) { Status.Text = "請先選取導線"; return; }
-        var dialog = new SchematicWireSettingsDialog(_getProject(), wire.WireId,
-            edit => Apply(edit, "已更新導線線號／規格")) { Owner = Window.GetWindow(this) };
-        dialog.ShowDialog();
+        UpdateInspector(_getProject()); _inspectorFields["sizeMode"].Focus();
     }
 }

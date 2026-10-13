@@ -1,32 +1,28 @@
 using ComponentIntelligence.Electrical.Domain;
-using System.Globalization;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
-public sealed record SchematicCableLabel(string Text, SchematicPoint Center, int Rotation, double AvailableLength);
+public sealed record SchematicCableLabel(string Text, SchematicPoint Center, int Rotation, double AvailableLength)
+{
+    public string FullText { get; init; } = Text;
+    public bool IsOrdinaryWire { get; init; }
+}
 
 public static class SchematicCableLabelPresentation
 {
-    public static SchematicCableLabel? Resolve(ElectricalProject project, SchematicWire wire, SchematicCrossingResult? crossings = null)
+    public static SchematicCableLabel? Resolve(ElectricalProject project, SchematicWire wire, SchematicCrossingResult? crossings = null,
+        SchematicWireLegendEntry? preparedDetail = null)
     {
         var connection = project.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
         string? text;
-        if (connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null)
+        string? fullText = null;
+        var ordinary = connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null;
+        if (ordinary)
         {
             if (string.IsNullOrWhiteSpace(wire.Designation)) return null;
-            var specification = SchematicWirePresentation.Resolve(project, wire);
-            var gauge = specification.Awg is int awg ? (specification.AwgIsApproximate ? "約 AWG " : "AWG ") + awg : "AWG 待設定";
-            var area = specification.AreaMm2 is double value ? value.ToString("0.###", CultureInfo.InvariantCulture) + " mm²" : "截面積待設定";
-            var ends = SchematicWireContacts.Ends(project, wire);
-            var functions = ends.Count < 2 ? [] : ends.Select(e => e.Function).Where(f => f.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase);
-            var evidence = SchematicWireEvidence.Resolve(project, wire);
-            var function = string.Join(" → ", functions);
-            var contacts = ends.Count < 2 ? "" : string.Join(" → ", ends.Select(e => e.Caption));
-            var color = evidence.ColorConflict ? "線色待確認" : evidence.PhysicalColor;
-            text = string.Join(" · ", new[] { function, contacts }.Where(v => !string.IsNullOrWhiteSpace(v))) + "\n" +
-                string.Join(" | ", new[] { wire.Designation, color, gauge, area }.Where(v => !string.IsNullOrWhiteSpace(v))) +
-                (wire.SizingProposal is not null ? " (待核對)" : "");
-            text = text.Trim();
+            var detail = preparedDetail ?? SchematicWireLegendPresentation.Entry(project, wire);
+            text = detail.Caption;
+            fullText = detail.FullText;
         }
         else
         {
@@ -43,7 +39,8 @@ public static class SchematicCableLabelPresentation
         var obstacles = crossings.Junctions.Concat(crossings.Crossovers.Select(c => c.Position))
             .Concat(crossings.Conflicts.Select(c => c.Position)).ToArray();
         var span = ClearSpans(wire, obstacles).OrderByDescending(s => s.Length).FirstOrDefault();
-        return span.Length > 4 ? new(text.Trim(), span.Center, span.Rotation, span.Length - 4) : null;
+        return span.Length > 4 ? new(text.Trim(), span.Center, span.Rotation, span.Length - 4)
+            { FullText = fullText ?? text.Trim(), IsOrdinaryWire = ordinary } : null;
     }
 
     private static IEnumerable<(SchematicPoint Center, int Rotation, double Length)> ClearSpans(SchematicWire wire,

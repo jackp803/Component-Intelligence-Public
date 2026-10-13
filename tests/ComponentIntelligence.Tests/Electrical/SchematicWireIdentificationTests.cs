@@ -40,9 +40,9 @@ public sealed class SchematicWireIdentificationTests
         var p = Draw(Fixture(.2));
         var caption = SchematicCableLabelPresentation.Resolve(p, p.Schematic!.Wires[0]);
         Assert.NotNull(caption);
-        Assert.Contains("IOLink1_X1_1", caption.Text);
-        Assert.Contains("mm", caption.Text);
-        Assert.Contains("AWG", caption.Text);
+        Assert.Contains("IOLink1_X1_1", caption.FullText);
+        Assert.Contains("mm", caption.FullText);
+        Assert.Contains("AWG", caption.FullText);
     }
 
     [Fact]

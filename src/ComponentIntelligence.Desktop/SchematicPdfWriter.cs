@@ -36,6 +36,11 @@ public static class SchematicPdfWriter
                     sectionDestinations.TryAdd(section.CableInstanceId, sheet.PageId); output.Add(new(sheet, tile, section));
                 }
             }
+            foreach (var source in plan.MainPages.Select((page, index) => (page, index)))
+            foreach (var tile in SchematicWireDetailsRenderer.Plan(SchematicWireLegendPresentation.Entries(plan.MainProject, source.page.PageId), source.page, source.index + 1))
+                output.Add(new(source.page with { PageId = "wire-details-" + Guid.NewGuid().ToString("N"),
+                    Title = "導線明細 / 工程圖 " + (source.index + 1), CableDetail = null, InlineCableDetails = [],
+                    TitleBlockContentOverride = "導線明細 / 工程圖 " + (source.index + 1) }, null, null) { WireDetails = tile });
             var snapshot = plan.MainProject;
             snapshot.Schematic!.Pages.Clear(); snapshot.Schematic.Pages.AddRange(output.Select(o => o.Sheet));
             var indices = output.Select((page, index) => (page.Sheet.PageId, index)).ToDictionary(p => p.PageId, p => p.index, StringComparer.Ordinal);
@@ -49,6 +54,7 @@ public static class SchematicPdfWriter
                 if (item.Tile is { } tile && item.Section is { } section)
                     bitmap = CableWiringAppendixRenderer.Render(snapshot.Cables.Single(c => c.CableInstanceId == section.CableInstanceId), sheet, tile,
                         CableWiringAppendixRenderer.ReturnLinks(tile, section.SourceLinks, indices, sheet.Margin), bitmap);
+                if (item.WireDetails is { } details) bitmap = SchematicWireDetailsRenderer.Render(sheet, details, bitmap);
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
                 using var stream = new MemoryStream(); encoder.Save(stream); stream.Position = 0;
                 using var image = XImage.FromStream(stream);
@@ -78,6 +84,13 @@ public static class SchematicPdfWriter
             foreach (var item in output.Where(p => p.Tile is not null))
             foreach (var link in CableWiringAppendixRenderer.ReturnLinks(item.Tile!, item.Section!.SourceLinks, indices, item.Sheet.Margin))
                 AddLink(indices[item.Sheet.PageId], link.Bounds, indices[link.PageId], link.Destination);
+            foreach (var item in output.Where(p => p.WireDetails is not null))
+            {
+                var tile = item.WireDetails!;
+                AddLink(indices[item.Sheet.PageId], new(item.Sheet.Margin + 4,
+                    item.Sheet.Height - item.Sheet.Margin - (item.Sheet.TemplateGeometry is null ? 12 : 66), 55, 7),
+                    indices[tile.SourcePageId], new(item.Sheet.Margin, item.Sheet.Margin));
+            }
             void AddLink(int from, SchematicGridBounds bounds, int to, SchematicPoint destination)
             {
                 const double mm = 72d / 25.4;
@@ -96,5 +109,8 @@ public static class SchematicPdfWriter
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
-    private sealed record OutputPage(SchematicPage Sheet, CableWiringAppendixTile? Tile, CableWiringAppendixSection? Section);
+    private sealed record OutputPage(SchematicPage Sheet, CableWiringAppendixTile? Tile, CableWiringAppendixSection? Section)
+    {
+        public SchematicWireDetailsTile? WireDetails { get; init; }
+    }
 }

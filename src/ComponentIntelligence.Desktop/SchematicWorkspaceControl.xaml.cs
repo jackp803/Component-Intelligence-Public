@@ -150,6 +150,7 @@ public partial class SchematicWorkspaceControl : UserControl
             RenderTitleBlock(project, page);
         }
         DrawFrame(page, doc.Pages.IndexOf(page) + 1, project.Name);
+        _renderCableDetailBounds.Remove(page.PageId);
         foreach (var binding in page.InlineCableDetails.Concat(page.CableDetail is null ? [] : new[] { page.CableDetail }))
         {
             SchematicCableDetailPresentation? detailView = null;
@@ -160,6 +161,16 @@ public partial class SchematicWorkspaceControl : UserControl
                 detailView = detail;
                 var geometry = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height, Primitives = detail.Primitives });
                 geometry.IsHitTestVisible = false; Sheet.Children.Add(geometry);
+                if (!_renderCableDetailBounds.TryGetValue(page.PageId, out var bounds))
+                    _renderCableDetailBounds[page.PageId] = bounds = [];
+                if (detail.PartBounds.Count > 0)
+                    foreach (var part in detail.PartBounds.Values)
+                    { var box = new Rect(part.X * 3, part.Y * 3, part.Width * 3, part.Height * 3); box.Inflate(3, 3); bounds.Add(box); }
+                else
+                {
+                    var ink = CanvasInkBounds(geometry);
+                    if (!ink.IsEmpty) { ink.Inflate(3, 3); bounds.Add(ink); }
+                }
             }
             catch (InvalidOperationException error)
             {

@@ -47,6 +47,7 @@ public partial class SchematicWorkspaceControl
                 if (target.WireId == wire.WireId)
                     Hide(target.Shape);
             foreach (var label in Sheet.Children.OfType<TextBlock>().Where(t => Equals(t.Tag, "wire-label:" + wire.WireId))) Hide(label);
+            foreach (var tick in Sheet.Children.OfType<FrameworkElement>().Where(t => Equals(t.Tag, "wire-caption-tick:" + wire.WireId))) Hide(tick);
             var points = wire.Points.ToList();
             if (wire.Start.SymbolId == _dragSymbol) points = TranslateEndpoint(points, dx, dy, true);
             if (wire.End.SymbolId == _dragSymbol) points = TranslateEndpoint(points, dx, dy, false);

@@ -11,8 +11,10 @@ namespace ComponentIntelligence.Desktop;
 public partial class SchematicWorkspaceControl
 {
     private readonly Dictionary<string, SchematicCableLabel> _renderWireLabels = new(StringComparer.Ordinal);
+    private Dictionary<string, SchematicWireLegendEntry> _renderWireDetails = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Symbol, string Pin), string> _renderPinLabels = new();
     private readonly Dictionary<string, string> _wireLabelWarnings = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<Rect>> _renderCableDetailBounds = new(StringComparer.Ordinal);
 
     private void RelayoutWireLabels()
     {
@@ -25,7 +27,7 @@ public partial class SchematicWorkspaceControl
             try
             {
                 foreach (var element in canvas.Children.OfType<FrameworkElement>().Where(e => e.Tag is string tag &&
-                    (tag.StartsWith("wire-label:") || tag.StartsWith("wire-leader:") || tag == "wire-label-warning")).ToArray())
+                    (tag.StartsWith("wire-label:") || tag.StartsWith("wire-leader:") || tag.StartsWith("wire-caption-tick:") || tag is "wire-label-warning" or "wire-spec-legend")).ToArray())
                     canvas.Children.Remove(element);
                 canvas.Height = page.Height * 3;
                 var crossings = SchematicCrossingService.Analyze(project.Schematic!.Wires.Where(w => w.PageId == page.PageId).ToArray());
@@ -39,9 +41,10 @@ public partial class SchematicWorkspaceControl
     private void PrepareWireLabels(ElectricalProject project, SchematicPage page, SchematicCrossingResult crossings)
     {
         _renderWireLabels.Clear(); _renderPinLabels.Clear();
+        _renderWireDetails = SchematicWireLegendPresentation.Entries(project, page.PageId).ToDictionary(e => e.WireId, StringComparer.Ordinal);
         foreach (var wire in project.Schematic!.Wires.Where(w => w.PageId == page.PageId))
         {
-            var caption = SchematicCableLabelPresentation.Resolve(project, wire, crossings);
+            var caption = SchematicCableLabelPresentation.Resolve(project, wire, crossings, _renderWireDetails.GetValueOrDefault(wire.WireId));
             if (caption is null) continue;
             _renderWireLabels.Add(wire.WireId, caption);
             if (SchematicWireContacts.Ends(project, wire).Count < 2) continue;
@@ -61,6 +64,10 @@ public partial class SchematicWorkspaceControl
             var body = SchematicPortPresentation.GenericBodyBounds(doc, s, SchematicSymbolOwner.Resolve(project, s));
             var box = new Rect(body.X * 3, body.Y * 3, body.Width * 3, body.Height * 3); box.Inflate(6, 6); return box;
         }).ToList();
+        // Keep notes outside the company title block and inline manufacturing details.
+        if (page.TemplateGeometry is not null)
+            occupied.Add(new Rect(Math.Max(page.Margin, page.Width - 185) * 3, (page.Height - 65) * 3, 185 * 3, 65 * 3));
+        occupied.AddRange(_renderCableDetailBounds.GetValueOrDefault(page.PageId) ?? []);
         foreach (var text in Sheet.Children.OfType<TextBlock>())
         {
             text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -92,30 +99,58 @@ public partial class SchematicWorkspaceControl
         {
             if (!_renderWireLabels.TryGetValue(wire.WireId, out var caption)) continue;
             var label = new TextBlock { Text = caption.Text, FontSize = 10.5, Foreground = Brushes.Black,
-                Background = Brushes.White, Padding = new Thickness(2, 0, 2, 0), TextWrapping = TextWrapping.Wrap,
+                Background = Brushes.White, Padding = new Thickness(2, 0, 2, 0), TextWrapping = caption.IsOrdinaryWire ? TextWrapping.NoWrap : TextWrapping.Wrap,
                 MaxWidth = Math.Min(540, (page.Width - 2 * page.Margin) * 3), Tag = "wire-label:" + wire.WireId,
                 IsHitTestVisible = !_renderingOutput && !_wireMode, Cursor = Cursors.SizeAll,
-                ToolTip = caption.Text + "\n" + (wire.SizingProposal?.Review ?? "") };
-            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            var size = label.DesiredSize;
+                ToolTip = caption.FullText };
+            var vertical = caption.IsOrdinaryWire && caption.Rotation == -90;
+            var size = new Size();
             var margin = page.Margin * 3;
-            var gap = Math.Max(5, paddings[wire.WireId] + 1);
-            var desired = wire.LabelPosition is { } saved ? new Point(saved.X * 3, saved.Y * 3) :
-                new Point(caption.Center.X * 3, caption.Center.Y * 3 - size.Height / 2 - gap);
+            var gap = Math.Max(4, paddings[wire.WireId] + .5);
+            var desired = new Point();
             Rect At(Point p) => new(p.X - size.Width / 2, p.Y - size.Height / 2, size.Width, size.Height);
             bool Fits(Rect r) => r.Left >= margin && r.Top >= margin && r.Right <= page.Width * 3 - margin &&
                 r.Bottom <= page.Height * 3 - margin && !occupied.Any(o => o.IntersectsWith(r)) && !wireLines.Any(o => o.IntersectsWith(r));
             Rect? chosen = null;
-            if (Fits(At(desired))) chosen = At(desired);
-            if (chosen is null && wire.LabelPosition is null)
-                for (var x = 0d; x <= caption.AvailableLength * 1.5 && chosen is null; x += 18)
-                foreach (var offset in new[] { x, -x })
-                foreach (var side in new[] { -1, 1 })
+            bool TryLocal(int preferredSide)
+            {
+            foreach (var font in caption.IsOrdinaryWire ? new[] { 10.5, 8.5 } : new[] { 10.5 })
+            {
+                label.FontSize = font;
+                label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                size = vertical ? new(label.DesiredSize.Height, label.DesiredSize.Width) : label.DesiredSize;
+                var across = vertical ? size.Width : size.Height;
+                var along = vertical ? size.Height : size.Width;
+                var maximumOffset = Math.Max(0, (caption.AvailableLength * 3 - along) / 2);
+                var origin = new Point(caption.Center.X * 3, caption.Center.Y * 3);
+                desired = vertical ? new(origin.X + preferredSide * (across / 2 + gap), origin.Y) :
+                    new(origin.X, origin.Y + preferredSide * (across / 2 + gap));
+                if (wire.LabelPosition is { } saved)
                 {
-                    var point = new Point(caption.Center.X * 3 + offset, caption.Center.Y * 3 + side * (size.Height / 2 + gap));
-                    if (Fits(At(point))) { chosen = At(point); break; }
+                    var savedPoint = new Point(saved.X * 3, saved.Y * 3);
+                    var distance = vertical ? Math.Abs(savedPoint.X - origin.X) : Math.Abs(savedPoint.Y - origin.Y);
+                    var offset = vertical ? Math.Abs(savedPoint.Y - origin.Y) : Math.Abs(savedPoint.X - origin.X);
+                    var sameSide = vertical ? Math.Sign(savedPoint.X - origin.X) == preferredSide : Math.Sign(savedPoint.Y - origin.Y) == preferredSide;
+                    if (!caption.IsOrdinaryWire || sameSide && distance <= across / 2 + gap + 2 && offset <= maximumOffset)
+                        desired = savedPoint;
                 }
-            if (chosen is null)
+                if (Fits(At(desired)) && (!caption.IsOrdinaryWire || along <= caption.AvailableLength * 3)) chosen = At(desired);
+                if (chosen is null && (!caption.IsOrdinaryWire || along <= caption.AvailableLength * 3))
+                    for (var step = 0d; step <= maximumOffset && chosen is null; step += 18)
+                    foreach (var offset in new[] { step, -step })
+                    foreach (var side in caption.IsOrdinaryWire ? new[] { preferredSide } : new[] { -1, 1 })
+                    {
+                        var point = vertical ? new Point(origin.X + side * (across / 2 + gap), origin.Y + offset) :
+                            new Point(origin.X + offset, origin.Y + side * (across / 2 + gap));
+                        if (Fits(At(point))) { chosen = At(point); break; }
+                    }
+                if (chosen is not null) break;
+            }
+            return chosen is not null;
+            }
+            TryLocal(-1);
+            var adjacentFallback = chosen is null && caption.IsOrdinaryWire && TryLocal(1);
+            if (chosen is null && !caption.IsOrdinaryWire)
             {
                 for (var radius = 14d; radius <= Math.Max(page.Width, page.Height) * 3 && chosen is null; radius += 14)
                 for (var x = -radius; x <= radius && chosen is null; x += 24)
@@ -128,13 +163,21 @@ public partial class SchematicWorkspaceControl
             if (chosen is not { } box)
             {
                 if (_renderingOutput) throw new InvalidOperationException("導線標籤沒有足夠空間，請拉開模塊或移到其他頁面。");
-                warnings.Add(caption.Text);
+                warnings.Add(caption.FullText);
                 continue;
             }
             var center = new Point(box.X + box.Width / 2, box.Y + box.Height / 2);
+            if (adjacentFallback)
+            {
+                var tick = new Line { X1 = vertical ? caption.Center.X * 3 : center.X,
+                    Y1 = vertical ? center.Y : caption.Center.Y * 3,
+                    X2 = vertical ? box.Left : center.X, Y2 = vertical ? center.Y : box.Top,
+                    Stroke = Brushes.DarkCyan, StrokeThickness = .8, IsHitTestVisible = false, Tag = "wire-caption-tick:" + wire.WireId };
+                Sheet.Children.Add(tick);
+            }
             var onWire = new Point(caption.Center.X * 3, caption.Center.Y * 3);
             var endpoint = new Point(Math.Clamp(onWire.X, box.Left, box.Right), Math.Clamp(onWire.Y, box.Top, box.Bottom));
-            if ((endpoint - onWire).Length > 6)
+            if (!caption.IsOrdinaryWire && (endpoint - onWire).Length > 6)
             {
                 var color = (Brush)new BrushConverter().ConvertFromString(SchematicWireEvidence.Resolve(project, wire).ColorHex)!;
                 if (color.ToString() == "#FFFFFFFF") color = Brushes.DimGray;
@@ -143,7 +186,8 @@ public partial class SchematicWorkspaceControl
                     Tag = "wire-leader:" + wire.WireId };
                 Panel.SetZIndex(leader, -1); Sheet.Children.Add(leader);
             }
-            Canvas.SetLeft(label, box.X); Canvas.SetTop(label, box.Y); Sheet.Children.Add(label);
+            if (vertical) label.RenderTransform = new RotateTransform(-90);
+            Canvas.SetLeft(label, box.X); Canvas.SetTop(label, vertical ? box.Bottom : box.Y); Sheet.Children.Add(label);
             var blocked = box; blocked.Inflate(4, 4); occupied.Add(blocked);
             if (!_renderingOutput) label.MouseLeftButtonDown += (_, e) =>
             {
@@ -151,6 +195,30 @@ public partial class SchematicWorkspaceControl
                 _selectionId = wire.WireId; BeginGesture(e); _dragWireLabel = wire.WireId;
                 _dragWireLabelOrigin = new(center.X / 3, center.Y / 3); e.Handled = true;
             };
+        }
+        var groups = SchematicWireLegendPresentation.Groups(_renderWireDetails.Values);
+        if (groups.Count > 0)
+        {
+            var legend = new TextBlock { Text = string.Join("\n", groups.Select(g => g.Text)), FontSize = 10.5,
+                Foreground = Brushes.Black, Background = Brushes.White, Padding = new Thickness(4),
+                TextWrapping = TextWrapping.Wrap, Width = Math.Min(650, (page.Width - 2 * page.Margin) * 3),
+                Tag = "wire-spec-legend", IsHitTestVisible = false };
+            legend.Measure(new Size(legend.Width, double.PositiveInfinity));
+            Rect? placement = null;
+            var margin = page.Margin * 3;
+            for (var y = margin + 24; y + legend.DesiredSize.Height <= page.Height * 3 - margin && placement is null; y += 12)
+            for (var x = page.Width * 3 - margin - legend.DesiredSize.Width; x >= margin && placement is null; x -= 18)
+            {
+                var candidate = new Rect(x, y, legend.DesiredSize.Width, legend.DesiredSize.Height);
+                if (!occupied.Any(o => o.IntersectsWith(candidate)) && !wireLines.Any(o => o.IntersectsWith(candidate))) placement = candidate;
+            }
+            if (placement is { } box)
+            { Canvas.SetLeft(legend, box.X); Canvas.SetTop(legend, box.Y); Sheet.Children.Add(legend); }
+            else
+            {
+                if (_renderingOutput) throw new InvalidOperationException("導線規格標示沒有足夠空間，請拉開模塊或移到其他頁面。");
+                warnings.Add(legend.Text);
+            }
         }
         if (warnings.Count > 0)
         {

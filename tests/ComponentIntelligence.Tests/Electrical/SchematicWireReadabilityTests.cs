@@ -107,10 +107,10 @@ public sealed class SchematicWireReadabilityTests
         p.Components[1].Ports[0].Pins[0].Function = "GND";
         p = SchematicWireIdentificationTests.Draw(p);
         var label = SchematicCableLabelPresentation.Resolve(p, p.Schematic!.Wires.Single())!;
-        Assert.Contains("COM", label.Text);
+        Assert.Contains("COM", label.FullText);
         Assert.Contains("GND", label.Text);
-        Assert.Contains("black", label.Text);
-        Assert.Contains("AWG", label.Text);
+        Assert.Contains("black", label.FullText);
+        Assert.Contains("AWG", label.FullText);
     }
 
     [Theory]

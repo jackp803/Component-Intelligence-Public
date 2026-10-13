@@ -49,6 +49,13 @@ internal static partial class Program
         Require(sheet.Children.OfType<TextBlock>().Any(t => t.Text == "P1 / 6 Feedback / orange"), "Unconnected pin lost its full function label.");
         var labels = sheet.Children.OfType<TextBlock>().Where(t => t.Tag is string tag && tag.StartsWith("wire-label:")).ToArray();
         Require(labels.Length == 5, "Every connected wire needs exactly one combined label.");
+        Require(labels.All(t => !t.Text.Contains("AWG") && !t.Text.Contains('\n') && t.Text.Length < 40),
+            "Wire captions still repeat sizing or full remote descriptions.");
+        var legend = sheet.Children.OfType<TextBlock>().SingleOrDefault(t => Equals(t.Tag, "wire-spec-legend"));
+        Require(legend is not null && legend.Text.Split("AWG").Length - 1 == 2,
+            "Two identical-size power wires and three unknown wires need exactly two group specifications.");
+        Require(!sheet.Children.OfType<FrameworkElement>().Any(t => t.Tag is string tag && tag.StartsWith("wire-leader:")),
+            "Ordinary wire labels still create remote dashed leaders.");
         var boxes = labels.Select(t => new Rect(Canvas.GetLeft(t), Canvas.GetTop(t), t.DesiredSize.Width, t.DesiredSize.Height)).ToArray();
         foreach (var label in labels)
         {
@@ -114,6 +121,10 @@ internal static partial class Program
         using (var stream = File.Create(Path.Combine(output, "wire-readability.png"))) encoder.Save(stream);
         var count = SchematicPdfWriter.Write(p, Path.Combine(output, "wire-readability.pdf"), (project, page) =>
             (BitmapSource)type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [project, page])!);
+        Require(count == 2, "PDF must retain one engineering page and one complete wire-details appendix.");
+        using (var pdf = PdfSharp.Pdf.IO.PdfReader.Open(Path.Combine(output, "wire-readability.pdf"), PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
+            Require(pdf.Pages[1].Annotations.Count == 1, "Wire details appendix is missing its engineering-page return link.");
+        CompactWireStressProof(p, output);
         var first = p.Schematic!.Wires[0];
         p = service.DeleteWire(p, first.WireId); render.Invoke(workspace, [p]);
         Require(sheet.Children.OfType<TextBlock>().Any(t => t.Text == "P1 / 1 COM / black"), "Deleting the wire failed to restore separate COM label.");

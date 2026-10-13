@@ -2,7 +2,10 @@ using ComponentIntelligence.Electrical.Domain;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
-public sealed record SchematicWireContact(string Caption, ComponentPin? Pin, string Function);
+public sealed record SchematicWireContact(string Caption, ComponentPin? Pin, string Function)
+{
+    public string ShortFunction { get; init; } = "";
+}
 
 public static class SchematicWireContacts
 {
@@ -52,7 +55,11 @@ public static class SchematicWireContacts
         if (string.IsNullOrWhiteSpace(reference)) reference = port.Name;
         var function = pin is null ? "" : WithoutColor(pin.Function);
         if (function.Length == 0 && pin is not null) function = WithoutColor(pin.PinName);
-        return new(reference + "/" + port.Name + (pin is null ? "" : "." + pin.PinNumber), pin, function);
+        var shortFunction = WithoutColor(pin?.PinName);
+        if (shortFunction.Length == 0) shortFunction = function;
+        if (shortFunction.Length > 32 || shortFunction.Contains('\n')) shortFunction = "功能見明細";
+        return new(reference + "/" + port.Name + (pin is null ? "" : "." + pin.PinNumber), pin, function)
+        { ShortFunction = shortFunction };
     }
 
     public static IReadOnlyList<SchematicWireContact> Ends(ElectricalProject project, SchematicWire wire)

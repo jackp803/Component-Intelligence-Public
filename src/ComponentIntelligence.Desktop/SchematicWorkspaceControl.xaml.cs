@@ -27,6 +27,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private bool _refreshing, _wireMode, _placeMode, _editModuleMode;
     private SchematicAttachment? _wireStart;
     private List<SchematicPoint> _wirePoints = [];
+    private int _wireWaypoints;
     private SchematicPoint? _pointer;
     private ElectricalProject? _gestureStart, _gesturePreview;
     private SchematicPoint? _dragStart;
@@ -39,6 +40,8 @@ public partial class SchematicWorkspaceControl : UserControl
     private int? _dragVertex;
     private int? _dragSegment;
     private string? _dragMarker;
+    private string? _dragWireLabel;
+    private SchematicPoint? _dragWireLabelOrigin;
     private string? _resumeWireId;
     private bool _resumeReversed;
     private readonly Dictionary<string, Canvas> _pageCanvases = new(StringComparer.Ordinal);
@@ -83,13 +86,17 @@ public partial class SchematicWorkspaceControl : UserControl
 
     private bool Apply(Func<ElectricalProject, ElectricalProject> command, string label)
     {
-        try { var next = command(_getProject()); _commit(next, label); RefreshWorkspace(); Status.Text = label; return true; }
+        try { var next = command(_getProject()); _commit(next, label); RefreshWorkspace();
+            Status.Text = label + (_wireLabelWarnings.Count > 0 ? "\n" + string.Join("\n", _wireLabelWarnings.Values.Distinct()) : ""); return true; }
         catch (Exception e) { Status.Text = "未套用：" + e.Message; return false; }
     }
 
     private void Render(ElectricalProject project)
     {
         var pages = project.Schematic?.Pages ?? [];
+        _wireLabelWarnings.Clear();
+        foreach (var id in _symbolVisuals.Keys.Where(id => project.Schematic?.Symbols.All(s => s.SymbolId != id) != false).ToArray())
+            _symbolVisuals.Remove(id);
         foreach (var id in _pageCanvases.Keys.Where(id => pages.All(p => p.PageId != id)).ToArray())
         { PageHost.Children.Remove(_pageCanvases[id]); _pageCanvases.Remove(id); _wireStrokeTargets.Remove(id); }
         for (var index = 0; index < pages.Count; index++)
@@ -163,6 +170,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 RenderDetailHandles(project, page, binding, detailView);
         }
         var crossings = SchematicCrossingService.Analyze(doc.Wires.Where(w => w.PageId == page.PageId).ToArray());
+        PrepareWireLabels(project, page, crossings);
         foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))
         {
             var specification = SchematicWirePresentation.Resolve(project, wire);
@@ -172,7 +180,7 @@ public partial class SchematicWorkspaceControl : UserControl
             var physicalWeight = SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm;
             var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
             var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
-            TrackWireStrokes(page.PageId, line, physicalWeight, wire.WireId == _selectionId);
+            TrackWireStrokes(page.PageId, line, physicalWeight, wire.WireId == _selectionId, wireId: wire.WireId);
             line.ToolTip = (_wireMode ? "點選既有導線，建立明確分支" : wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
             line.ToolTip += "\n" + wire.Designation + (wire.SizingProposal is { } proposal ? "\n線徑待核對：" + proposal.Review : "");
             line.MouseLeftButtonDown += (_, e) =>
@@ -180,19 +188,19 @@ public partial class SchematicWorkspaceControl : UserControl
                 if (_wireMode) return;
                 _selectionId = wire.WireId; Render(_getProject()); e.Handled = true; Focus();
             };
-            if (evidence.Category == "DC_NEGATIVE" && wire.WireId != _selectionId)
+            if (evidence.NeedsOutline && wire.WireId != _selectionId)
             {
                 var outline = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
                     Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, Brushes.DimGray, weight + 2 / zoom, line.StrokeDashArray);
                 outline.IsHitTestVisible = false; Sheet.Children.Add(outline);
-                TrackWireStrokes(page.PageId, outline, physicalWeight, false, true);
+                TrackWireStrokes(page.PageId, outline, physicalWeight, false, true, wire.WireId);
             }
             if (crossings.Crossovers.Any(c => c.HorizontalWireId == wire.WireId))
             {
                 var geometry = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
                     Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, line.Stroke, line.StrokeThickness, line.StrokeDashArray);
                 Sheet.Children.Add(geometry);
-                TrackWireStrokes(page.PageId, geometry, physicalWeight, wire.WireId == _selectionId);
+                TrackWireStrokes(page.PageId, geometry, physicalWeight, wire.WireId == _selectionId, wireId: wire.WireId);
             }
             else Sheet.Children.Add(line);
             if (_wireMode && !_renderingOutput)
@@ -279,15 +287,13 @@ public partial class SchematicWorkspaceControl : UserControl
                     };
                 }
         }
-        foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))
-            if (SchematicCableLabelPresentation.Resolve(project, wire, crossings) is { } cableLabel) RenderCableLabel(cableLabel, page);
         foreach (var point in crossings.Junctions) Marker(point, Brushes.Black, Brushes.Black, 5).IsHitTestVisible = false;
         foreach (var conflict in crossings.Conflicts)
         {
             var warning = Marker(conflict.Position, Brushes.Transparent, Brushes.Firebrick, 12);
             warning.ToolTip = conflict.Code == "COLLINEAR_OVERLAP" ? "不同導線共線重疊；請分開走線通道" : "未連接的接觸／交叉間距不足";
         }
-        foreach (var symbol in doc.Symbols.Where(s => s.PageId == page.PageId)) RenderSymbol(project, symbol);
+        foreach (var symbol in doc.Symbols.Where(s => s.PageId == page.PageId)) RenderTrackedSymbol(project, symbol);
         foreach (var pair in doc.Continuations)
         foreach (var marker in new[] { pair.Source, pair.Destination }.Where(m => m.PageId == page.PageId))
         {
@@ -338,6 +344,7 @@ public partial class SchematicWorkspaceControl : UserControl
         }
         Text($"草稿／未完成  |  {doc.Pages.IndexOf(page) + 1} / {doc.Pages.Count}",
             page.Margin, page.Height - 5, 9, Brushes.Black);
+        RenderWireLabels(project, page, crossings);
     }
 
     private void DrawFrame(SchematicPage page, int number, string? name)
@@ -441,6 +448,7 @@ public partial class SchematicWorkspaceControl : UserControl
             var pin = Marker(point, anchor.Confirmed ? Brushes.White : Brushes.LightGoldenrodYellow, Brushes.Black, 7);
             pin.ToolTip = $"{anchor.Label}\n{(anchor.Confirmed ? "接點位置已確認" : "接點位置待設定")}";
             pin.Cursor = portEditing && symbol.Geometry is null ? Cursors.SizeAll : Cursors.Cross;
+            if (!_renderingOutput) pin.ContextMenu = PinOrderMenu(symbol, owner, anchor);
             pin.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) WireAt(SchematicAttachment.Pin(symbol.SymbolId, anchor.EndpointId), point, false);
@@ -455,7 +463,7 @@ public partial class SchematicWorkspaceControl : UserControl
             if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
             {
                 var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
-                var label = new TextBlock { Text = anchor.Label ?? anchor.EndpointId, FontSize = 8.5,
+                var label = new TextBlock { Text = _renderPinLabels.GetValueOrDefault((symbol.SymbolId, anchor.EndpointId)) ?? anchor.Label ?? anchor.EndpointId, FontSize = 9.5,
                     Foreground = Brushes.DimGray, IsHitTestVisible = false };
                 label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 var box = pose.Bounds(label.DesiredSize.Width / 3, label.DesiredSize.Height / 3);
@@ -619,42 +627,6 @@ public partial class SchematicWorkspaceControl : UserControl
         catch { target.ToolTip = "圖片無法載入"; }
     }
 
-    private void RenderCableLabel(SchematicCableLabel caption, SchematicPage page)
-    {
-        var label = new TextBlock { Text = caption.Text, FontSize = 10.5, Foreground = Brushes.Black,
-            Background = Brushes.White, Padding = new Thickness(2, 0, 2, 0), IsHitTestVisible = false };
-        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var available = caption.AvailableLength * PixelsPerMm;
-        if (label.DesiredSize.Width > available)
-        {
-            label.FontSize = Math.Max(6, (available - 4) / (label.DesiredSize.Width - 4) * label.FontSize);
-            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        }
-        var vertical = caption.Rotation != 0;
-        var margin = page.Margin * PixelsPerMm;
-        var pageWidth = page.Width * PixelsPerMm;
-        var pageHeight = page.Height * PixelsPerMm;
-        label.MaxWidth = (vertical ? pageHeight : pageWidth) - 2 * margin;
-        label.TextWrapping = TextWrapping.Wrap;
-        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var across = (vertical ? pageWidth : pageHeight) - 2 * margin;
-        if (label.DesiredSize.Height > across)
-        {
-            label.FontSize *= across / label.DesiredSize.Height;
-            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        }
-        var offset = label.DesiredSize.Width > available ? label.DesiredSize.Height / 2 + 4 : 0;
-        var halfWidth = (vertical ? label.DesiredSize.Height : label.DesiredSize.Width) / 2;
-        var halfHeight = (vertical ? label.DesiredSize.Width : label.DesiredSize.Height) / 2;
-        var centerX = Math.Clamp(caption.Center.X * PixelsPerMm + (vertical ? offset : 0), margin + halfWidth, pageWidth - margin - halfWidth);
-        var centerY = Math.Clamp(caption.Center.Y * PixelsPerMm - (vertical ? 0 : offset), margin + halfHeight, pageHeight - margin - halfHeight);
-        label.RenderTransformOrigin = new Point(.5, .5);
-        label.RenderTransform = new RotateTransform(caption.Rotation);
-        Canvas.SetLeft(label, centerX - label.DesiredSize.Width / 2);
-        Canvas.SetTop(label, centerY - label.DesiredSize.Height / 2);
-        Sheet.Children.Add(label);
-    }
-
     private void Text(string text, double x, double y, double size, Brush colour, int rotation = 0)
     {
         var label = new TextBlock { Text = text, FontSize = size, Foreground = colour, IsHitTestVisible = false };
@@ -680,10 +652,11 @@ public partial class SchematicWorkspaceControl : UserControl
     private void WireAt(SchematicAttachment attachment, SchematicPoint point, bool finish)
     {
         if (_pageId is null) return;
-        if (_wireStart is null) { _wireStart = attachment; _wirePoints = [point]; }
+        if (_wireStart is null) { _wireStart = attachment; _wirePoints = [point]; _wireWaypoints = 0; }
         else
         {
             _wirePoints = SchematicDraftRoute.Append(_wirePoints, point);
+            if (attachment.Kind == SchematicAttachmentKind.Free && !finish) _wireWaypoints++;
             if (attachment.Kind != SchematicAttachmentKind.Free || finish)
             {
                 var start = _wireStart; var points = _wirePoints.ToArray(); var page = _pageId;
@@ -695,10 +668,10 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private ElectricalProject SaveWire(ElectricalProject project, string page, SchematicAttachment start,
         SchematicAttachment end, IReadOnlyList<SchematicPoint> points) => _resumeWireId is null
-        ? _service.DrawWire(project, page, start, end, points)
-        : _resumeReversed ? _service.CompleteDraft(project, _resumeWireId, end, start, points.Reverse().ToArray())
-        : _service.CompleteDraft(project, _resumeWireId, start, end, points);
-    private void ClearPendingWire() { _wireStart = null; _wirePoints.Clear(); _resumeWireId = null; _resumeReversed = false; }
+        ? _service.DrawWire(project, page, start, end, points, manualRoute: _wireWaypoints > 0)
+        : _resumeReversed ? _service.CompleteDraft(project, _resumeWireId, end, start, points.Reverse().ToArray(), manualRoute: _wireWaypoints > 0)
+        : _service.CompleteDraft(project, _resumeWireId, start, end, points, manualRoute: _wireWaypoints > 0);
+    private void ClearPendingWire() { ClearWirePreview(); _wireStart = null; _wirePoints.Clear(); _wireWaypoints = 0; _resumeWireId = null; _resumeReversed = false; }
     public bool FinishPendingDraft()
     {
         if (_wireStart is null || _wirePoints.Count < 2 || _pageId is null) return true;
@@ -707,9 +680,11 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void RenderWirePreview()
     {
+        ClearWirePreview();
         if (_wireStart is null) return;
         var points = _pointer is null ? _wirePoints.ToList() : SchematicDraftRoute.Append(_wirePoints, _pointer);
         var preview = Path(points, Brushes.DarkCyan, 1.5); preview.IsHitTestVisible = false; Sheet.Children.Add(preview);
+        _wirePreviewElement = preview; _wirePreviewOwner = Sheet;
     }
     private void Sheet_Down(object sender, MouseButtonEventArgs e)
     {
@@ -784,7 +759,10 @@ public partial class SchematicWorkspaceControl : UserControl
         {
             try
             {
-                if (_dragDetailId is not null) PreviewDetailGesture();
+                if (_dragWireLabel is not null && _dragWireLabelOrigin is not null)
+                    _gesturePreview = _service.SetWireLabelPosition(_gestureStart, _dragWireLabel,
+                        new(_dragWireLabelOrigin.X + _pointer.X - _dragStart.X, _dragWireLabelOrigin.Y + _pointer.Y - _dragStart.Y));
+                else if (_dragDetailId is not null) PreviewDetailGesture();
                 else if (_dragResizeSymbol is not null)
                     PreviewSymbolResize();
                 else if (_dragPinSymbol is not null && _dragPinId is not null)
@@ -812,6 +790,8 @@ public partial class SchematicWorkspaceControl : UserControl
                 }
                 else if (_dragSymbol is not null)
                 {
+                    if (!_finishingPointerPreview) { PreviewSymbolTranslation(); return; }
+                    ClearSymbolTranslation();
                     var s = _gestureStart.Schematic!.Symbols.Single(s => s.SymbolId == _dragSymbol);
                     _gesturePreview = _service.TransformSymbol(_gestureStart, s.SymbolId,
                         new(s.Position.X + _pointer.X - _dragStart.X, s.Position.Y + _pointer.Y - _dragStart.Y), s.Rotation);
@@ -835,7 +815,8 @@ public partial class SchematicWorkspaceControl : UserControl
             }
             catch (Exception error) { _gesturePreview = null; Status.Text = error.Message; }
         }
-        else if ((_wireMode && _wireStart is not null) || _placeMode) Render(_getProject());
+        else if (_wireMode && _wireStart is not null) RenderWirePreview();
+        else if (_placeMode) Render(_getProject());
     }
     private void Sheet_Up(object sender, MouseButtonEventArgs e)
     {
@@ -857,7 +838,8 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void CancelGesture()
     {
-        ClearPointerPreview(); _gestureDetailBounds = null; _gestureCadBounds = null;
+        ClearSymbolTranslation();
+        ClearPointerPreview(); _gestureDetailBounds = null; _gestureCadBounds = null; _dragWireLabel = null; _dragWireLabelOrigin = null;
         _gestureStart = null; _gesturePreview = null; _dragStart = null; _dragActivated = false; _dragSymbol = null; _dragPortSymbol = null; _dragPortId = null; _dragPinSymbol = null; _dragPinId = null; _dragResizeSymbol = null; _dragPortHasPins = false; _dragVertex = null; _dragSegment = null; _dragMarker = null; _dragDetailId = null; _dragDetailResize = false; Sheet.ReleaseMouseCapture();
     }
     private void CancelCommand()
@@ -967,6 +949,7 @@ public partial class SchematicWorkspaceControl : UserControl
         if (SheetZoom is null) return;
         SheetZoom.ScaleX = SheetZoom.ScaleY = e.NewValue;
         UpdateWireZoom(e.NewValue);
+        RelayoutWireLabels();
     }
     private void Navigate_Click(object sender, RoutedEventArgs e)
     {

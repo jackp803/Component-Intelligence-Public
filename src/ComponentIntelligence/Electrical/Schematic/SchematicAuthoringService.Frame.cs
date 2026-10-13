@@ -122,15 +122,18 @@ public sealed partial class SchematicAuthoringService
                 .Any(a => SymbolAttachmentPoint(draft, old, a) != SymbolAttachmentPoint(draft, next, a)))
                 throw new InvalidOperationException("Unlock attached wires before moving their contacts.");
         doc.Symbols[index] = next;
+        var bodyChanged = old.Position != next.Position || old.Width != next.Width || old.Height != next.Height || old.Rotation != next.Rotation;
         for (var i = 0; i < doc.Wires.Count; i++)
         {
             var wire = doc.Wires[i];
-            if (wire.Locked || wire.Start.SymbolId != old.SymbolId && wire.End.SymbolId != old.SymbolId) continue;
+            if (wire.Locked) continue;
+            var moveStart = wire.Start.SymbolId == old.SymbolId && SymbolAttachmentPoint(draft, old, wire.Start) != SymbolAttachmentPoint(draft, next, wire.Start);
+            var moveEnd = wire.End.SymbolId == old.SymbolId && SymbolAttachmentPoint(draft, old, wire.End) != SymbolAttachmentPoint(draft, next, wire.End);
+            if (!moveStart && !moveEnd && !(bodyChanged && CanRerouteSimpleWire(doc, wire))) continue;
             var points = wire.Points.ToList();
-            if (wire.Start.SymbolId == old.SymbolId) points = ReanchorSymbol(points, draft, next, wire.Start, true);
-            if (wire.End.SymbolId == old.SymbolId) points = ReanchorSymbol(points, draft, next, wire.End, false);
-            if (CanReroutePortWire(doc, wire)) points = ReroutePortWire(draft, doc, wire);
-            else if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire);
+            if (moveStart) points = ReanchorSymbol(points, draft, next, wire.Start, true);
+            if (moveEnd) points = ReanchorSymbol(points, draft, next, wire.End, false);
+            if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire);
             doc.Wires[i] = wire with { Points = points };
             ReanchorDependentJunctions(doc, wire.WireId);
         }

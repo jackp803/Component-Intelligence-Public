@@ -24,8 +24,8 @@ public sealed class SchematicWireSettingsDialog : Window
         var panel = new StackPanel { Margin = new(16) };
         _name = new() { Text = _wire.Designation ?? "", MaxLength = 100, ToolTip = "線號" };
         _mode = new() { ItemsSource = new[] { "保留目前規格", "重新自動建議（待核對）", "手動 AWG", "手動截面積 mm²" }, SelectedIndex = 0 };
-        _awg = new() { ItemsSource = Enumerable.Range(0, 41).ToArray(), SelectedItem = _wire.Awg ?? 20, ToolTip = "AWG" };
         var specification = SchematicWirePresentation.Resolve(project, _wire);
+        _awg = new() { ItemsSource = Enumerable.Range(0, 41).ToArray(), SelectedItem = specification.Awg ?? 20, ToolTip = "AWG" };
         _area = new() { ItemsSource = new[] { .14, .25, .34, .5, .75, 1, 1.5, 2.5, 4, 6, 10, 16, 25 }, IsEditable = true,
             Text = (specification.AreaMm2 ?? .5).ToString("0.###", CultureInfo.InvariantCulture), ToolTip = "導體截面積 mm²" };
         foreach (var (label, field) in new[] { ("線號", (FrameworkElement)_name), ("設定方式", _mode), ("AWG", _awg), ("截面積 mm²", _area) })

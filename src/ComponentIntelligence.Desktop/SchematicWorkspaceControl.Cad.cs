@@ -14,8 +14,17 @@ public partial class SchematicWorkspaceControl
     internal static Canvas CadCanvas(SchematicCadAsset asset, Brush? stroke = null, double thickness = 1, DoubleCollection? dash = null, bool interactive = false)
     {
         var canvas = new Canvas { Width = asset.Width * 3, Height = asset.Height * 3, IsHitTestVisible = interactive };
+        var batched = stroke is null && dash is null && thickness == 1 && asset.Primitives.Count >= 48;
+        var vectors = new List<SchematicCadPrimitive>();
+        void FlushVectors()
+        {
+            if (vectors.Count == 0) return;
+            AddCadVectorBatch(canvas, vectors, thickness); vectors.Clear();
+        }
         foreach (var primitive in asset.Primitives)
         {
+            if (batched && primitive.Kind is "LINE" or "CIRCLE" or "ARC") { vectors.Add(primitive); continue; }
+            FlushVectors();
             FrameworkElement element;
             switch (primitive.Kind)
             {
@@ -90,6 +99,7 @@ public partial class SchematicWorkspaceControl
             }
             canvas.Children.Add(element);
         }
+        FlushVectors();
         return canvas;
     }
 

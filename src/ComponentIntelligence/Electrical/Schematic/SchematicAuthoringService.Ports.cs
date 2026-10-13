@@ -58,7 +58,7 @@ public sealed partial class SchematicAuthoringService
         var port = owner.Ports.SingleOrDefault(p => p.PortId == portId)
             ?? throw new InvalidOperationException("Unknown port.");
         var pins = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
-        var anchors = symbol.Anchors.Where(a => pins.Contains(a.EndpointId)).ToArray();
+        var anchors = PortPinsInVisualOrder(symbol, port).ToArray();
         if (anchors.Length == 0 && port.Pins.Count > 0)
             throw new InvalidOperationException("This representation does not contain the selected port pins.");
         SchematicSymbol next;
@@ -119,8 +119,7 @@ public sealed partial class SchematicAuthoringService
                 points = ReanchorSymbol(points, draft, next, wire.Start, true);
             if (wire.End.SymbolId == symbolId && SymbolAttachmentPoint(draft, symbol, wire.End) != SymbolAttachmentPoint(draft, next, wire.End))
                 points = ReanchorSymbol(points, draft, next, wire.End, false);
-            if (CanReroutePortWire(doc, wire)) points = ReroutePortWire(draft, doc, wire);
-            else if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire);
+            if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire);
             doc.Wires[i] = wire with { Points = points };
             ReanchorDependentJunctions(doc, wire.WireId);
         }

@@ -76,7 +76,8 @@ public static class SchematicWireIdentification
         return result;
     }
 
-    public static int ApproximateAwg(double area) => Enumerable.Range(0, 41).MinBy(a => Math.Abs(WireSize.AwgToAreaMm2(a) - area));
+    public static int ApproximateAwg(double area) => Enumerable.Range(0, 41)
+        .Where(a => WireSize.AwgToAreaMm2(a) >= area).DefaultIfEmpty(0).Max();
 
     private static string AllocateName(ElectricalProject project, IReadOnlyList<SchematicWire> group)
     {
@@ -149,7 +150,7 @@ public static class SchematicWireIdentification
             return new(null, null, "INVALID-TERMINATION", "接頭適用截面積資料無效；請人工核對。");
         var pins = ends.SelectMany(e => e.Pin is null ? e.Port.Pins.AsEnumerable() : new[] { e.Pin }).ToArray();
         var voltages = pins.Select(p => p.Power?.Voltage).Where(v => v is not null).ToArray();
-        if (voltages.Any(v => v!.Type == VoltageType.Ac || v.MaxVoltage > 60 || v.NominalVoltage > 60 ||
+        if (voltages.Any(v => v!.Type == VoltageType.Ac && v.NominalVoltage is not > 0 && v.MaxVoltage is not > 0 || v.MaxVoltage > 60 || v.NominalVoltage > 60 ||
             v.NominalVoltage is double nominal && !double.IsFinite(nominal))) return null;
         var loads = pins.Select(p => p.Power?.RequiredCurrentAmp ?? p.Digital?.RequiredInputCurrentAmp).ToArray();
         if (loads.Any(v => v.HasValue && (!double.IsFinite(v.Value) || v.Value <= 0)))

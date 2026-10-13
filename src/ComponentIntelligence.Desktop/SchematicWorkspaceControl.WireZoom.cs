@@ -6,15 +6,15 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class SchematicWorkspaceControl
 {
-    private sealed record WireStrokeTarget(Shape Shape, double PhysicalWeight, bool Selected, bool Outline);
+    private sealed record WireStrokeTarget(Shape Shape, double PhysicalWeight, bool Selected, bool Outline, string? WireId);
     private readonly Dictionary<string, List<WireStrokeTarget>> _wireStrokeTargets = new(StringComparer.Ordinal);
 
-    private void TrackWireStrokes(string pageId, FrameworkElement element, double physicalWeight, bool selected, bool outline = false)
+    private void TrackWireStrokes(string pageId, FrameworkElement element, double physicalWeight, bool selected, bool outline = false, string? wireId = null)
     {
         if (_renderingOutput) return;
         var shapes = element is Shape shape ? new[] { shape } : element is Canvas canvas ? canvas.Children.OfType<Shape>() : [];
         foreach (var target in shapes)
-            _wireStrokeTargets[pageId].Add(new(target, physicalWeight, selected, outline));
+            _wireStrokeTargets[pageId].Add(new(target, physicalWeight, selected, outline, wireId));
     }
 
     private void UpdateWireZoom(double zoom)

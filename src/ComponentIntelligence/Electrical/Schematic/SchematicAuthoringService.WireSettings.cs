@@ -4,6 +4,19 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed partial class SchematicAuthoringService
 {
+    public ElectricalProject SetWireLabelPosition(ElectricalProject project, string wireId, SchematicPoint position) => Edit(project, (_, doc) =>
+    {
+        RequirePoint(position);
+        var index = doc.Wires.FindIndex(w => w.WireId == wireId);
+        if (index < 0) throw new InvalidOperationException("The wire no longer exists.");
+        var wire = doc.Wires[index];
+        if (wire.Locked) throw new InvalidOperationException("The wire is locked.");
+        var page = doc.Pages.Single(p => p.PageId == wire.PageId);
+        if (position.X < page.Margin || position.Y < page.Margin || position.X > page.Width - page.Margin || position.Y > page.Height - page.Margin)
+            throw new InvalidOperationException("標籤位置超出圖面。");
+        doc.Wires[index] = wire with { LabelPosition = position };
+    });
+
     public ElectricalProject SetWireArea(ElectricalProject project, string wireId, double areaMm2)
     {
         if (!double.IsFinite(areaMm2) || areaMm2 <= 0 || areaMm2 > 1000) throw new ArgumentOutOfRangeException(nameof(areaMm2));

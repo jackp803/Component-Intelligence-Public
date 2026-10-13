@@ -25,8 +25,8 @@ public static class SchematicWirePresentation
         var catalog = connection?.Kind == ConnectionKind.Cable;
         var awg = core?.Awg ?? (catalog ? null : wire.Awg);
         var area = catalog ? authoritativeArea : authoritativeArea ?? wire.AreaMm2 ?? (awg is int value ? WireSize.AwgToAreaMm2(value) : connection?.ConductorAreaMm2);
-        var approximate = awg is null && area is > 0;
-        awg ??= area is > 0 ? SchematicWireIdentification.ApproximateAwg(area.Value) : null;
+        var approximate = awg is null && area is > 0 && area <= WireSize.AwgToAreaMm2(0);
+        awg ??= approximate ? SchematicWireIdentification.ApproximateAwg(area!.Value) : null;
         return new(awg, area, core?.ColorCode) { AwgIsApproximate = approximate };
     }
 

@@ -10,6 +10,7 @@ public partial class SchematicWorkspaceControl
     private SchematicPoint? _lastPreviewPointer;
     private SchematicGridBounds? _gestureDetailBounds;
     private Rect? _gestureCadBounds;
+    private bool _finishingPointerPreview;
 
     private void QueuePointerPreview()
     {
@@ -25,10 +26,11 @@ public partial class SchematicWorkspaceControl
 
     private void FlushPointerPreview()
     {
-        if (_pendingPointerPreview is null) return;
-        _pendingPointerPreview.Abort(); _pendingPointerPreview = null;
+        if (_pendingPointerPreview is null && _dragVisualTransforms.Count == 0) return;
+        _pendingPointerPreview?.Abort(); _pendingPointerPreview = null;
         _lastPreviewPointer = _pointer;
-        ProcessPointerPreview();
+        _finishingPointerPreview = true;
+        try { ProcessPointerPreview(); } finally { _finishingPointerPreview = false; }
     }
 
     private void ClearPointerPreview()

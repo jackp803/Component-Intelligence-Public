@@ -5,6 +5,9 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed record SchematicWireEvidence(string Category, string ColorHex, string Description)
 {
+    public string? PhysicalColor { get; init; }
+    public bool ColorConflict { get; init; }
+    public bool NeedsOutline => ColorHex is "#FFFFFF" or "#E3BB22";
     // Product display only; standards applicability and clauses are not yet verified.
     public const string Profile = "PRODUCT-SCHEMATIC-PREVIEW-V1";
 
@@ -55,7 +58,15 @@ public sealed record SchematicWireEvidence(string Category, string ColorHex, str
                     ? $"{min.ToString("0.###", CultureInfo.InvariantCulture)}..{max.ToString("0.###", CultureInfo.InvariantCulture)}" : "?";
             return $"{pin.PinNumber} {pin.PinName}: {value} V {(v?.Type ?? VoltageType.Unknown).ToString().ToUpperInvariant()}";
         });
-        return new(category, category switch { "DC_POSITIVE" => "#B42318", "DC_NEGATIVE" => "#FFFFFF", "CONFLICT" => "#8B008B", _ => "#333333" },
-            string.Join("\n", descriptions));
+        var contactPins = SchematicWireContacts.Ends(project, wire).Select(c => c.Pin).OfType<ComponentPin>();
+        var colors = pins.Concat(contactPins).Select(SchematicWireContacts.Color).Where(c => c.HasValue)
+            .Select(c => c!.Value).DistinctBy(c => c.Name).ToArray();
+        var colorConflict = colors.Length > 1;
+        var colorHex = conflict || colorConflict ? "#8B008B" : colors.Length == 1 ? colors[0].Hex :
+            category switch { "DC_POSITIVE" => "#B42318", "DC_NEGATIVE" => "#FFFFFF", _ => "#333333" };
+        return new(category, colorHex, string.Join("\n", descriptions) +
+            (colorConflict ? "\n兩端腳位線色不同，請確認：" + string.Join(" / ", colors.Select(c => c.Name)) :
+                colors.Length == 1 ? "\n腳位線色：" + colors[0].Name : ""))
+        { PhysicalColor = colors.Length == 1 ? colors[0].Name : null, ColorConflict = colorConflict };
     }
 }

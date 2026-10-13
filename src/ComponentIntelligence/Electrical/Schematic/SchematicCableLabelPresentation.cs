@@ -17,7 +17,16 @@ public static class SchematicCableLabelPresentation
             var specification = SchematicWirePresentation.Resolve(project, wire);
             var gauge = specification.Awg is int awg ? (specification.AwgIsApproximate ? "約 AWG " : "AWG ") + awg : "AWG 待設定";
             var area = specification.AreaMm2 is double value ? value.ToString("0.###", CultureInfo.InvariantCulture) + " mm²" : "截面積待設定";
-            text = wire.Designation + " | " + gauge + " | " + area + (wire.SizingProposal is not null ? " (待核對)" : "");
+            var ends = SchematicWireContacts.Ends(project, wire);
+            var functions = ends.Count < 2 ? [] : ends.Select(e => e.Function).Where(f => f.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase);
+            var evidence = SchematicWireEvidence.Resolve(project, wire);
+            var function = string.Join(" → ", functions);
+            var contacts = ends.Count < 2 ? "" : string.Join(" → ", ends.Select(e => e.Caption));
+            var color = evidence.ColorConflict ? "線色待確認" : evidence.PhysicalColor;
+            text = string.Join(" · ", new[] { function, contacts }.Where(v => !string.IsNullOrWhiteSpace(v))) + "\n" +
+                string.Join(" | ", new[] { wire.Designation, color, gauge, area }.Where(v => !string.IsNullOrWhiteSpace(v))) +
+                (wire.SizingProposal is not null ? " (待核對)" : "");
+            text = text.Trim();
         }
         else
         {

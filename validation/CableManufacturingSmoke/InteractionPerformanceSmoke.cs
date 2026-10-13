@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Media;
+using ComponentIntelligence.Electrical.Editing;
 using ComponentIntelligence.Contracts;
 using ComponentIntelligence.Desktop;
 using ComponentIntelligence.Electrical.Domain;
@@ -40,12 +42,46 @@ internal static partial class Program
         void Call(string name, params object?[] values) => type.GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!.Invoke(workspace, values);
         Set("_pageId", "main");
         Call("Render", current);
+        var beforeAllocation = GC.GetAllocatedBytesForCurrentThread();
         var watch = Stopwatch.StartNew();
         for (var i = 0; i < 5; i++) Call("Render", current);
         watch.Stop(); var singlePageMs = watch.Elapsed.TotalMilliseconds / 5;
+        var renderAllocation = (GC.GetAllocatedBytesForCurrentThread() - beforeAllocation) / 5;
         var canvases = (Dictionary<string, Canvas>)Get("_pageCanvases")!;
         var hiddenNodes = canvases.Where(p => p.Key != "main").Sum(p => p.Value.Children.Count);
+        var largestCadChildren = canvases["main"].Children.OfType<Canvas>().Select(c => c.Children.Count).DefaultIfEmpty().Max();
         var first = canvases["main"].Children[0];
+        double symbolPreviewMs = 0, wirePreviewMs = 0;
+        if (verify)
+        {
+            var symbol = current.Schematic!.Symbols[0];
+            var saved = JsonSerializer.Serialize(current);
+            Set("_gestureStart", current); Set("_dragStart", new SchematicPoint(30, 50)); Set("_dragSymbol", symbol.SymbolId);
+            Set("_pointer", new SchematicPoint(40, 60)); Call("ProcessPointerPreview");
+            Require(Get("_gesturePreview") is null && ReferenceEquals(first, canvases["main"].Children[0]),
+                "Symbol drag still clones the project and rebuilds the sheet on every pointer update.");
+            Require(saved == JsonSerializer.Serialize(current), "Visual drag mutated the live project before release.");
+            watch.Restart();
+            for (var i = 0; i < 100; i++)
+            { Set("_pointer", new SchematicPoint(40 + i / 100d, 60)); Call("ProcessPointerPreview"); }
+            watch.Stop(); symbolPreviewMs = watch.Elapsed.TotalMilliseconds / 100;
+            Set("_pointer", new SchematicPoint(40, 60));
+            Set("_lastPreviewPointer", new SchematicPoint(40, 60)); Call("FlushPointerPreview");
+            var moved = (ElectricalProject)Get("_gesturePreview")!;
+            Require(moved.Schematic!.Symbols[0].Position == new SchematicPoint(40, 60), "Release failed to calculate the final symbol position.");
+            Call("CancelGesture"); Call("Render", current);
+            first = canvases["main"].Children[0];
+            Set("_wireMode", true); Set("_wireStart", SchematicAttachment.Free());
+            Set("_wirePoints", new List<SchematicPoint> { new(60, 80) }); Set("_pointer", new SchematicPoint(70, 90));
+            Call("ProcessPointerPreview");
+            Require(ReferenceEquals(first, canvases["main"].Children[0]), "Wire preview rebuilt unrelated CAD/frame objects.");
+            watch.Restart();
+            for (var i = 0; i < 100; i++)
+            { Set("_pointer", new SchematicPoint(70 + i / 100d, 90)); Call("ProcessPointerPreview"); }
+            watch.Stop(); wirePreviewMs = watch.Elapsed.TotalMilliseconds / 100;
+            Call("ClearPendingWire"); Set("_wireMode", false); Call("Render", current);
+            first = canvases["main"].Children[0];
+        }
         Call("Zoom_Changed", workspace, new RoutedPropertyChangedEventArgs<double>(1, 1.25));
         var zoomPreservesNodes = ReferenceEquals(first, canvases["main"].Children[0]);
         Set("_allPages", true); Call("Render", current);
@@ -54,6 +90,7 @@ internal static partial class Program
         Require(canvases.Values.All(c => c.Children.Count > 0), "All-pages view failed to render a page.");
         if (verify)
         {
+            Require(largestCadChildren < 40, "CAD linework still allocates hundreds of individual visual controls per drawing.");
             Require(hiddenNodes == 0, "Single-page rendering rebuilt hidden pages.");
             Require(zoomPreservesNodes, "Zoom replaced the visual tree.");
             Set("_allPages", false); Set("_selectionId", "detail:Sketch:" + detail.DetailId);
@@ -94,9 +131,15 @@ internal static partial class Program
             Require(canvases["page-1"].Visibility == Visibility.Visible && canvases["page-1"].Children.Count > 0,
                 "Switching to a previously hidden page did not render it.");
         }
+        var history = new ProjectMutationHistory();
+        for (var i = 0; i < 50; i++) history.RecordBeforeMutation(current, "synthetic drag");
+        var rawHistoryBytes = (long)JsonSerializer.Serialize(current).Length * 2 * 50;
         File.WriteAllText(Path.Combine(root, "performance.json"), JsonSerializer.Serialize(new { Pages = 8, PrimitivesPerSketch = 600,
             Iterations = 5, SinglePageRenderMs = singlePageMs, AllPagesRenderMs = allPagesMs, HiddenPageNodes = hiddenNodes,
-            ZoomPreservesVisualTree = zoomPreservesNodes, VerifiedInteraction = verify }, new JsonSerializerOptions { WriteIndented = true }));
+            LargestCadChildren = largestCadChildren, RenderAllocationBytes = renderAllocation,
+            RenderingTier = RenderCapability.Tier >> 16, UndoCompressedBytes = history.RetainedBytes, UndoRawUtf16Bytes = rawHistoryBytes,
+            ZoomPreservesVisualTree = zoomPreservesNodes, SymbolPointerPreviewMs = symbolPreviewMs, WirePointerPreviewMs = wirePreviewMs,
+            VerifiedInteraction = verify }, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine($"Render single={singlePageMs:F1} ms, all={allPagesMs:F1} ms; hidden nodes={hiddenNodes}; zoom retained={zoomPreservesNodes}; verified={verify}");
         owner.Content = null; owner.Close();
         return 0;

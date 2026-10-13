@@ -4,6 +4,22 @@ Status: written specification for user review; implementation has not started.
 Date: 2026-10-13
 Baseline: BK, commit `2b138072872db39729df870e28c2d335e7fb0b0b`.
 
+## 中文核對摘要
+
+這一輪是整理你自己每天使用的電氣設計畫面，不整套重做。右側直接修改的方向已確認；以下完整範圍請再核對，尚未修改程式。
+
+1. 畫圖區放大：左側 BOM／頁面能收合、調整寬度；上方保留常用工具，其他功能仍能找到，原快捷鍵保留。
+2. 點模塊、線或表格，右側顯示對應設定。一般欄位改完按 Enter 或「套用」，一次修改可一次復原；錯誤輸入不會寫進專案，也不會套到另一個物件。
+3. 模塊可改 Reference、位置、大小等，Port／Pin 有明確編輯入口。複雜接法與拓譜保留大視窗，不硬塞進窄側欄。
+4. 導線可改線號與自動／手動線徑，保留 AWG、mm² 與待核對說明。功能、線色若來自腳位，修改時清楚指出哪個腳位受影響，不默改兩端或猜測相通。
+5. 表格／示意圖可改位置、尺寸、文字倍率或刪除表示；刪除表格不等於刪掉線材與接法。
+6. 記住面板、顯示設定和最近成功使用的匯入／匯出資料夾。清楚顯示儲存狀態、專案資料位置與中央庫位置，不搬動既有資料庫。
+7. 提供復原備份：建議有完整修改且閒置兩分鐘時備份，最多保留每專案 20 份自動復原紀錄，不刪手動／正式儲存紀錄。備份不算正式儲存，也不會自行覆蓋或還原你的專案；可讓你選擇恢復。
+8. 效能先量測拖曳、拉線、放開滑鼠後的計算及記憶體，再修耗時處。已有的輕量預覽與快取保留；不先假定要換 GPU 或加記憶體，不更改電腦設定。
+9. 原有 BOM、接點編號、手動路徑、模塊版型、線材拓譜及 PDF 分組標示／跳頁功能都要保留。驗證使用測試資料，不操作正式視窗、專案、中央工作簿或原始 DWG。
+
+確認這份規格後才寫實作計畫。以下英文部分是供開發與測試使用的詳細約束。
+
 ## Intent and Agreement
 
 The user is the sole intended operator. The goal is a faster, less interruptive daily drawing workflow, not a new public-product onboarding experience. Preserve familiar project, BOM, CAD, cable and engineering workflows.

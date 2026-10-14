@@ -145,7 +145,8 @@ public sealed class SchematicPortConnectionTests
         project = _service.DrawWire(project, "page", SchematicAttachment.Port(symbol.SymbolId, "A"),
             SchematicAttachment.Free(), [start, new(300, start.Y), new(300, tail.Y), tail]);
         var id = Assert.Single(project.Schematic!.Wires).WireId;
-        project = _service.TransformSymbol(project, symbol.SymbolId, new(100, 35), 0);
+        Assert.Throws<InvalidOperationException>(() => _service.TransformSymbol(project, symbol.SymbolId, new(100, 35), 0));
+        project = _service.TransformSymbol(project, symbol.SymbolId, new(100, 100), 0);
         var wire = Assert.Single(project.Schematic!.Wires);
         Assert.Equal(id, wire.WireId);
         Assert.Equal(tail, wire.Points[^1]);

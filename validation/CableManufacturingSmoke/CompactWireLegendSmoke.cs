@@ -218,7 +218,7 @@ internal static partial class Program
         var actual = new SchematicCableDetailService().BuildArchived(p, tablePage, detail).PartBounds[SchematicCableDetailPart.Table];
         Require(actual.Height > 70, "Table-overlap fixture failed to exceed the former fixed 70 mm reservation.");
         var tableCanvas = Draw();
-        var note = tableCanvas.Children.OfType<TextBlock>().Single(t => Equals(t.Tag, "wire-spec-legend"));
+        var note = tableCanvas.Children.OfType<TextBlock>().Single(t => Equals(t.Tag, "wire-spec-legend") || Equals(t.Tag, "wire-label:table-wire"));
         var tableBounds = new Rect(actual.X * 3, actual.Y * 3, actual.Width * 3, actual.Height * 3);
         Require(!tableBounds.IntersectsWith(new Rect(Canvas.GetLeft(note), Canvas.GetTop(note), note.DesiredSize.Width, note.DesiredSize.Height)),
             "Group specification legend obscures the lower rows of a tall manufacturing table.");

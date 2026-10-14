@@ -40,6 +40,28 @@ public static class SchematicWireContacts
         return (slash >= 0 && Colors.ContainsKey(text[(slash + 1)..].Trim()) ? text[..slash] : text).Trim();
     }
 
+    private static string? InferredCaption(ElectricalProject project, ComponentPin pin)
+    {
+        var link = pin.InferredFunction!;
+        // The link records a runtime PinId, not the source pin's archive lineage ID.
+        var sources = Topology.ConnectorMatingService.Ports(project).SelectMany(p => p.Pins)
+            .Where(p => string.Equals(p.PinId, link.SourcePinId, StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
+        if (sources.Length != 1) return null;
+        var source = sources[0];
+        if (source.FunctionManualOverride || source.Status is PinStatus.Nc or PinStatus.Unused or PinStatus.Reserved ||
+            string.IsNullOrWhiteSpace(source.Function) ||
+            !string.Equals(source.Function.Trim(), link.Value.Trim(), StringComparison.OrdinalIgnoreCase)) return null;
+        var function = WithoutColor(source.Function);
+        // An explicit short name cannot select one of the source's operating modes.
+        if (function.IndexOfAny(['/', '|', ';']) >= 0 || function.Contains('\u6216') ||
+            function.Contains(" or ", StringComparison.OrdinalIgnoreCase) ||
+            function.Contains("selectable", StringComparison.OrdinalIgnoreCase) ||
+            function.Contains("switchable", StringComparison.OrdinalIgnoreCase)) return null;
+        var caption = WithoutColor(source.PinName);
+        return caption.Length is > 0 and <= 32 && !caption.Any(char.IsControl) && caption != source.PinNumber.Trim()
+            ? caption : null;
+    }
+
     public static SchematicWireContact? Resolve(ElectricalProject project, SchematicAttachment attachment)
     {
         if (attachment.Kind is not (SchematicAttachmentKind.Pin or SchematicAttachmentKind.Port)) return null;
@@ -55,9 +77,11 @@ public static class SchematicWireContacts
         if (string.IsNullOrWhiteSpace(reference)) reference = port.Name;
         var function = pin is null ? "" : WithoutColor(pin.DisplayFunction);
         if (function.Length == 0 && pin is not null && !pin.FunctionManualOverride) function = WithoutColor(pin.PinName);
-        var shortFunction = pin?.InferredFunction is not null || pin?.FunctionManualOverride == true ? function : WithoutColor(pin?.PinName);
+        var inferred = pin?.InferredFunction is not null && !pin.FunctionManualOverride && string.IsNullOrWhiteSpace(pin.Function);
+        var shortFunction = pin?.FunctionManualOverride == true ? function : inferred
+            ? InferredCaption(project, pin!) ?? function : WithoutColor(pin?.PinName);
         if (shortFunction.Length == 0) shortFunction = function;
-        if (shortFunction.Length > 32 || shortFunction.Contains('\n')) shortFunction = "功能見明細";
+        if (shortFunction.Length > 32 || shortFunction.Any(char.IsControl)) shortFunction = "功能見明細";
         return new(reference + "/" + port.Name + (pin is null ? "" : "." + pin.PinNumber), pin, function)
         { ShortFunction = shortFunction };
     }

@@ -54,7 +54,9 @@ public sealed class SchematicAuthoringTests
         Assert.Equal("A", wire.Start.EndpointId);
         Assert.Empty(next.Connections);
         SchematicAuthoringService.Validate(next);
-        next = _service.TransformSymbol(next, "S1", new(110, 10), (rotation + 90) % 360);
+        if (rotation == 90)
+            Assert.Throws<InvalidOperationException>(() => _service.TransformSymbol(next, "S1", new(110, 10), 180));
+        next = _service.TransformSymbol(next, "S1", new(110, 20), (rotation + 90) % 360);
         var route = next.Schematic!.Wires[0].Points;
         for (var i = 1; i < route.Count - 1; i++)
         {

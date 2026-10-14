@@ -10,7 +10,7 @@ public partial class SchematicWorkspaceControl
         var port = owner.Ports.SingleOrDefault(p => p.Pins.Any(pin => pin.PinId == anchor.EndpointId));
         if (port is null) return null;
         var visual = SchematicAuthoringService.PortPinsInVisualOrder(symbol, port);
-        if (visual.Count < 2 || visual.Any(a => a.CadContactId is not null)) return null;
+        if (visual.Count < 2 || visual.Any(a => a.CadContactId is not null) && !symbol.EndpointDisplayPlacements.Any(p => p.PortId == port.PortId)) return null;
         var ids = visual.Select(a => a.EndpointId).ToArray();
         var index = Array.IndexOf(ids, anchor.EndpointId);
         var menu = new ContextMenu();

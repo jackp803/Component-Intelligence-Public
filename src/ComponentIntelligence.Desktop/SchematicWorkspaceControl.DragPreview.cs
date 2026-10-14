@@ -45,6 +45,8 @@ public partial class SchematicWorkspaceControl
                 element.RenderTransform = new TransformGroup { Children = [element.RenderTransform, translation] };
             }
             var doc = _gestureStart.Schematic!;
+            foreach (var marker in Sheet.Children.OfType<FrameworkElement>().Where(e => e.Tag is string tag &&
+                (tag == "route-junction" || tag.StartsWith("route-conflict:")))) Hide(marker);
             foreach (var wire in doc.Wires.Where(w => w.PageId == _pageId && (w.Start.SymbolId == _dragSymbol || w.End.SymbolId == _dragSymbol)))
             {
             foreach (var target in _wireStrokeTargets.GetValueOrDefault(wire.PageId) ?? [])

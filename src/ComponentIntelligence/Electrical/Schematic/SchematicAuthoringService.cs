@@ -378,6 +378,7 @@ public sealed partial class SchematicAuthoringService
             Start = start, End = end, Points = points.ToList(), ManualRoute = manualRoute };
         doc.Wires.Add(wire);
         Validate(draft);
+        if (CanRerouteSimpleWire(doc, wire)) EnsureAutomaticEndpointsClear(doc, wire);
         if (start.Kind != SchematicAttachmentKind.Free && end.Kind != SchematicAttachmentKind.Free &&
             CanRerouteSimpleWire(doc, wire)) doc.Wires[^1] = wire with { Points = RerouteSimpleWire(draft, doc, wire) };
         ResolveCompletedConnections(draft, doc);
@@ -495,21 +496,43 @@ public sealed partial class SchematicAuthoringService
             throw new InvalidOperationException("Unlock the incident wire before moving its anchor.");
         var next = old with { Position = position, Rotation = rotation };
         doc.Symbols[index] = next;
+        var body = SchematicPortPresentation.GenericBodyBounds(doc, next, SchematicSymbolOwner.Resolve(draft, next));
+        if (doc.Wires.Any(w => w.PageId == next.PageId && (w.Locked || w.ManualRoute) &&
+            w.Start.SymbolId != symbolId && w.End.SymbolId != symbolId && w.Points.Zip(w.Points.Skip(1)).Any(e => FanoutSegmentTouchesBody(e.First, e.Second, body))))
+            throw new InvalidOperationException("新位置會遮住鎖定或手動畫的導線；請調整位置或先明確修改該導線。");
+        var affected = doc.Wires.Where(w => w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId ||
+            w.PageId == next.PageId && CanRerouteSimpleWire(doc, w) && w.Points.Zip(w.Points.Skip(1)).Any(e =>
+                FanoutSegmentTouchesBody(e.First, e.Second, new(body.X - 2, body.Y - 2, body.Width + 4, body.Height + 4))))
+            .Select(w => w.WireId).ToHashSet(StringComparer.Ordinal);
+        var reserved = doc.Wires.Where(w => !affected.Contains(w.WireId) || !CanRerouteSimpleWire(doc, w)).ToList();
         for (var i = 0; i < doc.Wires.Count; i++)
         {
             var wire = doc.Wires[i];
+            if (!affected.Contains(wire.WireId)) continue;
             var points = wire.Points.ToList();
-            if (wire.Start.SymbolId == symbolId) points = ReanchorSymbol(points, draft, next, wire.Start, true);
-            if (wire.End.SymbolId == symbolId) points = ReanchorSymbol(points, draft, next, wire.End, false);
-            if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire);
+            if (wire.Start.SymbolId == symbolId) points = wire.ManualRoute ? Reanchor(points, SymbolAttachmentPoint(draft, next, wire.Start), true) : ReanchorSymbol(points, draft, next, wire.Start, true);
+            if (wire.End.SymbolId == symbolId) points = wire.ManualRoute ? Reanchor(points, SymbolAttachmentPoint(draft, next, wire.End), false) : ReanchorSymbol(points, draft, next, wire.End, false);
+            if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire, reserved);
             doc.Wires[i] = wire with { Points = points };
+            reserved.Add(doc.Wires[i]);
             ReanchorDependentJunctions(doc, wire.WireId);
         }
     });
 
     public static SchematicPoint AnchorPoint(SchematicSymbol symbol, string endpointId)
     {
+        var placement = symbol.EndpointDisplayPlacements.SingleOrDefault(p => p.EndpointId == endpointId);
+        return placement is null ? NativeAnchorPoint(symbol, endpointId) : TransformAnchorDisplayPoint(symbol, placement.Position);
+    }
+
+    public static SchematicPoint NativeAnchorPoint(SchematicSymbol symbol, string endpointId)
+    {
         var point = SchematicSymbolPresentation.CadDisplayPoint(symbol, symbol.Anchors.Single(a => a.EndpointId == endpointId).Position);
+        return TransformAnchorDisplayPoint(symbol, point);
+    }
+
+    private static SchematicPoint TransformAnchorDisplayPoint(SchematicSymbol symbol, SchematicPoint point)
+    {
         var rotated = symbol.Rotation switch
         {
             0 => point,
@@ -539,7 +562,8 @@ public sealed partial class SchematicAuthoringService
         (wire.Start.SymbolId is not null || wire.End.SymbolId is not null) &&
         !doc.Wires.Any(child => child.Start.WireId == wire.WireId || child.End.WireId == wire.WireId);
 
-    private static List<SchematicPoint> RerouteSimpleWire(ElectricalProject project, SchematicDocument doc, SchematicWire wire)
+    private static List<SchematicPoint> RerouteSimpleWire(ElectricalProject project, SchematicDocument doc, SchematicWire wire,
+        IReadOnlyList<SchematicWire>? reserved = null)
     {
         (SchematicPoint Point, string? Side, double Clearance) Endpoint(SchematicAttachment attachment, SchematicPoint fallback)
         {
@@ -593,26 +617,12 @@ public sealed partial class SchematicAuthoringService
         }
         var a = Lead(start.Point, start.Side, start.Clearance);
         var b = Lead(end.Point, end.Side, end.Clearance);
-        if (wire.Start.Kind == SchematicAttachmentKind.Free || wire.End.Kind == SchematicAttachmentKind.Free)
-        {
-            List<SchematicPoint[]> corners = [[new(b.X, a.Y)], [new(a.X, b.Y)]];
-            foreach (var lane in new[] { Math.Min(a.Y, b.Y) - 8, Math.Max(a.Y, b.Y) + 8 })
-                corners.Add([new(a.X, lane), new(b.X, lane)]);
-            foreach (var lane in new[] { Math.Min(a.X, b.X) - 8, Math.Max(a.X, b.X) + 8 })
-                corners.Add([new(lane, a.Y), new(lane, b.Y)]);
-            foreach (var corner in corners)
-            {
-                var route = Simplify(new[] { start.Point, a }.Concat(corner).Concat([b, end.Point]));
-                if (RouteRetraces(route)) continue;
-                if (a != start.Point && route[1] != a) route.Insert(1, a);
-                if (b != end.Point && route[^2] != b) route.Insert(route.Count - 1, b);
-                return route;
-            }
-            throw new InvalidOperationException("The contacts need more room for a non-overlapping route.");
-        }
         bool Contains(SchematicGridBounds r, SchematicPoint p) => p.X > r.X && p.X < r.X + r.Width && p.Y > r.Y && p.Y < r.Y + r.Height;
         var obstacles = doc.Symbols.Where(s => s.PageId == wire.PageId).Select(s => (s.SymbolId,
             Bounds: SchematicPortPresentation.GenericBodyBounds(doc, s, SchematicSymbolOwner.Resolve(project, s)))).ToArray();
+        var draft = wire.Start.Kind == SchematicAttachmentKind.Free || wire.End.Kind == SchematicAttachmentKind.Free;
+        if (draft)
+            obstacles = obstacles.Where(o => !Contains(o.Bounds, wire.Start.Kind == SchematicAttachmentKind.Free ? start.Point : end.Point)).ToArray();
         bool BlocksStub(SchematicPoint p, SchematicPoint q, SchematicGridBounds body) =>
             p.Y == q.Y && p.Y > body.Y - 2 && p.Y < body.Y + body.Height + 2 &&
                 Math.Min(p.X, q.X) < body.X + body.Width + 2 && Math.Max(p.X, q.X) > body.X - 2 ||
@@ -623,12 +633,32 @@ public sealed partial class SchematicAuthoringService
             throw new InvalidOperationException("接點出口被另一個模塊擋住，請先拉開模塊間距。");
         var bodies = obstacles.Where(o => !(o.SymbolId == wire.Start.SymbolId && Contains(o.Bounds, a) ||
             o.SymbolId == wire.End.SymbolId && Contains(o.Bounds, b))).Select(o => o.Bounds).ToArray();
-        var middle = SchematicOrthogonalRoute.Between(a, b, doc.Pages.Single(p => p.PageId == wire.PageId), bodies);
+        var routes = IndependentRoutes(doc, wire, reserved).ToList();
+        EnsureAutomaticEndpointsClear(doc, wire with { Points = [start.Point, end.Point] }, reserved);
+        var exitStubs = new List<SchematicWire>();
+        if (start.Point != a) exitStubs.Add(wire with { Points = [start.Point, a] });
+        if (end.Point != b) exitStubs.Add(wire with { Points = [b, end.Point] });
+        var middle = SchematicOrthogonalRoute.Between(a, b, doc.Pages.Single(p => p.PageId == wire.PageId), bodies, routes, exitStubs);
         var result = Simplify(new[] { start.Point }.Concat(middle).Append(end.Point));
         if (a != start.Point && result[1] != a) result.Insert(1, a);
         if (b != end.Point && result[^2] != b) result.Insert(result.Count - 1, b);
         if (RouteRetraces(result)) throw new InvalidOperationException("接點間距不足，導線出口會重疊，請拉開模塊。");
         return result;
+    }
+
+    private static IEnumerable<SchematicWire> IndependentRoutes(SchematicDocument doc, SchematicWire wire, IReadOnlyList<SchematicWire>? reserved = null) =>
+        (reserved ?? doc.Wires).Where(other => other.PageId == wire.PageId && other.WireId != wire.WireId &&
+            !(wire.ConnectionId is not null && wire.ConnectionId == other.ConnectionId) &&
+            !new[] { wire.Start, wire.End }.Any(e => e.Kind != SchematicAttachmentKind.Free &&
+                new[] { other.Start, other.End }.Any(o => e.Kind == o.Kind && e.EndpointId == o.EndpointId && e.SymbolId == o.SymbolId)));
+
+    private static void EnsureAutomaticEndpointsClear(SchematicDocument doc, SchematicWire wire, IReadOnlyList<SchematicWire>? reserved = null)
+    {
+        bool Touches(SchematicPoint p, SchematicWire other) => other.Points.Zip(other.Points.Skip(1)).Any(e =>
+            e.First.Y == e.Second.Y && p.Y == e.First.Y && p.X >= Math.Min(e.First.X, e.Second.X) && p.X <= Math.Max(e.First.X, e.Second.X) ||
+            e.First.X == e.Second.X && p.X == e.First.X && p.Y >= Math.Min(e.First.Y, e.Second.Y) && p.Y <= Math.Max(e.First.Y, e.Second.Y));
+        if (IndependentRoutes(doc, wire, reserved).Any(route => Touches(wire.Points[0], route) || Touches(wire.Points[^1], route)))
+            throw new InvalidOperationException("導線端點碰到未連接的導線；請明確選擇分支接點或移開端點。");
     }
 
     private static bool RouteRetraces(IReadOnlyList<SchematicPoint> route)
@@ -913,6 +943,7 @@ public sealed partial class SchematicAuthoringService
                 Math.Abs(symbol.Height - geometry.Height * SchematicSymbolPresentation.CadDisplayScale(symbol)) > 1e-8 * Math.Max(1, symbol.Height)))
                 throw new InvalidOperationException("CAD display size must preserve the native aspect ratio.");
             var owner = SchematicSymbolOwner.Resolve(project, symbol);
+            ValidatePortFanout(project, doc, symbol, owner);
             if (symbol.CollapsedPortIds.Distinct(StringComparer.Ordinal).Count() != symbol.CollapsedPortIds.Count ||
                 symbol.CollapsedPortIds.Any(id => !owner.Ports.Any(p => p.PortId == id)))
                 throw new InvalidOperationException("Collapsed port must belong to this representation owner.");

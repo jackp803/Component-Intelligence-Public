@@ -87,6 +87,18 @@ public static class SchematicPdfWriter
             foreach (var item in output.Where(p => p.WireDetails is not null))
             {
                 var tile = item.WireDetails!;
+                foreach (var row in tile.Blocks.SelectMany(block => block.Rows))
+                {
+                    var wire = snapshot.Schematic.Wires.Single(w => w.WireId == row.Entry.WireId && w.PageId == tile.SourcePageId);
+                    foreach (var (a, b) in wire.Points.Zip(wire.Points.Skip(1)))
+                    {
+                        var length = Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+                        if (length <= 6) continue;
+                        var bounds = a.Y == b.Y ? new SchematicGridBounds(Math.Min(a.X, b.X) + 3, a.Y - 1.2, length - 6, 2.4) :
+                            new SchematicGridBounds(a.X - 1.2, Math.Min(a.Y, b.Y) + 3, 2.4, length - 6);
+                        AddLink(indices[tile.SourcePageId], bounds, indices[item.Sheet.PageId], new(item.Sheet.Margin + 4, item.Sheet.Margin + 22));
+                    }
+                }
                 AddLink(indices[item.Sheet.PageId], new(item.Sheet.Margin + 4,
                     item.Sheet.Height - item.Sheet.Margin - (item.Sheet.TemplateGeometry is null ? 12 : 66), 55, 7),
                     indices[tile.SourcePageId], new(item.Sheet.Margin, item.Sheet.Margin));

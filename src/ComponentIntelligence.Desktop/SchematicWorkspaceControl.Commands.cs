@@ -83,6 +83,13 @@ public partial class SchematicWorkspaceControl
 
     private void DeleteSelectedObject()
     {
+        if (_selectedWires.Count > 1)
+        {
+            var ids = _selectedWires.ToArray();
+            if (ReviewedEdit(p => _service.DeleteWires(p, ids), "刪除整組導線", "刪除選取的 " + ids.Length + " 條導線及相依線段？"))
+            { _selectedWires.Clear(); _selectionId = null; RefreshWorkspace(); }
+            return;
+        }
         if (SelectedCableDetail() is { } detail && _pageId is not null)
         {
             var part = SelectedDetailPart();
@@ -100,11 +107,8 @@ public partial class SchematicWorkspaceControl
         if (symbol is not null)
         {
             if (symbol.Locked) { Status.Text = "請先解鎖此圖面表示。"; return; }
-            if (doc!.Wires.Any(w => w.Start.SymbolId == symbol.SymbolId || w.End.SymbolId == symbol.SymbolId))
-            { Status.Text = "此表示仍有接線，請先明確處理接線；未刪除任何資料。"; return; }
-            if (MessageBox.Show(Window.GetWindow(this), "只刪除此圖面表示？實體元件、Reference 與其他表示會保留。",
-                "刪除圖面表示", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-            if (Apply(p => _service.DeleteRepresentation(p, symbol.SymbolId), "已刪除圖面表示；實體元件保留，可復原"))
+            if (ReviewedEdit(p => _service.DeleteRepresentations(p, [symbol.SymbolId], deleteConnections: true),
+                "刪除圖面表示", "刪除此圖面表示與相關工程連線？Reference 與其他表示保留。"))
             { _selectionId = null; RefreshWorkspace(); }
             return;
         }
@@ -114,9 +118,8 @@ public partial class SchematicWorkspaceControl
             return;
         }
         if (_getProject().Schematic?.Wires.Any(w => w.WireId == _selectionId) != true) return;
-        if (MessageBox.Show(Window.GetWindow(this), "刪除此導線及對應工程連線？", "刪除導線",
-            MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        Apply(p => _service.DeleteWire(p, _selectionId!), "已刪除導線");
+        if (ReviewedEdit(p => _service.DeleteWires(p, [_selectionId!]), "刪除導線", "刪除此導線及對應工程連線？"))
+        { _selectedWires.Clear(); _selectionId = null; RefreshWorkspace(); }
     }
 
     private void DeleteContinuationMarker(string markerId)
@@ -154,6 +157,7 @@ public partial class SchematicWorkspaceControl
 
     private void Gauge_Click(object sender, RoutedEventArgs e)
     {
+        if (_selectedWires.Count > 1) { BatchGauge(); return; }
         var wire = _getProject().Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
         if (wire is null) { Status.Text = "請先選取導線"; return; }
         if (_getProject().Connections.Any(c => c.ConnectionId == wire.ConnectionId && c.Kind == ComponentIntelligence.Electrical.Domain.ConnectionKind.DirectMating))

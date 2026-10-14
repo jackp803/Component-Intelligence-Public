@@ -9,6 +9,7 @@ public static class ElectricalProjectMigrator
     public const string CableFunctionAssociationSchemaVersion = "0.9";
     public const string CadDisplayScaleSchemaVersion = "0.10";
     public const string ConnectorMatingSchemaVersion = "0.11";
+    public const string PortFanoutSchemaVersion = "0.12";
 
     public static ElectricalProject Migrate(ElectricalProject project)
     {
@@ -17,7 +18,8 @@ public static class ElectricalProjectMigrator
             string.Equals(project.SchemaVersion, CableWiringSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(project.SchemaVersion, CableFunctionAssociationSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(project.SchemaVersion, CadDisplayScaleSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(project.SchemaVersion, ConnectorMatingSchemaVersion, StringComparison.OrdinalIgnoreCase))
+            string.Equals(project.SchemaVersion, ConnectorMatingSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(project.SchemaVersion, PortFanoutSchemaVersion, StringComparison.OrdinalIgnoreCase))
         {
             ProjectLegacyAssemblyCompatibility(project);
             return ProtectCableWiring(project);
@@ -37,6 +39,9 @@ public static class ElectricalProjectMigrator
     }
 
     private static ElectricalProject ProtectCableWiring(ElectricalProject project) =>
+        project.SchemaVersion == PortFanoutSchemaVersion ? project :
+        project.Schematic?.Symbols.Any(s => s.EndpointDisplayPlacements.Count > 0) == true
+            ? Copy(project, PortFanoutSchemaVersion, project.DrawingPlan) :
         project.SchemaVersion == ConnectorMatingSchemaVersion ? project :
         project.Connections.Any(c => c.MatingMap is not null) || Connectivity.ProjectPinFunctionService.Pins(project)
             .Any(p => p.InferredFunction is not null || p.FunctionManualOverride) ? Copy(project, ConnectorMatingSchemaVersion, project.DrawingPlan) :
@@ -53,6 +58,9 @@ public static class ElectricalProjectMigrator
 
     private static bool HasFunctions(CableManufacturingDefinition? definition) => definition is not null &&
         (definition.FunctionLinks.Count > 0 || definition.FunctionOverrides.Count > 0);
+
+    internal static ElectricalProject ForPortFanout(ElectricalProject project) =>
+        Copy(Migrate(Editing.EngineeringReviewService.Clone(project)), PortFanoutSchemaVersion, project.DrawingPlan);
 
     private static ElectricalProject UpgradeFrom01(ElectricalProject source) => Copy(source, "0.2");
     private static ElectricalProject UpgradeFrom02(ElectricalProject source) => Copy(source, "0.3");
@@ -78,6 +86,7 @@ public static class ElectricalProjectMigrator
         Name = source.Name,
         DrawingPlan = drawingPlan,
         Schematic = source.Schematic,
+        BomItems = source.BomItems,
         Components = source.Components,
         Nets = source.Nets,
         Connections = source.Connections,

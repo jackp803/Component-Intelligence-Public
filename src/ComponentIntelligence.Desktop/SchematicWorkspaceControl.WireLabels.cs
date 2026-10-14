@@ -92,9 +92,17 @@ public partial class SchematicWorkspaceControl
             {
                 var radius = 4.5 + paddings[c.HorizontalWireId];
                 return new Rect(c.Position.X * 3 - radius, c.Position.Y * 3 - radius, radius * 2, radius * 2);
-            })).ToArray();
+            }))
+            .Concat(doc.Symbols.Where(s => s.PageId == page.PageId).SelectMany(s => s.EndpointDisplayPlacements.SelectMany(p =>
+                SchematicAuthoringService.PortFanoutLeadPoints(s, p.EndpointId).Zip(SchematicAuthoringService.PortFanoutLeadPoints(s, p.EndpointId).Skip(1))
+                    .Select(segment => { var box = new Rect(new Point(segment.First.X * 3, segment.First.Y * 3), new Point(segment.Second.X * 3, segment.Second.Y * 3)); box.Inflate(2, 2); return box; }))))
+            .ToArray();
         _wireLabelWarnings.Remove(page.PageId);
         var warnings = new List<string>();
+        var groups = SchematicWireLegendPresentation.Groups(_renderWireDetails.Values);
+        var standalone = groups.Where(g => g.Entries.Count == 1).Select(g => g.Entries[0].WireId).ToHashSet(StringComparer.Ordinal);
+        var inlineSpecs = new HashSet<string>(StringComparer.Ordinal);
+        var compactNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var wire in wires)
         {
             if (!_renderWireLabels.TryGetValue(wire.WireId, out var caption)) continue;
@@ -112,6 +120,7 @@ public partial class SchematicWorkspaceControl
             bool Fits(Rect r) => r.Left >= margin && r.Top >= margin && r.Right <= page.Width * 3 - margin &&
                 r.Bottom <= page.Height * 3 - margin && !occupied.Any(o => o.IntersectsWith(r)) && !wireLines.Any(o => o.IntersectsWith(r));
             Rect? chosen = null;
+            var chosenSide = -1;
             bool TryLocal(int preferredSide)
             {
             foreach (var font in caption.IsOrdinaryWire ? new[] { 10.5, 8.5 } : new[] { 10.5 })
@@ -146,10 +155,23 @@ public partial class SchematicWorkspaceControl
                     }
                 if (chosen is not null) break;
             }
+            if (chosen is not null) chosenSide = preferredSide;
             return chosen is not null;
             }
-            TryLocal(-1);
-            var adjacentFallback = chosen is null && caption.IsOrdinaryWire && TryLocal(1);
+            var baseText = label.Text;
+            if (standalone.Contains(wire.WireId) && _renderWireDetails.TryGetValue(wire.WireId, out var detail))
+            {
+                label.Text += "\n" + detail.Specification.Text;
+                if (TryLocal(-1) || TryLocal(1)) inlineSpecs.Add(wire.WireId);
+                else label.Text = baseText;
+            }
+            if (chosen is null) TryLocal(-1);
+            if (chosen is null && caption.IsOrdinaryWire) TryLocal(1);
+            if (chosen is null && caption.IsOrdinaryWire && _renderWireDetails.TryGetValue(wire.WireId, out var fallback))
+            {
+                label.Text = fallback.Index + (fallback.ShortFunction.Length > 0 ? " · " + fallback.ShortFunction : "");
+                if (TryLocal(-1) || TryLocal(1)) compactNames.Add(wire.WireId);
+            }
             if (chosen is null && !caption.IsOrdinaryWire)
             {
                 for (var radius = 14d; radius <= Math.Max(page.Width, page.Height) * 3 && chosen is null; radius += 14)
@@ -163,11 +185,11 @@ public partial class SchematicWorkspaceControl
             if (chosen is not { } box)
             {
                 if (_renderingOutput) throw new InvalidOperationException("導線標籤沒有足夠空間，請拉開模塊或移到其他頁面。");
-                warnings.Add(caption.FullText);
+                warnings.Add(_renderWireDetails.GetValueOrDefault(wire.WireId)?.DisplayName ?? caption.Text);
                 continue;
             }
             var center = new Point(box.X + box.Width / 2, box.Y + box.Height / 2);
-            if (adjacentFallback)
+            if (caption.IsOrdinaryWire && chosenSide == 1)
             {
                 var tick = new Line { X1 = vertical ? caption.Center.X * 3 : center.X,
                     Y1 = vertical ? center.Y : caption.Center.Y * 3,
@@ -191,15 +213,19 @@ public partial class SchematicWorkspaceControl
             var blocked = box; blocked.Inflate(4, 4); occupied.Add(blocked);
             if (!_renderingOutput) label.MouseLeftButtonDown += (_, e) =>
             {
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { SelectWire(wire.WireId, true); e.Handled = true; return; }
                 if (_wireMode || wire.Locked) return;
+                _selectedWires.Clear(); _selectedWires.Add(wire.WireId);
                 _selectionId = wire.WireId; BeginGesture(e); _dragWireLabel = wire.WireId;
                 _dragWireLabelOrigin = new(center.X / 3, center.Y / 3); e.Handled = true;
             };
         }
-        var groups = SchematicWireLegendPresentation.Groups(_renderWireDetails.Values);
-        if (groups.Count > 0)
+        var remaining = groups.Where(g => !g.Entries.All(e => inlineSpecs.Contains(e.WireId))).ToArray();
+        if (remaining.Length > 0 || compactNames.Count > 0)
         {
-            var legend = new TextBlock { Text = string.Join("\n", groups.Select(g => g.Text)), FontSize = 10.5,
+            var legendText = remaining.Select(g => g.Text).Concat(_renderWireDetails.Values.Where(e => compactNames.Contains(e.WireId))
+                .Select(e => e.Index + " = " + e.DisplayName + (e.ShortFunction.Length > 0 ? " · " + e.ShortFunction : "")));
+            var legend = new TextBlock { Text = string.Join("\n", legendText), FontSize = 10.5,
                 Foreground = Brushes.Black, Background = Brushes.White, Padding = new Thickness(4),
                 TextWrapping = TextWrapping.Wrap, Width = Math.Min(650, (page.Width - 2 * page.Margin) * 3),
                 Tag = "wire-spec-legend", IsHitTestVisible = false };
@@ -222,15 +248,10 @@ public partial class SchematicWorkspaceControl
         }
         if (warnings.Count > 0)
         {
-            const string message = "導線標籤空間不足，未放入圖紙；請拉開模塊或移到其他頁面後再匯出。";
+            const string message = "標示空間不足：請展開 Port 引線或調整圖塊位置；完整資料可在導線明細核對。";
             _wireLabelWarnings[page.PageId] = message;
-            var warning = new TextBlock { Text = message + "\n" + string.Join("\n", warnings), Foreground = Brushes.Firebrick,
-                FontSize = 12, TextWrapping = TextWrapping.Wrap, Width = (page.Width - 2 * page.Margin) * 3,
-                Tag = "wire-label-warning", IsHitTestVisible = false };
-            warning.Measure(new Size(warning.Width, double.PositiveInfinity));
-            Canvas.SetLeft(warning, page.Margin * 3); Canvas.SetTop(warning, page.Height * 3 + 12);
-            Sheet.Children.Add(warning); Sheet.Height += warning.DesiredSize.Height + 24;
-            Status.Text = message;
+            Status.Text = message + "\n" + string.Join("、", warnings);
+            Status.ToolTip = string.Join("\n", warnings);
         }
     }
 }

@@ -94,6 +94,8 @@ public partial class SchematicWorkspaceControl : UserControl
 
     private void Render(ElectricalProject project)
     {
+        _selectedWires.RemoveWhere(id => project.Schematic?.Wires.Any(w => w.WireId == id) != true);
+        if (_selectionId is not null && project.Schematic?.Wires.Any(w => w.WireId == _selectionId) != true) _selectedWires.Clear();
         var pages = project.Schematic?.Pages ?? [];
         _wireLabelWarnings.Clear();
         foreach (var id in _symbolVisuals.Keys.Where(id => project.Schematic?.Symbols.All(s => s.SymbolId != id) != false).ToArray())
@@ -127,7 +129,7 @@ public partial class SchematicWorkspaceControl : UserControl
     {
         if (_pageId == pageId) return;
         if (!FinishPendingDraft()) return;
-        CancelGesture(); _pageId = pageId; _selectionId = null;
+        CancelGesture(); _selectedWires.Clear(); _pageId = pageId; _selectionId = null;
         _refreshing = true;
         try { PageList.SelectedItem = PageList.Items.Cast<PageItem>().FirstOrDefault(p => p.Id == pageId); }
         finally { _refreshing = false; }
@@ -193,18 +195,18 @@ public partial class SchematicWorkspaceControl : UserControl
             var weight = Math.Max(1.5 / zoom, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
             var physicalWeight = SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm;
             var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
-            var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
+            var line = Path(wire.Points, IsWireSelected(wire.WireId) ? Brushes.DarkCyan : color, IsWireSelected(wire.WireId) ? weight + 1 : weight);
             if (mating) line.StrokeDashArray = new DoubleCollection { 5, 3 };
-            TrackWireStrokes(page.PageId, line, physicalWeight, wire.WireId == _selectionId, wireId: wire.WireId);
+            TrackWireStrokes(page.PageId, line, physicalWeight, IsWireSelected(wire.WireId), wireId: wire.WireId);
             line.ToolTip = (_wireMode ? "點選既有導線，建立明確分支" : wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
             line.ToolTip += "\n" + wire.Designation + (wire.SizingProposal is { } proposal ? "\n線徑待核對：" + proposal.Review : "");
             if (mating) line.ToolTip = "接頭對接 / 逐 Pin 對應已確認";
             line.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) return;
-                _selectionId = wire.WireId; Render(_getProject()); e.Handled = true; Focus();
+                SelectWire(wire.WireId, Keyboard.Modifiers.HasFlag(ModifierKeys.Control)); e.Handled = true;
             };
-            if (evidence.NeedsOutline && wire.WireId != _selectionId)
+            if (evidence.NeedsOutline && !IsWireSelected(wire.WireId))
             {
                 var outline = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
                     Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, Brushes.DimGray, weight + 2 / zoom, line.StrokeDashArray);
@@ -216,7 +218,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 var geometry = CadCanvas(new SchematicCadAsset { SourceSha256 = "", Width = page.Width, Height = page.Height,
                     Primitives = SchematicCrossingService.RoutePrimitives(wire, crossings) }, line.Stroke, line.StrokeThickness, line.StrokeDashArray);
                 Sheet.Children.Add(geometry);
-                TrackWireStrokes(page.PageId, geometry, physicalWeight, wire.WireId == _selectionId, wireId: wire.WireId);
+                TrackWireStrokes(page.PageId, geometry, physicalWeight, IsWireSelected(wire.WireId), wireId: wire.WireId);
             }
             else Sheet.Children.Add(line);
             if (_wireMode && !_renderingOutput && !mating)
@@ -303,10 +305,12 @@ public partial class SchematicWorkspaceControl : UserControl
                     };
                 }
         }
-        foreach (var point in crossings.Junctions) Marker(point, Brushes.Black, Brushes.Black, 5).IsHitTestVisible = false;
+        foreach (var point in crossings.Junctions)
+        { var junction = Marker(point, Brushes.Black, Brushes.Black, 5); junction.IsHitTestVisible = false; junction.Tag = "route-junction"; }
         foreach (var conflict in crossings.Conflicts)
         {
             var warning = Marker(conflict.Position, Brushes.Transparent, Brushes.Firebrick, 12);
+            warning.Tag = "route-conflict:" + conflict.FirstWireId + ":" + conflict.SecondWireId;
             warning.ToolTip = conflict.Code == "COLLINEAR_OVERLAP" ? "不同導線共線重疊；請分開走線通道" : "未連接的接觸／交叉間距不足";
         }
         foreach (var symbol in doc.Symbols.Where(s => s.PageId == page.PageId)) RenderTrackedSymbol(project, symbol);
@@ -477,6 +481,14 @@ public partial class SchematicWorkspaceControl : UserControl
         {
             if (_pairMode && !_renderingOutput) continue;
             if (SchematicPortPresentation.IsCollapsedPin(project.Schematic!, symbol, owner, anchor)) continue;
+            var fanout = SchematicAuthoringService.PortFanoutLeadPoints(symbol, anchor.EndpointId);
+            if (fanout.Count > 1)
+            {
+                var stub = Path(fanout.ToList(), Brushes.Gray, 1);
+                stub.StrokeDashArray = new DoubleCollection { 2, 2 }; stub.IsHitTestVisible = false;
+                stub.Tag = "port-fanout:" + symbol.SymbolId + ":" + anchor.EndpointId;
+                stub.ToolTip = "接點顯示引線"; Sheet.Children.Add(stub);
+            }
             var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
             var pin = Marker(point, anchor.Confirmed ? Brushes.White : Brushes.LightGoldenrodYellow, Brushes.Black, 7);
             pin.ToolTip = $"{anchor.Label}\n{(anchor.Confirmed ? "接點位置已確認" : "接點位置待設定")}";
@@ -493,7 +505,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 else { _selectionId = symbol.SymbolId; UpdateSelection(project); }
                 e.Handled = true;
             };
-            if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
+            if (fanout.Count > 0 || SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
             {
                 var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
                 var label = new TextBlock { Text = _renderPinLabels.GetValueOrDefault((symbol.SymbolId, anchor.EndpointId)) ?? SchematicWireContacts.AnchorText(project, symbol, anchor), FontSize = 9.5,
@@ -531,6 +543,7 @@ public partial class SchematicWorkspaceControl : UserControl
                     (Position: center, Side: SchematicPortPresentation.PortSide(symbol, port));
                 center = contact.Position;
                 var point = Marker(center, Brushes.White, Brushes.Black, 9);
+                if (!_renderingOutput) point.ContextMenu = PortFanoutMenu(symbol, port);
                 point.ToolTip = points.Length == 0 ? portEditing
                     ? $"{port.Name}: 拖曳移動 Port；尚無 Pin 明細，不能展開"
                     : $"{port.Name}: 可接線到 Port；尚無 Pin 明細，不能展開"
@@ -571,6 +584,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 Cursor = portEditing ? Cursors.SizeAll : Cursors.Hand,
                 Child = new TextBlock { Text = "▾", FontSize = 10, TextAlignment = TextAlignment.Center },
                 ToolTip = portEditing ? $"{port.Name}：點一下收合 Pin；拖曳到模塊四邊" : $"{port.Name}：雙擊收合 Pin" };
+            if (!_renderingOutput) handle.ContextMenu = PortFanoutMenu(symbol, port);
             var handleSide = SchematicPortPresentation.PortSide(symbol, port);
             // Port drag targeting still uses the native frame, not the fitted CAD selection outline.
             var handlePosition = handleSide switch
@@ -773,7 +787,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 hit?.Position ?? point, e.ClickCount > 1);
             e.Handled = true;
         }
-        else { _selectionId = null; Render(_getProject()); }
+        else BeginWireMarquee(e);
     }
     private void BeginGesture(MouseButtonEventArgs e)
     {
@@ -785,6 +799,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void Sheet_Move(object sender, MouseEventArgs e)
     {
         if (sender is Canvas canvas && canvas != Sheet) return;
+        if (_marqueeStart is not null) { UpdateWireMarquee(e.GetPosition(Sheet)); return; }
         _pointer = Snap(e.GetPosition(Sheet));
         if (_gestureStart is not null && _dragStart is not null && e.LeftButton == MouseButtonState.Pressed)
         {
@@ -865,6 +880,7 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void Sheet_Up(object sender, MouseButtonEventArgs e)
     {
+        if (_marqueeStart is not null) { FinishWireMarquee(e.GetPosition(Sheet)); return; }
         if (_gestureStart is null) return;
         if (_dragActivated && Sheet.IsMouseCaptured) { _pointer = Snap(e.GetPosition(Sheet)); QueuePointerPreview(); }
         FlushPointerPreview();
@@ -889,6 +905,7 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void CancelCommand()
     {
+        CancelWireMarquee(); _selectedWires.Clear();
         CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null; _matingFirst = null;
         _pendingRepresentation = null;
         _pendingCable = null;
@@ -922,7 +939,7 @@ public partial class SchematicWorkspaceControl : UserControl
     {
         if (_refreshing || PageList.SelectedItem is not PageItem item) return;
         if (!FinishPendingDraft()) { RefreshWorkspace(); return; }
-        ClearPendingWire(); CancelGesture(); _pageId = item.Id; _selectionId = null; RefreshWorkspace();
+        ClearPendingWire(); CancelGesture(); CancelWireMarquee(); _selectedWires.Clear(); _pageId = item.Id; _selectionId = null; RefreshWorkspace();
     }
     private void PageUp_Click(object sender, RoutedEventArgs e) => MovePage(-1);
     private void PageDown_Click(object sender, RoutedEventArgs e) => MovePage(1);
@@ -984,6 +1001,7 @@ public partial class SchematicWorkspaceControl : UserControl
             if (evidence.Category == "CONFLICT") SelectionState.Text += "\n兩端分類衝突，需確認";
             if (w.SizingProposal is { } proposal) SelectionState.Text += "\n線徑建議待核對：" + proposal.Review;
         }
+        if (_selectedWires.Count > 1) { SelectionLabel.Text = "已選取 " + _selectedWires.Count + " 條導線"; SelectionState.Text = ""; }
     }
     private void Reference_Click(object sender, RoutedEventArgs e)
     {

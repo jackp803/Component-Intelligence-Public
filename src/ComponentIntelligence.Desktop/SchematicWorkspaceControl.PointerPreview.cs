@@ -41,6 +41,7 @@ public partial class SchematicWorkspaceControl
 
     private void Sheet_LostMouseCapture(object sender, RoutedEventArgs e)
     {
+        if (_marqueeStart is not null && !Sheet.IsMouseCaptured) { CancelWireMarquee(); Render(_getProject()); return; }
         if (_gestureStart is null || !ReferenceEquals(sender, Sheet) || Sheet.IsMouseCaptured) return;
         CancelGesture(); Render(_getProject());
     }

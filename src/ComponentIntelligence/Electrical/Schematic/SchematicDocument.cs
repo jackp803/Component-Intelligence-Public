@@ -99,6 +99,7 @@ public sealed record SchematicSymbol
     public string ArchiveRepresentationId { get; init; } = "default";
     public SchematicCadAsset? Geometry { get; init; }
     public List<SchematicAnchor> Anchors { get; init; } = [];
+    public List<SchematicEndpointDisplayPlacement> EndpointDisplayPlacements { get; init; } = [];
     public List<SchematicCadPortBinding> CadPortBindings { get; init; } = [];
     public List<string> CollapsedPortIds { get; init; } = [];
     public List<SchematicPortPlacement> PortPlacements { get; init; } = [];
@@ -108,6 +109,14 @@ public sealed record SchematicSymbol
 
 public sealed record SchematicCadPortBinding(string PortId, string SourcePortId, string CadContactId,
     SchematicPoint Position, string Direction);
+
+// Unrotated display millimetres relative to the symbol; native CAD contacts remain authoritative.
+public sealed record SchematicEndpointDisplayPlacement
+{
+    public required string EndpointId { get; init; }
+    public required string PortId { get; init; }
+    public required SchematicPoint Position { get; init; }
+}
 
 public sealed record SchematicPortPlacement
 {

@@ -29,7 +29,7 @@ public static class SchematicPortPresentation
         var y = offsets.Length == 0 || height >= original.Height ? 0 :
             Math.Clamp((offsets.Min(p => p.Y) + offsets.Max(p => p.Y) - height) / 2, 0, original.Height - height);
         var displayed = visible.Select(anchor => (Side: RotatedSide(anchor.Direction, symbol.Rotation),
-            Point: SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId))).ToArray();
+            Point: SchematicAuthoringService.NativeAnchorPoint(symbol, anchor.EndpointId))).ToArray();
         var left = displayed.Where(a => a.Side == "Left").Select(a => a.Point.X).ToArray();
         var right = displayed.Where(a => a.Side == "Right").Select(a => a.Point.X).ToArray();
         var top = displayed.Where(a => a.Side == "Top").Select(a => a.Point.Y).ToArray();
@@ -160,13 +160,13 @@ public static class SchematicPortPresentation
         }
         var ids = port.Pins.Select(pin => pin.PinId).ToHashSet(StringComparer.Ordinal);
         var points = symbol.Anchors.Where(a => ids.Contains(a.EndpointId))
-            .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
+            .Select(a => SchematicAuthoringService.NativeAnchorPoint(symbol, a.EndpointId)).ToArray();
         return points.Length == 0 ? 0 : side is "Top" or "Bottom" ? points.Average(p => p.X) : points.Average(p => p.Y);
     }
 
     private static SchematicPoint AnchorOffset(SchematicSymbol symbol, SchematicAnchor anchor)
     {
-        var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
+        var point = SchematicAuthoringService.NativeAnchorPoint(symbol, anchor.EndpointId);
         return new(point.X - symbol.Position.X, point.Y - symbol.Position.Y);
     }
 

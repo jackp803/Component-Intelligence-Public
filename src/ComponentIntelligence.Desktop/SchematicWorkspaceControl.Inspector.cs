@@ -105,6 +105,13 @@ public partial class SchematicWorkspaceControl
     }
     private void UpdateInspector(ElectricalProject project, bool force = false)
     {
+        if (_selectedWires.Count > 1)
+        {
+            _inspectorTarget = null;
+            ModuleInspectorPanel.Visibility = WireInspectorFields.Visibility = DetailInspectorFields.Visibility = InspectorActions.Visibility = Visibility.Collapsed;
+            InspectorDelete.Visibility = Visibility.Visible;
+            return;
+        }
         if (!force && _gestureStart is not null && _inspectorTarget == _selectionId) return;
         if (!force && _inspectorTarget == _selectionId && _inspectorProjectId == project.ProjectId &&
             (InspectorDirty || _inspectorSource == TargetSource(project, _selectionId))) return;

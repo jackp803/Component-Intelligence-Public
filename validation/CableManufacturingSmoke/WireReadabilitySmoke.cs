@@ -52,7 +52,7 @@ internal static partial class Program
         Require(labels.All(t => !t.Text.Contains("AWG") && !t.Text.Contains('\n') && t.Text.Length < 40),
             "Wire captions still repeat sizing or full remote descriptions.");
         var legend = sheet.Children.OfType<TextBlock>().SingleOrDefault(t => Equals(t.Tag, "wire-spec-legend"));
-        Require(legend is not null && legend.Text.Split("AWG").Length - 1 == 2,
+        Require(legend is not null && legend.Text.Split("AWG").Length - 1 == 1 && legend.Text.Contains("線徑待核對"),
             "Two identical-size power wires and three unknown wires need exactly two group specifications.");
         Require(!sheet.Children.OfType<FrameworkElement>().Any(t => t.Tag is string tag && tag.StartsWith("wire-leader:")),
             "Ordinary wire labels still create remote dashed leaders.");
@@ -166,11 +166,11 @@ internal static partial class Program
             "Junctions were duplicated once for each wire.");
         p.Schematic.Symbols.Add(p.Schematic.Symbols[0] with { SymbolId = "space-blocker", Position = new(0, 0), Width = 420, Height = 297 });
         render.Invoke(workspace, [p]);
-        Require(sheet.Children.OfType<TextBlock>().Any(t => Equals(t.Tag, "wire-label-warning") && t.Text.Contains("V24")),
-            "Unplaceable wire captions disappeared without visible complete functions.");
+        Require(!sheet.Children.OfType<TextBlock>().Any(t => Equals(t.Tag, "wire-label-warning")),
+            "Unplaceable annotations were dumped outside the sheet.");
         Call("Apply", new Func<ElectricalProject, ElectricalProject>(project => project), "synthetic identity edit");
         var status = (TextBlock)type.GetField("Status", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(workspace)!;
-        Require(status.Text.Contains("標籤空間不足"), "Successful edit overwrote the unplaced-caption warning.");
+        Require(status.Text.Contains("標示空間不足"), "Successful edit overwrote the unplaced-caption warning.");
         try
         {
             Call("RenderOutputPage", p, p.Schematic!.Pages[0]);

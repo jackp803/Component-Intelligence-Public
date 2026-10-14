@@ -123,18 +123,23 @@ public sealed partial class SchematicAuthoringService
                 throw new InvalidOperationException("Unlock attached wires before moving their contacts.");
         doc.Symbols[index] = next;
         var bodyChanged = old.Position != next.Position || old.Width != next.Width || old.Height != next.Height || old.Rotation != next.Rotation;
+        var affected = doc.Wires.Where(w => !w.Locked && (
+            new[] { w.Start, w.End }.Any(a => a.SymbolId == old.SymbolId && SymbolAttachmentPoint(draft, old, a) != SymbolAttachmentPoint(draft, next, a)) ||
+            bodyChanged && w.PageId == next.PageId && CanRerouteSimpleWire(doc, w))).Select(w => w.WireId).ToHashSet(StringComparer.Ordinal);
+        var reserved = doc.Wires.Where(w => !affected.Contains(w.WireId) || !CanRerouteSimpleWire(doc, w)).ToList();
         for (var i = 0; i < doc.Wires.Count; i++)
         {
             var wire = doc.Wires[i];
             if (wire.Locked) continue;
             var moveStart = wire.Start.SymbolId == old.SymbolId && SymbolAttachmentPoint(draft, old, wire.Start) != SymbolAttachmentPoint(draft, next, wire.Start);
             var moveEnd = wire.End.SymbolId == old.SymbolId && SymbolAttachmentPoint(draft, old, wire.End) != SymbolAttachmentPoint(draft, next, wire.End);
-            if (!moveStart && !moveEnd && !(bodyChanged && CanRerouteSimpleWire(doc, wire))) continue;
+            if (!affected.Contains(wire.WireId)) continue;
             var points = wire.Points.ToList();
-            if (moveStart) points = ReanchorSymbol(points, draft, next, wire.Start, true);
-            if (moveEnd) points = ReanchorSymbol(points, draft, next, wire.End, false);
-            if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire);
+            if (moveStart) points = wire.ManualRoute ? Reanchor(points, SymbolAttachmentPoint(draft, next, wire.Start), true) : ReanchorSymbol(points, draft, next, wire.Start, true);
+            if (moveEnd) points = wire.ManualRoute ? Reanchor(points, SymbolAttachmentPoint(draft, next, wire.End), false) : ReanchorSymbol(points, draft, next, wire.End, false);
+            if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire, reserved);
             doc.Wires[i] = wire with { Points = points };
+            reserved.Add(doc.Wires[i]);
             ReanchorDependentJunctions(doc, wire.WireId);
         }
     }

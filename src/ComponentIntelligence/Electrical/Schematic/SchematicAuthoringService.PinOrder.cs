@@ -29,6 +29,14 @@ public sealed partial class SchematicAuthoringService
         if (orderedPinIds.Count != slots.Count || orderedPinIds.Distinct(StringComparer.Ordinal).Count() != slots.Count ||
             !orderedPinIds.ToHashSet(StringComparer.Ordinal).SetEquals(slots.Select(a => a.EndpointId)))
             throw new InvalidOperationException("Choose each represented Pin exactly once.");
+        var display = symbol.EndpointDisplayPlacements.Where(p => p.PortId == portId).ToDictionary(p => p.EndpointId, StringComparer.Ordinal);
+        if (display.Count > 0)
+        {
+            var displayPositions = orderedPinIds.Select((id, i) => (id, point: display[slots[i].EndpointId].Position)).ToDictionary(p => p.id, p => p.point, StringComparer.Ordinal);
+            var reordered = symbol with { EndpointDisplayPlacements = symbol.EndpointDisplayPlacements.Select(p => displayPositions.TryGetValue(p.EndpointId, out var point) ? p with { Position = point } : p).ToList() };
+            ReanchorChangedSymbol(draft, doc, index, symbol, reordered);
+            return;
+        }
         if (slots.Any(a => a.CadContactId is not null))
             throw new InvalidOperationException("Physical CAD Pin bindings must be changed in contact binding; only virtual Pins can be reordered.");
         var positions = orderedPinIds.Select((id, i) => (id, slot: slots[i])).ToDictionary(p => p.id, p => p.slot, StringComparer.Ordinal);

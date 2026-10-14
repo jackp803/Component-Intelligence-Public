@@ -16,7 +16,7 @@ public sealed class SchematicCompactWireLabelTests
         }
         p = SchematicWireIdentificationTests.Draw(p);
         var label = SchematicCableLabelPresentation.Resolve(p, p.Schematic!.Wires.Single())!;
-        Assert.Equal("W01 · Com", label.Text);
+        Assert.Equal(p.Schematic.Wires.Single().Designation + " · Com", label.Text);
         Assert.DoesNotContain("AWG", label.Text);
         Assert.Contains("Common for 24 V", label.FullText);
         Assert.Contains("IOLink1_X1", label.FullText);
@@ -39,7 +39,8 @@ public sealed class SchematicCompactWireLabelTests
         Assert.Equal(2, groups[0].Entries.Count);
         Assert.Equal("W01", entries[0].Index);
         Assert.Equal("W05", entries[4].Index);
-        Assert.Contains("0.50001", groups[1].Specification.Text);
+        Assert.Equal(.50001, groups[1].Specification.AreaMm2);
+        Assert.Contains("0.5 mm²", groups[1].Specification.Text);
         Assert.NotEqual(groups[0].Specification.Status, groups[2].Specification.Status);
         Assert.Equal(before, JsonSerializer.Serialize(p));
         var reopened = JsonSerializer.Deserialize<ComponentIntelligence.Electrical.Domain.ElectricalProject>(before)!;

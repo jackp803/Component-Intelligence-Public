@@ -110,17 +110,20 @@ public sealed partial class SchematicAuthoringService
                 .Any(a => SymbolAttachmentPoint(draft, symbol, a) != SymbolAttachmentPoint(draft, next, a)))
                 throw new InvalidOperationException("Unlock attached wires before moving or resizing this port.");
         doc.Symbols[index] = next;
+        var affected = doc.Wires.Where(w => !w.Locked && (w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId)).Select(w => w.WireId).ToHashSet(StringComparer.Ordinal);
+        var reserved = doc.Wires.Where(w => !affected.Contains(w.WireId) || !CanRerouteSimpleWire(doc, w)).ToList();
         for (var i = 0; i < doc.Wires.Count; i++)
         {
             var wire = doc.Wires[i];
             if (wire.Locked || wire.Start.SymbolId != symbolId && wire.End.SymbolId != symbolId) continue;
             var points = wire.Points.ToList();
             if (wire.Start.SymbolId == symbolId && SymbolAttachmentPoint(draft, symbol, wire.Start) != SymbolAttachmentPoint(draft, next, wire.Start))
-                points = ReanchorSymbol(points, draft, next, wire.Start, true);
+                points = wire.ManualRoute ? Reanchor(points, SymbolAttachmentPoint(draft, next, wire.Start), true) : ReanchorSymbol(points, draft, next, wire.Start, true);
             if (wire.End.SymbolId == symbolId && SymbolAttachmentPoint(draft, symbol, wire.End) != SymbolAttachmentPoint(draft, next, wire.End))
-                points = ReanchorSymbol(points, draft, next, wire.End, false);
-            if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire);
+                points = wire.ManualRoute ? Reanchor(points, SymbolAttachmentPoint(draft, next, wire.End), false) : ReanchorSymbol(points, draft, next, wire.End, false);
+            if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire, reserved);
             doc.Wires[i] = wire with { Points = points };
+            reserved.Add(doc.Wires[i]);
             ReanchorDependentJunctions(doc, wire.WireId);
         }
     });

@@ -5,8 +5,9 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed record SchematicWireLegendSpecification(int? Awg, double? AreaMm2, bool Approximate, string Status)
 {
-    public string Text => (Awg is int gauge ? (Approximate ? "約 AWG " : "AWG ") + gauge : "AWG 待設定") + " / " +
-        (AreaMm2 is double area ? area.ToString("G", CultureInfo.InvariantCulture) + " mm²" : "截面積待設定") + " / " + Status;
+    public string Text => Awg is null && AreaMm2 is null ? "線徑待核對" :
+        (Awg is int gauge ? (Approximate ? "約 AWG " : "AWG ") + gauge : "AWG 待核對") + " / " +
+        (AreaMm2 is double area ? area.ToString("0.###", CultureInfo.InvariantCulture) + " mm²" : "截面積待核對") + " / " + Status;
 }
 
 public sealed record SchematicWireLegendEntry(string WireId, string PageId, string Index, string Designation,
@@ -14,7 +15,8 @@ public sealed record SchematicWireLegendEntry(string WireId, string PageId, stri
 {
     public string ShortFunction { get; init; } = "";
     public int PageNumber { get; init; }
-    public string Caption => Index + (ShortFunction.Length > 0 ? " · " + ShortFunction : "");
+    public string DisplayName => string.IsNullOrWhiteSpace(Designation) ? Index : Designation;
+    public string Caption => DisplayName + (ShortFunction.Length > 0 ? " · " + ShortFunction : "");
     public string FullText => string.Join("\n", new[] { Index + " / " + Designation, Contacts, Functions,
         Color + " / " + Specification.Text, Review }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
@@ -22,7 +24,7 @@ public sealed record SchematicWireLegendEntry(string WireId, string PageId, stri
 public sealed record SchematicWireLegendGroup(SchematicWireLegendSpecification Specification,
     IReadOnlyList<SchematicWireLegendEntry> Entries)
 {
-    public string Text => string.Join(", ", Entries.Select(e => e.Index)) + "：" + Specification.Text;
+    public string Text => string.Join(", ", Entries.Select(e => e.DisplayName)) + "：" + Specification.Text;
 }
 
 public static class SchematicWireLegendPresentation

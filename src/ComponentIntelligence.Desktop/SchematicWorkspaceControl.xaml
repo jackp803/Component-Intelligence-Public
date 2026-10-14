@@ -34,6 +34,7 @@
      <MenuItem Header="Pin 功能／自動映射" Click="FunctionReview_Click"/>
      <MenuItem Header="接點設定" InputGestureText="B" Click="Bindings_Click"/>
      <MenuItem Header="圖塊外觀" InputGestureText="I" Click="ImportSymbol_Click"/>
+     <MenuItem Header="更新已放置 CAD 圖塊" Click="RefreshCad_Click"/>
      <MenuItem Header="圖框／頁面" InputGestureText="T" Click="ImportTemplate_Click"/>
      <MenuItem Header="標題欄" Click="TitleBlock_Click"/>
      <MenuItem Header="前往對端" InputGestureText="J" Click="Navigate_Click"/>
@@ -59,10 +60,11 @@
       <Button Content="＋" ToolTip="新增頁面 (Ctrl+Shift+N)" Width="30" Click="AddPage_Click"/>
       <Button Content="↑" ToolTip="頁面往前 (Alt+PageUp)" Width="30" Click="PageUp_Click"/>
       <Button Content="↓" ToolTip="頁面往後 (Alt+PageDown)" Width="30" Click="PageDown_Click"/>
+      <Button FontFamily="Segoe MDL2 Assets" Content="&#xE74D;" ToolTip="刪除目前頁面" Width="30" Click="DeletePage_Click"/>
      </StackPanel>
     </DockPanel>
     <ListBox x:Name="PageList" Grid.Row="1" DisplayMemberPath="Label" SelectionChanged="Page_Selected">
-     <ListBox.ContextMenu><ContextMenu><MenuItem Header="重新命名目前頁面" InputGestureText="F2" Click="RenamePage_Click"/></ContextMenu></ListBox.ContextMenu>
+     <ListBox.ContextMenu><ContextMenu><MenuItem Header="重新命名目前頁面" InputGestureText="F2" Click="RenamePage_Click"/><MenuItem Header="刪除目前頁面" Click="DeletePage_Click"/></ContextMenu></ListBox.ContextMenu>
     </ListBox>
     <StackPanel Grid.Row="2" Margin="0,12,0,5">
      <TextBlock Text="專案 BOM" FontWeight="SemiBold"/>

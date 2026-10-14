@@ -19,6 +19,8 @@
    <Button Content="線材庫" Padding="12,5" Margin="4,0" Click="CableLibrary_Click" ToolTip="新增一條實體線材 (Ctrl+Shift+C)"/>
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE8A5;" Padding="10,5" Click="CableDetail_Click" ToolTip="線材明細 (Ctrl+D)"/>
    <Button Content="AWG" Padding="12,5" Click="Gauge_Click" ToolTip="導線規格 (G)"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE71B;" Padding="10,5" Click="Mating_Click" ToolTip="接頭對接 / Port 逐 Pin 核對"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE8FD;" Padding="10,5" Click="FunctionReview_Click" ToolTip="Pin 功能 / 自動映射與衝突核對"/>
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE9D5;" Padding="10,5" Click="WireDetails_Click" ToolTip="導線明細"/>
    <ToggleButton x:Name="AllPagesTool" Content="所有頁面" Padding="12,5" Click="AllPages_Click" ToolTip="單頁／所有頁面 (F6)"/>
    <Button Content="PDF 草稿" Padding="12,5" Click="ExportPdf_Click" ToolTip="儲存並匯出多頁 PDF 草稿 (Ctrl+Shift+E)"/>
@@ -28,6 +30,8 @@
    <Menu Background="Transparent" VerticalAlignment="Center" Margin="4,0">
     <MenuItem Header="圖面">
      <MenuItem Header="跨頁符號" InputGestureText="X" Click="Continuation_Click"/>
+     <MenuItem Header="接頭對接" Click="Mating_Click"/>
+     <MenuItem Header="Pin 功能／自動映射" Click="FunctionReview_Click"/>
      <MenuItem Header="接點設定" InputGestureText="B" Click="Bindings_Click"/>
      <MenuItem Header="圖塊外觀" InputGestureText="I" Click="ImportSymbol_Click"/>
      <MenuItem Header="圖框／頁面" InputGestureText="T" Click="ImportTemplate_Click"/>

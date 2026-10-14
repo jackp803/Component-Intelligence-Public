@@ -123,6 +123,8 @@ public partial class SchematicWorkspaceControl
             DetailInspectorFields.Visibility = detail is null ? Visibility.Collapsed : Visibility.Visible;
             InspectorActions.Visibility = InspectorDelete.Visibility = symbol is not null || wire is not null || detail is not null ? Visibility.Visible : Visibility.Collapsed;
             InspectorError.Text = "";
+            if (wire is not null && project.Connections.Any(c => c.ConnectionId == wire.ConnectionId && c.Kind == ConnectionKind.DirectMating))
+            { WireInspectorFields.Visibility = InspectorActions.Visibility = Visibility.Collapsed; SelectionLabel.Text = "接頭對接 / 逐 Pin 映射"; }
             ReferenceText.Text = symbol is null ? "" : SchematicSymbolOwner.Resolve(project, symbol).Reference ?? "";
             CadScaleText.Text = ""; UpdateCadScaleSelection(symbol);
             if (symbol is not null) {

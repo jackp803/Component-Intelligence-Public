@@ -26,6 +26,7 @@ public sealed partial class SchematicAuthoringService
             var members = SchematicWireIdentification.Segments(doc, wire);
             if (members.Any(w => w.Locked)) throw new InvalidOperationException("A route segment is locked.");
             var connection = draft.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
+            if (connection?.Kind == ConnectionKind.DirectMating) throw new InvalidOperationException("接頭對接沒有 AWG。");
             if (connection?.CableCoreId is not null) throw new InvalidOperationException("Edit the authoritative cable core specification before overriding its wire size.");
             foreach (var member in members)
                 doc.Wires[doc.Wires.FindIndex(w => w.WireId == member.WireId)] = member with
@@ -40,6 +41,7 @@ public sealed partial class SchematicAuthoringService
         var members = SchematicWireIdentification.Segments(doc, wire);
         if (members.Any(w => w.Locked)) throw new InvalidOperationException("A route segment is locked.");
         var connection = draft.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
+        if (connection?.Kind == ConnectionKind.DirectMating) throw new InvalidOperationException("接頭對接沒有 AWG。");
         if (connection?.CableCoreId is not null) throw new InvalidOperationException("The exact catalog core controls this wire size.");
         foreach (var member in members)
             doc.Wires[doc.Wires.FindIndex(w => w.WireId == member.WireId)] = member with

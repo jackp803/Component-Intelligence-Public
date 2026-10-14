@@ -53,9 +53,9 @@ public static class SchematicWireContacts
         if (string.IsNullOrWhiteSpace(reference) && symbol?.ComponentInstanceId is string id)
             reference = project.Schematic?.WireNamingReferences.GetValueOrDefault(id);
         if (string.IsNullOrWhiteSpace(reference)) reference = port.Name;
-        var function = pin is null ? "" : WithoutColor(pin.Function);
-        if (function.Length == 0 && pin is not null) function = WithoutColor(pin.PinName);
-        var shortFunction = WithoutColor(pin?.PinName);
+        var function = pin is null ? "" : WithoutColor(pin.DisplayFunction);
+        if (function.Length == 0 && pin is not null && !pin.FunctionManualOverride) function = WithoutColor(pin.PinName);
+        var shortFunction = pin?.InferredFunction is not null || pin?.FunctionManualOverride == true ? function : WithoutColor(pin?.PinName);
         if (shortFunction.Length == 0) shortFunction = function;
         if (shortFunction.Length > 32 || shortFunction.Contains('\n')) shortFunction = "功能見明細";
         return new(reference + "/" + port.Name + (pin is null ? "" : "." + pin.PinNumber), pin, function)
@@ -74,8 +74,11 @@ public static class SchematicWireContacts
         var connected = project.Schematic!.Wires.Any(w => new[] { w.Start, w.End }.Any(a =>
             a.Kind == SchematicAttachmentKind.Pin && a.SymbolId == symbol.SymbolId && a.EndpointId == anchor.EndpointId)
             && Ends(project, w).Count >= 2 && SchematicCableLabelPresentation.Resolve(project, w) is not null);
-        if (!connected) return anchor.Label ?? anchor.EndpointId;
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
-        return owner.Ports.SelectMany(p => p.Pins).Single(p => p.PinId == anchor.EndpointId).PinNumber;
+        var pin = owner.Ports.SelectMany(p => p.Pins).Single(p => p.PinId == anchor.EndpointId);
+        if (connected) return pin.PinNumber;
+        if (pin.InferredFunction is not null || pin.FunctionManualOverride)
+            return owner.Ports.Single(p => p.Pins.Contains(pin)).Name + " / " + pin.PinNumber + " " + pin.DisplayFunction;
+        return anchor.Label ?? anchor.EndpointId;
     }
 }

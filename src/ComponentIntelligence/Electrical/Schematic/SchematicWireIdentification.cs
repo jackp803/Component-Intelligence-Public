@@ -23,6 +23,13 @@ public static class SchematicWireIdentification
             if (seen.Contains(original.WireId)) continue;
             var group = Segments(doc, original);
             seen.UnionWith(group.Select(w => w.WireId));
+            if (project.Connections.Any(c => c.ConnectionId == original.ConnectionId && c.Kind == ConnectionKind.DirectMating))
+            {
+                foreach (var member in group)
+                    doc.Wires[doc.Wires.FindIndex(w => w.WireId == member.WireId)] = member with
+                    { Designation = null, Awg = null, AreaMm2 = null, SizingProposal = null, ManualSpecification = false, ManualDesignation = false };
+                continue;
+            }
             var manualNames = group.Where(w => w.ManualDesignation).Select(w => w.Designation).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (manualNames.Length > 1) throw new InvalidOperationException("Paired segments have different manual wire names.");
             var name = manualNames.FirstOrDefault() ?? group.Select(w => w.Designation).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));

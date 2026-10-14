@@ -156,6 +156,8 @@ public partial class SchematicWorkspaceControl
     {
         var wire = _getProject().Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
         if (wire is null) { Status.Text = "請先選取導線"; return; }
+        if (_getProject().Connections.Any(c => c.ConnectionId == wire.ConnectionId && c.Kind == ComponentIntelligence.Electrical.Domain.ConnectionKind.DirectMating))
+        { Status.Text = "接頭對接沒有新增導線，不需要 AWG。"; return; }
         UpdateInspector(_getProject()); _inspectorFields["sizeMode"].Focus();
     }
 }

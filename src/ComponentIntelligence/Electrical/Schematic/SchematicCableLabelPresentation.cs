@@ -14,6 +14,7 @@ public static class SchematicCableLabelPresentation
         SchematicWireLegendEntry? preparedDetail = null)
     {
         var connection = project.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
+        if (connection?.Kind == ConnectionKind.DirectMating) return null;
         string? text;
         string? fullText = null;
         var ordinary = connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null;

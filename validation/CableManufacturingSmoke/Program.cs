@@ -30,6 +30,7 @@ internal static partial class Program
     private static int Run(string[] args)
     {
         if (args.FirstOrDefault() == "workspace") return WorkspaceUsabilityProof(Path.GetFullPath(args[1]));
+        if (args.FirstOrDefault() == "mating") return MatingProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "wire-readability") return WireReadabilityProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() is "review-input" or "review-zoom") return ReviewInteractionProof(args[0]);
         if (args.FirstOrDefault() == "performance") return InteractionPerformanceProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault() == "verify");

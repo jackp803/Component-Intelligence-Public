@@ -30,7 +30,7 @@ public static class SchematicWireLegendPresentation
     public static bool IsOrdinary(ElectricalProject project, SchematicWire wire)
     {
         var connection = project.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
-        return connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null;
+        return connection?.Kind != ConnectionKind.DirectMating && (connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null);
     }
 
     public static IReadOnlyList<SchematicWireLegendEntry> Entries(ElectricalProject project, string? pageId = null)
@@ -52,7 +52,7 @@ public static class SchematicWireLegendPresentation
         foreach (var wire in project.Schematic?.Wires ?? [])
         {
             var connection = wire.ConnectionId is null ? null : connections.GetValueOrDefault(wire.ConnectionId);
-            if (!string.IsNullOrWhiteSpace(wire.Designation) && (connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null))
+            if (!string.IsNullOrWhiteSpace(wire.Designation) && connection?.Kind != ConnectionKind.DirectMating && (connection?.Kind != ConnectionKind.Cable || connection.CableInstanceId is null))
                 indices.Add(wire.WireId, indices.Count + 1);
         }
         return indices;
@@ -71,7 +71,7 @@ public static class SchematicWireLegendPresentation
         var shortFunctions = ends.Select(e => e.ShortFunction).Where(f => f.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var shortFunction = string.Join(" / ", shortFunctions);
         if (shortFunction.Length > 48) shortFunction = "功能見明細";
-        var functions = string.Join("\n", ends.Select(e => e.Caption + ": " + (e.Pin?.Function ?? e.Function) +
+        var functions = string.Join("\n", ends.Select(e => e.Caption + ": " + (e.Pin?.DisplayFunction ?? e.Function) +
             (!string.IsNullOrWhiteSpace(e.Pin?.PinName) && e.Pin.PinName != e.Pin.Function ? " [" + e.Pin.PinName + "]" : "")));
         return new(wire.WireId, wire.PageId, index > 0 ? "W" + index.ToString("D2", CultureInfo.InvariantCulture) : "W?",
             wire.Designation ?? "", string.Join(" → ", ends.Select(e => e.Caption)), functions,

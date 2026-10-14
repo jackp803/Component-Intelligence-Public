@@ -17,8 +17,8 @@ public static class TopologyElectricalContinuity
         ArgumentNullException.ThrowIfNull(seed);
 
         var adjacency = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var connection in project.Connections)
-            Connect(adjacency, connection.FromEndpointId, connection.ToEndpointId);
+        foreach (var (from, to) in Connectivity.ProjectConductiveEdges.External(project).Concat(Connectivity.ProjectConductiveEdges.CableInteriors(project)))
+            Connect(adjacency, from, to);
 
         AddStructuredTerminalContinuity(project, adjacency);
         AddArchivedTerminalComponentContinuity(project, adjacency);
@@ -84,18 +84,7 @@ public static class TopologyElectricalContinuity
         ElectricalProject project,
         IDictionary<string, HashSet<string>> adjacency)
     {
-        foreach (var component in project.Components.Where(component =>
-                     TopologyPaletteMaterialPolicy.Classify(component.TypeKey) == TopologyPaletteMaterialKind.TerminalBlock &&
-                     string.Equals(component.ComponentDefinitionId, "PHOENIX_CONTACT_3209578", StringComparison.OrdinalIgnoreCase)))
-        {
-            var pins = component.Ports.SelectMany(port => port.Pins).ToArray();
-            if (pins.Length < 2) continue;
-
-            // The reviewed Quattro identity is one common-potential body. Its visible Port and
-            // exact Pin selectors refer to that body; model-looking labels are not identity proof.
-            ConnectGroup(adjacency, component.Ports
-                .SelectMany(port => new[] { port.PortId }.Concat(port.Pins.Select(pin => pin.PinId))));
-        }
+        foreach (var (from, to) in Connectivity.ProjectConductiveEdges.KnownTerminalInteriors(project)) Connect(adjacency, from, to);
     }
 
     private static void ConnectGroup(

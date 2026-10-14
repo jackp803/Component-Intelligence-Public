@@ -61,6 +61,10 @@ public sealed class ComponentPort
 
 public sealed class ComponentPin
 {
+    public ProjectPinFunctionLink? InferredFunction { get; set; }
+    public bool FunctionManualOverride { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? DisplayFunction => FunctionManualOverride || !string.IsNullOrWhiteSpace(Function) ? Function : InferredFunction?.Value;
     public required string PinId { get; init; }
     public string? SourcePinId { get; set; }
     public string? PowerDomainId { get; set; }
@@ -108,6 +112,7 @@ public sealed class NetDefinition
 
 public sealed class ElectricalConnection
 {
+    public ConnectorMatingMap? MatingMap { get; set; }
     public required string ConnectionId { get; init; }
     public required string FromEndpointId { get; init; }
     public required string ToEndpointId { get; init; }

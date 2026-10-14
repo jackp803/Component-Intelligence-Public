@@ -20,6 +20,8 @@ public sealed class ConnectionPinMappingService
     {
         ArgumentNullException.ThrowIfNull(project);
         var connection = FindConnection(project, connectionId);
+        if (connection.MatingMap is { } mating)
+            return mating.Pairs.Select(p => new PinMappingEntry(p.FromPinId, p.ToPinId)).ToArray();
         if (string.IsNullOrWhiteSpace(connection.CableInstanceId)) return [];
         var cable = project.Cables.FirstOrDefault(item =>
             string.Equals(item.CableInstanceId, connection.CableInstanceId, StringComparison.OrdinalIgnoreCase));
@@ -45,6 +47,8 @@ public sealed class ConnectionPinMappingService
         ArgumentNullException.ThrowIfNull(project);
         ArgumentNullException.ThrowIfNull(mappings);
         var connection = FindConnection(project, connectionId);
+        if (connection.MatingMap is not null)
+            throw new InvalidOperationException("此連線是接頭對接，請使用接頭對接逐 Pin 核對，不會新增線材。");
         var fromPort = FindPort(project, connection.FromEndpointId)
             ?? throw new InvalidOperationException("Pin mapping requires the connection A endpoint to be a component Port.");
         var toPort = FindPort(project, connection.ToEndpointId)
@@ -102,6 +106,8 @@ public sealed class ConnectionPinMappingService
     public void ClearMappings(ElectricalProject project, string connectionId)
     {
         var connection = FindConnection(project, connectionId);
+        if (connection.MatingMap is not null)
+            throw new InvalidOperationException("請解除接頭對接，不能用線材 Core 編輯器清空對接映射。");
         if (connection.CableCoreId is not null)
             throw new InvalidOperationException("此連線已有明確 Core 歸屬，不可直接清空其腳位證據。");
         if (string.IsNullOrWhiteSpace(connection.CableInstanceId)) return;

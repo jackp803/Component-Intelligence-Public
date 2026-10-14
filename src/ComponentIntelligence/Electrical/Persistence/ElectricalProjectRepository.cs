@@ -50,6 +50,8 @@ public sealed class ElectricalProjectRepository
         ct.ThrowIfCancellationRequested();
         var current = ElectricalProjectMigrator.Migrate(ProjectSaveSession.Clone(project));
         Schematic.SchematicAuthoringService.Validate(current);
+        Connectivity.ProjectPinFunctionService.Synchronize(current);
+        current = ElectricalProjectMigrator.Migrate(current);
         var json = JsonSerializer.Serialize(current, _jsonOptions);
         await InitializeAsync(ct);
 
@@ -89,6 +91,7 @@ public sealed class ElectricalProjectRepository
         if (project is null) return null;
         var current = ElectricalProjectMigrator.Migrate(project);
         Schematic.SchematicAuthoringService.Validate(current);
+        Connectivity.ProjectPinFunctionService.Synchronize(current);
         return current;
     }
 

@@ -187,15 +187,18 @@ public partial class SchematicWorkspaceControl : UserControl
         foreach (var wire in doc.Wires.Where(w => w.PageId == page.PageId))
         {
             var specification = SchematicWirePresentation.Resolve(project, wire);
+            var mating = project.Connections.Any(c => c.ConnectionId == wire.ConnectionId && c.Kind == ConnectionKind.DirectMating);
             var evidence = SchematicWireEvidence.Resolve(project, wire);
             var zoom = _renderingOutput ? 1 : Zoom.Value;
             var weight = Math.Max(1.5 / zoom, SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm);
             var physicalWeight = SchematicWirePresentation.StrokeWidthMm(specification.Awg) * PixelsPerMm;
             var color = (Brush)new BrushConverter().ConvertFromString(evidence.ColorHex)!;
             var line = Path(wire.Points, wire.WireId == _selectionId ? Brushes.DarkCyan : color, wire.WireId == _selectionId ? weight + 1 : weight);
+            if (mating) line.StrokeDashArray = new DoubleCollection { 5, 3 };
             TrackWireStrokes(page.PageId, line, physicalWeight, wire.WireId == _selectionId, wireId: wire.WireId);
             line.ToolTip = (_wireMode ? "點選既有導線，建立明確分支" : wire.ConnectionId is null ? "待接續導線" : "已建立工程連線") + "\n" + evidence.Description;
             line.ToolTip += "\n" + wire.Designation + (wire.SizingProposal is { } proposal ? "\n線徑待核對：" + proposal.Review : "");
+            if (mating) line.ToolTip = "接頭對接 / 逐 Pin 對應已確認";
             line.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) return;
@@ -216,7 +219,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 TrackWireStrokes(page.PageId, geometry, physicalWeight, wire.WireId == _selectionId, wireId: wire.WireId);
             }
             else Sheet.Children.Add(line);
-            if (_wireMode && !_renderingOutput)
+            if (_wireMode && !_renderingOutput && !mating)
             for (var segment = 0; segment < wire.Points.Count - 1; segment++)
             {
                 var a = wire.Points[segment]; var b = wire.Points[segment + 1];
@@ -334,7 +337,23 @@ public partial class SchematicWorkspaceControl : UserControl
             var caption = new TextBlock { Text = _service.ReferenceCodeFor(doc, marker.MarkerId), FontSize = 10,
                 Foreground = Brushes.Black, Cursor = Cursors.Hand,
                 ToolTip = _service.ReferenceFor(project, marker.MarkerId) + "\n雙擊前往對端" };
+            var matingRoute = doc.Wires.SingleOrDefault(w => (w.Start.MarkerId == marker.MarkerId || w.End.MarkerId == marker.MarkerId) &&
+                project.Connections.Any(c => c.ConnectionId == w.ConnectionId && c.MatingMap is not null));
+            if (matingRoute is not null)
+                caption.Text = pair.Signal + " / " + caption.Text;
             Canvas.SetLeft(caption, (point.X + 2) * 3); Canvas.SetTop(caption, (point.Y - 5) * 3);
+            if (matingRoute is not null)
+            {
+                var endpoint = matingRoute.Start.Kind == SchematicAttachmentKind.Port ? matingRoute.Start : matingRoute.End;
+                var symbol = doc.Symbols.Single(s => s.SymbolId == endpoint.SymbolId);
+                var owner = SchematicSymbolOwner.Resolve(project, symbol);
+                var port = owner.Ports.Single(p => p.PortId == endpoint.EndpointId);
+                var body = SchematicPortPresentation.GenericBodyBounds(doc, symbol, owner);
+                caption.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                var left = SchematicPortPresentation.PortSide(symbol, port) == "Left";
+                Canvas.SetLeft(caption, left ? point.X * 3 - caption.DesiredSize.Width - 6 : (point.X + 2) * 3);
+                Canvas.SetTop(caption, Math.Min(point.Y, body.Y) * 3 - caption.DesiredSize.Height - 9);
+            }
             if (!_renderingOutput) caption.MouseLeftButtonDown += (_, e) =>
             {
                 if (e.ClickCount >= 2) NavigateToMarker(marker.MarkerId);
@@ -456,6 +475,7 @@ public partial class SchematicWorkspaceControl : UserControl
         var placedLabels = new List<(double Left, double Top, double Right, double Bottom)>();
         foreach (var anchor in symbol.Anchors)
         {
+            if (_pairMode && !_renderingOutput) continue;
             if (SchematicPortPresentation.IsCollapsedPin(project.Schematic!, symbol, owner, anchor)) continue;
             var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
             var pin = Marker(point, anchor.Confirmed ? Brushes.White : Brushes.LightGoldenrodYellow, Brushes.Black, 7);
@@ -476,7 +496,7 @@ public partial class SchematicWorkspaceControl : UserControl
             if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
             {
                 var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
-                var label = new TextBlock { Text = _renderPinLabels.GetValueOrDefault((symbol.SymbolId, anchor.EndpointId)) ?? anchor.Label ?? anchor.EndpointId, FontSize = 9.5,
+                var label = new TextBlock { Text = _renderPinLabels.GetValueOrDefault((symbol.SymbolId, anchor.EndpointId)) ?? SchematicWireContacts.AnchorText(project, symbol, anchor), FontSize = 9.5,
                     Foreground = Brushes.DimGray, IsHitTestVisible = false };
                 label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 var box = pose.Bounds(label.DesiredSize.Width / 3, label.DesiredSize.Height / 3);
@@ -505,9 +525,10 @@ public partial class SchematicWorkspaceControl : UserControl
                 .Select(a => SchematicAuthoringService.AnchorPoint(symbol, a.EndpointId)).ToArray();
             var center = points.Length == 0 ? symbol.Position :
                 new SchematicPoint(points.Average(p => p.X), points.Average(p => p.Y));
-            if (collapsed || portRoute)
+            if (collapsed || portRoute || _pairMode && !_renderingOutput)
             {
-                var contact = SchematicPortPresentation.GroupContact(project.Schematic!, symbol, owner, port, compact);
+                var contact = collapsed || portRoute ? SchematicPortPresentation.GroupContact(project.Schematic!, symbol, owner, port, compact) :
+                    (Position: center, Side: SchematicPortPresentation.PortSide(symbol, port));
                 center = contact.Position;
                 var point = Marker(center, Brushes.White, Brushes.Black, 9);
                 point.ToolTip = points.Length == 0 ? portEditing
@@ -520,7 +541,8 @@ public partial class SchematicWorkspaceControl : UserControl
                 point.MouseLeftButtonDown += (_, e) =>
                 {
                     _selectionId = symbol.SymbolId;
-                    if (_wireMode && !_renderingOutput)
+                    if (_pairMode && !_renderingOutput) PickMatingPort(SchematicAttachment.Port(symbol.SymbolId, port.PortId));
+                    else if (_wireMode && !_renderingOutput)
                     {
                         if (collapsed) WireAt(SchematicAttachment.Port(symbol.SymbolId, port.PortId), center, false);
                         else Status.Text = "此 Port 已展開；新增接線請選確切 Pin。";
@@ -537,8 +559,11 @@ public partial class SchematicWorkspaceControl : UserControl
                     else UpdateSelection(project);
                     e.Handled = true;
                 };
+                if (_pairMode && !_renderingOutput) point.ToolTip = port.Name + "：接頭對接，選擇整個 Port";
                 var label = SchematicPortPresentation.GroupLabel(center, contact.Side);
-                Text(port.Name, label.Position.X, label.Position.Y, 9, Brushes.DimGray, label.Rotation);
+                var mated = project.Connections.Any(c => c.MatingMap is not null && (c.FromEndpointId == port.PortId || c.ToEndpointId == port.PortId));
+                if (!mated || collapsed || _pairMode)
+                    Text(port.Name, label.Position.X, label.Position.Y, 9, Brushes.DimGray, label.Rotation);
                 continue;
             }
             var handle = new Border { Width = 17, Height = 17, Background = Brushes.White,
@@ -864,7 +889,7 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void CancelCommand()
     {
-        CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null;
+        CancelGesture(); ClearPendingWire(); _placeMode = false; _pairMode = false; _pairFirst = null; _matingFirst = null;
         _pendingRepresentation = null;
         _pendingCable = null;
         _pendingCableRepresentation = null;
@@ -874,7 +899,7 @@ public partial class SchematicWorkspaceControl : UserControl
         _selectionId = null; Render(_getProject()); Status.Text = "已取消目前操作";
     }
     private void Select_Click(object sender, RoutedEventArgs e) { if (!FinishPendingDraft()) return; CancelCommand(); Focus(); }
-    private void Wire_Click(object sender, RoutedEventArgs e) { _pairMode = false; _pairFirst = null; _placeMode = false; _editModuleMode = false; EditModuleTool.IsChecked = false; _wireMode = true; SelectTool.IsChecked = false; WireTool.IsChecked = true; Render(_getProject()); Focus(); }
+    private void Wire_Click(object sender, RoutedEventArgs e) { _pairMode = false; _pairFirst = null; _matingFirst = null; _placeMode = false; _editModuleMode = false; EditModuleTool.IsChecked = false; _wireMode = true; SelectTool.IsChecked = false; WireTool.IsChecked = true; Render(_getProject()); Focus(); }
     private void EditModule_Click(object sender, RoutedEventArgs e)
     {
         if (!FinishPendingDraft()) { EditModuleTool.IsChecked = _editModuleMode; return; }
@@ -988,13 +1013,14 @@ public partial class SchematicWorkspaceControl : UserControl
         var doc = _getProject().Schematic;
         if (doc is null || _pageId is null || doc.Pages.Count < 2) { Status.Text = "跨頁符號需要至少兩頁"; return; }
         if (!FinishPendingDraft()) return;
-        CancelGesture(); _pairMode = true; _pairFirst = null; _wireMode = false; _placeMode = false;
+        CancelCommand(); _pairMode = true; _pairFirst = null; _wireMode = false; _placeMode = false;
         SelectTool.IsChecked = true; WireTool.IsChecked = false;
-        Status.Text = "跨頁配對：選取第一條未完成導線"; Render(_getProject()); Focus();
+        Status.Text = "跨頁配對：選取 Port 接頭，或第一條未完成導線。"; Render(_getProject()); Focus();
     }
 
     private void PairWire(SchematicWire wire, SchematicPoint click)
     {
+        if (_matingFirst is not null) { Status.Text = "已選擇 Port，請選擇對端 Port，或按 Esc 重新選導線。"; return; }
         if (wire.Locked || wire.ConnectionId is not null) { Status.Text = "請選取未鎖定的待接續導線；不能合併既有完整回路"; return; }
         var ends = new[] { true, false }.Where(start => (start ? wire.Start : wire.End).Kind == SchematicAttachmentKind.Free).ToArray();
         if (ends.Length == 0) { Status.Text = "此導線沒有自由端"; return; }
@@ -1007,6 +1033,19 @@ public partial class SchematicWorkspaceControl : UserControl
         var first = _pairFirst.Value;
         var firstWire = _getProject().Schematic!.Wires.Single(w => w.WireId == first.WireId);
         if (firstWire.PageId == wire.PageId) { Status.Text = "第二條導線必須在另一頁"; return; }
+        var a = first.Start ? firstWire.End : firstWire.Start;
+        var b = atStart ? wire.End : wire.Start;
+        if (a.Kind == SchematicAttachmentKind.Port && b.Kind == SchematicAttachmentKind.Port)
+        {
+            try
+            {
+                var pairs = ConfirmMating(a.EndpointId!, b.EndpointId!, out var evidence);
+                if (pairs is not null && Apply(p => _service.ConnectAcrossPages(p, first.WireId, first.Start, wire.WireId, atStart,
+                    NextMatingSignal(p), pairs, evidence), "已建立跨頁接頭對接並更新 Pin 功能")) CancelCommand();
+            }
+            catch (InvalidOperationException error) { Status.Text = error.Message; }
+            return;
+        }
         var dialog = new Window { Title = "跨頁配對", Width = 400, Height = 190, Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
         var panel = new StackPanel { Margin = new(16) }; var signal = new TextBox { Margin = new(0, 4, 0, 12) };
         panel.Children.Add(new TextBlock { Text = "訊號／電位名稱" }); panel.Children.Add(signal);

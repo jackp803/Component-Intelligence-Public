@@ -30,9 +30,21 @@ public sealed class ElectricalProjectValidator
         ArgumentNullException.ThrowIfNull(project);
         var results = new List<ValidationResult>();
         var endpoints = BuildEndpointMap(project);
-        var connectedEndpointIds = project.Connections
-            .SelectMany(connection => new[] { connection.FromEndpointId, connection.ToEndpointId })
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        ISet<string> connectedEndpointIds;
+        try
+        {
+            connectedEndpointIds = Connectivity.ProjectConductiveEdges.ConnectedEndpointIds(project).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var issue in Connectivity.ProjectPinFunctionService.Inspect(project)
+                .Where(i => i.Code == "FUNCTION_CONFLICT" || project.Connections.Any(c => c.MatingMap is not null)))
+                results.Add(new() { RuleId = "RULE-" + issue.Code, Severity = ValidationSeverity.Warning,
+                    Message = issue.Description, SourceObjectIds = issue.PinIds.ToList(),
+                    RequiresConfirmation = true, RequiresPreExportReview = true });
+        }
+        catch (InvalidOperationException error)
+        {
+            connectedEndpointIds = new HashSet<string>();
+            results.Add(Block("RULE-MATING-MAP", error.Message, project.Connections.Where(c => c.MatingMap is not null).Select(c => c.ConnectionId)));
+        }
 
         ValidateReferences(project, results);
         ValidateConnections(project, endpoints, results);
@@ -90,6 +102,20 @@ public sealed class ElectricalProjectValidator
     {
         foreach (var connection in project.Connections)
         {
+            if (connection.MatingMap is { } map)
+            {
+                try { Topology.ConnectorMatingService.Validate(project, connection); }
+                catch (InvalidOperationException error)
+                { results.Add(Block("RULE-MATING-MAP", error.Message, [connection.ConnectionId])); continue; }
+                foreach (var pair in map.Pairs)
+                {
+                    var a = endpoints[pair.FromPinId]; var b = endpoints[pair.ToPinId];
+                    ValidateProtocol(connection, a, b, results);
+                    ValidatePower(connection, a.Pin!, b.Pin!, results);
+                    ValidateDigital(connection, a.Pin!, b.Pin!, results);
+                    ValidateAnalog(connection, a.Pin!, b.Pin!, results);
+                }
+            }
             if (!endpoints.TryGetValue(connection.FromEndpointId, out var from) ||
                 !endpoints.TryGetValue(connection.ToEndpointId, out var to))
             {
@@ -491,8 +517,11 @@ public sealed class ElectricalProjectValidator
         }
 
         foreach (var port in project.Cables.Where(c => c.ArchivedCable is not null).SelectMany(c => c.ArchivedCable!.Ports))
+        {
+            endpoints.Add(port.PortId, new EndpointInfo(port.PortId, null, port, null));
         foreach (var pin in port.Pins)
             endpoints.Add(pin.PinId, new EndpointInfo(pin.PinId, pin, port, null));
+        }
 
         foreach (var block in project.TerminalBlocks)
         foreach (var position in block.Positions)

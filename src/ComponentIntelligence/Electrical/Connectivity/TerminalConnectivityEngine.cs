@@ -17,10 +17,12 @@ public sealed class TerminalConnectivityEngine
         foreach (var point in level.ConnectionPoints)
             allIds.Add(point.ConnectionPointId);
 
-        foreach (var connection in project.Connections)
+        var edges = ProjectConductiveEdges.External(project).Concat(ProjectConductiveEdges.CableInteriors(project))
+            .Concat(ProjectConductiveEdges.KnownTerminalInteriors(project)).ToArray();
+        foreach (var connection in edges)
         {
-            allIds.Add(connection.FromEndpointId);
-            allIds.Add(connection.ToEndpointId);
+            allIds.Add(connection.From);
+            allIds.Add(connection.To);
         }
 
         if (allIds.Count == 0) return Array.Empty<ConnectivityGroup>();
@@ -43,8 +45,8 @@ public sealed class TerminalConnectivityEngine
             }
         }
 
-        foreach (var connection in project.Connections)
-            unionFind.Union(connection.FromEndpointId, connection.ToEndpointId);
+        foreach (var connection in edges)
+            unionFind.Union(connection.From, connection.To);
 
         return allIds
             .GroupBy(unionFind.Find, StringComparer.OrdinalIgnoreCase)

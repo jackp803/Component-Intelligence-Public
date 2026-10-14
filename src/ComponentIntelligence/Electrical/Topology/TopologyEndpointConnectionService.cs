@@ -99,6 +99,9 @@ public sealed class TopologyEndpointConnectionService
 
     private static void EnsureCapacity(ElectricalProject project, EndpointInfo endpoint)
     {
+        if (project.Connections.Any(c => c.MatingMap is not null &&
+            (c.FromEndpointId == endpoint.EndpointId || c.ToEndpointId == endpoint.EndpointId || ConnectorMatingService.UsesPin(c, endpoint.EndpointId))))
+            throw new InvalidOperationException("此 Port／Pin 所在接頭已對接，請先解除接頭對接。");
         if (endpoint.MaxConnections is not > 0) return;
 
         var used = project.Connections.Count(connection =>

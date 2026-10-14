@@ -27,6 +27,8 @@ public sealed partial class SchematicAuthoringService
             var members = SchematicWireIdentification.Segments(doc, wire);
             if (members.Any(w => w.Locked)) throw new InvalidOperationException("A route segment is locked.");
             var connection = draft.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
+            if (connection?.Kind == ConnectionKind.DirectMating)
+                throw new InvalidOperationException("接頭對接不是新增導線，沒有 AWG 設定。");
             if (connection?.CableCoreId is not null)
                 throw new InvalidOperationException("Edit the authoritative cable core specification before overriding its wire size.");
             if (awg is null && connection is not null && members.Any(w => w.SizingProposal is not null &&
@@ -97,6 +99,11 @@ public sealed partial class SchematicAuthoringService
                 throw new InvalidOperationException("Cable ownership must be explicitly removed in Cable Settings before deleting a conductor.");
             draft.Connections.Remove(connection);
             draft.TopologyRoutes.RemoveAll(r => r.ConnectionId == connection.ConnectionId);
+            if (connection.MatingMap is not null)
+            {
+                var markers = members.SelectMany(w => new[] { w.Start.MarkerId, w.End.MarkerId }).Where(id => id is not null).ToHashSet(StringComparer.Ordinal);
+                doc.Continuations.RemoveAll(c => markers.Contains(c.Source.MarkerId) || markers.Contains(c.Destination.MarkerId));
+            }
         }
         doc.Wires.RemoveAll(w => memberIds.Contains(w.WireId));
     }
@@ -287,6 +294,7 @@ public sealed partial class SchematicAuthoringService
         draft.Schematic ??= new();
         change(draft, draft.Schematic);
         Validate(draft);
+        Connectivity.ProjectPinFunctionService.Synchronize(draft);
         SchematicWireIdentification.Reconcile(draft);
         return draft;
     }
@@ -330,7 +338,8 @@ public sealed partial class SchematicAuthoringService
     });
 
     public ElectricalProject ConnectAcrossPages(ElectricalProject project, string firstWireId, bool firstStart,
-        string secondWireId, bool secondStart, string signal) => Edit(project, (draft, doc) =>
+        string secondWireId, bool secondStart, string signal, IReadOnlyList<ConnectorMatingPinPair>? matingPairs = null,
+        string? matingEvidence = null) => Edit(project, (draft, doc) =>
     {
         var first = doc.Wires.Single(w => w.WireId == firstWireId);
         var second = doc.Wires.Single(w => w.WireId == secondWireId);
@@ -348,6 +357,16 @@ public sealed partial class SchematicAuthoringService
         doc.Continuations.Add(new() { ContinuationId = id, Signal = signal.Trim(), Source = source, Destination = destination });
         doc.Wires[doc.Wires.IndexOf(first)] = firstStart ? first with { Start = SchematicAttachment.Marker(source.MarkerId) } : first with { End = SchematicAttachment.Marker(source.MarkerId) };
         doc.Wires[doc.Wires.IndexOf(second)] = secondStart ? second with { Start = SchematicAttachment.Marker(destination.MarkerId) } : second with { End = SchematicAttachment.Marker(destination.MarkerId) };
+        if (matingPairs is not null)
+        {
+            var a = firstStart ? first.End : first.Start;
+            var b = secondStart ? second.End : second.Start;
+            if (a.Kind != SchematicAttachmentKind.Port || b.Kind != SchematicAttachmentKind.Port)
+                throw new InvalidOperationException("接頭對接需使用兩個 Port 草稿端。");
+            var mate = ConnectorMatingService.Connect(draft, a.EndpointId!, b.EndpointId!, matingPairs, matingEvidence ?? "");
+            foreach (var index in new[] { doc.Wires.FindIndex(w => w.WireId == firstWireId), doc.Wires.FindIndex(w => w.WireId == secondWireId) })
+                doc.Wires[index] = doc.Wires[index] with { ConnectionId = mate.ConnectionId };
+        }
         Validate(draft);
         ResolveCompletedConnections(draft, doc);
     });
@@ -862,6 +881,7 @@ public sealed partial class SchematicAuthoringService
     public static void Validate(ElectricalProject project)
     {
         ArchivedCableInstanceFactory.ValidateProject(project);
+        foreach (var connection in project.Connections) ConnectorMatingService.Validate(project, connection);
         var doc = project.Schematic;
         if (doc is null) return;
         if (doc.SchemaVersion != "electrical-schematic.v1") throw new InvalidOperationException("Unsupported schematic document version.");
@@ -1089,7 +1109,12 @@ public sealed partial class SchematicAuthoringService
             if (existingIds.Length > 1) throw new InvalidOperationException("Continuation cannot join different existing connections.");
             var id = existingIds.SingleOrDefault();
             if (id is null)
+            {
+                if (ends.Any(e => e.Kind == SchematicAttachmentKind.Port && project.Cables.Any(c =>
+                    c.ArchivedCable?.Ports.Any(p => p.PortId == e.EndpointId) == true)))
+                    throw new InvalidOperationException("請使用接頭對接核對逐 Pin 對應，再建立跨頁接續；Port 不是單條導線。");
                 id = new TopologyEndpointConnectionService().ConnectEndpoints(project, ends[0].EndpointId!, ends[1].EndpointId!).ConnectionId;
+            }
             if (awg is int gauge)
                 project.Connections.Single(c => c.ConnectionId == id).ConductorAreaMm2 = Cables.WireSize.AwgToAreaMm2(gauge);
             foreach (var member in chain)

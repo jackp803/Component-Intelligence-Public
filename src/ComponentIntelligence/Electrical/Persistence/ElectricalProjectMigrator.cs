@@ -8,6 +8,7 @@ public static class ElectricalProjectMigrator
     public const string CableWiringSchemaVersion = "0.8";
     public const string CableFunctionAssociationSchemaVersion = "0.9";
     public const string CadDisplayScaleSchemaVersion = "0.10";
+    public const string ConnectorMatingSchemaVersion = "0.11";
 
     public static ElectricalProject Migrate(ElectricalProject project)
     {
@@ -15,7 +16,8 @@ public static class ElectricalProjectMigrator
         if (string.Equals(project.SchemaVersion, CurrentSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(project.SchemaVersion, CableWiringSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(project.SchemaVersion, CableFunctionAssociationSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(project.SchemaVersion, CadDisplayScaleSchemaVersion, StringComparison.OrdinalIgnoreCase))
+            string.Equals(project.SchemaVersion, CadDisplayScaleSchemaVersion, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(project.SchemaVersion, ConnectorMatingSchemaVersion, StringComparison.OrdinalIgnoreCase))
         {
             ProjectLegacyAssemblyCompatibility(project);
             return ProtectCableWiring(project);
@@ -35,6 +37,9 @@ public static class ElectricalProjectMigrator
     }
 
     private static ElectricalProject ProtectCableWiring(ElectricalProject project) =>
+        project.SchemaVersion == ConnectorMatingSchemaVersion ? project :
+        project.Connections.Any(c => c.MatingMap is not null) || Connectivity.ProjectPinFunctionService.Pins(project)
+            .Any(p => p.InferredFunction is not null || p.FunctionManualOverride) ? Copy(project, ConnectorMatingSchemaVersion, project.DrawingPlan) :
         project.SchemaVersion == CadDisplayScaleSchemaVersion ? project :
         project.Schematic?.Symbols.Any(s => s.Geometry is { } g &&
             (s.Width != g.Width || s.Height != g.Height)) == true ? Copy(project, CadDisplayScaleSchemaVersion, project.DrawingPlan) :

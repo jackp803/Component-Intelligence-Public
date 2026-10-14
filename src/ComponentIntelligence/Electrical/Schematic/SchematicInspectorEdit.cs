@@ -22,6 +22,7 @@ public static class SchematicInspectorEdit
         var nextOwner = SchematicSymbolOwner.Resolve(next, symbol);
         var port = nextOwner.Ports.Single(p => p.Pins.Any(p => p.PinId == pinId));
         var updated = port.Pins.Single(p => p.PinId == pinId); updated.Function = function.Trim(); updated.PinName = name;
+        updated.FunctionManualOverride = true; updated.InferredFunction = null;
         for (var i = 0; i < next.Schematic!.Symbols.Count; i++) {
             var representation = next.Schematic.Symbols[i];
             if (representation.ComponentInstanceId != symbol.ComponentInstanceId) continue;
@@ -29,6 +30,7 @@ public static class SchematicInspectorEdit
                 a with { Label = port.Name + " / " + updated.PinNumber + " " + name } : a).ToList() };
         }
         SchematicAuthoringService.Validate(next);
+        Connectivity.ProjectPinFunctionService.Synchronize(next);
         return next;
     }
     public static ElectricalProject ApplyModule(ElectricalProject project, string id, SchematicModuleEdit edit)

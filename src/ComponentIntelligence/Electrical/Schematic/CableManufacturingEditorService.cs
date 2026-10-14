@@ -21,6 +21,7 @@ public sealed class CableManufacturingEditorService
             {
                 var current = runtime.Pins.Single(p => p.SourcePinId == pin.PinId);
                 pin.PinNumber = current.PinNumber; pin.PinName = current.PinName; pin.Function = current.Function;
+                pin.InferredFunction = Clone(current.InferredFunction); pin.FunctionManualOverride = current.FunctionManualOverride;
             }
         }
         return binding.Template with { Ports = ports, Mapping = Clone(binding.Mapping), MappingConfirmed = binding.MappingConfirmed,
@@ -38,7 +39,24 @@ public sealed class CableManufacturingEditorService
             throw new InvalidOperationException("An instance cannot silently replace its Pin inventory; create a new template revision and rebind explicitly.");
         var changed = JsonSerializer.Serialize(Prepare(original)) != JsonSerializer.Serialize(draft);
         if (!changed) return Clone(cable);
-        var result = Apply(original, draft);
+        var working = Clone(draft);
+        var declared = Clone(original);
+        var baseline = original.Ports.SelectMany(p => p.Pins).ToDictionary(p => p.PinId, StringComparer.Ordinal);
+        var explicitFunctionEdits = draft.Rows.SelectMany(CableManufacturingCells.All)
+            .Where(cell => cell.SourcePinId is { } id && baseline.TryGetValue(id, out var old) &&
+                Normalize(cell.Function) != Normalize(old.DisplayFunction))
+            .Select(cell => cell.SourcePinId!).ToHashSet(StringComparer.Ordinal);
+        // A displayed project inference is not an archive declaration or a new source.
+        foreach (var row in working.Rows)
+        foreach (var port in working.Ends)
+        {
+            var cell = CableManufacturingCells.Get(working, row, port.PortId);
+            if (cell.SourcePinId is { } id && baseline.TryGetValue(id, out var old) && old.InferredFunction is not null &&
+                Normalize(cell.Function) == Normalize(old.DisplayFunction))
+            { cell.Function = old.Function; CableManufacturingCells.Set(working, row, port.PortId, cell); }
+        }
+        foreach (var pin in working.Ends.Concat(declared.Ports).SelectMany(p => p.Pins)) pin.InferredFunction = null;
+        var result = Apply(declared, working);
         var copy = Clone(cable);
         foreach (var port in copy.ArchivedCable!.Ports)
         {
@@ -47,10 +65,12 @@ public sealed class CableManufacturingEditorService
             foreach (var pin in port.Pins)
             {
                 var source = end.Pins.Single(p => p.PinId == pin.SourcePinId);
+                if (explicitFunctionEdits.Contains(source.PinId) || Normalize(pin.Function) != Normalize(source.Function))
+                { pin.FunctionManualOverride = true; pin.InferredFunction = null; }
                 pin.PinNumber = source.PinNumber; pin.PinName = source.PinName; pin.Function = source.Function;
             }
         }
-        var electricalChanged = !ElectricalEquivalent(original, result);
+        var electricalChanged = !ElectricalEquivalent(declared, result);
         copy.ArchivedCable = copy.ArchivedCable with { Mapping = Clone(result.Mapping), Manufacturing = Clone(result.Manufacturing),
             MappingConfirmed = !electricalChanged && binding.MappingConfirmed, HasMappingOverride = binding.HasMappingOverride || electricalChanged };
         return copy;
@@ -84,12 +104,12 @@ public sealed class CableManufacturingEditorService
         foreach (var row in draft.Rows)
         {
             if (row.FromSourcePinId is { } from && pins.TryGetValue(from, out var fromPin))
-            { row.FromFunction = fromPin.Function; row.FromUsage = usages.GetValueOrDefault(from); }
+            { row.FromFunction = fromPin.DisplayFunction; row.FromUsage = usages.GetValueOrDefault(from); }
             if (row.ToSourcePinId is { } to && pins.TryGetValue(to, out var toPin))
-            { row.ToFunction = toPin.Function; row.ToUsage = usages.GetValueOrDefault(to); }
+            { row.ToFunction = toPin.DisplayFunction; row.ToUsage = usages.GetValueOrDefault(to); }
             foreach (var cell in row.AdditionalEnds.Values)
                 if (cell.SourcePinId is { } id && pins.TryGetValue(id, out var pin))
-                { cell.Function = pin.Function; cell.Usage = usages.GetValueOrDefault(id); }
+                { cell.Function = pin.DisplayFunction; cell.Usage = usages.GetValueOrDefault(id); }
         }
         CableManufacturingCells.EnsureColumns(draft);
         if (draft.InventoryOnly) CableWiringEditorService.RebuildInventory(draft);

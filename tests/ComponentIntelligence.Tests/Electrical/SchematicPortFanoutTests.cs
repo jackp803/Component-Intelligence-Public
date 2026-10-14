@@ -307,6 +307,192 @@ public sealed class SchematicPortFanoutTests
     private ElectricalProject Fanout(ElectricalProject project, bool enabled, double pitch = 10, double lead = 25,
         string symbolId = "SA", string portId = "PA") => _service.SetPortFanout(project, symbolId, portId, enabled, pitch, lead);
 
+    [Fact]
+    public void AlignmentUsesActualCrossedAttachmentsAndPreservesNativeCadAndElectricalGraph()
+    {
+        var project = Fixture(wired: true, cad: true);
+        project.Connections[0] = new() { ConnectionId = "CONN1", FromEndpointId = "A1", ToEndpointId = "B3" };
+        project.Connections[2] = new() { ConnectionId = "CONN3", FromEndpointId = "A3", ToEndpointId = "B1" };
+        project.Schematic!.Wires[0] = project.Schematic.Wires[0] with { End = SchematicAttachment.Pin("SB", "B3"),
+            Points = [new(140, 112), new(200, 112), new(200, 128), new(260, 128)] };
+        project.Schematic.Wires[2] = project.Schematic.Wires[2] with { End = SchematicAttachment.Pin("SB", "B1"),
+            Points = [new(140, 128), new(210, 128), new(210, 112), new(260, 112)] };
+        project = Fanout(project, true);
+        project = Fanout(project, true, symbolId: "SB", portId: "PB", pitch: 12);
+        var before = Snapshot(project);
+        var aligned = Align(project);
+        Assert.Equal(before, Snapshot(project));
+        Assert.Equal(Snapshot(project.Components), Snapshot(aligned.Components));
+        Assert.Equal(Snapshot(project.Connections), Snapshot(aligned.Connections));
+        Assert.Equal(Groups(project), Groups(aligned));
+        for (var i = 0; i < 2; i++)
+        {
+            Assert.Equal(Snapshot(project.Schematic!.Symbols[i].Anchors), Snapshot(aligned.Schematic!.Symbols[i].Anchors));
+            Assert.Equal(Snapshot(project.Schematic.Symbols[i].Geometry), Snapshot(aligned.Schematic.Symbols[i].Geometry));
+        }
+        foreach (var wire in aligned.Schematic!.Wires)
+        {
+            Assert.Equal(wire.Points[0].Y, wire.Points[^1].Y);
+            Assert.All(wire.Points, point => Assert.Equal(wire.Points[0].Y, point.Y));
+        }
+        Assert.Equal(new[] { "B3", "B2", "B1" }, SchematicAuthoringService.PortPinsInVisualOrder(aligned.Schematic.Symbols[1], aligned.Components[1].Ports[0]).Select(a => a.EndpointId));
+        SchematicAuthoringService.Validate(aligned);
+    }
+
+    [Fact]
+    public void AlignmentRejectsLockedPeerWithoutPartialMutation()
+    {
+        var project = Fanout(Fixture(wired: true), true);
+        project = Fanout(project, true, symbolId: "SB", portId: "PB");
+        project.Schematic!.Symbols[1] = project.Schematic.Symbols[1] with { Locked = true };
+        Reject(project, () => Align(project));
+    }
+
+    [Fact]
+    public void AlignmentRetainsExplicitManualInteriorWaypoints()
+    {
+        var project = Fanout(Fixture(wired: true), true);
+        project = Fanout(project, true, symbolId: "SB", portId: "PB");
+        project.Schematic!.Wires[0] = project.Schematic.Wires[0] with { ManualRoute = true,
+            Points = [new(165, 110), new(190, 110), new(190, 180), new(220, 180), new(220, 110), new(235, 110)] };
+        var before = project.Schematic.Wires[0];
+        var aligned = Align(project);
+        var after = aligned.Schematic!.Wires[0];
+        Assert.True(after.ManualRoute);
+        foreach (var point in before.Points.Skip(1).SkipLast(1)) Assert.Contains(point, after.Points);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(90)]
+    [InlineData(180)]
+    [InlineData(270)]
+    public void AlignmentExpandsBothEndsAndUsesTheRotatedFacingAxis(int rotation)
+    {
+        var project = Fixture(cad: true);
+        var sourcePosition = rotation is 180 ? new SchematicPoint(260, 100) : rotation is 270 ? new(100, 240) : new(100, 100);
+        var targetPosition = rotation is 0 ? new SchematicPoint(260, 100) : rotation is 90 ? new(100, 240) : new(100, 100);
+        project.Schematic!.Symbols[0] = project.Schematic.Symbols[0] with { Position = sourcePosition, Rotation = rotation };
+        project.Schematic.Symbols[1] = project.Schematic.Symbols[1] with { Position = targetPosition, Rotation = rotation };
+        for (var i = 1; i <= 3; i++)
+        {
+            var a = NativePoint(project.Schematic.Symbols[0], "A" + i);
+            var b = NativePoint(project.Schematic.Symbols[1], "B" + i);
+            project.Connections.Add(new() { ConnectionId = "C" + i, FromEndpointId = "A" + i, ToEndpointId = "B" + i });
+            project.Schematic.Wires.Add(new() { WireId = "W" + i, ConnectionId = "C" + i, PageId = "P",
+                Start = SchematicAttachment.Pin("SA", "A" + i), End = SchematicAttachment.Pin("SB", "B" + i), Points = [a, b] });
+        }
+        var before = Snapshot(project);
+        var aligned = Align(project);
+        Assert.Equal(before, Snapshot(project));
+        Assert.Equal(Snapshot(project.Connections), Snapshot(aligned.Connections));
+        Assert.Equal(Groups(project), Groups(aligned));
+        Assert.All(aligned.Schematic!.Symbols, symbol => Assert.Equal(3, symbol.EndpointDisplayPlacements.Count));
+        foreach (var wire in aligned.Schematic.Wires)
+            if (rotation is 0 or 180) Assert.All(wire.Points, point => Assert.Equal(wire.Points[0].Y, point.Y));
+            else Assert.All(wire.Points, point => Assert.Equal(wire.Points[0].X, point.X));
+        SchematicAuthoringService.Validate(aligned);
+    }
+
+    [Fact]
+    public void BranchedPortAlignmentRejectsWithoutFlatteningItsJunction()
+    {
+        var project = Fixture(cad: true, wired: true);
+        project.Schematic!.Wires.Add(new() { WireId = "branch", PageId = "P", Start = SchematicAttachment.Junction("WIRE1"),
+            End = SchematicAttachment.Free(), ManualRoute = true, Points = [new(200, 112), new(200, 180)] });
+        Reject(project, () => Align(project));
+    }
+
+    [Fact]
+    public void ShiftedAlignmentKeepsFanoutLeadsDistinctEvenWhenDisplayRowsMatchOtherNativeRows()
+    {
+        var p = Fixture(wired: true, cad: true);
+        p.Schematic!.Symbols[0] = p.Schematic.Symbols[0] with { Position = new(100, 118) };
+        var next = Align(p);
+        var target = next.Schematic!.Symbols[1];
+        var leads = target.EndpointDisplayPlacements.Select(e => new SchematicWire { WireId = e.EndpointId, PageId = "P",
+            Points = SchematicAuthoringService.PortFanoutLeadPoints(target, e.EndpointId).ToList() }).ToArray();
+        Assert.DoesNotContain(SchematicCrossingService.Analyze(leads).Conflicts, c => c.Code == "COLLINEAR_OVERLAP");
+        Assert.Equal(Snapshot(p.Connections), Snapshot(next.Connections));
+    }
+
+    [Fact]
+    public void AlignmentRejectsAMovedManualDraftThatWouldPassThroughAnotherDisplayContact()
+    {
+        var p = Fixture(wired: true, cad: true);
+        p.Connections.RemoveRange(1, 2); p.Schematic!.Wires.RemoveRange(1, 2);
+        p.Schematic.Symbols[0] = p.Schematic.Symbols[0] with { Position = new(100, 120) };
+        p.Schematic.Wires.Add(new() { WireId = "manual-draft", PageId = "P", ManualRoute = true,
+            Start = SchematicAttachment.Pin("SB", "B3"), End = SchematicAttachment.Free(), Points = [new(260, 128), new(235, 128)] });
+        Reject(p, () => Align(p));
+    }
+
+    [Fact]
+    public void TwoPointManualAlignmentDoesNotInventOvershootingInteriorWaypoints()
+    {
+        var p = Fixture(wired: true, cad: true);
+        p.Connections.RemoveRange(1, 2); p.Schematic!.Wires.RemoveRange(1, 2);
+        p.Schematic.Wires[0] = p.Schematic.Wires[0] with { ManualRoute = true };
+        var next = Align(p);
+        var wire = Assert.Single(next.Schematic!.Wires);
+        Assert.True(wire.ManualRoute);
+        Assert.Equal(2, wire.Points.Count);
+        Assert.All(wire.Points, point => Assert.Equal(wire.Points[0].Y, point.Y));
+        Assert.Equal(wire.Start, p.Schematic.Wires[0].Start);
+        Assert.Equal(wire.End, p.Schematic.Wires[0].End);
+    }
+
+    [Fact]
+    public void AlignmentCannotPlaceAnExpandedLeadOverAnUnrelatedLockedWire()
+    {
+        var p = Fixture(wired: true, cad: true);
+        p.Schematic!.Wires[1] = p.Schematic.Wires[1] with { Points = [new(140, 120), new(220, 120), new(220, 124), new(260, 124), new(260, 120)] };
+        p.Schematic.Wires.Add(new() { WireId = "locked-reservation", PageId = "P", Locked = true,
+            Points = [new(245, 120), new(255, 120)] });
+        Reject(p, () => Align(p));
+    }
+
+    [Fact]
+    public void AlignmentCannotTouchTheDisplayPinOfAnotherPortWithAnExpandedLead()
+    {
+        var p = Fixture(wired: true, cad: true);
+        p.Components[1].Ports.Add(new() { PortId = "PB4", Name = "Other", Pins = [new() { PinId = "B4", PinNumber = "4" }] });
+        p.Schematic!.Symbols[1] = p.Schematic.Symbols[1] with { Anchors = [.. p.Schematic.Symbols[1].Anchors,
+            new() { EndpointId = "B4", Direction = "Left", Position = new(0, 11), Confirmed = true }] };
+        p = Fanout(p, true, symbolId: "SB", portId: "PB4", lead: 6.25);
+        Reject(p, () => Align(p));
+    }
+
+    [Fact]
+    public void WholePortRouteMayMeetItsOwnFanoutLeadsWithoutLosingManualInteriorPoints()
+    {
+        var p = Fixture(wired: true);
+        p.Connections.RemoveRange(1, 2); p.Schematic!.Wires.RemoveRange(1, 2);
+        p.Connections.Add(new() { ConnectionId = "PORT", FromEndpointId = "PA", ToEndpointId = "PB" });
+        var wholePort = new SchematicWire { WireId = "whole-port", PageId = "P", ConnectionId = "PORT", ManualRoute = true,
+            Start = SchematicAttachment.Port("SA", "PA"), End = SchematicAttachment.Port("SB", "PB"),
+            Points = [new(140, 115), new(160, 115), new(160, 80), new(250, 80), new(250, 120), new(260, 120)] };
+        p.Schematic.Wires.Add(wholePort);
+        SchematicAuthoringService.Validate(p);
+        var next = Align(p);
+        var wire = next.Schematic!.Wires.Single(w => w.WireId == wholePort.WireId);
+        Assert.Equal(wholePort.Start, wire.Start);
+        Assert.Equal(wholePort.End, wire.End);
+        Assert.True(wire.ManualRoute);
+        foreach (var point in wholePort.Points.Skip(1).SkipLast(1)) Assert.Contains(point, wire.Points);
+        Assert.Equal(Snapshot(p.Connections), Snapshot(next.Connections));
+        SchematicAuthoringService.Validate(next);
+    }
+
+    private ElectricalProject Align(ElectricalProject project)
+    {
+        var method = typeof(SchematicAuthoringService).GetMethod("AlignPortFanout");
+        Assert.NotNull(method);
+        try { return (ElectricalProject)method!.Invoke(_service, [project, "SA", "PA"])!; }
+        catch (System.Reflection.TargetInvocationException error) when (error.InnerException is InvalidOperationException inner)
+        { throw inner; }
+    }
+
     private static SchematicPoint NativePoint(SchematicSymbol symbol, string endpointId) =>
         SchematicAuthoringService.NativeAnchorPoint(symbol, endpointId);
 

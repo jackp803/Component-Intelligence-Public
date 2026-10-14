@@ -56,16 +56,32 @@ internal static partial class Program
         }
         var before = JsonSerializer.Serialize(p);
         var dense = Draw();
+        Require(before == JsonSerializer.Serialize(p), "Narrow label reflow mutated electrical data or full manual names.");
+        try
+        {
+            type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [p, p.Schematic!.Pages[0]]);
+            throw new InvalidOperationException("Crowded full manual designations were silently replaced by W indices or omitted.");
+        }
+        catch (TargetInvocationException error) when (error.InnerException is InvalidOperationException inner && inner.Message.Contains("導線標籤")) { }
+        // Full manual names require real clearance; expand and align rather than substitute internal W indices.
+        var author = new SchematicAuthoringService();
+        p = author.TransformSymbol(p, p.Schematic!.Symbols[1].SymbolId, new(230, 40), 0);
+        p = author.SetPortFanout(p, p.Schematic!.Symbols[0].SymbolId, p.Components[0].Ports[0].PortId, true, 12, 25);
+        p = author.AlignPortFanout(p, p.Schematic!.Symbols[0].SymbolId, p.Components[0].Ports[0].PortId);
+        before = JsonSerializer.Serialize(p);
+        dense = Draw();
         var labels = dense.Children.OfType<TextBlock>().Where(t => t.Tag is string tag && tag.StartsWith("wire-label:")).ToArray();
-        Require(labels.Length == 5, "Dense long-description fixture dropped a compact wire label.");
+        Save(dense, "compact-dense-diagnostic.png");
+        Require(labels.Select(t => t.Tag).Distinct().Count() == 5, "Dense long-description fixture omitted wires: " + string.Join("; ", labels.Select(l => l.Text)));
         Require(!dense.Children.OfType<FrameworkElement>().Any(e => e.Tag is string tag && tag.StartsWith("wire-leader:")), "Old saved remote captions created long leaders.");
         foreach (var label in labels)
         {
-            var wire = p.Schematic.Wires.Single(w => Equals(label.Tag, "wire-label:" + w.WireId));
+            var wire = p.Schematic!.Wires.Single(w => Equals(label.Tag, "wire-label:" + w.WireId));
             var box = new Rect(Canvas.GetLeft(label), Canvas.GetTop(label), label.DesiredSize.Width, label.DesiredSize.Height);
             Require(Math.Min(Math.Abs(box.Top - wire.Points[0].Y * 3), Math.Abs(box.Bottom - wire.Points[0].Y * 3)) <= 8,
                 "Saved remote caption was not reflowed next to its wire.");
-            Require(box.Bottom < wire.Points[0].Y * 3, "Dense labels use mixed above/below placement and make adjacent wire attribution ambiguous.");
+            Require(box.Bottom < wire.Points[0].Y * 3 || dense.Children.OfType<System.Windows.Shapes.Line>().Any(l => Equals(l.Tag, "wire-caption-tick:" + wire.WireId)),
+                "A below-wire caption is missing its adjacent attribution tick.");
             Require(label.ToolTip?.ToString()?.Contains(descriptions[p.Schematic.Wires.IndexOf(wire)]) == true,
                 "Compact caption lost its original full function tooltip.");
             foreach (var other in p.Schematic.Wires)
@@ -77,7 +93,7 @@ internal static partial class Program
         Require(before == JsonSerializer.Serialize(p), "Dense caption reflow mutated project data or manual wire names.");
         Save(dense, "compact-dense-wires.png");
         Require(SchematicPdfWriter.Write(p, Path.Combine(output, "compact-dense-wires.pdf"), (project, page) =>
-            (BitmapSource)type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [project, page])!) == 2,
+            (BitmapSource)type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [project, page])!, includeWireDetails: true) == 2,
             "Dense drawing did not export its full details page.");
 
         var entries = SchematicWireLegendPresentation.Entries(p);
@@ -95,7 +111,7 @@ internal static partial class Program
             "Wire details grid lost full original wire descriptions.");
         var many = Enumerable.Range(0, 160).Select(i => entries[i % entries.Count] with
             { WireId = "stress-" + i, Index = "W" + (i + 1).ToString("D3") }).ToArray();
-        var page = p.Schematic.Pages[0];
+        var page = p.Schematic!.Pages[0];
         var tiles = SchematicWireDetailsRenderer.Plan(many, page, 1);
         var planned = tiles.SelectMany(t => t.Blocks).SelectMany(b => b.Rows).Select(r => r.Entry.WireId).ToArray();
         Require(tiles.Count > 1 && planned.Length == many.Length && planned.Distinct().Count() == many.Length,

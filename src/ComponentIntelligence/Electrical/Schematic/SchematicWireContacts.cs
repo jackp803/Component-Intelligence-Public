@@ -1,4 +1,5 @@
 using ComponentIntelligence.Electrical.Domain;
+using System.Text.RegularExpressions;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
@@ -52,14 +53,45 @@ public static class SchematicWireContacts
             string.IsNullOrWhiteSpace(source.Function) ||
             !string.Equals(source.Function.Trim(), link.Value.Trim(), StringComparison.OrdinalIgnoreCase)) return null;
         var function = WithoutColor(source.Function);
-        // An explicit short name cannot select one of the source's operating modes.
-        if (function.IndexOfAny(['/', '|', ';']) >= 0 || function.Contains('\u6216') ||
-            function.Contains(" or ", StringComparison.OrdinalIgnoreCase) ||
-            function.Contains("selectable", StringComparison.OrdinalIgnoreCase) ||
-            function.Contains("switchable", StringComparison.OrdinalIgnoreCase)) return null;
         var caption = WithoutColor(source.PinName);
         return caption.Length is > 0 and <= 32 && !caption.Any(char.IsControl) && caption != source.PinNumber.Trim()
-            ? caption : null;
+            ? CompactFunction(function, caption) : null;
+    }
+
+    private static string CompactFunction(string function, string caption)
+    {
+        var text = Regex.Replace(function, @"\s+", " ").Trim();
+        var choices = text.Replace("MS/TP", "MSTP", StringComparison.OrdinalIgnoreCase).Replace("AC/DC", "ACDC", StringComparison.OrdinalIgnoreCase)
+            .Replace("TCP/IP", "TCPIP", StringComparison.OrdinalIgnoreCase);
+        var selectable = text.Contains("selectable", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("switchable", StringComparison.OrdinalIgnoreCase) || text.Contains(" or ", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains('或') || text.Contains('|') || text.Contains(';') || choices.Contains('/') ||
+            Regex.IsMatch(text, @"\d\s*(V|mA)\s*/", RegexOptions.IgnoreCase);
+        var protocolAlternatives = Regex.IsMatch(text, @"^BACnet MS/TP\s*(?:/|or)\s*Modbus RTU differential data (?:negative|positive)\.?$", RegexOptions.IgnoreCase);
+        if (selectable && !protocolAlternatives)
+        {
+            if (text.Length <= 32) return text;
+            const string sensorPrefix = "Optional external sensor input for ";
+            if (text.StartsWith(sensorPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var options = text[sensorPrefix.Length..].TrimEnd('.').Replace("switching contact", "接點", StringComparison.OrdinalIgnoreCase)
+                    .Replace("active ", "", StringComparison.OrdinalIgnoreCase).Replace(" sensor", "", StringComparison.OrdinalIgnoreCase);
+                return "Sensor IN: " + options + "（型式待選）";
+            }
+            const string analogPrefix = "Selectable analogue output ";
+            if (text.StartsWith(analogPrefix, StringComparison.OrdinalIgnoreCase))
+                return "AO: " + text[analogPrefix.Length..].TrimEnd('.').Replace(" conductor", "", StringComparison.OrdinalIgnoreCase) + "（模式待選）";
+            return text + "（模式待選）";
+        }
+        if (text.Contains("differential", StringComparison.OrdinalIgnoreCase))
+        {
+            if (caption.Length is > 0 and <= 32) return caption;
+            if (text.Contains("negative", StringComparison.OrdinalIgnoreCase)) return "D-";
+            if (text.Contains("positive", StringComparison.OrdinalIgnoreCase)) return "D+";
+        }
+        if (caption.Length is > 0 and <= 32 && !caption.Any(char.IsControl)) return caption;
+        if (text.StartsWith("Common for ", StringComparison.OrdinalIgnoreCase)) return "COM";
+        return text;
     }
 
     public static SchematicWireContact? Resolve(ElectricalProject project, SchematicAttachment attachment)
@@ -81,7 +113,8 @@ public static class SchematicWireContacts
         var shortFunction = pin?.FunctionManualOverride == true ? function : inferred
             ? InferredCaption(project, pin!) ?? function : WithoutColor(pin?.PinName);
         if (shortFunction.Length == 0) shortFunction = function;
-        if (shortFunction.Length > 32 || shortFunction.Any(char.IsControl)) shortFunction = "功能見明細";
+        if (!inferred && pin?.FunctionManualOverride != true) shortFunction = CompactFunction(function, shortFunction);
+        else if (shortFunction.Any(char.IsControl)) shortFunction = Regex.Replace(shortFunction, @"\s+", " ").Trim();
         return new(reference + "/" + port.Name + (pin is null ? "" : "." + pin.PinNumber), pin, function)
         { ShortFunction = shortFunction };
     }

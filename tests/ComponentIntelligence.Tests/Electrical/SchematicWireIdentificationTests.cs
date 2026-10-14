@@ -40,7 +40,7 @@ public sealed class SchematicWireIdentificationTests
         var p = Draw(Fixture(.2));
         var caption = SchematicCableLabelPresentation.Resolve(p, p.Schematic!.Wires[0]);
         Assert.NotNull(caption);
-        Assert.Contains("IOLink1_X1_1", caption.FullText);
+        Assert.Contains("IOLink1_1", caption.FullText);
         Assert.Contains("mm", caption.FullText);
         Assert.Contains("AWG", caption.FullText);
     }
@@ -199,14 +199,14 @@ public sealed class SchematicWireIdentificationTests
         var p = Fixture(.2); p.Components[0].ReferenceDesignator = null;
         p.Components[0].Ports[0].Pins[0].PinNumber = "+";
         p = Draw(p); var name = p.Schematic!.Wires[0].Designation;
-        Assert.Equal("IOLink1_X1_+", name);
+        Assert.Equal("IOLink1_1", name);
         var clone = new ComponentInstance { ComponentInstanceId = "io-second", ComponentDefinitionId = "io-def", TypeKey = "IO-Link Master",
             Ports = [new() { PortId = "X1-second", Name = "X1", Pins = [new() { PinId = "A-second", PinNumber = "+" }] }] };
         p.Components.Add(clone);
         p.Schematic.Symbols.Add(p.Schematic.Symbols[0] with { SymbolId = "S3", ComponentInstanceId = clone.ComponentInstanceId,
             Position = new(20, 90), Anchors = [new() { EndpointId = "A-second", Position = new(40, 5), Direction = "Right" }] });
         p = new SchematicAuthoringService().DrawWire(p, "page", SchematicAttachment.Pin("S3", "A-second"), SchematicAttachment.Free(), [new(60, 95), new(100, 95)]);
-        Assert.Equal("IOLink2_X1_+", p.Schematic!.Wires[1].Designation);
+        Assert.Equal("IOLink2_1", p.Schematic!.Wires[1].Designation);
         p = JsonSerializer.Deserialize<ElectricalProject>(JsonSerializer.Serialize(p))!;
         p = new SchematicAuthoringService().TransformSymbol(p, "S1", new(25, 20), 0);
         Assert.Equal(name, p.Schematic!.Wires[0].Designation);

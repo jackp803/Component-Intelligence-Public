@@ -4,6 +4,8 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed partial class SchematicAuthoringService
 {
+    public ElectricalProject RefreshAutomaticWireNames(ElectricalProject project) => Edit(project, (_, _) => { });
+
     public ElectricalProject SetWireLabelPosition(ElectricalProject project, string wireId, SchematicPoint position) => Edit(project, (_, doc) =>
     {
         RequirePoint(position);

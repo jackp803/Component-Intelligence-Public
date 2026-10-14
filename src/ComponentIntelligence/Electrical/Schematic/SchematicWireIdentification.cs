@@ -18,6 +18,7 @@ public static class SchematicWireIdentification
         if (project.Schematic is not { } doc) return;
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var assignedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var historicalReferences = new Dictionary<string, string>(doc.WireNamingReferences, StringComparer.Ordinal);
         foreach (var original in doc.Wires.ToArray())
         {
             if (seen.Contains(original.WireId)) continue;
@@ -33,6 +34,8 @@ public static class SchematicWireIdentification
             var manualNames = group.Where(w => w.ManualDesignation).Select(w => w.Designation).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (manualNames.Length > 1) throw new InvalidOperationException("Paired segments have different manual wire names.");
             var name = manualNames.FirstOrDefault() ?? group.Select(w => w.Designation).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n));
+            if (manualNames.Length == 0 && group.All(w => !w.Locked) && name is not null && IsLegacyName(project, group, name, historicalReferences))
+                name = null;
             var splitName = name is not null && assignedNames.Contains(name);
             if (splitName) name = null;
             name ??= AllocateName(project, group);
@@ -95,26 +98,44 @@ public static class SchematicWireIdentification
         if (first is { } e)
         {
             var component = e.Component;
-            if (!doc.WireNamingReferences.TryGetValue(component.ComponentInstanceId, out var reference))
+            if (!doc.WireNamingReferences.TryGetValue(component.ComponentInstanceId, out var reference) || reference.Length > 16)
             {
-                reference = !string.IsNullOrWhiteSpace(component.ReferenceDesignator) ? Token(component.ReferenceDesignator) :
+                reference = !string.IsNullOrWhiteSpace(component.ReferenceDesignator) && Token(component.ReferenceDesignator).Length <= 16 ? Token(component.ReferenceDesignator) :
                     NamingEngine.NextReference(doc.WireNamingReferences.Values.Concat(project.Components.Select(c => c.ReferenceDesignator ?? "")), Prefix(component), 1);
                 doc.WireNamingReferences[component.ComponentInstanceId] = reference;
             }
-            stem = reference + "_" + Token(e.Port.Name) + (e.Pin is null ? "" : "_" + Token(e.Pin.PinNumber));
+            stem = reference + "_";
         }
         var reserved = doc.UsedWireDesignations.Concat(doc.Wires.Select(w => w.Designation ?? "")).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (stem != "W" && !reserved.Contains(stem)) return stem;
         if (stem == "W") return NamingEngine.NextReference(reserved, "W", 3);
-        var suffix = 2;
-        while (reserved.Contains(stem + "-" + suffix)) suffix++;
-        return stem + "-" + suffix;
+        return NamingEngine.NextReference(reserved, stem, 1);
+    }
+
+    private static bool IsLegacyName(ElectricalProject project, IReadOnlyList<SchematicWire> group, string name,
+        IReadOnlyDictionary<string, string> references)
+    {
+        if (references.Values.Where(r => r.Length <= 16).Any(r => name.StartsWith(r + "_", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(name[(r.Length + 1)..], out var number) && number > 0)) return false;
+        foreach (var end in group.SelectMany(w => new[] { w.Start, w.End }))
+        {
+            if (Endpoint(project, end.EndpointId) is not { } e) continue;
+            var candidates = new[] { references.GetValueOrDefault(e.Component.ComponentInstanceId), e.Component.ReferenceDesignator };
+            foreach (var reference in candidates.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var stem = Token(reference!) + "_" + Token(e.Port.Name) + (e.Pin is null ? "" : "_" + Token(e.Pin.PinNumber));
+                if (name.Equals(stem, StringComparison.OrdinalIgnoreCase) || name.StartsWith(stem + "-", StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(name[(stem.Length + 1)..], out var suffix) && suffix >= 2) return true;
+            }
+        }
+        return false;
     }
 
     private static string Prefix(ComponentInstance component)
     {
         var type = Token(component.TypeKey).Replace("-", "", StringComparison.Ordinal);
-        return type.Contains("IOLink", StringComparison.OrdinalIgnoreCase) ? "IOLink" : type;
+        foreach (var prefix in new[] { "IOLink", "Valve", "Sensor", "Actuator", "PLC", "MCP", "Motor", "Pump", "PowerSupply", "Connector" })
+            if (type.Contains(prefix, StringComparison.OrdinalIgnoreCase)) return prefix;
+        return type.Length <= 12 ? type : "Device";
     }
 
     private static string Token(string text)

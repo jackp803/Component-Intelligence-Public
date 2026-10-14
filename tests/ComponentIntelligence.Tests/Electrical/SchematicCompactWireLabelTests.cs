@@ -16,10 +16,10 @@ public sealed class SchematicCompactWireLabelTests
         }
         p = SchematicWireIdentificationTests.Draw(p);
         var label = SchematicCableLabelPresentation.Resolve(p, p.Schematic!.Wires.Single())!;
-        Assert.Equal(p.Schematic.Wires.Single().Designation + " · Com", label.Text);
+        Assert.Equal(p.Schematic.Wires.Single().Designation + " · Com · BK", label.Text);
         Assert.DoesNotContain("AWG", label.Text);
         Assert.Contains("Common for 24 V", label.FullText);
-        Assert.Contains("IOLink1_X1", label.FullText);
+        Assert.Contains("IOLink1_1", label.FullText);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public sealed class SchematicCompactWireLabelTests
         p.Components[0].Ports[0].Pins[0].Function = new string('x', 160);
         p = SchematicWireIdentificationTests.Draw(p);
         var entry = SchematicWireLegendPresentation.Entries(p).Single();
-        Assert.Equal("功能見明細", entry.ShortFunction);
+        Assert.Equal(new string('x', 160), entry.ShortFunction);
         Assert.Contains(new string('x', 160), entry.Functions);
         Assert.Contains(entry.Designation, entry.FullText);
     }

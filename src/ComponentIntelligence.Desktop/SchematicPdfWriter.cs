@@ -10,7 +10,7 @@ namespace ComponentIntelligence.Desktop;
 public static class SchematicPdfWriter
 {
     public static int Write(ElectricalProject project, string destination,
-        Func<ElectricalProject, SchematicPage, BitmapSource> render)
+        Func<ElectricalProject, SchematicPage, BitmapSource> render, bool includeWireDetails = false)
     {
         SchematicAuthoringService.Validate(project);
         if (project.Schematic?.Pages.Count is not > 0) throw new InvalidOperationException("尚無可輸出的頁面。");
@@ -36,6 +36,7 @@ public static class SchematicPdfWriter
                     sectionDestinations.TryAdd(section.CableInstanceId, sheet.PageId); output.Add(new(sheet, tile, section));
                 }
             }
+            if (includeWireDetails)
             foreach (var source in plan.MainPages.Select((page, index) => (page, index)))
             foreach (var tile in SchematicWireDetailsRenderer.Plan(SchematicWireLegendPresentation.Entries(plan.MainProject, source.page.PageId), source.page, source.index + 1))
                 output.Add(new(source.page with { PageId = "wire-details-" + Guid.NewGuid().ToString("N"),

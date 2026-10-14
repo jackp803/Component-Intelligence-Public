@@ -2,10 +2,13 @@ using ComponentIntelligence.Electrical.Domain;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
+public sealed record SchematicLabelSpan(SchematicPoint Center, int Rotation, double AvailableLength);
+
 public sealed record SchematicCableLabel(string Text, SchematicPoint Center, int Rotation, double AvailableLength)
 {
     public string FullText { get; init; } = Text;
     public bool IsOrdinaryWire { get; init; }
+    public IReadOnlyList<SchematicLabelSpan> Spans { get; init; } = [];
 }
 
 public static class SchematicCableLabelPresentation
@@ -27,7 +30,7 @@ public static class SchematicCableLabelPresentation
         }
         else
         {
-        var cable = project.Cables.SingleOrDefault(c => c.CableInstanceId == connection.CableInstanceId);
+        var cable = project.Cables.SingleOrDefault(c => c.CableInstanceId == connection!.CableInstanceId);
         if (cable is null) return null;
         var models = project.BomItems.Where(b => b.ConnectionMaterial && b.ComponentDefinitionId == cable.CableDefinitionId)
             .Select(b => b.Row.ModelOrPartNumber?.Trim()).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct(StringComparer.Ordinal).ToArray();
@@ -39,15 +42,29 @@ public static class SchematicCableLabelPresentation
         crossings ??= SchematicCrossingService.Analyze(project.Schematic?.Wires.Where(w => w.PageId == wire.PageId).ToArray() ?? [wire]);
         var obstacles = crossings.Junctions.Concat(crossings.Crossovers.Select(c => c.Position))
             .Concat(crossings.Conflicts.Select(c => c.Position)).ToArray();
-        var span = ClearSpans(wire, obstacles).OrderByDescending(s => s.Length).FirstOrDefault();
-        return span.Length > 4 ? new(text.Trim(), span.Center, span.Rotation, span.Length - 4)
-            { FullText = fullText ?? text.Trim(), IsOrdinaryWire = ordinary } : null;
+        var spans = ClearSpans(wire, obstacles).Where(s => s.Length > 0).OrderByDescending(s => s.Length)
+            .Select(s => new SchematicLabelSpan(s.Center, s.Rotation, Math.Max(0, s.Length - 4))).ToArray();
+        return spans.Length > 0 ? new(text.Trim(), spans[0].Center, spans[0].Rotation, spans[0].AvailableLength)
+            { FullText = fullText ?? text.Trim(), IsOrdinaryWire = ordinary, Spans = spans } : null;
     }
 
     private static IEnumerable<(SchematicPoint Center, int Rotation, double Length)> ClearSpans(SchematicWire wire,
         IReadOnlyList<SchematicPoint> obstacles)
     {
-        foreach (var (a, b) in wire.Points.Zip(wire.Points.Skip(1)))
+        var points = new List<SchematicPoint>();
+        foreach (var point in wire.Points)
+        {
+            if (points.Count > 0 && points[^1] == point) continue;
+            points.Add(point);
+            while (points.Count >= 3)
+            {
+                var a = points[^3]; var b = points[^2]; var c = points[^1];
+                if (a.X == b.X && b.X == c.X && (b.Y - a.Y) * (c.Y - b.Y) >= 0 ||
+                    a.Y == b.Y && b.Y == c.Y && (b.X - a.X) * (c.X - b.X) >= 0) points.RemoveAt(points.Count - 2);
+                else break;
+            }
+        }
+        foreach (var (a, b) in points.Zip(points.Skip(1)))
         {
             if (a.X != b.X && a.Y != b.Y || a == b) continue;
             var vertical = a.X == b.X;

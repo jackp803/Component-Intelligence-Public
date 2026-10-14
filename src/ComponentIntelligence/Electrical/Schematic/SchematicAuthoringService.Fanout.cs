@@ -20,37 +20,7 @@ public sealed partial class SchematicAuthoringService
             throw new InvalidOperationException("Fan-out requires a complete represented Port with exact Pins.");
         if (symbol.Locked || doc.Wires.Any(w => w.Locked && (w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId)))
             throw new InvalidOperationException("Unlock the representation and incident routes before changing fan-out.");
-        var placements = symbol.EndpointDisplayPlacements.Where(p => p.PortId != portId).ToList();
-        if (enabled)
-        {
-            var anchors = port.Pins.Select(pin => symbol.Anchors.Single(a => a.EndpointId == pin.PinId)).ToArray();
-            foreach (var group in anchors.GroupBy(a => a.Direction, StringComparer.Ordinal))
-            {
-                var side = group.Key;
-                if (side is not ("Left" or "Right" or "Top" or "Bottom"))
-                    throw new InvalidOperationException("Fan-out requires orthogonal native Pin directions.");
-                var members = group.ToArray();
-                var native = members.Select(a => SchematicSymbolPresentation.CadDisplayPoint(symbol, a.Position)).ToArray();
-                var center = side is "Left" or "Right" ? native.Average(p => p.Y) : native.Average(p => p.X);
-                for (var i = 0; i < members.Length; i++)
-                {
-                    var coordinate = center + (i - (members.Length - 1) / 2d) * pitch;
-                    var point = side switch
-                    {
-                        "Left" => new SchematicPoint(-lead, coordinate),
-                        "Right" => new SchematicPoint(symbol.Width + lead, coordinate),
-                        "Top" => new SchematicPoint(coordinate, -lead),
-                        _ => new SchematicPoint(coordinate, symbol.Height + lead)
-                    };
-                    placements.Add(new() { EndpointId = members[i].EndpointId, PortId = portId, Position = point });
-                }
-            }
-        }
-        var next = symbol with
-        {
-            EndpointDisplayPlacements = placements,
-            CollapsedPortIds = enabled ? symbol.CollapsedPortIds.Where(id => id != portId).ToList() : symbol.CollapsedPortIds
-        };
+        var next = FanoutSymbol(symbol, port, enabled, pitch, lead);
         doc.Symbols[index] = next;
         ValidatePortFanout(draft, doc, next, owner);
         var affected = doc.Wires.Where(w => new[] { w.Start, w.End }.Any(a => a.SymbolId == symbolId &&
@@ -73,22 +43,73 @@ public sealed partial class SchematicAuthoringService
         }
     });
 
+    private static SchematicSymbol FanoutSymbol(SchematicSymbol symbol, ComponentPort port, bool enabled, double pitch, double lead)
+    {
+        var placements = symbol.EndpointDisplayPlacements.Where(p => p.PortId != port.PortId).ToList();
+        if (enabled)
+        foreach (var group in port.Pins.Select(pin => symbol.Anchors.Single(a => a.EndpointId == pin.PinId)).GroupBy(a => a.Direction, StringComparer.Ordinal))
+        {
+            var side = group.Key;
+            if (side is not ("Left" or "Right" or "Top" or "Bottom")) throw new InvalidOperationException("Fan-out requires orthogonal native Pin directions.");
+            var members = group.ToArray();
+            var native = members.Select(a => SchematicSymbolPresentation.CadDisplayPoint(symbol, a.Position)).ToArray();
+            var center = side is "Left" or "Right" ? native.Average(p => p.Y) : native.Average(p => p.X);
+            for (var i = 0; i < members.Length; i++)
+            {
+                var coordinate = center + (i - (members.Length - 1) / 2d) * pitch;
+                var point = side switch { "Left" => new SchematicPoint(-lead, coordinate),
+                    "Right" => new SchematicPoint(symbol.Width + lead, coordinate),
+                    "Top" => new SchematicPoint(coordinate, -lead), _ => new SchematicPoint(coordinate, symbol.Height + lead) };
+                placements.Add(new() { EndpointId = members[i].EndpointId, PortId = port.PortId, Position = point });
+            }
+        }
+        return symbol with { EndpointDisplayPlacements = placements,
+            CollapsedPortIds = enabled ? symbol.CollapsedPortIds.Where(id => id != port.PortId).ToList() : symbol.CollapsedPortIds };
+    }
+
     public static IReadOnlyList<SchematicPoint> PortFanoutLeadPoints(SchematicSymbol symbol, string endpointId)
     {
         var placement = symbol.EndpointDisplayPlacements.SingleOrDefault(p => p.EndpointId == endpointId);
         if (placement is null) return [];
         var anchor = symbol.Anchors.Single(a => a.EndpointId == endpointId);
-        var native = SchematicSymbolPresentation.CadDisplayPoint(symbol, anchor.Position);
-        var display = placement.Position;
         var members = symbol.EndpointDisplayPlacements.Where(p => p.PortId == placement.PortId &&
             symbol.Anchors.Single(a => a.EndpointId == p.EndpointId).Direction == anchor.Direction).ToArray();
-        var lane = (Array.FindIndex(members, p => p.EndpointId == endpointId) + 1d) / (members.Length + 1d);
-        var local = anchor.Direction is "Left" or "Right"
-            ? new[] { native, new SchematicPoint(native.X + (display.X - native.X) * lane, native.Y),
-                new SchematicPoint(native.X + (display.X - native.X) * lane, display.Y), display }
-            : new[] { native, new SchematicPoint(native.X, native.Y + (display.Y - native.Y) * lane),
-                new SchematicPoint(display.X, native.Y + (display.Y - native.Y) * lane), display };
-        return Simplify(local.Select(p => TransformAnchorDisplayPoint(symbol, p)));
+        var horizontal = anchor.Direction is "Left" or "Right";
+        var native = members.Select(p => SchematicSymbolPresentation.CadDisplayPoint(symbol,
+            symbol.Anchors.Single(a => a.EndpointId == p.EndpointId).Position)).ToArray();
+        var paths = members.Select((p, i) =>
+        {
+            var lane = (i + 1d) / (members.Length + 1d);
+            return new SchematicWire { WireId = p.EndpointId, PageId = symbol.PageId, Points = Simplify(horizontal
+                ? new[] { native[i], new(native[i].X + (p.Position.X - native[i].X) * lane, native[i].Y),
+                    new SchematicPoint(native[i].X + (p.Position.X - native[i].X) * lane, p.Position.Y), p.Position }
+                : new[] { native[i], new(native[i].X, native[i].Y + (p.Position.Y - native[i].Y) * lane),
+                    new SchematicPoint(p.Position.X, native[i].Y + (p.Position.Y - native[i].Y) * lane), p.Position }) };
+        }).ToArray();
+        var conflict = SchematicCrossingService.Analyze(paths).Conflicts.Any(c => c.Code == "COLLINEAR_OVERLAP" &&
+            native[Array.FindIndex(members, p => p.EndpointId == c.FirstWireId)] != native[Array.FindIndex(members, p => p.EndpointId == c.SecondWireId)]);
+        if (conflict)
+        {
+            // Separate entry/exit lanes avoid a lead merging into another Pin's native row after alignment.
+            var rows = native.Select(p => horizontal ? p.Y : p.X).Concat(members.Select(p => horizontal ? p.Position.Y : p.Position.X)).ToHashSet();
+            var boundary = anchor.Direction switch { "Left" or "Top" => 0, "Right" => symbol.Width, _ => symbol.Height };
+            for (var i = 0; i < members.Length; i++)
+            {
+                var display = members[i].Position;
+                var delta = (horizontal ? display.X : display.Y) - boundary;
+                var fraction = (i + 1d) / (members.Length + 1d);
+                var entry = boundary + delta * (.1 + .25 * fraction);
+                var exit = boundary + delta * (.65 + .25 * fraction);
+                var row = ((horizontal ? native[i].Y : native[i].X) + (horizontal ? display.Y : display.X)) / 2;
+                var center = row;
+                for (var offset = 1; rows.Contains(row); offset++) row = center + (offset % 2 == 0 ? 1 : -1) * ((offset + 1) / 2) * .5;
+                rows.Add(row);
+                paths[i] = paths[i] with { Points = Simplify(horizontal
+                    ? new[] { native[i], new(entry, native[i].Y), new(entry, row), new(exit, row), new(exit, display.Y), display }
+                    : new[] { native[i], new(native[i].X, entry), new(row, entry), new(row, exit), new(display.X, exit), display }) };
+            }
+        }
+        return paths.Single(p => p.WireId == endpointId).Points.Select(p => TransformAnchorDisplayPoint(symbol, p)).ToArray();
     }
 
     private static void ValidatePortFanout(ElectricalProject project, SchematicDocument doc, SchematicSymbol symbol,

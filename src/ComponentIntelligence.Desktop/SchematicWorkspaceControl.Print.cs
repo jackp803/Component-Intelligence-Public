@@ -70,7 +70,7 @@ public partial class SchematicWorkspaceControl
         {
             if (File.Exists(dialog.FileName)) throw new IOException("輸出檔已存在，請選擇新的檔名。");
             var project = await PrepareOutputAsync(); if (project is null) return;
-            var count = SchematicPdfWriter.Write(project, dialog.FileName, RenderOutputPage);
+            var count = SchematicPdfWriter.Write(project, dialog.FileName, RenderOutputPage, PdfWireDetails.IsChecked);
             Status.Text = $"已輸出 {count} 頁 PDF 草稿（未工程核准）：{dialog.FileName}";
             RememberDialogDirectory(dialog.FileName, false);
         }

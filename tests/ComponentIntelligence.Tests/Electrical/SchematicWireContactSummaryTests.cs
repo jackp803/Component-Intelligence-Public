@@ -89,7 +89,7 @@ public sealed class SchematicWireContactSummaryTests
         var project = Project("COM / black", LongCommon);
         var sink = Pin(project, "sink");
         sink.InferredFunction = new(sourceId, LongCommon);
-        Assert.Equal(Details, Resolve(project).ShortFunction);
+        Assert.Equal(LongCommon, Resolve(project).ShortFunction);
         Assert.Equal(LongCommon, sink.DisplayFunction);
         Assert.Equal("17", sink.PinNumber);
     }
@@ -122,7 +122,7 @@ public sealed class SchematicWireContactSummaryTests
             case "unused": source.Status = PinStatus.Unused; break;
             default: AddSource(project, "source", "V24 / red", LongCommon); break;
         }
-        Assert.Equal(Details, Resolve(project).ShortFunction);
+        Assert.Equal(LongCommon, Resolve(project).ShortFunction);
         Assert.Equal(LongCommon, Pin(project, "sink").DisplayFunction);
     }
 
@@ -133,12 +133,12 @@ public sealed class SchematicWireContactSummaryTests
     [InlineData("0-10 V; 4-20 mA")]
     [InlineData("0-10 V \u6216 4-20 mA")]
     [InlineData("Analog input with selectable voltage or current operating modes")]
-    public void SelectableAnalogModesRemainFullOrExplicitlyReferToDetails(string function)
+    public void SelectableAnalogModesRemainFullOrExplicitlyUnselected(string function)
     {
         var project = Project("AI / blue", function);
         Pin(project, "source").Analog = new();
         var before = JsonSerializer.Serialize(project);
-        Assert.Equal(function.Length <= 32 ? function : Details, Resolve(project).ShortFunction);
+        Assert.Equal(function.Length <= 32 ? function : function + "（模式待選）", Resolve(project).ShortFunction);
         Assert.Equal(function, Pin(project, "sink").DisplayFunction);
         Assert.Equal(before, JsonSerializer.Serialize(project));
     }
@@ -152,7 +152,7 @@ public sealed class SchematicWireContactSummaryTests
     public void MissingNumericLongOrMultilineSourceNameDoesNotBecomeAShortFunction(string name)
     {
         var project = Project(name, LongCommon);
-        Assert.Equal(Details, Resolve(project).ShortFunction);
+        Assert.Equal(LongCommon, Resolve(project).ShortFunction);
         Assert.Equal(LongCommon, Pin(project, "sink").DisplayFunction);
     }
 
@@ -174,7 +174,6 @@ public sealed class SchematicWireContactSummaryTests
         Assert.Equal("Local return", sink.DisplayFunction);
     }
 
-    private const string Details = "\u529f\u80fd\u898b\u660e\u7d30";
     private const string LongCommon = "Common for the non-isolated 24 V supply and communication reference";
     private const string LongData = "Positive differential data conductor for the communication interface";
 

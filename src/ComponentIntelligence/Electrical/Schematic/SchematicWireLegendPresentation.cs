@@ -16,7 +16,10 @@ public sealed record SchematicWireLegendEntry(string WireId, string PageId, stri
     public string ShortFunction { get; init; } = "";
     public int PageNumber { get; init; }
     public string DisplayName => string.IsNullOrWhiteSpace(Designation) ? Index : Designation;
-    public string Caption => DisplayName + (ShortFunction.Length > 0 ? " · " + ShortFunction : "");
+    public string ColorCode => Color switch { "black" => "BK", "red" => "RD", "white" => "WH", "orange" => "OG",
+        "pink" => "PK", "grey" => "GY", "brown" => "BN", "blue" => "BU", "green" => "GN", "yellow" => "YE",
+        "violet" => "VT", "線色未指定" => "線色待設定", _ => Color };
+    public string Caption => DisplayName + " · " + (ShortFunction.Length > 0 ? ShortFunction : "功能待設定") + " · " + ColorCode;
     public string FullText => string.Join("\n", new[] { Index + " / " + Designation, Contacts, Functions,
         Color + " / " + Specification.Text, Review }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
@@ -70,9 +73,9 @@ public static class SchematicWireLegendPresentation
         var evidence = SchematicWireEvidence.Resolve(project, wire);
         var status = wire.SizingProposal is not null ? "待核對" : wire.ManualSpecification ? "手動設定" :
             spec.Awg is null && spec.AreaMm2 is null ? "未設定" : "已指定";
-        var shortFunctions = ends.Select(e => e.ShortFunction).Where(f => f.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var shortFunctions = ends.Select(e => e.Pin?.FunctionManualOverride == true && e.ShortFunction.Length == 0
+            ? "端點功能待設定" : e.ShortFunction).Where(f => f.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var shortFunction = string.Join(" / ", shortFunctions);
-        if (shortFunction.Length > 48) shortFunction = "功能見明細";
         var functions = string.Join("\n", ends.Select(e => e.Caption + ": " + (e.Pin?.DisplayFunction ?? e.Function) +
             (!string.IsNullOrWhiteSpace(e.Pin?.PinName) && e.Pin.PinName != e.Pin.Function ? " [" + e.Pin.PinName + "]" : "")));
         return new(wire.WireId, wire.PageId, index > 0 ? "W" + index.ToString("D2", CultureInfo.InvariantCulture) : "W?",

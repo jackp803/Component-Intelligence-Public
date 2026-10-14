@@ -29,6 +29,7 @@ internal static partial class Program
 
     private static int Run(string[] args)
     {
+        if (args.FirstOrDefault() == "inline-annotations") return InlineAnnotationProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "workspace") return WorkspaceUsabilityProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "mating") return MatingProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "editing") return EditingConsistencyProof(Path.GetFullPath(args[1]));

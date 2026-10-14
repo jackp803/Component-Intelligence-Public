@@ -42,6 +42,8 @@
     </MenuItem>
     <MenuItem Header="更多">
      <MenuItem Header="線材設定" InputGestureText="C" Click="CableSettings_Click"/>
+     <MenuItem Header="更新自動線號" Click="RefreshWireNames_Click"/>
+     <MenuItem x:Name="PdfWireDetails" Header="PDF 附完整導線明細" IsCheckable="True" IsChecked="False"/>
      <MenuItem Header="DXF 草稿" InputGestureText="Ctrl+E" Click="ExportDraft_Click"/>
      <MenuItem Header="草稿缺口" InputGestureText="F8" Click="ReviewDraft_Click"/>
      <MenuItem Header="快捷鍵" InputGestureText="F1" Click="Shortcuts_Click"/>

@@ -76,7 +76,7 @@ internal static partial class Program
         var bitmap = new RenderTargetBitmap((int)sheet.Width, (int)sheet.Height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32); bitmap.Render(sheet);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using (var file = File.Create(Path.Combine(output, "editing.png"))) encoder.Save(file);
         var count = SchematicPdfWriter.Write(p, Path.Combine(output, "editing.pdf"), (project, page) =>
-            (BitmapSource)type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [project, page])!);
+            (BitmapSource)type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [project, page])!, includeWireDetails: true);
         Require(count >= 2, "PDF omitted full wire detail appendix.");
         using (var pdf = PdfSharp.Pdf.IO.PdfReader.Open(Path.Combine(output, "editing.pdf"), PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
             Require(pdf.Pages[0].Annotations.Count >= 6, "Wire bodies do not link directly to their full detail appendix.");

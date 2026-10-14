@@ -18,6 +18,10 @@ public partial class SchematicWorkspaceControl
         var expand = new MenuItem { Header = enabled ? "收回接點引線" : "展開接點引線", IsEnabled = !symbol.Locked && port.Pins.Count > 0 };
         expand.Click += (_, _) => { if (ResolveInspectorDraft()) Apply(p => _service.SetPortFanout(p, symbol.SymbolId, port.PortId, !enabled), "已調整 Port 引線；Pin 針號與接法不變"); };
         menu.Items.Add(expand);
+        var align = new MenuItem { Header = "依接線對齊接點", IsEnabled = !symbol.Locked && port.Pins.Count > 0 };
+        align.Click += (_, _) => { if (ResolveInspectorDraft()) Apply(p => _service.AlignPortFanout(p, symbol.SymbolId, port.PortId),
+            "已展開並對齊兩端接點；Pin 針號、CAD 原始接點與接法不變"); };
+        menu.Items.Add(align);
         var settings = new MenuItem { Header = "引線間距與長度", IsEnabled = !symbol.Locked && port.Pins.Count > 0 };
         settings.Click += (_, _) => EditFanoutSpacing(symbol, port);
         menu.Items.Add(settings); return menu;

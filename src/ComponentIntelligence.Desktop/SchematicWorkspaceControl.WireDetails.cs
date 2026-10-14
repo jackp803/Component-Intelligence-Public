@@ -7,6 +7,11 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class SchematicWorkspaceControl
 {
+    private void RefreshWireNames_Click(object sender, RoutedEventArgs e)
+    {
+        if (ResolveInspectorDraft()) Apply(p => _service.RefreshAutomaticWireNames(p), "已更新自動線號；手動線號與鎖定導線保留");
+    }
+
     private void WireDetails_Click(object sender, RoutedEventArgs e)
     {
         var grid = CreateWireDetailsGrid(SchematicWireLegendPresentation.Entries(_getProject()));

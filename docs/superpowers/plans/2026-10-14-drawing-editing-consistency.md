@@ -72,8 +72,8 @@ existing input/render handlers, contextual inspector.
 
 - [x] Full domain suite, WPF screenshots, PDF link/layout regression, performance check.
 - [x] Independent review; important findings reproduce RED then fix GREEN.
-- [ ] Commit only scoped edits; clean-source rebuild and isolated BN runtime bundle.
-- [ ] Verify launcher/source/runtime hashes without opening the production app.
+- [x] Commit only scoped edits; clean-source rebuild and isolated BN runtime bundle.
+- [x] Verify launcher/source/runtime hashes without opening the production app.
 
 ## Evidence So Far
 
@@ -91,3 +91,11 @@ preservation, accidental automatic endpoint touch, and slow fallback routing.
 130-reservation fallback improved from 5,848 ms RED to 12.757 ms independently
 verified; owned outward stubs cannot retrace, and grids above 1,000,000 nodes
 fail before allocating search arrays. All tests use synthetic data.
+
+Delivery completed from code commit ee74918c1b67a2a066f44abab1a00d1074c5a808.
+Clean archived source: 1,702 tests passed (unrelated preexisting dirty changes
+were excluded). Clean-source editing/readability/mating/manufacturing/wiring,
+workspace and performance proofs passed. Runtime product version
+BN-2026.10.14+ee74918; 222 runtime files and the source ZIP passed SHA-256
+launcher validation. Existing AU data and selected central archive paths were
+verified read-only; StartedSoftware=false. Native user UAT remains pending.

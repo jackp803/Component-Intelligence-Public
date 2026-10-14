@@ -39,4 +39,12 @@ representation; exact Pin identities and provenance remain explicit.
 
 ## Delivery Status
 
-Runtime and clean-source packaging not yet recorded. No merge or push.
+Delivered BM / 2026-10-14 to the wrapper project's project archive folder.
+Code/source revision: 5a1d7708c7882be821916346a653dccc2f3df39f.
+Clean source suite: 1544 passed. Clean Release mating, workspace, readability
+and retained performance smoke passed. Published runtime has 222 files and
+ProductVersion BM-2026.10.14+5a1d7708. Source ZIP SHA256:
+6E6346BD53E61D32FEE83AC95C156E0CCC3BF693512830F897C0EBB9244BD096.
+Windows PowerShell launcher ValidateOnly verified runtime, source archive and
+existing data/selected central-archive paths without starting the application.
+No merge or push; unrelated dirty files remain untouched.

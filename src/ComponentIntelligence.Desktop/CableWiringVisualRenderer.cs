@@ -68,7 +68,8 @@ public static class CableWiringVisualRenderer
                 "ARC" => Arc(p, pixelsPerMm, stroke),
                 "CIRCLE" => new Ellipse { Width = p.Radius * 2 * pixelsPerMm, Height = p.Radius * 2 * pixelsPerMm,
                     Fill = p.Radius < .8 ? Brushes.Black : Brushes.White, Stroke = Brushes.Black, StrokeThickness = .3 * pixelsPerMm },
-                "TEXT" or "MTEXT" => CreateText(p, textPixelsPerMm ?? pixelsPerMm, minimumTextHeight),
+                "TEXT" or "MTEXT" => CreateText(p, textPixelsPerMm ?? pixelsPerMm, minimumTextHeight,
+                    pixelsPerMm / (textPixelsPerMm ?? pixelsPerMm)),
                 _ => null
             };
             if (shape is null) continue;
@@ -81,9 +82,9 @@ public static class CableWiringVisualRenderer
         }
     }
 
-    internal static TextBlock CreateText(SchematicCadPrimitive primitive, double pixelsPerMm, double minimumTextHeight) =>
+    internal static TextBlock CreateText(SchematicCadPrimitive primitive, double pixelsPerMm, double minimumTextHeight, double widthScale = 1) =>
         new() { Text = primitive.DisplayText ?? primitive.Text ?? "", FontSize = Math.Max(primitive.TextHeight, minimumTextHeight) * pixelsPerMm,
-            Width = primitive.TextWidth > 0 ? primitive.TextWidth * pixelsPerMm : double.NaN,
+            Width = primitive.TextWidth > 0 ? primitive.TextWidth * pixelsPerMm * widthScale : double.NaN,
             TextWrapping = primitive.TextWidth > 0 ? System.Windows.TextWrapping.Wrap : System.Windows.TextWrapping.NoWrap,
             FontFamily = new("Microsoft JhengHei"), Foreground = Brushes.Black, Background = Brushes.White };
 

@@ -36,6 +36,11 @@ internal static partial class Program
         Call("Render", project);
         var sheet = (Canvas)type.GetProperty("Sheet", flags)!.GetValue(workspace)!;
         Require(sheet.Children.OfType<TextBlock>().All(t => !t.Text.Contains("草稿／未完成")), "Printable page still contains the draft/incomplete caption.");
+        sheet.Measure(new(sheet.Width, sheet.Height)); sheet.Arrange(new(0, 0, sheet.Width, sheet.Height));
+        var footerBounds = sheet.Children.OfType<TextBlock>().Where(t => Canvas.GetTop(t) >= sheet.Height - 24)
+            .Select(t => new Rect(Canvas.GetLeft(t), Canvas.GetTop(t), t.DesiredSize.Width, t.DesiredSize.Height)).ToArray();
+        for (var i = 0; i < footerBounds.Length; i++)
+            for (var j = i + 1; j < footerBounds.Length; j++) Require(!footerBounds[i].IntersectsWith(footerBounds[j]), "Page footer captions overlap.");
         var duplicate = (Button)workspace.FindName("DuplicateCableButton");
         Require(duplicate is { Visibility: Visibility.Visible }, "Selected cable has no distinct physical-copy action.");
         duplicate.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

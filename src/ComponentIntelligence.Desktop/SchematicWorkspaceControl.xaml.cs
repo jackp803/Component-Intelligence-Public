@@ -376,8 +376,6 @@ public partial class SchematicWorkspaceControl : UserControl
                 { element.IsHitTestVisible = false; element.Opacity = .55; }
             }
         }
-        Text($"{doc.Pages.IndexOf(page) + 1} / {doc.Pages.Count}",
-            page.Margin, page.Height - 5, 9, Brushes.Black);
         RenderWireLabels(project, page, crossings);
     }
 

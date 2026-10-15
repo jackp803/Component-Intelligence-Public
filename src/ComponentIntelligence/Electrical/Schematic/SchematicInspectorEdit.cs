@@ -44,6 +44,9 @@ public static class SchematicInspectorEdit
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
         var body = SchematicPortPresentation.GenericBodyBounds(project.Schematic!, symbol, owner);
         var reference = string.IsNullOrWhiteSpace(edit.Reference) ? null : edit.Reference.Trim();
+        var geometryChanged = symbol.Position != new SchematicPoint(edit.X, edit.Y) || symbol.Rotation != edit.Rotation ||
+            (symbol.Geometry is null ? Math.Abs(body.Width - edit.Width) > .001 || Math.Abs(body.Height - edit.Height) > .001 :
+                edit.CadScale is double requestedScale && Math.Abs(SchematicSymbolPresentation.CadDisplayScale(symbol) - requestedScale) > .000001);
         var unchanged = reference == (string.IsNullOrWhiteSpace(owner.Reference) ? null : owner.Reference) &&
             symbol.Position == new SchematicPoint(edit.X, edit.Y) && symbol.Rotation == edit.Rotation && symbol.Locked == edit.Locked &&
             (symbol.Geometry is null ? Math.Abs(body.Width - edit.Width) < .001 && Math.Abs(body.Height - edit.Height) < .001 :
@@ -67,11 +70,17 @@ public static class SchematicInspectorEdit
         if (symbol.Position != new SchematicPoint(edit.X, edit.Y) || symbol.Rotation != edit.Rotation)
             next = service.TransformSymbol(next, id, new(edit.X, edit.Y), edit.Rotation);
         if (edit.Locked) next = service.SetLocked(next, id, true);
+        // Metadata edits must not force legacy CAD frames to move or resize to pass a new placement check.
+        if (!geometryChanged) return next;
         var result = next.Schematic!.Symbols.Single(s => s.SymbolId == id);
         var bounds = SchematicPortPresentation.GenericBodyBounds(next.Schematic, result, SchematicSymbolOwner.Resolve(next, result));
         var page = next.Schematic.Pages.Single(p => p.PageId == result.PageId);
-        if (bounds.X < page.Margin || bounds.Y < page.Margin || bounds.X + bounds.Width > page.Width - page.Margin || bounds.Y + bounds.Height > page.Height - page.Margin)
-            throw new InvalidOperationException("模塊位置或尺寸超出有效圖面。");
+        var overflow = new[] { ("左側", page.Margin - bounds.X), ("上側", page.Margin - bounds.Y),
+            ("右側", bounds.X + bounds.Width - page.Width + page.Margin), ("下側", bounds.Y + bounds.Height - page.Height + page.Margin) }
+            .Where(edge => edge.Item2 > .000001).Select(edge => $"{edge.Item1}超出 {edge.Item2:0.###} mm").ToArray();
+        if (overflow.Length > 0)
+            throw new InvalidOperationException($"「{page.Title}」的模塊「{reference ?? owner.DisplayName}」位置或尺寸超出有效圖面：{string.Join("、", overflow)}。" +
+                $"目前外框 X={bounds.X:0.###}、Y={bounds.Y:0.###}、寬={bounds.Width:0.###}、高={bounds.Height:0.###} mm；圖面邊界 {page.Margin:0.###}～{page.Width - page.Margin:0.###} × {page.Margin:0.###}～{page.Height - page.Margin:0.###} mm。");
         return next;
     }
 

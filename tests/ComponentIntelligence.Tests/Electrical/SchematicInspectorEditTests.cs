@@ -8,6 +8,50 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicInspectorEditTests
 {
     [Fact]
+    public void ReferenceOnlyEditPreservesLegacyCadFrameOutsideMargin()
+    {
+        var project = Fixture();
+        var symbol = project.Schematic!.Symbols[0];
+        project.Schematic.Symbols[0] = symbol with { Position = new(0, 137.5), Width = 174, Height = 105,
+            Geometry = new() { SourceSha256 = new('a', 64), Width = 174, Height = 105,
+                Primitives = [new() { Kind = "LINE", Start = new(20, 40), End = new(160, 75) }] } };
+        var before = JsonSerializer.Serialize(project);
+        var next = SchematicInspectorEdit.ApplyModule(project, "S", new("Cable1", 0, 137.5, 174, 105, 0, false, 1));
+        Assert.Equal("Cable1", next.Components[0].ReferenceDesignator);
+        Assert.Equal(JsonSerializer.Serialize(project.Schematic.Symbols[0]), JsonSerializer.Serialize(next.Schematic!.Symbols[0]));
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+    }
+
+    [Fact]
+    public void GeometryErrorIdentifiesPageObjectAndOverflowEdge()
+    {
+        var project = Fixture();
+        var before = JsonSerializer.Serialize(project);
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            SchematicInspectorEdit.ApplyModule(project, "S", new("Valve1", 0, 30, 40, 40, 0, false, null)));
+        Assert.Contains("Valve1", error.Message);
+        Assert.Contains("One", error.Message);
+        Assert.Contains("左側", error.Message);
+        Assert.Contains("mm", error.Message);
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+    }
+
+    [Fact]
+    public void ArchivedCableReferenceOnlyEditPreservesPortBindingsAndPinnedCad()
+    {
+        var project = CadSymbolScaleTests.Fixture();
+        var symbol = project.Schematic!.Symbols[0] with { Position = new(0, 137.5) };
+        project.Schematic.Symbols[0] = symbol;
+        var before = JsonSerializer.Serialize(project);
+        var next = SchematicInspectorEdit.ApplyModule(project, symbol.SymbolId,
+            new("Cable1", 0, 137.5, symbol.Width, symbol.Height, 0, false, 1));
+        Assert.Equal("Cable1", next.Cables[0].ReferenceDesignator);
+        Assert.Equal(JsonSerializer.Serialize(symbol), JsonSerializer.Serialize(next.Schematic!.Symbols[0]));
+        Assert.Equal(JsonSerializer.Serialize(project.Cables[0].ArchivedCable), JsonSerializer.Serialize(next.Cables[0].ArchivedCable));
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+    }
+
+    [Fact]
     public void CompositeEditIsIsolatedAndOneUndoRestoresEverything()
     {
         var project = Fixture(); var before = JsonSerializer.Serialize(project);

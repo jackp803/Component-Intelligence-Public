@@ -348,15 +348,13 @@ public partial class SchematicWorkspaceControl : UserControl
             Canvas.SetLeft(caption, (point.X + 2) * 3); Canvas.SetTop(caption, (point.Y - 5) * 3);
             if (matingRoute is not null)
             {
-                var endpoint = matingRoute.Start.Kind == SchematicAttachmentKind.Port ? matingRoute.Start : matingRoute.End;
-                var symbol = doc.Symbols.Single(s => s.SymbolId == endpoint.SymbolId);
-                var owner = SchematicSymbolOwner.Resolve(project, symbol);
-                var port = owner.Ports.Single(p => p.PortId == endpoint.EndpointId);
-                var body = SchematicPortPresentation.GenericBodyBounds(doc, symbol, owner);
-                caption.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                var left = SchematicPortPresentation.PortSide(symbol, port) == "Left";
-                Canvas.SetLeft(caption, left ? point.X * 3 - caption.DesiredSize.Width - 6 : (point.X + 2) * 3);
-                Canvas.SetTop(caption, Math.Min(point.Y, body.Y) * 3 - caption.DesiredSize.Height - 9);
+                if (!PositionMatingCaption(project, page, marker, caption))
+                {
+                    var message = $"「{page.Title}」的對接標籤「{pair.Signal}」在箭頭附近沒有可讀空間；請移動箭頭或旁邊模塊。";
+                    if (_renderingOutput) throw new InvalidOperationException(message);
+                    caption.Visibility = Visibility.Collapsed; arrow.Stroke = Brushes.Firebrick;
+                    arrow.ToolTip = caption.Text + "\n" + message; Status.Text = message;
+                }
             }
             if (!_renderingOutput) caption.MouseLeftButtonDown += (_, e) =>
             {

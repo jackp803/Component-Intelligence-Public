@@ -4,6 +4,15 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed partial class SchematicAuthoringService
 {
+    public ElectricalProject SetArchivedCableItemKind(ElectricalProject project, string cableId, CableLibraryItemKind kind) =>
+        Edit(project, (draft, doc) => {
+            if (!Enum.IsDefined(kind)) throw new InvalidOperationException("Unknown cable library item kind.");
+            RequireIndependentCable(doc, cableId);
+            var cable = draft.Cables.Single(c => c.CableInstanceId == cableId);
+            var binding = cable.ArchivedCable ?? throw new InvalidOperationException("Select an archived cable.");
+            cable.ArchivedCable = binding with { LibraryItemKindOverride = kind };
+        });
+
     public ElectricalProject SetArchivedCableManufacturing(ElectricalProject project, string cableId, CableManufacturingDraft manufacturing) =>
         Edit(project, (draft, doc) =>
         {

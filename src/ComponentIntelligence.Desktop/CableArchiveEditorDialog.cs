@@ -36,6 +36,9 @@ public sealed class CableArchiveEditorDialog : Window
     private readonly CableManufacturingTableEditor _table;
     private readonly TextBox _name = new();
     private readonly TextBox _revision = new();
+    private sealed record ItemKindChoice(CableLibraryItemKind Value, string Label);
+    private readonly ComboBox _kind = new() { ItemsSource = new[] { new ItemKindChoice(CableLibraryItemKind.Cable, "完整線材"),
+        new ItemKindChoice(CableLibraryItemKind.Connector, "單獨接頭") }, DisplayMemberPath = "Label", SelectedValuePath = "Value" };
     private readonly TextBox _mappingRevision = new();
     private readonly TextBox _evidence = new() { AcceptsReturn = true, MinHeight = 50, TextWrapping = TextWrapping.Wrap };
     private readonly CheckBox _confirmed = new() { Content = "已核對所有接法與來源" };
@@ -54,7 +57,7 @@ public sealed class CableArchiveEditorDialog : Window
     public CableArchiveEntry? SavedEntry { get; private set; }
 
     public CableArchiveEditorDialog(SymbolArchiveRepository repository, IReadOnlyList<ComponentIR> catalog,
-        CableArchiveEntry? existing = null)
+        CableArchiveEntry? existing = null, CableLibraryItemKind initialKind = CableLibraryItemKind.Cable)
     {
         _repository = repository; _expectedHash = repository.GetContentHash();
         if (existing is not null)
@@ -69,14 +72,15 @@ public sealed class CableArchiveEditorDialog : Window
         _source = existing is null ? new()
         {
             TemplateId = "cable-" + Guid.NewGuid().ToString("N"), TemplateRevision = "draft",
-            AssetSha256 = new('0', 64), Manufacturing = new() { InventoryOnly = true }, Ports = Enumerable.Range(1, 2).Select(i => new ComponentIntelligence.Electrical.Domain.ComponentPort
+            LibraryItemKind = initialKind,
+            AssetSha256 = new('0', 64), Manufacturing = new() { InventoryOnly = true }, Ports = Enumerable.Range(1, initialKind == CableLibraryItemKind.Connector ? 1 : 2).Select(i => new ComponentIntelligence.Electrical.Domain.ComponentPort
             {
                 PortId = "source-port-" + Guid.NewGuid().ToString("N"), Name = "P" + i,
                 Pins = [new() { PinId = "source-pin-" + Guid.NewGuid().ToString("N"), PinNumber = "1" }]
             }).ToList()
         } : JsonSerializer.Deserialize<ArchivedCableTemplate>(JsonSerializer.Serialize(existing.Template))!;
         _textBindings = new(_source.TextBindings.Select(b => new TextRow { AttributeTag = b.AttributeTag, Field = b.Field }));
-        _table = new(new CableManufacturingEditorService().Prepare(_source), CableConnectorCatalog.Choices(catalog),
+        _table = new(new CableManufacturingEditorService().Prepare(_source), CableConnectorCatalog.Choices(catalog, repository.Load().CableTemplates),
             boundPins: () => {
                 if (!Commit(_contactGrid)) throw new InvalidOperationException("請先完成接點綁定欄位編輯。");
                 var bound = _contacts.Where(c => !string.IsNullOrWhiteSpace(c.Contact)).Select(c => c.PinId).ToHashSet(StringComparer.Ordinal);
@@ -93,24 +97,27 @@ public sealed class CableArchiveEditorDialog : Window
             foreach (var contact in _contacts.Where(c => pins.Contains(c.PinId) || !current.Contains(c.PinId)).ToArray()) _contacts.Remove(contact);
             _contactGrid.Items.Refresh(); _confirmed.IsChecked = false;
         };
-        Title = existing is null ? "新增自製線材模板" : _updateCandidate ? "編輯線材候選草稿" : "線材模板：建立新版本";
+        Title = existing is null ? initialKind == CableLibraryItemKind.Connector ? "匯入自製接頭" : "匯入自製線材" : _updateCandidate ? "編輯候選草稿" : "建立新版本";
         Width = 1000; Height = 800; MinWidth = 750; MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _name.Text = _source.DisplayName ?? "";
+        _kind.SelectedValue = _source.LibraryItemKind;
         _revision.Text = _updateCandidate ? _source.TemplateRevision : DateTime.Now.ToString("yyyyMMdd-HHmmssfff");
         _revision.IsReadOnly = _updateCandidate;
         _mappingRevision.Text = _source.MappingRevision ?? "";
         _evidence.Text = _source.MappingEvidence ?? "";
-        _construction.SelectedItem = existing?.ConstructionType ?? CableConstructionType.Unknown;
-        _constructionEvidence.Text = existing?.ConstructionEvidence ?? "";
+        _construction.SelectedItem = existing?.ConstructionType ?? CableConstructionType.Custom;
+        _constructionEvidence.Text = existing?.ConstructionEvidence ?? "使用者自製匯入";
         // Confirmation is a new explicit decision, not inherited by a changed candidate.
         _table.Draft.ConfirmMapping = false;
         var root = new DockPanel { Margin = new(16) };
         var heading = new Grid { Margin = new(0, 0, 0, 12) };
         heading.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
-        heading.ColumnDefinitions.Add(new() { Width = new(220) });
-        heading.Children.Add(Field("線材名稱", _name));
-        var revisionField = Field(_updateCandidate ? "草稿版本" : "新版本", _revision); Grid.SetColumn(revisionField, 1); heading.Children.Add(revisionField);
+        heading.ColumnDefinitions.Add(new() { Width = new(135) });
+        heading.ColumnDefinitions.Add(new() { Width = new(200) });
+        heading.Children.Add(Field("名稱", _name));
+        var kindField = Field("項目類型", _kind); Grid.SetColumn(kindField, 1); heading.Children.Add(kindField);
+        var revisionField = Field(_updateCandidate ? "草稿版本" : "新版本", _revision); Grid.SetColumn(revisionField, 2); heading.Children.Add(revisionField);
         DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 10, 0, 0) };
         var cancel = new Button { Content = "取消", IsCancel = true, Padding = new(14, 6, 14, 6) };
@@ -199,12 +206,19 @@ public sealed class CableArchiveEditorDialog : Window
         _contactGrid.Items.Refresh();
     }
 
+    public Task ImportWiringAsync(string path) => _wiring.ImportAsync(path);
+
     private async Task SaveAsync()
     {
-        if (_saving) return;
+        if (await SaveCandidateAsync() is not null) DialogResult = true;
+    }
+
+    public async Task<CableArchiveEntry?> SaveCandidateAsync()
+    {
+        if (_saving) return null;
         try
         {
-            if (!_table.Commit() || !Commit(_contactGrid) || !Commit(_textGrid)) return;
+            if (!_table.Commit() || !Commit(_contactGrid) || !Commit(_textGrid)) return null;
             _wiring.ValidateCommitted(); _sketch.ValidateCommitted();
             if (_sketch.Geometry is not null && _sketchOnly.IsChecked != true)
                 throw new InvalidOperationException("請確認製作示意 CAD 不含舊接法表；若原圖有表格，請先選取示意圖區域或圖塊。");
@@ -217,6 +231,7 @@ public sealed class CableArchiveEditorDialog : Window
             var template = new CableManufacturingEditorService().Apply(_source, _table.Draft) with
             {
                 TemplateRevision = _revision.Text.Trim(), DisplayName = _name.Text.Trim(),
+                LibraryItemKind = (CableLibraryItemKind)_kind.SelectedValue,
                 AssetSha256 = wiring?.SourceSha256 ?? new('0', 64), WiringSelectionSha256 = _wiring.Selection?.GeometrySha256,
                 TextBindings = _textBindings.Select(b => new CableTextBinding(b.AttributeTag, b.Field)).ToList()
             };
@@ -237,10 +252,11 @@ public sealed class CableArchiveEditorDialog : Window
             SavedEntry = await new CableArchiveCreationService(_repository).CreateAsync(new() { Entry = entry,
                 WiringSourcePath = _wiring.SourcePath, WiringGeometry = wiring, ManufacturingSourcePath = _sketch.SourcePath,
                 ManufacturingGeometry = _sketch.Geometry, ExpectedArchiveSha256 = _expectedHash, UpdateExistingCandidate = _updateCandidate });
-            _saving = false; DialogResult = true;
+            return SavedEntry;
         }
         catch (Exception error) { _error.Text = error.Message; }
         finally { _saving = false; IsEnabled = true; }
+        return null;
     }
 
     private static bool Commit(DataGrid grid) => grid.CommitEdit(DataGridEditingUnit.Cell, true) && grid.CommitEdit(DataGridEditingUnit.Row, true);

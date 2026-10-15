@@ -83,6 +83,8 @@ public static class CableWiringVisualRenderer
 
     internal static TextBlock CreateText(SchematicCadPrimitive primitive, double pixelsPerMm, double minimumTextHeight) =>
         new() { Text = primitive.DisplayText ?? primitive.Text ?? "", FontSize = Math.Max(primitive.TextHeight, minimumTextHeight) * pixelsPerMm,
+            Width = primitive.TextWidth > 0 ? primitive.TextWidth * pixelsPerMm : double.NaN,
+            TextWrapping = primitive.TextWidth > 0 ? System.Windows.TextWrapping.Wrap : System.Windows.TextWrapping.NoWrap,
             FontFamily = new("Microsoft JhengHei"), Foreground = Brushes.Black, Background = Brushes.White };
 
     private static Path Arc(SchematicCadPrimitive p, double scale, Brush stroke)

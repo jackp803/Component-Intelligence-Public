@@ -29,6 +29,8 @@ internal static partial class Program
 
     private static int Run(string[] args)
     {
+        if (args.FirstOrDefault() == "library-review") return CableLibraryReviewProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
+        if (args.FirstOrDefault() == "library-workflow") return CableLibraryWorkflowProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "legacy-isolation") return LegacyCableIsolationProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "cable-instances") return CableInstancesProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "pin-sizing") return PinSizingWorkflowProof(Path.GetFullPath(args[1]));

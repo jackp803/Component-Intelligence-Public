@@ -54,22 +54,26 @@ public partial class SchematicWorkspaceControl
         try
         {
             var repository = new SymbolArchiveRepository(_archiveRoot);
+            var filter = new ComboBox { ItemsSource = new[] { "全部", "完整線材", "單獨接頭" }, SelectedIndex = 0, Width = 110, Margin = new(8, 0, 0, 0) };
             CableChoice[] Choices() => repository.Load().CableTemplates.Where(c => c.Status is SymbolRevisionStatus.Candidate or SymbolRevisionStatus.Approved)
-                .Select(c => new CableChoice(c, $"{c.Template.DisplayName ?? c.Template.TemplateId} / {c.Template.TemplateRevision} / {(c.Status == SymbolRevisionStatus.Approved ? "已核准" : "候選草稿")}")).ToArray();
+                .Where(c => filter.SelectedIndex == 0 || c.Template.LibraryItemKind == (filter.SelectedIndex == 1 ? CableLibraryItemKind.Cable : CableLibraryItemKind.Connector))
+                .Select(c => new CableChoice(c, $"[{(c.Template.LibraryItemKind == CableLibraryItemKind.Connector ? "接頭" : "線材")}] {c.Template.DisplayName ?? c.Template.TemplateId} / {c.Template.TemplateRevision} / {(c.Status == SymbolRevisionStatus.Approved ? "已核准" : "候選草稿")}")).ToArray();
             var choices = Choices();
             var dialog = new Window
             {
-                Title = "線材庫：新增一條實體線材",
-                Width = 640,
+                Title = "線材／接頭庫",
+                Width = 720,
                 Height = 530,
                 Owner = Window.GetWindow(this),
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
             var panel = new DockPanel { Margin = new(16) };
             var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new(0, 0, 0, 8) };
-            var create = new Button { Content = "\uE710", FontFamily = new("Segoe MDL2 Assets"), ToolTip = "新增線材模板 (Ctrl+Alt+C)", Padding = new(9, 5, 9, 5) };
+            var create = new Button { Content = "匯入線材", ToolTip = "匯入自製線材 CAD", Padding = new(9, 5, 9, 5) };
+            var importConnector = new Button { Content = "匯入接頭", ToolTip = "匯入自製接頭 CAD", Padding = new(9, 5, 9, 5), Margin = new(6, 0, 0, 0) };
             var revise = new Button { Content = "\uE70F", FontFamily = new("Segoe MDL2 Assets"), ToolTip = "以所選模板建立新版本", Padding = new(9, 5, 9, 5), Margin = new(6, 0, 0, 0), IsEnabled = false };
-            toolbar.Children.Add(create); toolbar.Children.Add(revise); DockPanel.SetDock(toolbar, Dock.Top); panel.Children.Add(toolbar);
+            toolbar.Children.Add(create); toolbar.Children.Add(importConnector); toolbar.Children.Add(revise); toolbar.Children.Add(filter);
+            DockPanel.SetDock(toolbar, Dock.Top); panel.Children.Add(toolbar);
             var bottom = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
             var cancel = new Button { Content = "取消", IsCancel = true, Padding = new(14, 6, 14, 6) };
             var ok = new Button { Content = "選取並放置", IsEnabled = false, Margin = new(8, 0, 0, 0), Padding = new(14, 6, 14, 6) };
@@ -88,6 +92,7 @@ public partial class SchematicWorkspaceControl
             lower.Children.Add(new TextBlock { Text = "製作方式（未知可保留草稿）" }); lower.Children.Add(classification);
             DockPanel.SetDock(lower, Dock.Bottom); panel.Children.Add(lower);
             var list = new ListBox { ItemsSource = choices, DisplayMemberPath = "Label" }; panel.Children.Add(list);
+            filter.SelectionChanged += (_, _) => { choices = Choices(); list.ItemsSource = choices; ok.IsEnabled = revise.IsEnabled = false; details.Text = ""; };
             list.SelectionChanged += (_, _) =>
             {
                 if (list.SelectedItem is not CableChoice choice) return;
@@ -101,20 +106,30 @@ public partial class SchematicWorkspaceControl
                 revise.ToolTip = entry.Status == SymbolRevisionStatus.Candidate ? "編輯所選候選草稿" : "以所選模板建立新版本";
                 if (entry.WiringAssetPending) details.Text += "\n尚無接線 CAD：可編輯草稿，不能放置。";
             };
-            void EditTemplate(CableArchiveEntry? entry)
+            async Task EditTemplate(CableArchiveEntry? entry, CableLibraryItemKind kind = CableLibraryItemKind.Cable)
             {
                 try
                 {
-                    var editor = new CableArchiveEditorDialog(repository, _catalog, entry) { Owner = dialog };
+                    string? path = null;
+                    if (entry is null)
+                    {
+                        var file = new Microsoft.Win32.OpenFileDialog { Filter = "CAD 圖檔|*.dxf;*.dwg;*.dwt", CheckFileExists = true };
+                        if (file.ShowDialog(dialog) != true) return;
+                        path = file.FileName;
+                    }
+                    var editor = new CableArchiveEditorDialog(repository, _catalog, entry, kind) { Owner = dialog };
+                    if (path is not null) await editor.ImportWiringAsync(path);
                     if (editor.ShowDialog() != true) return;
+                    filter.SelectedIndex = 0;
                     choices = Choices(); list.ItemsSource = choices;
                     list.SelectedItem = choices.Single(c => c.Entry.Template.TemplateId == editor.SavedEntry!.Template.TemplateId &&
                         c.Entry.Template.TemplateRevision == editor.SavedEntry.Template.TemplateRevision);
                 }
                 catch (Exception error) { details.Text = "無法編輯線材：" + error.Message; }
             }
-            create.Click += (_, _) => EditTemplate(null);
-            revise.Click += (_, _) => { if (list.SelectedItem is CableChoice current) EditTemplate(current.Entry); };
+            create.Click += async (_, _) => await EditTemplate(null);
+            importConnector.Click += async (_, _) => await EditTemplate(null, CableLibraryItemKind.Connector);
+            revise.Click += async (_, _) => { if (list.SelectedItem is CableChoice current) await EditTemplate(current.Entry); };
             ok.Click += (_, _) => { if (list.SelectedItem is CableChoice) dialog.DialogResult = true; };
             dialog.Content = panel;
             if (dialog.ShowDialog() != true || list.SelectedItem is not CableChoice selected) return;

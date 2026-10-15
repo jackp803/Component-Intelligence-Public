@@ -17,11 +17,11 @@ public sealed class CableManufacturingEditorService
         {
             var runtime = binding.Ports.Single(p => p.SourcePortId == port.PortId);
             port.Name = runtime.Name; port.Connector = Clone(runtime.Connector);
-            foreach (var pin in port.Pins)
+            for (var i = 0; i < port.Pins.Count; i++)
             {
+                var pin = port.Pins[i];
                 var current = runtime.Pins.Single(p => p.SourcePinId == pin.PinId);
-                pin.PinNumber = current.PinNumber; pin.PinName = current.PinName; pin.Function = current.Function;
-                pin.InferredFunction = Clone(current.InferredFunction); pin.FunctionManualOverride = current.FunctionManualOverride;
+                port.Pins[i] = CopyPinMetadata(current, pin);
             }
         }
         return binding.Template with { Ports = ports, Mapping = Clone(binding.Mapping), MappingConfirmed = binding.MappingConfirmed,
@@ -62,12 +62,15 @@ public sealed class CableManufacturingEditorService
         {
             var end = result.Ports.Single(p => p.PortId == port.SourcePortId);
             port.Name = end.Name; port.Connector = Clone(end.Connector);
-            foreach (var pin in port.Pins)
+            for (var i = 0; i < port.Pins.Count; i++)
             {
+                var pin = port.Pins[i];
                 var source = end.Pins.Single(p => p.PinId == pin.SourcePinId);
-                if (explicitFunctionEdits.Contains(source.PinId) || Normalize(pin.Function) != Normalize(source.Function))
-                { pin.FunctionManualOverride = true; pin.InferredFunction = null; }
-                pin.PinNumber = source.PinNumber; pin.PinName = source.PinName; pin.Function = source.Function;
+                var changedFunction = explicitFunctionEdits.Contains(source.PinId) || Normalize(pin.Function) != Normalize(source.Function);
+                var updated = CopyPinMetadata(source, pin);
+                updated.FunctionManualOverride = changedFunction || pin.FunctionManualOverride;
+                updated.InferredFunction = changedFunction ? null : Clone(pin.InferredFunction);
+                port.Pins[i] = updated;
             }
         }
         var electricalChanged = !ElectricalEquivalent(declared, result);
@@ -216,12 +219,12 @@ public sealed class CableManufacturingEditorService
     public static bool HasRemovalImpact(CableManufacturingDraft draft, IReadOnlySet<string> pins, IReadOnlySet<string>? boundPins = null) =>
         boundPins?.Overlaps(pins) == true || CableWiringEditorService.Mapping(draft).Any(p => pins.Contains(p.FromSourcePinId) || pins.Contains(p.ToSourcePinId)) ||
         draft.Ends.SelectMany(p => p.Pins).Any(p => pins.Contains(p.PinId) && !string.IsNullOrWhiteSpace(p.Function)) ||
-        draft.Rows.Any(r => r.FromSourcePinId is { } f && pins.Contains(f) &&
+        draft.Rows.Any(r => !draft.InventoryOnly && (r.FromSourcePinId is { } f && pins.Contains(f) &&
             (r.ToSourcePinId is not null || r.FromUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.FromFunction) || !string.IsNullOrWhiteSpace(r.ToFunction)) ||
             r.ToSourcePinId is { } t && pins.Contains(t) &&
-            (r.FromSourcePinId is not null || r.ToUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.ToFunction) || !string.IsNullOrWhiteSpace(r.FromFunction)) ||
+            (r.FromSourcePinId is not null || r.ToUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.ToFunction) || !string.IsNullOrWhiteSpace(r.FromFunction))) ||
             CableManufacturingCells.All(r).Any(c => c.SourcePinId is { } id && pins.Contains(id) &&
-                (CableManufacturingCells.All(r).Count(v => v.SourcePinId is not null) > 1 || c.Usage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(c.Function))));
+                (!draft.InventoryOnly && CableManufacturingCells.All(r).Count(v => v.SourcePinId is not null) > 1 || c.Usage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(c.Function))));
 
     private static void RemovePinReferences(CableManufacturingDraft draft, IReadOnlySet<string> removed,
         IReadOnlySet<string>? boundPins, bool confirmRemoval)
@@ -256,17 +259,25 @@ public sealed class CableManufacturingEditorService
         if (!allowInventoryChanges && source.Pins.Count != port.Pins.Count)
             throw new InvalidOperationException("變更 Pin 數需建立新模板修訂，不能替換已放入線材的接點。");
         var ids = port.Pins.Select(p => p.PinId).ToHashSet(StringComparer.Ordinal);
-        if (HasRemovalImpact(draft, ids, boundPins) || port.Pins.Any(p => !string.IsNullOrWhiteSpace(p.Function)) ||
-            draft.Rows.Any(r => r.FromSourcePinId is { } f && ids.Contains(f) &&
-                (r.ToSourcePinId is not null || r.FromUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.FromFunction)) ||
-                r.ToSourcePinId is { } t && ids.Contains(t) &&
-                (r.FromSourcePinId is not null || r.ToUsage != CablePinUsage.Pending || !string.IsNullOrWhiteSpace(r.ToFunction))))
+        if (HasRemovalImpact(draft, ids, boundPins))
             throw new InvalidOperationException("此接頭已有接法、狀態或 CAD 綁定。請先明確核對及解除相關設定，再換用接頭；可用腳位編輯保留身分並修改標示。");
         SetPinCount(draft, sourcePortId, source.Pins.Count);
         for (var i = 0; i < port.Pins.Count; i++)
         {
-            port.Pins[i].PinNumber = source.Pins[i].PinNumber;
-            port.Pins[i].PinName = source.Pins[i].PinName;
+            var old = port.Pins[i];
+            var node = JsonSerializer.SerializeToNode(source.Pins[i])!;
+            node[nameof(ComponentPin.PinId)] = old.PinId;
+            node[nameof(ComponentPin.SourcePinId)] = old.SourcePinId;
+            node[nameof(ComponentPin.InferredFunction)] = null;
+            port.Pins[i] = node.Deserialize<ComponentPin>()!;
+            if (draft.InventoryOnly) CableFunctionAssociationService.SetFunction(draft, old.PinId, source.Pins[i].Function);
+            else foreach (var row in draft.Rows)
+            foreach (var end in draft.Ends)
+            {
+                var cell = CableManufacturingCells.Get(draft, row, end.PortId);
+                if (cell.SourcePinId != old.PinId) continue;
+                cell.Function = source.Pins[i].Function; CableManufacturingCells.Set(draft, row, end.PortId, cell);
+            }
         }
         port.Connector = source.Connector is null
             ? new() { ConnectorId = "custom-" + port.PortId, Family = "Custom", PinCount = port.Pins.Count }
@@ -434,5 +445,12 @@ public sealed class CableManufacturingEditorService
         a.MappingRevision == b.MappingRevision && a.MappingEvidence == b.MappingEvidence;
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static ComponentPin CopyPinMetadata(ComponentPin source, ComponentPin target)
+    {
+        var node = JsonSerializer.SerializeToNode(source)!;
+        node[nameof(ComponentPin.PinId)] = target.PinId;
+        node[nameof(ComponentPin.SourcePinId)] = target.SourcePinId;
+        return node.Deserialize<ComponentPin>()!;
+    }
     private static T Clone<T>(T value) => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value))!;
 }

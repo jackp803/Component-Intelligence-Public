@@ -13,21 +13,48 @@ public sealed record CableWiringAppendixTile(CableWiringDiagramPresentation Diag
 {
     public double GeometryScale { get; init; } = 1;
     public double MinimumTextHeight { get; init; } = 3.2;
+    public IReadOnlyList<string> MemberLines { get; init; } = [];
+    public bool SharedWiring { get; init; }
+    public IReadOnlyList<string> RemainingMemberLines { get; init; } = [];
 }
 public sealed record CableWiringAppendixReturnLink(string PageId, int PageNumber,
-    SchematicPoint Destination, SchematicGridBounds Bounds);
-
-public static class CableWiringAppendixRenderer
+    SchematicPoint Destination, SchematicGridBounds Bounds)
 {
-    public static IReadOnlyList<CableWiringAppendixTile> Plan(CableInstance cable, SchematicPage page, int sourcePageCount)
+    public string? CableReference { get; init; }
+}
+
+public static partial class CableWiringAppendixRenderer
+{
+    public static IReadOnlyList<CableWiringAppendixTile> Plan(CableInstance cable, SchematicPage page, int sourcePageCount,
+        IReadOnlyList<CableInstance>? members = null)
     {
-        var draft = new CableManufacturingEditorService().Prepare(cable);
-        var diagram = new CableWiringEditorService().Build(draft);
         var width = page.Width - 2 * page.Margin - 8;
+        var diagram = CableWiringAppendixLayout.Build(cable, width);
+        var memberLines = new List<string>();
+        if (members is { Count: > 1 } || !string.IsNullOrWhiteSpace(cable.Notes))
+        foreach (var member in members ?? new[] { cable })
+        {
+            var value = (member.ReferenceDesignator ?? "Reference 未設定") + " / " +
+                (member.ProvidedLengthMm?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "長度待填") +
+                (member.ProvidedLengthMm.HasValue ? " mm" : "") +
+                (string.IsNullOrWhiteSpace(member.Notes) ? "" : " / " + member.Notes);
+            foreach (var paragraph in value.Replace("\r", "").Split('\n'))
+            {
+                var length = Math.Max(1, (int)(width / 3.2));
+                for (var i = 0; i < paragraph.Length; i += length) memberLines.Add(paragraph.Substring(i, Math.Min(length, paragraph.Length - i)));
+            }
+        }
+        var headerLimit = Math.Max(1, (int)((page.Height - 2 * page.Margin - (page.TemplateGeometry is null ? 36 : 83)) * .22 / 5));
+        var remaining = memberLines.Skip(headerLimit).ToArray();
+        if (remaining.Length > 0)
+        {
+            memberLines = memberLines.Take(headerLimit).ToList();
+            memberLines.Add("其餘適用線材／備註列於後續資料頁");
+        }
         var footerColumns = Math.Max(1, (int)(width / 44));
         var footerHeight = Math.Max(8, Math.Ceiling((double)sourcePageCount / footerColumns) * 6 + 4);
         var footerY = page.Height - page.Margin - footerHeight - (page.TemplateGeometry is null ? 8 : 55);
-        var content = new SchematicGridBounds(page.Margin + 4, page.Margin + 27, width, footerY - page.Margin - 30);
+        var content = new SchematicGridBounds(page.Margin + 4, page.Margin + 27 + memberLines.Count * 5, width, footerY - page.Margin - 30 - memberLines.Count * 5);
         if (content.Width < 45 || content.Height < 30) throw new InvalidOperationException("紙張太小，無法清楚容納線材接線图與返回連結；請增加紙張尺寸。");
         var minimumTextHeight = 3.2;
         (SchematicCadPrimitive Primitive, Size Size)[] MeasureTexts() => diagram.Primitives.Where(p => p.Kind is "TEXT" or "MTEXT").Select(p =>
@@ -68,7 +95,8 @@ public static class CableWiringAppendixRenderer
             if (bounds.Width * scale > content.Width || bounds.Height * scale > content.Height || !LabelsFit(scale)) continue;
             var view = new SchematicGridBounds(bounds.X - (content.Width / scale - bounds.Width) / 2,
                 bounds.Y, content.Width / scale, content.Height / scale);
-            return [new(diagram, view, content, footerY, footerColumns, 1, 1) { GeometryScale = scale }];
+            return [new(diagram, view, content, footerY, footerColumns, 1, 1) { GeometryScale = scale, MemberLines = memberLines,
+                RemainingMemberLines = remaining, SharedWiring = members is { Count: > 1 } }];
         }
         if (!LabelsFit(1))
         {
@@ -91,16 +119,17 @@ public static class CableWiringAppendixRenderer
         for (var column = 0; column < columns; column++)
             tiles.Add(new(diagram, new(tiledBounds.X + column * (content.Width - overlapX),
                 tiledBounds.Y + row * (content.Height - overlapY), content.Width, content.Height),
-                content, footerY, footerColumns, tiles.Count + 1, rows * columns) { MinimumTextHeight = minimumTextHeight });
+                content, footerY, footerColumns, tiles.Count + 1, rows * columns) { MinimumTextHeight = minimumTextHeight, MemberLines = memberLines,
+                    RemainingMemberLines = tiles.Count == 0 ? remaining : [], SharedWiring = members is { Count: > 1 } });
         return tiles;
     }
 
     public static IReadOnlyList<CableWiringAppendixReturnLink> ReturnLinks(CableWiringAppendixTile tile,
         IReadOnlyList<CableWiringAppendixSourceLink> sources, IReadOnlyDictionary<string, int> pageIndices, double margin)
     {
-        return sources.DistinctBy(s => s.SourcePageId).Select((source, index) => new CableWiringAppendixReturnLink(
+        return sources.DistinctBy(s => (s.SourcePageId, s.CableInstanceId)).Select((source, index) => new CableWiringAppendixReturnLink(
             source.SourcePageId, pageIndices[source.SourcePageId] + 1, source.ReturnPosition,
-            new(margin + 4 + index % tile.FooterColumns * 44, tile.FooterY + index / tile.FooterColumns * 6, 42, 5))).ToArray();
+            new(margin + 4 + index % tile.FooterColumns * 44, tile.FooterY + index / tile.FooterColumns * 6, 42, 5)) { CableReference = source.CableReference }).ToArray();
     }
 
     public static BitmapSource Render(CableInstance cable, SchematicPage page, CableWiringAppendixTile tile,
@@ -116,10 +145,11 @@ public static class CableWiringAppendixRenderer
                 Width = (page.Width - page.Margin - x) * pixelsPerMm };
             Canvas.SetLeft(text, x * pixelsPerMm); Canvas.SetTop(text, y * pixelsPerMm); canvas.Children.Add(text);
         }
-        Text((cable.ReferenceDesignator ?? "Reference 未設定") + " / " + (cable.DisplayName ?? cable.CableDefinitionId), page.Margin + 4, page.Margin + 2, 15);
-        Text($"接線圖 {tile.TileIndex}/{tile.TileCount} / {cable.ProvidedLengthMm?.ToString() ?? "待確認"} mm / {cable.Specification ?? "規格待確認"}", page.Margin + 4, page.Margin + 10);
-        Text((cable.ArchivedCable!.MappingConfirmed ? "接法已核對" : "草稿 / 接法未確認") + " / " + cable.CableInstanceId,
-            page.Margin + 4, page.Margin + 17, 11, cable.ArchivedCable.MappingConfirmed ? Brushes.DarkGreen : Brushes.Firebrick);
+        Text((tile.SharedWiring ? "共用接法" : cable.ReferenceDesignator ?? "Reference 未設定") + " / " +
+            (cable.DisplayName ?? cable.CableDefinitionId), page.Margin + 4, page.Margin + 2, 15);
+        Text($"接線圖 {tile.TileIndex}/{tile.TileCount} / {cable.Specification ?? "規格待確認"}", page.Margin + 4, page.Margin + 10);
+        if (tile.MemberLines.Count == 0) Text(cable.ProvidedLengthMm is double length ? length.ToString("0.###") + " mm" : "長度待填", page.Margin + 4, page.Margin + 17, 11);
+        for (var i = 0; i < tile.MemberLines.Count; i++) Text(tile.MemberLines[i], page.Margin + 4, page.Margin + 19 + i * 5, 12);
         var clip = new Canvas { Width = tile.ContentBounds.Width * pixelsPerMm, Height = tile.ContentBounds.Height * pixelsPerMm,
             Background = Brushes.White, ClipToBounds = true };
         var geometryPixelsPerMm = pixelsPerMm * tile.GeometryScale;
@@ -127,7 +157,18 @@ public static class CableWiringAppendixRenderer
         CableWiringVisualRenderer.DrawDiagram(diagram, tile.Diagram, geometryPixelsPerMm,
             textPixelsPerMm: pixelsPerMm, minimumTextHeight: tile.MinimumTextHeight);
         clip.Children.Add(diagram); Canvas.SetLeft(clip, tile.ContentBounds.X * pixelsPerMm); Canvas.SetTop(clip, tile.ContentBounds.Y * pixelsPerMm); canvas.Children.Add(clip);
-        foreach (var link in returns) Text("返回工程圖 " + link.PageNumber, link.Bounds.X, link.Bounds.Y, 11, Brushes.DarkCyan);
+        foreach (var link in returns)
+        {
+            var text = new TextBlock { Text = string.IsNullOrWhiteSpace(link.CableReference) ? "返回工程圖 " + link.PageNumber : "返回 " + link.CableReference + " / " + link.PageNumber,
+                Width = link.Bounds.Width * 4, FontFamily = new("Microsoft JhengHei"), FontSize = 11, Foreground = Brushes.DarkCyan,
+                TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, Background = Brushes.White };
+            Canvas.SetLeft(text, link.Bounds.X * 4); Canvas.SetTop(text, link.Bounds.Y * 4); canvas.Children.Add(text);
+        }
+        return Rasterize(canvas, page);
+    }
+
+    private static BitmapSource Rasterize(Canvas canvas, SchematicPage page)
+    {
         canvas.Measure(new Size(canvas.Width, canvas.Height)); canvas.Arrange(new Rect(0, 0, canvas.Width, canvas.Height)); canvas.UpdateLayout();
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen()) dc.DrawRectangle(new VisualBrush(canvas) { Stretch = Stretch.Fill }, null,

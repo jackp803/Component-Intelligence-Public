@@ -14,6 +14,8 @@ public sealed class ArchivedCableSettingsDialog : Window
     private readonly string _cableId, _baseline;
     private readonly TextBox _reference, _length, _specification, _notes;
     private readonly ComboBox _construction;
+    private readonly ComboBox _kind;
+    private sealed record ItemKindChoice(CableLibraryItemKind Value, string Label);
     private readonly CableManufacturingTableEditor _editor;
     private readonly TextBlock _error;
     private sealed record ConstructionChoice(CableConstructionType Value, string Label);
@@ -43,6 +45,11 @@ public sealed class ArchivedCableSettingsDialog : Window
             var field = new TextBox { Text = value }; properties.Children.Add(field); return field;
         }
         _reference = Field("Reference", cable.ReferenceDesignator ?? "");
+        properties.Children.Add(new TextBlock { Text = "項目類型", Margin = new(0, 10, 0, 3) });
+        _kind = new() { ItemsSource = new[] { new ItemKindChoice(CableLibraryItemKind.Cable, "完整線材"),
+            new ItemKindChoice(CableLibraryItemKind.Connector, "單獨接頭") }, DisplayMemberPath = "Label", SelectedValuePath = "Value",
+            SelectedValue = CableWiringEquivalence.Kind(cable) };
+        properties.Children.Add(_kind);
         _length = Field("實際線長 (mm)", cable.ProvidedLengthMm?.ToString(CultureInfo.CurrentCulture) ?? "");
         _specification = Field("規格", cable.Specification ?? "");
         _notes = Field("此條線材備註", cable.Notes ?? "");
@@ -80,7 +87,8 @@ public sealed class ArchivedCableSettingsDialog : Window
                     var author = new SchematicAuthoringService();
                     var next = author.SetArchivedCableDetails(current, _cableId, _reference.Text, length, _specification.Text,
                         ((ConstructionChoice)_construction.SelectedItem).Value, cable.ArchivedCable!.Mapping, _notes.Text);
-                    return author.SetArchivedCableManufacturing(next, _cableId, _editor.Draft);
+                    next = author.SetArchivedCableManufacturing(next, _cableId, _editor.Draft);
+                    return author.SetArchivedCableItemKind(next, _cableId, (CableLibraryItemKind)_kind.SelectedValue);
                 }
                 catch (Exception error) { rejection = error.Message; throw; }
             });

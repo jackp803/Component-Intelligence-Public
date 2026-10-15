@@ -93,6 +93,7 @@ internal sealed class CableCadRoleEditor : UserControl
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         await LoadAsync(dialog.FileName, resetSelection: true);
     }
+    public Task ImportAsync(string path) => LoadAsync(path, resetSelection: true);
     private async Task ReloadAsync() { if (SourcePath is not null) await LoadAsync(SourcePath, resetSelection: false); }
 
     private async Task LoadAsync(string path, bool resetSelection)

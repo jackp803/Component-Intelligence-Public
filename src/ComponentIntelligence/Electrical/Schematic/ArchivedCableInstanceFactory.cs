@@ -81,6 +81,7 @@ public static class ArchivedCableInstanceFactory
 
     public static void ValidateTemplate(ArchivedCableTemplate template)
     {
+        if (!Enum.IsDefined(template.LibraryItemKind)) throw new InvalidOperationException("Invalid cable library item kind.");
         if (string.IsNullOrWhiteSpace(template.TemplateId) || string.IsNullOrWhiteSpace(template.TemplateRevision) ||
             string.IsNullOrWhiteSpace(template.AssetSha256) || template.AssetSha256.Length != 64 || !template.AssetSha256.All(Uri.IsHexDigit))
             throw new InvalidOperationException("Cable template requires exact identity, revision and SHA-256.");
@@ -107,6 +108,8 @@ public static class ArchivedCableInstanceFactory
         foreach (var cable in project.Cables.Where(c => c.ArchivedCable is not null))
         {
             var binding = cable.ArchivedCable!;
+            if (binding.LibraryItemKindOverride is { } kind && !Enum.IsDefined(kind))
+                throw new InvalidOperationException("Invalid cable library item kind override.");
             ValidateTemplate(binding.Template);
             if (binding.ManufacturingGeometry is { } cad)
             {

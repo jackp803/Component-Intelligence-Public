@@ -23,10 +23,11 @@ public sealed class CableWiringAppendixTests
     }
 
     [Fact]
-    public void IdenticalTemplatesAndHashesStillProduceDistinctPhysicalSections()
+    public void UnknownEmptyTopologyStillProducesDistinctPhysicalSections()
     {
         var project = Project("main");
         project.Cables.AddRange([Cable("cable-a"), Cable("cable-b")]);
+        foreach (var cable in project.Cables) cable.ArchivedCable = cable.ArchivedCable! with { Mapping = [] };
         project.Schematic!.Symbols.AddRange([Body("a", "main", "cable-a"), Body("b", "main", "cable-b")]);
 
         var plan = CableWiringAppendixPlan.Build(project);
@@ -268,7 +269,7 @@ public sealed class CableWiringAppendixTests
     }
 
     [Fact]
-    public void ExactWireAssociationKeepsOverlappingPhysicalInstancesSeparate()
+    public void OverlappingEquivalentWiresShareDiagramWithoutMergingPhysicalInstances()
     {
         var project = Project("main");
         project.Cables.AddRange([Cable("cable-a"), Cable("cable-b")]);
@@ -277,8 +278,11 @@ public sealed class CableWiringAppendixTests
 
         var plan = CableWiringAppendixPlan.Build(project);
 
-        Assert.Equal(new[] { "cable-a", "cable-b" }, plan.Sections.Select(s => s.CableInstanceId));
-        Assert.All(plan.Sections, s => Assert.Single(s.SourceLinks));
+        var section = Assert.Single(plan.Sections);
+        Assert.Equal(new[] { "cable-a", "cable-b" }, section.CableInstanceIds);
+        Assert.Equal(2, section.SourceLinks.Count);
+        Assert.Equal(2, plan.MainProject.Cables.Count);
+        Assert.Equal(2, plan.MainProject.Connections.Count);
     }
 
     [Fact]

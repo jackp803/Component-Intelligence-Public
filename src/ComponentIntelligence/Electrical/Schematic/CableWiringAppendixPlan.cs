@@ -4,10 +4,17 @@ using ComponentIntelligence.Electrical.Editing;
 namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed record CableWiringAppendixSourceLink(string SourcePageId, SchematicPoint TopLeft,
-    double Width, double Height, SchematicPoint ReturnPosition);
+    double Width, double Height, SchematicPoint ReturnPosition)
+{
+    public string? CableInstanceId { get; init; }
+    public string? CableReference { get; init; }
+}
 
 public sealed record CableWiringAppendixSection(string CableInstanceId,
-    IReadOnlyList<SchematicPage> ExistingDetailPages, IReadOnlyList<CableWiringAppendixSourceLink> SourceLinks);
+    IReadOnlyList<SchematicPage> ExistingDetailPages, IReadOnlyList<CableWiringAppendixSourceLink> SourceLinks)
+{
+    public IReadOnlyList<string> CableInstanceIds { get; init; } = [CableInstanceId];
+}
 
 public sealed class CableWiringAppendixPlan
 {
@@ -33,7 +40,8 @@ public sealed class CableWiringAppendixPlan
         var snapshot = EngineeringReviewService.Clone(project);
         if (snapshot.Schematic is not { } document) return new(snapshot, [], []);
         var originalPageIds = document.Pages.Select(p => p.PageId).ToHashSet(StringComparer.Ordinal);
-        var eligibleCables = snapshot.Cables.Where(c => c.ArchivedCable is { Ports.Count: > 0 } archived &&
+        var eligibleCables = snapshot.Cables.Where(c => CableWiringEquivalence.Kind(c) != CableLibraryItemKind.Connector &&
+            c.ArchivedCable is { Ports.Count: > 0 } archived &&
             archived.Ports.All(p => p.Pins.Count > 0)).Select(c => c.CableInstanceId).ToHashSet(StringComparer.Ordinal);
         var connections = snapshot.Connections.ToDictionary(c => c.ConnectionId, StringComparer.Ordinal);
         var symbols = document.Symbols.ToLookup(s => s.PageId, StringComparer.Ordinal);
@@ -104,8 +112,26 @@ public sealed class CableWiringAppendixPlan
         // Keep continuation marker identities intact; the PDF writer resolves them against its final page order.
         document.Pages.Clear();
         document.Pages.AddRange(mainPages);
-        return new(snapshot, mainPages.AsReadOnly(), sectionOrder.Select(s => new CableWiringAppendixSection(
-            s.CableId, s.Pages.AsReadOnly(), s.Links.AsReadOnly())).ToList().AsReadOnly());
+        var grouped = new List<CableWiringAppendixSection>();
+        var equivalent = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var section in sectionOrder)
+        {
+            var cable = snapshot.Cables.Single(c => c.CableInstanceId == section.CableId);
+            var links = section.Links.Select(link => link with { CableInstanceId = cable.CableInstanceId, CableReference = cable.ReferenceDesignator }).ToArray();
+            var signature = CableWiringEquivalence.Signature(cable);
+            if (signature is not null && equivalent.TryGetValue(signature, out var index))
+            {
+                var existing = grouped[index];
+                grouped[index] = existing with { CableInstanceIds = [..existing.CableInstanceIds, section.CableId],
+                    ExistingDetailPages = [..existing.ExistingDetailPages, ..section.Pages], SourceLinks = [..existing.SourceLinks, ..links] };
+            }
+            else
+            {
+                if (signature is not null) equivalent.Add(signature, grouped.Count);
+                grouped.Add(new(section.CableId, section.Pages.AsReadOnly(), links));
+            }
+        }
+        return new(snapshot, mainPages.AsReadOnly(), grouped.AsReadOnly());
     }
 
     private static void ValidateSources(SchematicDocument document)

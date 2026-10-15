@@ -8,6 +8,7 @@ public sealed record ArchivedCableTemplate
     public required string AssetSha256 { get; init; }
     public string? WiringSelectionSha256 { get; init; }
     public string? DisplayName { get; init; }
+    public CableLibraryItemKind LibraryItemKind { get; init; }
     public List<ComponentPort> Ports { get; init; } = [];
     public string? MappingRevision { get; init; }
     public string? MappingEvidence { get; init; }
@@ -18,6 +19,7 @@ public sealed record ArchivedCableTemplate
 }
 
 public enum CableTextField { Reference, LengthMm, Specification }
+public enum CableLibraryItemKind { Cable, Connector }
 public sealed record CableTextBinding(string AttributeTag, CableTextField Field);
 
 public sealed record CablePinMapping(string FromSourcePinId, string ToSourcePinId);
@@ -25,6 +27,7 @@ public sealed record CablePinMapping(string FromSourcePinId, string ToSourcePinI
 public sealed record ArchivedCableBinding
 {
     public required ArchivedCableTemplate Template { get; init; }
+    public CableLibraryItemKind? LibraryItemKindOverride { get; init; }
     public List<ComponentPort> Ports { get; init; } = [];
     public List<CablePinMapping> Mapping { get; init; } = [];
     public bool MappingConfirmed { get; init; }

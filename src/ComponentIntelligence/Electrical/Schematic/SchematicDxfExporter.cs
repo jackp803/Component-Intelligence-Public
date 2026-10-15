@@ -286,7 +286,7 @@ public sealed class SchematicDxfExporter
             var triangle = SchematicContinuationArrow.Points(source, marker);
             var p = triangle[0]; var a = triangle[1]; var b = triangle[2];
             Line(p, a, "SCHEMATIC_CONTINUATION"); Line(a, b, "SCHEMATIC_CONTINUATION"); Line(b, p, "SCHEMATIC_CONTINUATION");
-            Label(service.ReferenceCodeFor(source, marker.MarkerId), new(p.X + 2, p.Y - 5), "SCHEMATIC_LABEL", 10d / 3);
+            Label(SchematicContinuationNavigation.Caption(project, marker.MarkerId), new(p.X + 2, p.Y - 5), "SCHEMATIC_LABEL", 10d / 3);
         }
         using var stream = new MemoryStream();
         if (!dxf.Save(stream)) throw new IOException("DXF serialization failed.");

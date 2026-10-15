@@ -47,14 +47,14 @@ internal static partial class Program
         project = service.MatePorts(project, from, to, ConnectorMatingService.Prepare(project, from.EndpointId!, to.EndpointId!), "synthetic checked", "J1 接頭對接");
         history.RecordBeforeMutation(before, "mate"); Set("_pageId", "two"); Call("Render", project);
         Require(Sheet().Children.OfType<TextBlock>().Any(t => t.Text.Contains("P1 / 1 GND")), "Inferred Pin function did not appear on destination module.");
-        Require(Sheet().Children.OfType<TextBlock>().Any(t => t.Text.Contains("J1 接頭對接")), "Mating arrow lost its short caption.");
+        Require(Sheet().Children.OfType<TextBlock>().Any(t => t.Text.StartsWith("Sensor1 接頭對接")), "Mating arrow does not show its opposite Reference.");
         Require(!Sheet().Children.OfType<TextBlock>().Any(t => t.Text.Contains("AWG")), "Mating generated an AWG caption or overflow warning.");
         Require(Sheet().Children.OfType<Shape>().Any(s => s.StrokeDashArray?.Count == 2), "Mating link is indistinguishable from a physical conductor.");
         Set("_selectionId", project.Schematic!.Wires[1].WireId); Call("UpdateInspector", project, true);
         var fields = (StackPanel)type.GetField("WireInspectorFields", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(workspace)!;
         Require(fields.Visibility == Visibility.Collapsed, "Mating exposed physical wire/AWG controls.");
         var sheet = Sheet(); sheet.Measure(new Size(sheet.Width, sheet.Height)); sheet.Arrange(new Rect(0, 0, sheet.Width, sheet.Height)); sheet.UpdateLayout();
-        var caption = sheet.Children.OfType<TextBlock>().Single(t => t.Text.Contains("J1 接頭對接"));
+        var caption = sheet.Children.OfType<TextBlock>().Single(t => t.Text.StartsWith("Sensor1 接頭對接"));
         Rect Box(TextBlock t) => new(Canvas.GetLeft(t), Canvas.GetTop(t), t.DesiredSize.Width, t.DesiredSize.Height);
         Require(sheet.Children.OfType<TextBlock>().Where(t => t != caption).All(t => !Box(t).IntersectsWith(Box(caption))), "Mating arrow caption overlaps Pin labels or Port name.");
         Render(workspace, 1400, 900, Path.Combine(output, "mating-workspace.png"));

@@ -172,12 +172,10 @@ public partial class ElectricalWorkspaceWindow : Window
                 return;
             }
 
-            _project = loaded;
-            _history.Clear();
-            BeginSession(true);
-            RefreshAll();
+            var independentCables = AdoptLoadedProject(loaded);
             WorkspaceStatusText.Text = $"已載入 Project {_project.ProjectId} 及其專案 BOM。";
             await SynchronizeCentralArchiveOnLoadAsync();
+            if (independentCables > 0) WorkspaceStatusText.Text += $"\n已拆出 {independentCables} 條獨立線材，外部接線保留；請儲存確認。";
         }
         catch (Exception exception)
         {

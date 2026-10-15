@@ -138,7 +138,7 @@ public sealed class ArchivedCableInstanceTests
     }
 
     [Fact]
-    public async Task CableCadPlacementAndAnotherRepresentationShareOnePhysicalCable()
+    public async Task CableCadPlacementAlwaysCreatesIndependentPhysicalCables()
     {
         var service = new SchematicAuthoringService();
         var p = service.AddPage(new ElectricalProject { ProjectId = "drawing" }, "Cable");
@@ -154,14 +154,16 @@ public sealed class ArchivedCableInstanceTests
         Assert.Equal("common", symbol.Anchors[0].CadContactId);
         Assert.Equal(geometry.SourceSha256, symbol.Geometry!.SourceSha256);
         p = service.PlaceCableRepresentation(p, cable.CableInstanceId, geometry, contacts, page, new(150, 20));
-        Assert.Single(p.Cables); Assert.Equal(2, p.Schematic!.Symbols.Count);
+        Assert.Equal(2, p.Cables.Count); Assert.Equal(2, p.Schematic!.Symbols.Count);
         var extra = service.PlaceExistingRepresentation(p, symbol.SymbolId, page, new(220, 80));
-        Assert.Single(extra.Cables); Assert.Equal(3, extra.Schematic!.Symbols.Count);
-        Assert.Equal(1m, Assert.Single(new DerivedBomEngine().Build(extra)).Quantity);
-        Assert.Equal(symbol.Anchors, extra.Schematic.Symbols[2].Anchors);
+        Assert.Equal(3, extra.Cables.Count); Assert.Equal(3, extra.Schematic!.Symbols.Count);
+        Assert.Equal(3m, new DerivedBomEngine().Build(extra).Sum(l => l.Quantity));
+        Assert.Equal(symbol.Anchors.Select(a => a.SourcePinId), extra.Schematic.Symbols[2].Anchors.Select(a => a.SourcePinId));
+        Assert.Empty(symbol.Anchors.Select(a => a.EndpointId).Intersect(extra.Schematic.Symbols[2].Anchors.Select(a => a.EndpointId)));
         Assert.NotEqual(symbol.SymbolId, extra.Schematic.Symbols[2].SymbolId);
         p = service.SetSymbolDetails(p, symbol.SymbolId, "W-Y1", symbol.Anchors);
-        Assert.All(p.Schematic!.Symbols, s => Assert.Equal("W-Y1", SchematicSymbolOwner.Resolve(p, s).Reference));
+        Assert.Equal("W-Y1", SchematicSymbolOwner.Resolve(p, p.Schematic!.Symbols[0]).Reference);
+        Assert.Null(SchematicSymbolOwner.Resolve(p, p.Schematic.Symbols[1]).Reference);
         p = service.DrawWire(p, page, SchematicAttachment.Pin(symbol.SymbolId, symbol.Anchors[0].EndpointId), SchematicAttachment.Free(),
             [new(20, 40), new(10, 40), new(10, 70)]);
         p = service.TransformSymbol(p, symbol.SymbolId, new(40, 40), 90);
@@ -169,15 +171,15 @@ public sealed class ArchivedCableInstanceTests
         Assert.Empty(p.Connections);
         Assert.Throws<InvalidOperationException>(() => service.DeleteRepresentation(p, symbol.SymbolId));
         p = service.DeleteRepresentation(p, p.Schematic.Symbols[1].SymbolId);
-        Assert.Single(p.Cables); Assert.Single(p.Schematic!.Symbols);
+        Assert.Equal(2, p.Cables.Count); Assert.Single(p.Schematic!.Symbols);
         Assert.Contains(SchematicDraftReview.Inspect(p), i => i.Code == "UNCONFIRMED_CABLE_MAPPING");
         var path = Path.Combine(Path.GetTempPath(), "cable-canvas-test-" + Guid.NewGuid().ToString("N") + ".db");
         try {
             var repo = new ElectricalProjectRepository(new SqliteConnectionFactory(), path);
             await repo.SaveAsync(p); var loaded = (await repo.GetAsync(p.ProjectId))!;
             Assert.Equal(JsonSerializer.Serialize(p.Schematic), JsonSerializer.Serialize(loaded.Schematic));
-            Assert.Single(loaded.Cables); Assert.Empty(loaded.Components);
-            Assert.Equal(1m, Assert.Single(new DerivedBomEngine().Build(loaded)).Quantity);
+            Assert.Equal(2, loaded.Cables.Count); Assert.Empty(loaded.Components);
+            Assert.Equal(2m, new DerivedBomEngine().Build(loaded).Sum(l => l.Quantity));
         } finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); File.Delete(path); }
     }
 

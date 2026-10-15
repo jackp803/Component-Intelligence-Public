@@ -7,6 +7,7 @@ public sealed partial class SchematicAuthoringService
     public ElectricalProject SetArchivedCableManufacturing(ElectricalProject project, string cableId, CableManufacturingDraft manufacturing) =>
         Edit(project, (draft, doc) =>
         {
+            RequireIndependentCable(doc, cableId);
             var index = draft.Cables.FindIndex(c => c.CableInstanceId == cableId);
             if (index < 0) throw new InvalidOperationException("Select an archived cable.");
             var cable = new CableManufacturingEditorService().ApplyToInstance(draft.Cables[index], manufacturing);
@@ -65,12 +66,15 @@ public sealed partial class SchematicAuthoringService
     }
 
     public ElectricalProject PlaceExistingRepresentation(ElectricalProject project, string symbolId,
-        string pageId, SchematicPoint position) => Edit(project, (_, doc) =>
+        string pageId, SchematicPoint position)
     {
-        var source = doc.Symbols.Single(s => s.SymbolId == symbolId);
-        doc.Symbols.Add(source with { SymbolId = "symbol-" + Guid.NewGuid().ToString("N"), PageId = pageId,
-            Position = position, Locked = false, Anchors = source.Anchors.ToList() });
-    });
+        if (project.Schematic!.Symbols.Single(s => s.SymbolId == symbolId).CableInstanceId is not null)
+            return DuplicateArchivedCable(project, symbolId, pageId, position);
+        return Edit(project, (_, doc) => {
+            var source = doc.Symbols.Single(s => s.SymbolId == symbolId);
+            doc.Symbols.Add(source with { SymbolId = "symbol-" + Guid.NewGuid().ToString("N"), PageId = pageId,
+                Position = position, Locked = false, Anchors = source.Anchors.ToList() }); });
+    }
 
     public ElectricalProject SetArchivedCableDetails(ElectricalProject project, string cableId, string? reference,
         double? lengthMm, string? specification, CableConstructionType construction, IReadOnlyList<CablePinMapping> mapping) =>
@@ -79,8 +83,9 @@ public sealed partial class SchematicAuthoringService
 
     public ElectricalProject SetArchivedCableDetails(ElectricalProject project, string cableId, string? reference,
         double? lengthMm, string? specification, CableConstructionType construction, IReadOnlyList<CablePinMapping> mapping, string? notes) =>
-        Edit(project, (draft, _) =>
+        Edit(project, (draft, doc) =>
         {
+            RequireIndependentCable(doc, cableId);
             if (lengthMm.HasValue && (!double.IsFinite(lengthMm.Value) || lengthMm <= 0))
                 throw new InvalidOperationException("線材長度必須為正數，或留空待確認。");
             if (!Enum.IsDefined(construction)) throw new InvalidOperationException("Unknown cable construction classification.");
@@ -109,24 +114,18 @@ public sealed partial class SchematicAuthoringService
             var original = draft.Cables.SingleOrDefault(c => c.CableInstanceId == source.CableInstanceId && c.ArchivedCable is not null)
                 ?? throw new InvalidOperationException("請選取有接線模板的實體線材。");
             var copy = ArchivedCableInstanceFactory.Duplicate(original);
-            var originalPorts = original.ArchivedCable!.Ports;
-            var ids = originalPorts.ToDictionary(p => p.PortId,
-                p => copy.ArchivedCable!.Ports.Single(c => c.SourcePortId == p.SourcePortId).PortId, StringComparer.Ordinal);
-            foreach (var port in originalPorts)
-                foreach (var pin in port.Pins)
-                    ids.Add(pin.PinId, copy.ArchivedCable!.Ports.Single(p => p.SourcePortId == port.SourcePortId).Pins
-                        .Single(p => p.SourcePinId == pin.SourcePinId).PinId);
+            var ids = SchematicCableInstanceIdentity.EndpointMap(original, copy);
             draft.Cables.Add(copy);
-            doc.Symbols.Add(source with {
+            doc.Symbols.Add(SchematicCableInstanceIdentity.Rebind(source, copy.CableInstanceId, ids) with {
                 SymbolId = "symbol-" + Guid.NewGuid().ToString("N"), CableInstanceId = copy.CableInstanceId,
-                PageId = pageId, Position = position, Locked = false,
-                Anchors = source.Anchors.Select(a => a with { EndpointId = ids[a.EndpointId] }).ToList(),
-                CadPortBindings = source.CadPortBindings.Select(b => b with { PortId = ids[b.PortId] }).ToList(),
-                CollapsedPortIds = source.CollapsedPortIds.Select(id => ids[id]).ToList(),
-                PortPlacements = source.PortPlacements.Select(p => p with { PortId = ids[p.PortId] }).ToList(),
-                EndpointDisplayPlacements = source.EndpointDisplayPlacements.Select(p => p with {
-                    EndpointId = ids[p.EndpointId], PortId = ids[p.PortId] }).ToList() });
+                PageId = pageId, Position = position, Locked = false });
         });
+
+    private static void RequireIndependentCable(SchematicDocument doc, string cableId)
+    {
+        if (doc.Symbols.Count(s => s.CableInstanceId == cableId) > 1)
+            throw new InvalidOperationException("舊線材仍共用資料；請重新載入專案完成線材獨立化後再編輯，避免同步修改其他線材。");
+    }
 
     public ElectricalProject AddArchivedCable(ElectricalProject project, ArchivedCableTemplate template,
         CableConstructionType construction, SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts,
@@ -144,8 +143,9 @@ public sealed partial class SchematicAuthoringService
 
     public ElectricalProject PlaceCableRepresentation(ElectricalProject project, string cableId,
         SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts, string pageId, SchematicPoint position) =>
-        Edit(project, (draft, doc) => doc.Symbols.Add(CreateCableSymbol(
-            draft.Cables.Single(c => c.CableInstanceId == cableId), geometry, contacts, pageId, position)));
+        Edit(project, (draft, doc) => {
+            var copy = ArchivedCableInstanceFactory.Duplicate(draft.Cables.Single(c => c.CableInstanceId == cableId));
+            draft.Cables.Add(copy); doc.Symbols.Add(CreateCableSymbol(copy, geometry, contacts, pageId, position)); });
 
     private static SchematicSymbol CreateCableSymbol(CableInstance cable, SchematicCadAsset geometry,
         IReadOnlyDictionary<string, string> contacts, string pageId, SchematicPoint position)

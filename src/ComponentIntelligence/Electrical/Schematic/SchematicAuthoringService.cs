@@ -179,6 +179,7 @@ public sealed partial class SchematicAuthoringService
         if (i < 0) throw new InvalidOperationException("Unknown representation.");
         var symbol = doc.Symbols[i];
         if (symbol.Locked) throw new InvalidOperationException("The representation is locked.");
+        if (symbol.CableInstanceId is { } cableId) RequireIndependentCable(doc, cableId);
         SchematicSymbolOwner.Resolve(draft, symbol).SetReference(reference);
         var next = symbol with { Anchors = anchors.Select(a =>
             symbol.Anchors.Any(old => old.EndpointId == a.EndpointId && old.CadContactId == a.CadContactId && old.Position != a.Position)

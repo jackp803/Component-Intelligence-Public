@@ -111,11 +111,11 @@ public sealed class SchematicCadRefreshTests
     }
 
     [Fact]
-    public void CableRefreshRequiresAllRepresentationsOfSelectedPhysicalCable()
+    public void LegacyCableRefreshRequiresAllRepresentationsOfSelectedPhysicalCable()
     {
         var project = CableProject();
         var service = new SchematicAuthoringService();
-        project = service.PlaceExistingRepresentation(project, "cable-symbol-1", "page", new(140, 20));
+        project.Schematic!.Symbols.Add(project.Schematic.Symbols[0] with { SymbolId = "legacy-view", Position = new(140, 20) });
         var omitted = project.Schematic!.Symbols[1].SymbolId;
         var before = JsonSerializer.Serialize(project);
         var error = Assert.Throws<InvalidOperationException>(() => Refresh(project, ["cable-symbol-1"], UpdatedGeometry()));
@@ -125,7 +125,7 @@ public sealed class SchematicCadRefreshTests
     }
 
     [Fact]
-    public void CableRefreshUpdatesSamePhysicalRepresentationsAndLeavesOtherInstancePinned()
+    public void CableRefreshUpdatesOnlyExplicitlySelectedIndependentInstances()
     {
         var project = CableProject();
         var service = new SchematicAuthoringService();
@@ -135,7 +135,7 @@ public sealed class SchematicCadRefreshTests
         var first = project.Schematic!.Symbols[0];
         var second = project.Schematic.Symbols[1];
         project.Schematic.Symbols[1] = second with { Width = 20, Height = 15, Rotation = 180, ManualSize = true };
-        var otherCable = JsonSerializer.Serialize(project.Cables[1]);
+        var otherCable = JsonSerializer.Serialize(project.Cables[2]);
         var otherSymbol = JsonSerializer.Serialize(project.Schematic.Symbols[2]);
         var cable = project.Cables[0];
         var oldBinding = cable.ArchivedCable!;
@@ -157,7 +157,7 @@ public sealed class SchematicCadRefreshTests
         Assert.Equal(JsonSerializer.Serialize(oldBinding.Manufacturing), JsonSerializer.Serialize(binding.Manufacturing));
         Assert.Equal(JsonSerializer.Serialize(oldBinding.ManufacturingGeometry), JsonSerializer.Serialize(binding.ManufacturingGeometry));
         Assert.Equal(electrical, ElectricalState(refreshed));
-        Assert.Equal(otherCable, JsonSerializer.Serialize(refreshed.Cables[1]));
+        Assert.Equal(otherCable, JsonSerializer.Serialize(refreshed.Cables[2]));
         Assert.Equal(otherSymbol, JsonSerializer.Serialize(refreshed.Schematic!.Symbols[2]));
         Assert.Equal(30, refreshed.Schematic.Symbols[1].Width);
         Assert.Equal(20, refreshed.Schematic.Symbols[1].Height);

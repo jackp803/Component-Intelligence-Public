@@ -66,7 +66,7 @@ public sealed class CableInstanceDuplicationTests
     }
 
     [Fact]
-    public async Task SeparateLengthsAndNotesPersistWhileSameCableViewsStayLinked()
+    public async Task SeparateLengthsAndNotesPersistWithoutAnySharedCableViews()
     {
         var author = new SchematicAuthoringService(); var project = Project();
         project = author.DuplicateArchivedCable(project, project.Schematic!.Symbols[0].SymbolId, "sheet", new(180, 20));
@@ -75,10 +75,9 @@ public sealed class CableInstanceDuplicationTests
             CableConstructionType.Custom, first.ArchivedCable!.Mapping, "Upper sensor");
         project = author.SetArchivedCableDetails(project, second.CableInstanceId, "C2", 1200, "6 cores",
             CableConstructionType.Custom, second.ArchivedCable!.Mapping, "Lower sensor\nService loop");
-        project = author.PlaceExistingRepresentation(project, project.Schematic!.Symbols[0].SymbolId, "sheet", new(20, 110));
-        Assert.Equal(2, project.Cables.Count); Assert.Equal(3, project.Schematic!.Symbols.Count);
+        Assert.Equal(2, project.Cables.Count); Assert.Equal(2, project.Schematic!.Symbols.Count);
         Assert.Equal(new[] { 500d, 1200d }, project.Cables.Select(c => c.ProvidedLengthMm!.Value));
-        Assert.Equal(2, project.Schematic.Symbols.Count(s => SchematicSymbolOwner.Resolve(project, s).Reference == "C1"));
+        Assert.Single(project.Schematic.Symbols.Where(s => SchematicSymbolOwner.Resolve(project, s).Reference == "C1"));
         var details = new SchematicCableDetailService();
         foreach (var cable in project.Cables.ToArray())
             project = details.AddArchivedDetail(project, cable.CableInstanceId, layout: new(cable.CableInstanceId, null) { SketchVisible = false });

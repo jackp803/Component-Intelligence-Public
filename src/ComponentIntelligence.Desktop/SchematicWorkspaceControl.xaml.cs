@@ -338,13 +338,11 @@ public partial class SchematicWorkspaceControl : UserControl
                 menu.Items.Add(remove); arrow.ContextMenu = menu;
             }
             Sheet.Children.Add(arrow);
-            var caption = new TextBlock { Text = _service.ReferenceCodeFor(doc, marker.MarkerId), FontSize = 10,
+            var caption = new TextBlock { Text = SchematicContinuationNavigation.Caption(project, marker.MarkerId), FontSize = 10,
                 Foreground = Brushes.Black, Cursor = Cursors.Hand,
                 ToolTip = _service.ReferenceFor(project, marker.MarkerId) + "\n雙擊前往對端" };
             var matingRoute = doc.Wires.SingleOrDefault(w => (w.Start.MarkerId == marker.MarkerId || w.End.MarkerId == marker.MarkerId) &&
                 project.Connections.Any(c => c.ConnectionId == w.ConnectionId && c.MatingMap is not null));
-            if (matingRoute is not null)
-                caption.Text = pair.Signal + " / " + caption.Text;
             Canvas.SetLeft(caption, (point.X + 2) * 3); Canvas.SetTop(caption, (point.Y - 5) * 3);
             if (matingRoute is not null)
             {
@@ -913,7 +911,6 @@ public partial class SchematicWorkspaceControl : UserControl
         _pendingRepresentation = null;
         _pendingCable = null;
         _pendingCableRepresentation = null;
-        _copyingPhysicalCable = false;
         _pendingBom = null;
         _wireMode = false; _editModuleMode = false; _placementPreview = null;
         SelectTool.IsChecked = true; WireTool.IsChecked = false; EditModuleTool.IsChecked = false;

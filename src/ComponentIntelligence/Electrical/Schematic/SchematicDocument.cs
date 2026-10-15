@@ -69,6 +69,7 @@ public sealed record SchematicPage
 
 public sealed record SchematicCableDetailBinding(string CableInstanceId, string? CableAssemblyId)
 {
+    public string? SourceSymbolId { get; init; }
     public string DetailId { get; init; } = "";
     public SchematicPoint TablePosition { get; init; } = new(20, 30);
     public SchematicPoint SketchPosition { get; init; } = new(20, 110);

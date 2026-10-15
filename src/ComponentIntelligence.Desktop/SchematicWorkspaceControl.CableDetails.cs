@@ -33,7 +33,8 @@ public partial class SchematicWorkspaceControl
         var pageId = _pageId;
         var page = _getProject().Schematic!.Pages.Single(p => p.PageId == pageId);
         existing ??= page.CableDetail?.CableInstanceId == cableId ? page.CableDetail : null;
-        var basis = existing ?? new SchematicCableDetailBinding(cableId, null);
+        var basis = existing ?? new SchematicCableDetailBinding(cableId, null) { SourceSymbolId =
+            _getProject().Schematic!.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId && s.CableInstanceId == cableId)?.SymbolId };
         var dialog = new Window { Title = "線材製作明細", Width = 480, Height = 580, MinWidth = 400, MinHeight = 510,
             Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var root = new DockPanel { Margin = new(16) };

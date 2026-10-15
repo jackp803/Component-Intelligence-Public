@@ -14,7 +14,7 @@ public sealed partial class SchematicAuthoringService
         {
             var source = RequireWire(project, referenceWireId);
             var spec = SchematicWirePresentation.Resolve(project, source);
-            if (source.SizingProposal is not null || spec.Awg is null && spec.AreaMm2 is null)
+            if (source.SizingProposal is not null || source.AdoptedSizingProposal is not null || spec.Awg is null && spec.AreaMm2 is null)
                 throw new InvalidOperationException("來源線徑尚未核對，不能當成已確認規格套用。");
             awg = spec.AwgIsApproximate ? null : spec.Awg; areaMm2 = awg is null ? spec.AreaMm2 : null;
         }

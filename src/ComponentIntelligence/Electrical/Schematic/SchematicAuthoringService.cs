@@ -36,7 +36,7 @@ public sealed partial class SchematicAuthoringService
             foreach (var member in members)
             {
                 var index = doc.Wires.FindIndex(w => w.WireId == member.WireId);
-                doc.Wires[index] = member with { Awg = awg, AreaMm2 = null, ManualSpecification = true, SizingProposal = null };
+                doc.Wires[index] = member with { Awg = awg, AreaMm2 = null, ManualSpecification = true, SizingProposal = null, AdoptedSizingProposal = null };
             }
             if (connection is not null && awg is int value)
                 connection.ConductorAreaMm2 = Cables.WireSize.AwgToAreaMm2(value);

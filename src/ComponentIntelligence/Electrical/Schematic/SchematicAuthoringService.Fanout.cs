@@ -5,8 +5,10 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed partial class SchematicAuthoringService
 {
+    public const double DefaultFanoutPitch = 10;
+    public const double DefaultFanoutLead = 10;
     public ElectricalProject SetPortFanout(ElectricalProject project, string symbolId, string portId,
-        bool enabled, double pitch = 10, double lead = 25) => Edit(ElectricalProjectMigrator.ForPortFanout(project), (draft, doc) =>
+        bool enabled, double pitch = DefaultFanoutPitch, double lead = DefaultFanoutLead) => Edit(ElectricalProjectMigrator.ForPortFanout(project), (draft, doc) =>
     {
         if (!double.IsFinite(pitch) || pitch <= 0 || !double.IsFinite(lead) || lead <= 0)
             throw new InvalidOperationException("Fan-out pitch and lead must be finite positive distances.");

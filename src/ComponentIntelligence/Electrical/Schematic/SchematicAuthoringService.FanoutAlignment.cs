@@ -32,7 +32,7 @@ public sealed partial class SchematicAuthoringService
                 throw new InvalidOperationException("對齊需要完整的 Port 接點表示。");
             if (!symbol.EndpointDisplayPlacements.Any(p => p.PortId == value.PortId))
             {
-                symbol = FanoutSymbol(symbol, value, true, 10, 25);
+                symbol = FanoutSymbol(symbol, value, true, DefaultFanoutPitch, DefaultFanoutLead);
                 doc.Symbols[doc.Symbols.FindIndex(s => s.SymbolId == id)] = symbol;
             }
             return symbol;
@@ -75,7 +75,7 @@ public sealed partial class SchematicAuthoringService
             {
                 var global = TransformAnchorDisplayPoint(target, placement.Position);
                 var coordinate = horizontal == true ? global.Y : global.X;
-                if (used.Any(c => Math.Abs(c - coordinate) < 5))
+                if (used.Any(c => Math.Abs(c - coordinate) < DefaultFanoutPitch - .001))
                 {
                     coordinate = used.Max() + 10;
                     global = horizontal == true ? global with { Y = coordinate } : global with { X = coordinate };

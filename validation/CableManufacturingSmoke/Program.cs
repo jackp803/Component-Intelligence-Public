@@ -29,6 +29,7 @@ internal static partial class Program
 
     private static int Run(string[] args)
     {
+        if (args.FirstOrDefault() == "pin-sizing") return PinSizingWorkflowProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "layout-regression") return LayoutRegressionProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "inline-annotations") return InlineAnnotationProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "workspace") return WorkspaceUsabilityProof(Path.GetFullPath(args[1]));

@@ -162,6 +162,18 @@ public partial class SchematicWorkspaceControl
         if (wire is null) { Status.Text = "請先選取導線"; return; }
         if (_getProject().Connections.Any(c => c.ConnectionId == wire.ConnectionId && c.Kind == ComponentIntelligence.Electrical.Domain.ConnectionKind.DirectMating))
         { Status.Text = "接頭對接沒有新增導線，不需要 AWG。"; return; }
-        UpdateInspector(_getProject()); _inspectorFields["sizeMode"].Focus();
+        ShowWireSizing();
+    }
+
+    private void ShowWireSizing(bool showBasis = false, bool manual = false)
+    {
+        if (!ResolveInspectorDraft()) return;
+        var project = _getProject();
+        var wire = project.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
+        if (wire is null) { Status.Text = "請先選取導線"; return; }
+        if (project.Connections.Any(c => c.ConnectionId == wire.ConnectionId && c.Kind == ComponentIntelligence.Electrical.Domain.ConnectionKind.DirectMating))
+        { Status.Text = "接頭對接沒有新增導線，不需要 AWG。"; return; }
+        new SchematicWireSettingsDialog(project, wire.WireId, command => Apply(command, "已更新導線規格"), showBasis, manual)
+            { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 }

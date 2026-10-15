@@ -87,8 +87,8 @@ public partial class SchematicWorkspaceControl : UserControl
 
     private bool Apply(Func<ElectricalProject, ElectricalProject> command, string label)
     {
-        try { var current = _getProject(); var next = command(current); if (!ReferenceEquals(next, current)) _commit(next, label); RefreshWorkspace();
-            Status.Text = label + (_wireLabelWarnings.Count > 0 ? "\n" + string.Join("\n", _wireLabelWarnings.Values.Distinct()) : ""); return true; }
+        try { var current = _getProject(); var next = CompleteExpandedFanoutEdit(current, command(current)); if (!ReferenceEquals(next, current)) _commit(next, label); RefreshWorkspace();
+            Status.Text = label + (_autoFanoutNotice.Length > 0 ? "\n" + _autoFanoutNotice : "") + (_wireLabelWarnings.Count > 0 ? "\n" + string.Join("\n", _wireLabelWarnings.Values.Distinct()) : ""); return true; }
         catch (Exception e) { Status.Text = "未套用：" + e.Message; return false; }
     }
 
@@ -789,6 +789,7 @@ public partial class SchematicWorkspaceControl : UserControl
     }
     private void BeginGesture(MouseButtonEventArgs e)
     {
+        _autoFanoutNotice = "";
         ClearPointerPreview(); _gestureDetailBounds = null; _gestureCadBounds = null;
         _dragViewportStart = e.GetPosition(PageScroll);
         _dragActivated = false;
@@ -884,11 +885,17 @@ public partial class SchematicWorkspaceControl : UserControl
         FlushPointerPreview();
         var togglePort = _editModuleMode && !_dragActivated && _dragPortHasPins && _dragPortSymbol is not null && _dragPortId is not null
             ? (_dragPortSymbol, _dragPortId) : ((string?, string?)?)null;
-        if (_gesturePreview is not null && _pointer != _dragStart) _commit(_gesturePreview, "調整圖面位置／路徑");
+        var releaseNotice = "";
+        if (_gesturePreview is not null && _pointer != _dragStart)
+        {
+            _commit(CompleteExpandedFanoutEdit(_gestureStart, _gesturePreview), "調整圖面位置／路徑");
+            releaseNotice = _autoFanoutNotice;
+        }
         CancelGesture();
         if (togglePort is { } target)
             Apply(p => _service.TogglePortCollapsed(p, target.Item1!, target.Item2!), "已切換 Port 接點顯示");
         RefreshWorkspace(); FocusCanvas();
+        if (releaseNotice.Length > 0) Status.Text = releaseNotice;
     }
     private void FocusCanvas()
     {

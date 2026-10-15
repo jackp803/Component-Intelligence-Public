@@ -43,7 +43,7 @@ internal static partial class Program
         void Layout() { sheet.Measure(new Size(sheet.Width, sheet.Height)); sheet.Arrange(new Rect(0, 0, sheet.Width, sheet.Height)); sheet.UpdateLayout(); }
         Layout();
         var label = sheet.Children.OfType<TextBlock>().Single(t => Equals(t.Tag, "wire-label:" + first));
-        Require(label.Text.Contains("1P24") && label.Text.Contains("AWG 18") && label.Text.Contains("0.823"), "Named wire and unique specification are not adjacent on the wire.");
+        Require(label.Text.Contains(" → ") && label.Text.Contains("AWG 18") && label.ToolTip!.ToString()!.Contains("1P24") && label.ToolTip.ToString()!.Contains("0.823"), "Short Pin/AWG caption or retained full manual specification is missing.");
         Require(!label.Text.Contains("0.823046"), "Display leaked unrounded area.");
         var serialized = JsonSerializer.Serialize(p);
         Call("SelectWire", first, false); Call("SelectWire", p.Schematic.Wires[1].WireId, true);

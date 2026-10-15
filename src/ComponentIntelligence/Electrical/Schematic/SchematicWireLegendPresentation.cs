@@ -5,6 +5,7 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed record SchematicWireLegendSpecification(int? Awg, double? AreaMm2, bool Approximate, string Status)
 {
+    public string GaugeText => Awg is int gauge ? (Approximate ? "約 AWG " : "AWG ") + gauge : "AWG 未設定";
     public string Text => Awg is null && AreaMm2 is null ? "線徑待核對" :
         (Awg is int gauge ? (Approximate ? "約 AWG " : "AWG ") + gauge : "AWG 待核對") + " / " +
         (AreaMm2 is double area ? area.ToString("0.###", CultureInfo.InvariantCulture) + " mm²" : "截面積待核對") + " / " + Status;
@@ -14,12 +15,13 @@ public sealed record SchematicWireLegendEntry(string WireId, string PageId, stri
     string Contacts, string Functions, string Color, SchematicWireLegendSpecification Specification, string Review)
 {
     public string ShortFunction { get; init; } = "";
+    public string PinCaption { get; init; } = "";
     public int PageNumber { get; init; }
     public string DisplayName => string.IsNullOrWhiteSpace(Designation) ? Index : Designation;
     public string ColorCode => Color switch { "black" => "BK", "red" => "RD", "white" => "WH", "orange" => "OG",
         "pink" => "PK", "grey" => "GY", "brown" => "BN", "blue" => "BU", "green" => "GN", "yellow" => "YE",
         "violet" => "VT", "線色未指定" => "線色待設定", _ => Color };
-    public string Caption => DisplayName + " · " + (ShortFunction.Length > 0 ? ShortFunction : "功能待設定") + " · " + ColorCode;
+    public string Caption => PinCaption.Length > 0 ? PinCaption : DisplayName;
     public string FullText => string.Join("\n", new[] { Index + " / " + Designation, Contacts, Functions,
         Color + " / " + Specification.Text, Review }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
@@ -71,7 +73,7 @@ public static class SchematicWireLegendPresentation
         var ends = SchematicWireContacts.Ends(project, wire);
         var spec = SchematicWirePresentation.Resolve(project, wire);
         var evidence = SchematicWireEvidence.Resolve(project, wire);
-        var status = wire.SizingProposal is not null ? "待核對" : wire.ManualSpecification ? "手動設定" :
+        var status = wire.SizingProposal is not null ? "待核對" : wire.AdoptedSizingProposal is not null ? "已採用建議（非安全核准）" : wire.ManualSpecification ? "手動設定" :
             spec.Awg is null && spec.AreaMm2 is null ? "未設定" : "已指定";
         var shortFunctions = ends.Select(e => e.Pin?.FunctionManualOverride == true && e.ShortFunction.Length == 0
             ? "端點功能待設定" : e.ShortFunction).Where(f => f.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -81,7 +83,7 @@ public static class SchematicWireLegendPresentation
         return new(wire.WireId, wire.PageId, index > 0 ? "W" + index.ToString("D2", CultureInfo.InvariantCulture) : "W?",
             wire.Designation ?? "", string.Join(" → ", ends.Select(e => e.Caption)), functions,
             evidence.ColorConflict ? "線色待確認" : evidence.PhysicalColor ?? "線色未指定",
-            new(spec.Awg, spec.AreaMm2, spec.AwgIsApproximate, status), wire.SizingProposal?.Review ?? "")
-        { ShortFunction = shortFunction, PageNumber = project.Schematic?.Pages.FindIndex(p => p.PageId == wire.PageId) + 1 ?? 0 };
+            new(spec.Awg, spec.AreaMm2, spec.AwgIsApproximate, status), (wire.SizingProposal ?? wire.AdoptedSizingProposal)?.Review ?? "")
+        { ShortFunction = shortFunction, PinCaption = SchematicWirePinCaption.Text(project, wire), PageNumber = project.Schematic?.Pages.FindIndex(p => p.PageId == wire.PageId) + 1 ?? 0 };
     }
 }

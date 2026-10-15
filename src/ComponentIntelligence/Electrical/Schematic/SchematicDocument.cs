@@ -169,6 +169,7 @@ public sealed record SchematicWire
     public bool ManualDesignation { get; init; }
     public SchematicPoint? LabelPosition { get; init; }
     public SchematicWireSizingProposal? SizingProposal { get; init; }
+    public SchematicWireSizingProposal? AdoptedSizingProposal { get; init; }
     public SchematicAttachment Start { get; init; } = SchematicAttachment.Free();
     public SchematicAttachment End { get; init; } = SchematicAttachment.Free();
     public List<SchematicPoint> Points { get; init; } = [];

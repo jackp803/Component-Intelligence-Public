@@ -71,10 +71,10 @@ internal static partial class Program
         }
         var before = JsonSerializer.Serialize(p);
         Call("Render", p); Layout();
-        Check(Labels().Any(t => t.Text.Contains("AWG") && t.Text.Contains("mm²")), "AWG/area are not placed beside any wire.");
-        Check(Labels().Sum(t => t.Text.Split("AWG").Length - 1) == 2, "Each exact-spec bundle needs one on-wire gauge annotation.");
+        Check(Labels().All(t => t.Text.Contains("AWG") && !t.Text.Contains("mm²")), "Short on-wire AWG format was not applied.");
+        Check(Labels().Sum(t => t.Text.Split("AWG").Length - 1) == 5, "Each conductor needs its compact gauge annotation.");
         Check(!Sheet().Children.OfType<TextBlock>().Any(t => Equals(t.Tag, "wire-spec-legend")), "Specifications are still in a remote legend.");
-        for (var i = 0; i < 5; i++) Check(Labels().Any(t => Equals(t.Tag, "wire-label:W" + i) && t.Text.Contains("Wire" + i)), "Full wire designation missing.");
+        for (var i = 0; i < 5; i++) Check(Labels().Any(t => Equals(t.Tag, "wire-label:W" + i) && t.Text.Contains(" → ") && t.ToolTip!.ToString()!.Contains("Wire" + i)), "Pin caption or retained full wire designation missing.");
         Check(!Labels().Any(t => t.Text.Contains("功能見明細")), "Caption still refers to details.");
         Clearance(); Save("inline-bundles.png");
         Check(before == JsonSerializer.Serialize(p), "Label rendering mutated engineering data.");

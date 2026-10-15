@@ -28,7 +28,7 @@ public static class SchematicWireIdentification
             {
                 foreach (var member in group)
                     doc.Wires[doc.Wires.FindIndex(w => w.WireId == member.WireId)] = member with
-                    { Designation = null, Awg = null, AreaMm2 = null, SizingProposal = null, ManualSpecification = false, ManualDesignation = false };
+                    { Designation = null, Awg = null, AreaMm2 = null, SizingProposal = null, AdoptedSizingProposal = null, ManualSpecification = false, ManualDesignation = false };
                 continue;
             }
             var manualNames = group.Where(w => w.ManualDesignation).Select(w => w.Designation).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -58,7 +58,8 @@ public static class SchematicWireIdentification
                 doc.Wires[index] = member with { Designation = name, ManualDesignation = manualNames.Length > 0 && !splitName,
                     Awg = catalogReplacesProposal ? null : manual is not null ? manual.Awg : member.Awg,
                     AreaMm2 = catalogReplacesProposal ? null : manual is not null ? manual.AreaMm2 : proposal is not null ? proposal.AreaMm2 : member.AreaMm2,
-                    ManualSpecification = manual is not null, SizingProposal = proposal };
+                    ManualSpecification = manual is not null, SizingProposal = proposal,
+                    AdoptedSizingProposal = connection?.Kind == ConnectionKind.Cable ? null : manual?.AdoptedSizingProposal };
             }
             if (connection is not null && proposal is not null) connection.ConductorAreaMm2 = proposal.AreaMm2;
             if (connection is not null && manual is not null && connection.Kind != ConnectionKind.Cable && sizes[0] is double manualArea)

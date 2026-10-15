@@ -60,10 +60,10 @@ internal static partial class Program
         try
         {
             type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [p, p.Schematic!.Pages[0]]);
-            throw new InvalidOperationException("Crowded full manual designations were silently replaced by W indices or omitted.");
+            throw new InvalidOperationException("In-sheet unconnected Pin text left no clearance, but output silently omitted a conductor caption.");
         }
         catch (TargetInvocationException error) when (error.InnerException is InvalidOperationException inner && inner.Message.Contains("導線標籤")) { }
-        // Full manual names require real clearance; expand and align rather than substitute internal W indices.
+        // Preserve full manual names in data/tooltips while checking expanded-port layout as well.
         var author = new SchematicAuthoringService();
         p = author.TransformSymbol(p, p.Schematic!.Symbols[1].SymbolId, new(230, 40), 0);
         p = author.SetPortFanout(p, p.Schematic!.Symbols[0].SymbolId, p.Components[0].Ports[0].PortId, true, 12, 25);

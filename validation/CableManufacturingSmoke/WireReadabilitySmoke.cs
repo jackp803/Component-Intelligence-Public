@@ -50,8 +50,8 @@ internal static partial class Program
         var labels = sheet.Children.OfType<TextBlock>().Where(t => t.Tag is string tag && tag.StartsWith("wire-label:")).ToArray();
         Require(labels.Length == 5, "Every connected wire needs exactly one combined label.");
         Require(labels.All(t => !t.Text.Contains("功能見明細")), "Wire captions still replace functions with a details placeholder.");
-        Require(labels.Sum(t => t.Text.Split("AWG").Length - 1) == 1 && labels.Any(t => t.Text.Contains("線徑待核對")),
-            "Two identical-size power wires and three unknown wires need exactly two on-wire group specifications.");
+        Require(labels.Sum(t => t.Text.Split("AWG").Length - 1) == 5 && labels.Count(t => t.Text.Contains("AWG 未設定")) == 3,
+            "Every wire needs its available gauge or an explicit unknown value, without fabricated defaults.");
         Require(!sheet.Children.OfType<TextBlock>().Any(t => Equals(t.Tag, "wire-spec-legend")), "Wire specifications are still in a remote legend.");
         Require(!sheet.Children.OfType<FrameworkElement>().Any(t => t.Tag is string tag && tag.StartsWith("wire-leader:")),
             "Ordinary wire labels still create remote dashed leaders.");

@@ -36,8 +36,8 @@ public partial class SchematicWorkspaceControl
         var direction = placements.Length == 0 ? "Right" : symbol.Anchors.Single(a => a.EndpointId == placements[0].EndpointId).Direction;
         var coordinates = placements.Where(p => symbol.Anchors.Single(a => a.EndpointId == p.EndpointId).Direction == direction)
             .Select(p => direction is "Left" or "Right" ? p.Position.Y : p.Position.X).Order().ToArray();
-        var currentPitch = coordinates.Length < 2 ? 10 : coordinates[1] - coordinates[0];
-        var currentLead = placements.Length == 0 ? 25 : direction switch { "Left" => -placements[0].Position.X,
+        var currentPitch = coordinates.Length < 2 ? SchematicAuthoringService.DefaultFanoutPitch : coordinates[1] - coordinates[0];
+        var currentLead = placements.Length == 0 ? SchematicAuthoringService.DefaultFanoutLead : direction switch { "Left" => -placements[0].Position.X,
             "Right" => placements[0].Position.X - symbol.Width, "Top" => -placements[0].Position.Y, _ => placements[0].Position.Y - symbol.Height };
         var pitch = new TextBox { Text = currentPitch.ToString("0.###", CultureInfo.CurrentCulture) }; panel.Children.Add(pitch);
         panel.Children.Add(new TextBlock { Text = "引線長度 (mm)", Margin = new(0, 8, 0, 0) });

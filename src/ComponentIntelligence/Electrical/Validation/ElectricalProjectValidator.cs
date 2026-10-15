@@ -53,10 +53,10 @@ public sealed class ElectricalProjectValidator
         ValidateTerminalCapacity(project, results);
         ValidateBusAddresses(project, results);
         ValidateCableAssemblies(project, results);
-        foreach (var wire in project.Schematic?.Wires.Where(w => w.SizingProposal is not null) ?? [])
+        foreach (var wire in project.Schematic?.Wires.Where(w => w.SizingProposal is not null || w.AdoptedSizingProposal is not null) ?? [])
             results.Add(new ValidationResult {
                 RuleId = "RULE-WIRE-SIZE-PROPOSAL", Severity = ValidationSeverity.Warning,
-                Message = $"{wire.Designation ?? wire.WireId}：自動線徑建議待核對。{wire.SizingProposal!.Review}",
+                Message = $"{wire.Designation ?? wire.WireId}：{(wire.AdoptedSizingProposal is null ? "自動線徑建議待核對" : "已選用建議規格，適用條件仍待核對")}。{(wire.SizingProposal ?? wire.AdoptedSizingProposal)!.Review}",
                 SourceObjectIds = [wire.WireId], RequiresConfirmation = true,
                 RequiresPreExportReview = true, AffectsDrawingExport = false
             });

@@ -4,6 +4,26 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public sealed partial class SchematicAuthoringService
 {
+    public ElectricalProject AcceptWireSizeSuggestion(ElectricalProject project, string wireId) => Edit(project, (draft, doc) =>
+    {
+        var wire = doc.Wires.Single(w => w.WireId == wireId);
+        var members = SchematicWireIdentification.Segments(doc, wire);
+        if (members.Any(w => w.Locked)) throw new InvalidOperationException("請先解除導線鎖定。");
+        var shown = wire.SizingProposal;
+        if (shown?.AreaMm2 is not > 0 || !double.IsFinite(shown.AreaMm2.Value))
+            throw new InvalidOperationException("目前沒有可採用的線徑建議；請查看依據或手動設定。");
+        SchematicWireIdentification.Reconcile(draft);
+        wire = doc.Wires.Single(w => w.WireId == wireId);
+        if (wire.SizingProposal != shown) throw new InvalidOperationException("負載或接點資料已變更，建議已更新；請重新查看後再採用。");
+        var connection = draft.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
+        if (connection?.Kind is ConnectionKind.Cable or ConnectionKind.DirectMating)
+            throw new InvalidOperationException("此線徑由實體線材規格管理，不能採用一般導線建議。");
+        foreach (var member in SchematicWireIdentification.Segments(doc, wire))
+            doc.Wires[doc.Wires.FindIndex(w => w.WireId == member.WireId)] = member with {
+                Awg = null, AreaMm2 = shown.AreaMm2, ManualSpecification = true, SizingProposal = null, AdoptedSizingProposal = shown };
+        if (connection is not null) connection.ConductorAreaMm2 = shown.AreaMm2;
+    });
+
     public ElectricalProject RefreshAutomaticWireNames(ElectricalProject project) => Edit(project, (_, _) => { });
 
     public ElectricalProject SetWireLabelPosition(ElectricalProject project, string wireId, SchematicPoint position) => Edit(project, (_, doc) =>
@@ -32,7 +52,7 @@ public sealed partial class SchematicAuthoringService
             if (connection?.CableCoreId is not null) throw new InvalidOperationException("Edit the authoritative cable core specification before overriding its wire size.");
             foreach (var member in members)
                 doc.Wires[doc.Wires.FindIndex(w => w.WireId == member.WireId)] = member with
-                { Awg = null, AreaMm2 = areaMm2, ManualSpecification = true, SizingProposal = null };
+                { Awg = null, AreaMm2 = areaMm2, ManualSpecification = true, SizingProposal = null, AdoptedSizingProposal = null };
             if (connection is not null) connection.ConductorAreaMm2 = areaMm2;
         });
     }
@@ -47,7 +67,7 @@ public sealed partial class SchematicAuthoringService
         if (connection?.CableCoreId is not null) throw new InvalidOperationException("The exact catalog core controls this wire size.");
         foreach (var member in members)
             doc.Wires[doc.Wires.FindIndex(w => w.WireId == member.WireId)] = member with
-            { Awg = null, AreaMm2 = null, ManualSpecification = false, SizingProposal = null };
+            { Awg = null, AreaMm2 = null, ManualSpecification = false, SizingProposal = null, AdoptedSizingProposal = null };
         if (connection is not null) connection.ConductorAreaMm2 = null;
     });
 

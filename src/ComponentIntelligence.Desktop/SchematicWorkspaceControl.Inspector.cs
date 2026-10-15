@@ -16,6 +16,8 @@ public partial class SchematicWorkspaceControl
     private string _inspectorBaseline = "", _inspectorSource = "";
     private bool _populatingInspector, _applyingInspector;
     private TextBlock _pinInventory = null!, _wireEndpoints = null!;
+    private TextBlock _wireSizingSummary = null!;
+    private Button _adoptWireSize = null!;
     public event EventHandler? PendingEditsChanged;
     public bool HasPendingEdits => InspectorDirty || _wireStart is not null || _gestureStart is not null;
     public bool IsInteractionActive => HasPendingEdits || _exporting || _outputBusy;
@@ -33,6 +35,11 @@ public partial class SchematicWorkspaceControl
         Choice(WireInspectorFields, "sizeMode", "線徑設定", new[] { "保留目前規格", "重新自動建議（待核對）", "手動 AWG", "手動截面積 mm²" });
         Choice(WireInspectorFields, "awg", "AWG", Enumerable.Range(0, 41).ToArray());
         Field(WireInspectorFields, "area", "導體截面積 (mm²)");
+        _wireSizingSummary = new() { TextWrapping = TextWrapping.Wrap, Margin = new(0, 8, 0, 0) }; WireInspectorFields.Children.Add(_wireSizingSummary);
+        _adoptWireSize = AddAction(WireInspectorFields, "採用建議", () => {
+            if (ResolveInspectorDraft() && _selectionId is { } id) Apply(p => _service.AcceptWireSizeSuggestion(p, id), "已採用線徑建議；依據保留，非安全核准"); });
+        AddAction(WireInspectorFields, "查看依據", () => ShowWireSizing(true));
+        AddAction(WireInspectorFields, "手動修改", () => ShowWireSizing(false, true));
         _wireEndpoints = new() { TextWrapping = TextWrapping.Wrap, Margin = new(0, 8, 0, 0) }; WireInspectorFields.Children.Add(_wireEndpoints);
         AddAction(WireInspectorFields, "編輯起點接點", () => EditWireEndpoint(true));
         AddAction(WireInspectorFields, "編輯終點接點", () => EditWireEndpoint(false));
@@ -64,10 +71,10 @@ public partial class SchematicWorkspaceControl
         field.Checked += InspectorFieldChanged; field.Unchecked += InspectorFieldChanged;
         panel.Children.Add(field); _inspectorFields.Add(id, field);
     }
-    private static void AddAction(StackPanel panel, string label, Action action)
+    private static Button AddAction(StackPanel panel, string label, Action action)
     {
         var button = new Button { Content = label, Margin = new(0, 6, 0, 0), Padding = new(6, 4, 6, 4) };
-        button.Click += (_, _) => action(); panel.Children.Add(button);
+        button.Click += (_, _) => action(); panel.Children.Add(button); return button;
     }
     private string InspectorFormKey() => JsonSerializer.Serialize(new[] { ReferenceText.Text, CadScaleText.Text }
         .Concat(_inspectorFields.OrderBy(p => p.Key).Select(p => p.Value switch { TextBox t => t.Text, ComboBox c => c.SelectedIndex.ToString(), CheckBox b => b.IsChecked.ToString(), _ => "" })));
@@ -144,8 +151,10 @@ public partial class SchematicWorkspaceControl
             }
             if (wire is not null) {
                 var spec = SchematicWirePresentation.Resolve(project, wire);
+                _wireSizingSummary.Text = SchematicWireSizingPresentation.Summary(project, wire);
+                _adoptWireSize.IsEnabled = SchematicWireSizingPresentation.CanAccept(project, wire);
                 SetField("designation", wire.Designation); ((ComboBox)_inspectorFields["sizeMode"]).SelectedIndex = 0;
-                SetField("awg", spec.Awg ?? 20); SetField("area", spec.AreaMm2 ?? .5);
+                SetField("awg", spec.Awg); SetField("area", spec.AreaMm2);
                 _inspectorFields["awg"].IsEnabled = _inspectorFields["area"].IsEnabled = false;
                 _wireEndpoints.Text = string.Join("\n\n", new[] { ("起點", wire.Start), ("終點", wire.End) }.Select(end => {
                     var contact = SchematicWireContacts.Resolve(project, end.Item2);
@@ -180,7 +189,8 @@ public partial class SchematicWorkspaceControl
             }
             else if (current.Schematic.Wires.Any(w => w.WireId == target))
                 next = SchematicInspectorEdit.ApplyWire(current, target, new(((TextBox)_inspectorFields["designation"]).Text,
-                    ((ComboBox)_inspectorFields["sizeMode"]).SelectedIndex, (int)((ComboBox)_inspectorFields["awg"]).SelectedItem,
+                    ((ComboBox)_inspectorFields["sizeMode"]).SelectedIndex, ((ComboBox)_inspectorFields["sizeMode"]).SelectedIndex == 2 ?
+                        ((ComboBox)_inspectorFields["awg"]).SelectedItem is int gauge ? gauge : throw new InvalidOperationException("請先選擇 AWG，未自動套用預設值。") : 0,
                     ((ComboBox)_inspectorFields["sizeMode"]).SelectedIndex == 3 ? Number("area") : .5));
             else {
                 var basis = SelectedCableDetail() ?? throw new InvalidOperationException("線材明細已不存在。");
@@ -190,8 +200,9 @@ public partial class SchematicWorkspaceControl
                 next = new SchematicCableDetailService().SetLayout(current, _inspectorPage!, basis.DetailId, layout);
             }
             _applyingInspector = true;
+            next = CompleteExpandedFanoutEdit(current, next);
             if (!ReferenceEquals(next, current)) { _commit(next, "已套用右側設定"); }
-            UpdateInspector(_getProject(), true); RefreshWorkspace(); Status.Text = "已套用右側設定"; return true;
+            UpdateInspector(_getProject(), true); RefreshWorkspace(); Status.Text = "已套用右側設定" + (_autoFanoutNotice.Length > 0 ? "\n" + _autoFanoutNotice : ""); return true;
         }
         catch (Exception error) { InspectorError.Text = error.Message; return false; }
         finally { _applyingInspector = false; }

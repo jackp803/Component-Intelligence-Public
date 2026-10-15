@@ -6,7 +6,7 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicCompactWireLabelTests
 {
     [Fact]
-    public void LongDescriptionUsesExplicitPinNameAndKeepsGaugeOffTheWire()
+    public void LongDescriptionUsesBothShortPinFunctionsWithGaugeProjectedSeparately()
     {
         var p = SchematicWireIdentificationTests.Fixture(.2);
         foreach (var pin in p.Components.SelectMany(c => c.Ports).SelectMany(port => port.Pins))
@@ -16,7 +16,7 @@ public sealed class SchematicCompactWireLabelTests
         }
         p = SchematicWireIdentificationTests.Draw(p);
         var label = SchematicCableLabelPresentation.Resolve(p, p.Schematic!.Wires.Single())!;
-        Assert.Equal(p.Schematic.Wires.Single().Designation + " · Com · BK", label.Text);
+        Assert.Equal("1_COM → 1_COM", label.Text);
         Assert.DoesNotContain("AWG", label.Text);
         Assert.Contains("Common for 24 V", label.FullText);
         Assert.Contains("IOLink1_1", label.FullText);

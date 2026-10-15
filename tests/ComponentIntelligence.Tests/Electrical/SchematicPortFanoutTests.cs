@@ -12,6 +12,59 @@ public sealed class SchematicPortFanoutTests
     private readonly SchematicAuthoringService _service = new();
 
     [Fact]
+    public void NewFanoutDefaultsAreTenMillimetresForPitchAndLead()
+    {
+        var next = _service.SetPortFanout(Fixture(cad: true), "SA", "PA", true);
+        var symbol = next.Schematic!.Symbols[0];
+        Assert.Equal(150, SchematicAuthoringService.AnchorPoint(symbol, "A1").X);
+        Assert.Equal(10, SchematicAuthoringService.AnchorPoint(symbol, "A2").Y - SchematicAuthoringService.AnchorPoint(symbol, "A1").Y);
+    }
+
+    [Fact]
+    public void AutomaticAlignmentWaitsForBothExpandedPortsAndPreservesNativeData()
+    {
+        var p = _service.TransformSymbol(Fixture(wired: true), "SB", new(260, 125), 0);
+        p = _service.SetPortFanout(p, "SA", "PA", true, 10, 10);
+        var method = typeof(SchematicAuthoringService).GetMethod("AutoAlignExpandedPorts"); Assert.NotNull(method);
+        object Result(ElectricalProject value) => method.Invoke(_service, [value, "SA"])!;
+        var waiting = Result(p);
+        Assert.Same(p, waiting.GetType().GetProperty("Project")!.GetValue(waiting));
+        p = _service.SetPortFanout(p, "SB", "PB", true, 6, 10);
+        var before = Snapshot(p); var result = Result(p);
+        var next = (ElectricalProject)result.GetType().GetProperty("Project")!.GetValue(result)!;
+        for (var i = 1; i <= 3; i++) Assert.Equal(SchematicAuthoringService.AnchorPoint(next.Schematic!.Symbols[0], "A" + i).Y,
+            SchematicAuthoringService.AnchorPoint(next.Schematic.Symbols[1], "B" + i).Y);
+        Assert.Equal(Snapshot(p.Components), Snapshot(next.Components)); Assert.Equal(Snapshot(p.Connections), Snapshot(next.Connections));
+        Assert.Equal(Snapshot(p.Schematic!.Symbols.Select(s => s.Anchors)), Snapshot(next.Schematic!.Symbols.Select(s => s.Anchors)));
+        Assert.Equal(before, Snapshot(p));
+    }
+
+    [Fact]
+    public void AutomaticAlignmentSkipsLockedPeerWithoutDiscardingExistingEdit()
+    {
+        var p = _service.SetPortFanout(Fixture(wired: true), "SA", "PA", true, 10, 10);
+        p = _service.SetPortFanout(p, "SB", "PB", true, 10, 10);
+        p = _service.SetLocked(p, "SB", true); var before = Snapshot(p);
+        var method = typeof(SchematicAuthoringService).GetMethod("AutoAlignExpandedPorts"); Assert.NotNull(method);
+        var result = method.Invoke(_service, [p, "SA"])!;
+        Assert.Equal(before, Snapshot((ElectricalProject)result.GetType().GetProperty("Project")!.GetValue(result)!));
+        Assert.NotEmpty(((IEnumerable<string>)result.GetType().GetProperty("Warnings")!.GetValue(result)!));
+    }
+
+    [Fact]
+    public void AutomaticAlignmentAlsoSeparatesUnwiredPeerPinsToTenMillimetres()
+    {
+        var p = Fixture(wired: true); p.Connections.RemoveAt(2); p.Connections.RemoveAt(0);
+        p.Schematic!.Wires.RemoveAt(2); p.Schematic.Wires.RemoveAt(0);
+        p = _service.SetPortFanout(p, "SA", "PA", true, 10, 10);
+        p = _service.SetPortFanout(p, "SB", "PB", true, 6, 10);
+        var result = _service.AutoAlignExpandedPorts(p, "SA");
+        Assert.Empty(result.Warnings);
+        var rows = result.Project.Schematic!.Symbols[1].EndpointDisplayPlacements.Select(p => p.Position.Y).Order().ToArray();
+        Assert.All(rows.Zip(rows.Skip(1)), pair => Assert.True(pair.Second - pair.First >= 10 - .001));
+    }
+
+    [Fact]
     public void FanoutChangesOnlyDisplayPositionsAndCreatesNoConductiveEdges()
     {
         var project = Fixture(cad: true);
@@ -423,7 +476,7 @@ public sealed class SchematicPortFanoutTests
         p.Connections.RemoveRange(1, 2); p.Schematic!.Wires.RemoveRange(1, 2);
         p.Schematic.Symbols[0] = p.Schematic.Symbols[0] with { Position = new(100, 120) };
         p.Schematic.Wires.Add(new() { WireId = "manual-draft", PageId = "P", ManualRoute = true,
-            Start = SchematicAttachment.Pin("SB", "B3"), End = SchematicAttachment.Free(), Points = [new(260, 128), new(235, 128)] });
+            Start = SchematicAttachment.Pin("SB", "B3"), End = SchematicAttachment.Free(), Points = [new(260, 128), new(250, 128)] });
         Reject(p, () => Align(p));
     }
 
@@ -459,7 +512,7 @@ public sealed class SchematicPortFanoutTests
         p.Components[1].Ports.Add(new() { PortId = "PB4", Name = "Other", Pins = [new() { PinId = "B4", PinNumber = "4" }] });
         p.Schematic!.Symbols[1] = p.Schematic.Symbols[1] with { Anchors = [.. p.Schematic.Symbols[1].Anchors,
             new() { EndpointId = "B4", Direction = "Left", Position = new(0, 11), Confirmed = true }] };
-        p = Fanout(p, true, symbolId: "SB", portId: "PB4", lead: 6.25);
+        p = Fanout(p, true, symbolId: "SB", portId: "PB4", lead: 2.5);
         Reject(p, () => Align(p));
     }
 
@@ -471,7 +524,7 @@ public sealed class SchematicPortFanoutTests
         p.Connections.Add(new() { ConnectionId = "PORT", FromEndpointId = "PA", ToEndpointId = "PB" });
         var wholePort = new SchematicWire { WireId = "whole-port", PageId = "P", ConnectionId = "PORT", ManualRoute = true,
             Start = SchematicAttachment.Port("SA", "PA"), End = SchematicAttachment.Port("SB", "PB"),
-            Points = [new(140, 115), new(160, 115), new(160, 80), new(250, 80), new(250, 120), new(260, 120)] };
+            Points = [new(140, 115), new(160, 115), new(160, 80), new(240, 80), new(240, 120), new(260, 120)] };
         p.Schematic.Wires.Add(wholePort);
         SchematicAuthoringService.Validate(p);
         var next = Align(p);

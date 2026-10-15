@@ -21,12 +21,14 @@ public sealed class SchematicEditingConsistencyTests
     }
 
     [Fact]
-    public void WireCaptionUsesActualDesignationAndRoundedArea()
+    public void ShortCaptionRetainsManualDesignationInDetailsAndRoundedArea()
     {
         var p = Drawing(); var service = new SchematicAuthoringService(); var id = p.Schematic!.Wires[0].WireId;
         p = service.SetWireDesignation(p, id, "1P24"); p = service.SetWireAwg(p, id, 18);
         var entry = SchematicWireLegendPresentation.Entry(p, p.Schematic!.Wires[0]);
-        Assert.StartsWith("1P24", entry.Caption);
+        Assert.Contains("1P24", entry.FullText);
+        Assert.Equal("1P24", p.Schematic.Wires[0].Designation);
+        Assert.Contains(" → ", entry.Caption);
         Assert.DoesNotContain("0.823046", entry.Specification.Text);
         Assert.Contains("0.823", entry.Specification.Text);
         Assert.StartsWith("1P24", SchematicWireLegendPresentation.Groups([entry])[0].Text);

@@ -200,7 +200,7 @@ public sealed partial class SchematicAuthoringService
                 End = reverseSecond ? second.Start : second.End,
                 Points = points, ManualRoute = first.ManualRoute || second.ManualRoute,
                 Awg = specification.Awg, AreaMm2 = specification.AreaMm2,
-                ManualSpecification = ManualSize(specification), SizingProposal = specification.SizingProposal,
+                ManualSpecification = ManualSize(specification), SizingProposal = specification.SizingProposal, AdoptedSizingProposal = specification.AdoptedSizingProposal,
                 Designation = designation.Designation, ManualDesignation = designation.ManualDesignation
             };
             doc.Wires.Remove(second);

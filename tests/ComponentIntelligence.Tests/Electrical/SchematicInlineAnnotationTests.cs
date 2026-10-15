@@ -7,7 +7,7 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class SchematicInlineAnnotationTests
 {
     [Fact]
-    public void CaptionIncludesDesignationCompactFunctionAndPhysicalColor()
+    public void CaptionUsesBothPinFunctionsWhileDetailsRetainDesignationAndColor()
     {
         var project = SchematicWireIdentificationTests.Fixture(.2);
         foreach (var pin in project.Components.SelectMany(c => c.Ports).SelectMany(p => p.Pins))
@@ -16,7 +16,8 @@ public sealed class SchematicInlineAnnotationTests
         var wire = project.Schematic!.Wires.Single();
         var before = JsonSerializer.Serialize(project);
         var entry = SchematicWireLegendPresentation.Entry(project, wire);
-        Assert.Equal(wire.Designation + " · COM · BK", entry.Caption);
+        Assert.Equal("1_COM → 1_COM", entry.Caption);
+        Assert.Contains(wire.Designation!, entry.FullText); Assert.Contains("black", entry.FullText);
         Assert.Contains("Common for 24 V", entry.FullText);
         Assert.Equal(before, JsonSerializer.Serialize(project));
     }

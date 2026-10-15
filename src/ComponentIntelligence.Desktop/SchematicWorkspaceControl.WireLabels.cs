@@ -174,61 +174,27 @@ public partial class SchematicWorkspaceControl
 
         _wireLabelWarnings.Remove(page.PageId);
         var warnings = new List<string>();
-        var groups = SchematicWireLegendPresentation.Groups(_renderWireDetails.Values);
-        var memberships = new Dictionary<string, string>(StringComparer.Ordinal);
-        var specifications = new Dictionary<string, string>(StringComparer.Ordinal);
-        var emitted = new HashSet<string>(StringComparer.Ordinal);
-        for (var i = 0; i < groups.Count; i++)
-        {
-            var group = groups[i];
-            var key = "G" + (i + 1);
-            var representative = group.Entries.OrderByDescending(e => _renderWireLabels.GetValueOrDefault(e.WireId)?.AvailableLength ?? 0).First();
-            specifications[representative.WireId] = (group.Entries.Count > 1 ? key + " 共用：" : "") + group.Specification.Text;
-            foreach (var entry in group.Entries) memberships[entry.WireId] = group.Entries.Count > 1 ? " [" + key + "]" : "";
-        }
         foreach (var wire in wires)
         {
             if (!_renderWireLabels.TryGetValue(wire.WireId, out var caption)) continue;
-            var membership = memberships.GetValueOrDefault(wire.WireId, "");
-            var text = caption.Text + membership;
-            InlineWireCaption? placed = null;
-            if (specifications.TryGetValue(wire.WireId, out var spec))
-            {
-                placed = Place(wire, caption, (text + " · " + spec, false), (text + "\n" + spec, false));
-                if (placed is not null) emitted.Add(wire.WireId);
-            }
-            placed ??= Place(wire, caption, (text, false), (text, true));
+            var gauge = _renderWireDetails.GetValueOrDefault(wire.WireId)?.Specification.GaugeText;
+            var text = caption.Text + (gauge is null ? "" : "；" + gauge);
+            var placed = Place(wire, caption, (text, false), (gauge is null ? text : caption.Text + "\n" + gauge, false), (text, true));
             if (placed is not null) { Add(wire, placed); continue; }
-            if (_renderWireDetails.TryGetValue(wire.WireId, out var detail))
+            var parts = caption.Text.Split(" → ", StringSplitOptions.None);
+            var start = occupied.Count;
+            var pieces = new List<InlineWireCaption>();
+            var fragments = parts.Length > 1 ? parts.Select((part, i) => part + (i < parts.Length - 1 ? " →" : "")).ToList() : new List<string> { caption.Text };
+            if (gauge is not null) fragments.Add(gauge);
+            foreach (var part in fragments)
             {
-                // Place all parts atomically: a name must never appear without its function/color part.
-                var start = occupied.Count;
-                var pieces = new List<InlineWireCaption>();
-                foreach (var part in new[] { detail.DisplayName, (detail.ShortFunction.Length > 0 ? detail.ShortFunction : "功能待設定") + " · " + detail.ColorCode + membership })
-                {
-                    var piece = Place(wire, caption, (part, false), (part, true));
-                    if (piece is null) break;
-                    pieces.Add(piece); var box = piece.Bounds; box.Inflate(3, 3); occupied.Add(box);
-                }
-                occupied.RemoveRange(start, occupied.Count - start);
-                if (pieces.Count == 2) { foreach (var piece in pieces) Add(wire, piece); continue; }
+                var piece = Place(wire, caption, (part, false), (part, true));
+                if (piece is null) break;
+                pieces.Add(piece); var box = piece.Bounds; box.Inflate(3, 3); occupied.Add(box);
             }
+            occupied.RemoveRange(start, occupied.Count - start);
+            if (pieces.Count == fragments.Count) { foreach (var piece in pieces) Add(wire, piece); continue; }
             warnings.Add(_renderWireDetails.GetValueOrDefault(wire.WireId)?.DisplayName ?? caption.Text);
-        }
-        foreach (var (representative, spec) in specifications.Where(pair => !emitted.Contains(pair.Key)))
-        {
-            var group = groups.Single(g => g.Entries.Any(e => e.WireId == representative));
-            var candidates = group.Entries.OrderByDescending(e => _renderWireLabels.GetValueOrDefault(e.WireId)?.AvailableLength ?? 0);
-            var done = false;
-            foreach (var member in candidates)
-            {
-                var wire = wires.Single(w => w.WireId == member.WireId);
-                if (!_renderWireLabels.TryGetValue(wire.WireId, out var caption)) continue;
-                var placed = Place(wire, caption, (spec, false), (spec, true));
-                if (placed is null) continue;
-                Add(wire, placed); done = true; break;
-            }
-            if (!done) warnings.Add(spec);
         }
         if (warnings.Count > 0)
         {

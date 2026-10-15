@@ -5,6 +5,26 @@ namespace ComponentIntelligence.Electrical.Schematic;
 
 public static class ArchivedCableInstanceFactory
 {
+    public static CableInstance Duplicate(CableInstance source)
+    {
+        if (source.ArchivedCable is null) throw new InvalidOperationException("請選取有接線模板的實體線材。");
+        ValidateTemplate(source.ArchivedCable.Template);
+        // Source IDs describe the shared wiring; only runtime identities are replaced.
+        var node = JsonSerializer.SerializeToNode(source)!;
+        node[nameof(CableInstance.CableInstanceId)] = "cbl-" + Guid.NewGuid().ToString("N");
+        foreach (var port in node[nameof(CableInstance.ArchivedCable)]![nameof(ArchivedCableBinding.Ports)]!.AsArray())
+        {
+            port![nameof(ComponentPort.PortId)] = "cable-port-" + Guid.NewGuid().ToString("N");
+            foreach (var pin in port[nameof(ComponentPort.Pins)]!.AsArray())
+                pin![nameof(ComponentPin.PinId)] = "cable-pin-" + Guid.NewGuid().ToString("N");
+        }
+        var copy = node.Deserialize<CableInstance>()!;
+        copy.ReferenceDesignator = null; copy.ProvidedLengthMm = null; copy.Notes = null;
+        copy.LengthSource = CableLengthSource.Unknown; copy.CoreAssignments.Clear();
+        foreach (var pin in copy.ArchivedCable!.Ports.SelectMany(p => p.Pins)) pin.InferredFunction = null;
+        return copy;
+    }
+
     public static CableInstance Create(ArchivedCableTemplate template, CableConstructionType construction)
     {
         ArgumentNullException.ThrowIfNull(template);

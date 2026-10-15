@@ -376,7 +376,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 { element.IsHitTestVisible = false; element.Opacity = .55; }
             }
         }
-        Text($"草稿／未完成  |  {doc.Pages.IndexOf(page) + 1} / {doc.Pages.Count}",
+        Text($"{doc.Pages.IndexOf(page) + 1} / {doc.Pages.Count}",
             page.Margin, page.Height - 5, 9, Brushes.Black);
         RenderWireLabels(project, page, crossings);
     }
@@ -915,6 +915,7 @@ public partial class SchematicWorkspaceControl : UserControl
         _pendingRepresentation = null;
         _pendingCable = null;
         _pendingCableRepresentation = null;
+        _copyingPhysicalCable = false;
         _pendingBom = null;
         _wireMode = false; _editModuleMode = false; _placementPreview = null;
         SelectTool.IsChecked = true; WireTool.IsChecked = false; EditModuleTool.IsChecked = false;

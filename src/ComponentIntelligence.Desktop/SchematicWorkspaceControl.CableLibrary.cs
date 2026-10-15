@@ -16,23 +16,41 @@ public partial class SchematicWorkspaceControl
     private PendingCable? _pendingCable;
     private bool _placingCable;
     private string? _pendingCableRepresentation;
+    private bool _copyingPhysicalCable;
 
-    private void BeginAnotherCableRepresentation(SchematicSymbol source)
+    private void BeginAnotherCableRepresentation(SchematicSymbol source, bool duplicate = false)
     {
         if (_pageId is null || !FinishPendingDraft()) return;
         CancelCommand();
-        _placementPreview = _service.PlaceExistingRepresentation(_getProject(), source.SymbolId, _pageId, new(20, 20));
+        _placementPreview = duplicate ? _service.DuplicateArchivedCable(_getProject(), source.SymbolId, _pageId, new(20, 20)) :
+            _service.PlaceExistingRepresentation(_getProject(), source.SymbolId, _pageId, new(20, 20));
+        _copyingPhysicalCable = duplicate;
         _pendingCableRepresentation = source.SymbolId; _placeMode = true;
-        Status.Text = "同一條線材的另一個表示待放置；不增加實體數量。";
+        Status.Text = duplicate ? "另一條實體線材待放置；接法相同，線長、備註與 Reference 分別設定。" : "同一條線材的另一個表示待放置；不增加實體數量。";
         Focus(); Render(_getProject());
     }
 
     private void PlaceAnotherCableRepresentation(SchematicPoint point)
     {
         if (_pendingCableRepresentation is not { } source || _pageId is null) return;
-        if (Apply(p => _service.PlaceExistingRepresentation(p, source, _pageId, point), "已放置同一條線材的另一個表示"))
-        { _pendingCableRepresentation = null; _placeMode = false; _placementPreview = null; Render(_getProject()); }
+        var copy = _copyingPhysicalCable;
+        if (Apply(p => copy ? _service.DuplicateArchivedCable(p, source, _pageId, point) : _service.PlaceExistingRepresentation(p, source, _pageId, point),
+            copy ? "已新增另一條實體線材；請設定此條線的長度與備註" : "已放置同一條線材的另一個表示"))
+        {
+            if (copy) _selectionId = _getProject().Schematic!.Symbols.Last().SymbolId;
+            _pendingCableRepresentation = null; _copyingPhysicalCable = false; _placeMode = false; _placementPreview = null; Render(_getProject());
+        }
     }
+
+    private void DuplicateCable_Click(object sender, RoutedEventArgs e)
+    {
+        if (_getProject().Schematic?.Symbols.SingleOrDefault(s => s.SymbolId == _selectionId && s.CableInstanceId is not null) is not { } symbol) return;
+        try { BeginAnotherCableRepresentation(symbol, true); }
+        catch (Exception error) { Status.Text = "無法複製線材：" + error.Message; }
+    }
+
+    private void CableProperties_Click(object sender, RoutedEventArgs e)
+    { if (FinishPendingDraft()) TryEditSelectedArchivedCable(); }
 
     private async void CableLibrary_Click(object sender, RoutedEventArgs e)
     {

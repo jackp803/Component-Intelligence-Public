@@ -67,14 +67,15 @@ public sealed class ArchivedCableManufacturingDetailTests
     }
 
     [Fact]
-    public void UnwiredArchivedCableHasDraftDetail()
+    public void UnwiredArchivedCableKeepsDiagnosticsOutsidePrintableDetail()
     {
         var p = Project(); var service = new SchematicCableDetailService();
         var next = service.AddArchivedDetail(p, p.Cables[0].CableInstanceId, "sheet");
         var detail = service.Build(next, next.Schematic!.Pages.Last());
         Assert.Contains("CABLE_MAPPING_UNCONFIRMED", detail.Diagnostics);
         Assert.Contains(detail.Primitives, x => x.Text == "P1 FUNCTION");
-        Assert.Contains(detail.Primitives, x => x.Text?.Contains("草稿") == true);
+        Assert.DoesNotContain(detail.Primitives, x => x.Text?.Contains("草稿") == true || x.Text?.Contains("CABLE_") == true);
+        Assert.Contains(SchematicDraftReview.Inspect(next), x => x.Code == "CABLE_MAPPING_UNCONFIRMED");
         Assert.Contains(detail.Primitives, x => x.Kind == "CIRCLE");
         Assert.Empty(detail.ConnectionIds);
     }

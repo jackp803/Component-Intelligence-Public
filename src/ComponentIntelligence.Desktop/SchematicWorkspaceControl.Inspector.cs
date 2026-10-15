@@ -133,6 +133,9 @@ public partial class SchematicWorkspaceControl
             var wire = project.Schematic?.Wires.SingleOrDefault(w => w.WireId == _selectionId);
             var detail = SelectedCableDetail();
             ModuleInspectorPanel.Visibility = symbol is null ? Visibility.Collapsed : Visibility.Visible;
+            CablePropertiesButton.Visibility = DuplicateCableButton.Visibility = symbol?.CableInstanceId is { } cableId &&
+                project.Cables.Any(c => c.CableInstanceId == cableId && c.ArchivedCable is not null) ? Visibility.Visible : Visibility.Collapsed;
+            AnotherRepresentationButton.Content = symbol?.CableInstanceId is not null ? "同一條線的另一個表示" : "放置另一個表示";
             WireInspectorFields.Visibility = wire is null ? Visibility.Collapsed : Visibility.Visible;
             DetailInspectorFields.Visibility = detail is null ? Visibility.Collapsed : Visibility.Visible;
             InspectorActions.Visibility = InspectorDelete.Visibility = symbol is not null || wire is not null || detail is not null ? Visibility.Visible : Visibility.Collapsed;

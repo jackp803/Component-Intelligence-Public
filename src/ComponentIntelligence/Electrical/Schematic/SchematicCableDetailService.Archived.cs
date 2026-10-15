@@ -128,7 +128,9 @@ public sealed partial class SchematicCableDetailService
             foreach (var end in draft.Ends)
                 Wrapped(end.Name + ": " + (end.Connector is { } c
                     ? $"{c.Family} {c.Coding} {end.Pins.Count}P {c.Gender}" : "接頭待確認"));
-            if (diagnostics.Count > 0) Wrapped("草稿／未完成：" + string.Join(" / ", diagnostics));
+            if (!string.IsNullOrWhiteSpace(cable.Notes))
+                foreach (var note in cable.Notes.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                    Wrapped(note);
             if (draft.InventoryOnly) { Wrapped("Pin 清單：同列不表示導通"); Wrapped("接法以接線圖為準"); }
             var fields = draft.Ends.SelectMany(port => port.PortId == draft.FromSourcePortId
                 ? new[] { (port.PortId, Header: port.Name + " FUNCTION", Function: true), (port.PortId, Header: port.Name + " PIN", Function: false) }

@@ -74,11 +74,18 @@ public sealed partial class SchematicAuthoringService
 
     public ElectricalProject SetArchivedCableDetails(ElectricalProject project, string cableId, string? reference,
         double? lengthMm, string? specification, CableConstructionType construction, IReadOnlyList<CablePinMapping> mapping) =>
+        SetArchivedCableDetails(project, cableId, reference, lengthMm, specification, construction, mapping,
+            project.Cables.Single(c => c.CableInstanceId == cableId).Notes);
+
+    public ElectricalProject SetArchivedCableDetails(ElectricalProject project, string cableId, string? reference,
+        double? lengthMm, string? specification, CableConstructionType construction, IReadOnlyList<CablePinMapping> mapping, string? notes) =>
         Edit(project, (draft, _) =>
         {
             if (lengthMm.HasValue && (!double.IsFinite(lengthMm.Value) || lengthMm <= 0))
                 throw new InvalidOperationException("線材長度必須為正數，或留空待確認。");
             if (!Enum.IsDefined(construction)) throw new InvalidOperationException("Unknown cable construction classification.");
+            if (notes?.Length > 4000 || notes?.Any(c => char.IsControl(c) && c is not ('\r' or '\n' or '\t')) == true)
+                throw new InvalidOperationException("備註最多 4000 字，不能含無效控制字元。");
             var index = draft.Cables.FindIndex(c => c.CableInstanceId == cableId);
             if (index < 0 || draft.Cables[index].ArchivedCable is null)
                 throw new InvalidOperationException("Select an archived physical cable.");
@@ -87,11 +94,38 @@ public sealed partial class SchematicAuthoringService
                 cable = ArchivedCableInstanceFactory.WithMappingOverride(cable, mapping);
             cable.ReferenceDesignator = string.IsNullOrWhiteSpace(reference) ? null : reference.Trim();
             cable.Specification = string.IsNullOrWhiteSpace(specification) ? null : specification.Trim();
+            cable.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
             cable.CableConstructionType = construction;
             if (cable.ProvidedLengthMm != lengthMm)
             { cable.ProvidedLengthMm = lengthMm; cable.LengthSource = lengthMm is null ? CableLengthSource.Unknown : CableLengthSource.User; }
             draft.Cables[index] = cable;
             SchematicCableDetailService.ValidateEditedLayouts(project, draft, cableId);
+        });
+
+    public ElectricalProject DuplicateArchivedCable(ElectricalProject project, string symbolId, string pageId, SchematicPoint position) =>
+        Edit(project, (draft, doc) =>
+        {
+            var source = doc.Symbols.Single(s => s.SymbolId == symbolId);
+            var original = draft.Cables.SingleOrDefault(c => c.CableInstanceId == source.CableInstanceId && c.ArchivedCable is not null)
+                ?? throw new InvalidOperationException("請選取有接線模板的實體線材。");
+            var copy = ArchivedCableInstanceFactory.Duplicate(original);
+            var originalPorts = original.ArchivedCable!.Ports;
+            var ids = originalPorts.ToDictionary(p => p.PortId,
+                p => copy.ArchivedCable!.Ports.Single(c => c.SourcePortId == p.SourcePortId).PortId, StringComparer.Ordinal);
+            foreach (var port in originalPorts)
+                foreach (var pin in port.Pins)
+                    ids.Add(pin.PinId, copy.ArchivedCable!.Ports.Single(p => p.SourcePortId == port.SourcePortId).Pins
+                        .Single(p => p.SourcePinId == pin.SourcePinId).PinId);
+            draft.Cables.Add(copy);
+            doc.Symbols.Add(source with {
+                SymbolId = "symbol-" + Guid.NewGuid().ToString("N"), CableInstanceId = copy.CableInstanceId,
+                PageId = pageId, Position = position, Locked = false,
+                Anchors = source.Anchors.Select(a => a with { EndpointId = ids[a.EndpointId] }).ToList(),
+                CadPortBindings = source.CadPortBindings.Select(b => b with { PortId = ids[b.PortId] }).ToList(),
+                CollapsedPortIds = source.CollapsedPortIds.Select(id => ids[id]).ToList(),
+                PortPlacements = source.PortPlacements.Select(p => p with { PortId = ids[p.PortId] }).ToList(),
+                EndpointDisplayPlacements = source.EndpointDisplayPlacements.Select(p => p with {
+                    EndpointId = ids[p.EndpointId], PortId = ids[p.PortId] }).ToList() });
         });
 
     public ElectricalProject AddArchivedCable(ElectricalProject project, ArchivedCableTemplate template,

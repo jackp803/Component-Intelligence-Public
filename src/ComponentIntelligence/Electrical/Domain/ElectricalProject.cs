@@ -18,13 +18,14 @@ public sealed class ElectricalProject
     public List<CableRoute> CableRoutes { get; init; } = new();
     public List<UnconnectedEndpointReview> EndpointReviews { get; init; } = new();
     public List<TopologyPlacement> TopologyPlacements { get; init; } = new();
+    public List<TopologyRouteGeometry> TopologyRoutes { get; init; } = new();
 }
 
 public sealed class ComponentInstance
 {
     public required string ComponentInstanceId { get; init; }
     public required string ComponentDefinitionId { get; init; }
-    public required string TypeKey { get; init; }
+    public required string TypeKey { get; set; }
     public string? ReferenceDesignator { get; set; }
     public ReferenceSource ReferenceSource { get; set; } = ReferenceSource.AutoAssigned;
     public bool ReferenceLocked { get; set; }
@@ -33,13 +34,14 @@ public sealed class ComponentInstance
     public ResponsibilityScope ResponsibilityScope { get; set; } = ResponsibilityScope.Unknown;
     public List<ComponentPort> Ports { get; init; } = new();
     public PhysicalFootprint? Footprint { get; set; }
+    public bool FootprintOverride { get; set; }
     public PhysicalPlacement? Placement { get; set; }
 }
 
 public sealed class ComponentPort
 {
     public required string PortId { get; init; }
-    public required string Name { get; init; }
+    public required string Name { get; set; }
     public string? Protocol { get; set; }
     public List<string> Capabilities { get; init; } = new();
     public ConnectorDefinition? Connector { get; set; }
@@ -51,7 +53,7 @@ public sealed class ComponentPort
 public sealed class ComponentPin
 {
     public required string PinId { get; init; }
-    public required string PinNumber { get; init; }
+    public required string PinNumber { get; set; }
     public string? PinName { get; set; }
     public string? Function { get; set; }
     public string? Protocol { get; set; }
@@ -70,7 +72,7 @@ public sealed class ComponentPin
 public sealed class ConnectorDefinition
 {
     public required string ConnectorId { get; init; }
-    public required string Family { get; init; }
+    public required string Family { get; set; }
     public string? SeriesOrSize { get; set; }
     public int? PinCount { get; set; }
     public string? Coding { get; set; }
@@ -148,7 +150,8 @@ public sealed class CableCoreDefinition
 public sealed class CableInstance
 {
     public required string CableInstanceId { get; init; }
-    public required string CableDefinitionId { get; init; }
+    public required string CableDefinitionId { get; set; }
+    public string? DisplayName { get; set; }
     public string? ReferenceDesignator { get; set; }
     public double? ProvidedLengthMm { get; set; }
     public CableLengthSource LengthSource { get; set; } = CableLengthSource.Unknown;
@@ -285,6 +288,7 @@ public sealed class PhysicalPlacement
     public double XMm { get; set; }
     public double YMm { get; set; }
     public int RotationDegrees { get; set; }
+    public ComponentMountOrientation MountOrientation { get; set; } = ComponentMountOrientation.Front;
     public string? MountTargetId { get; set; }
     public MountingSurface Surface { get; set; } = MountingSurface.Unknown;
     public double DepthOffsetMm { get; set; }
@@ -356,4 +360,22 @@ public sealed class TopologyPlacement
     public double Width { get; set; } = 140;
     public double Height { get; set; } = 76;
     public int RotationDegrees { get; set; }
+}
+
+/// <summary>
+/// Saved topology-canvas geometry. These coordinates preserve the engineer's visual route across
+/// save/load and are never used as authoritative cable length or physical installation distance.
+/// </summary>
+public sealed class TopologyRouteGeometry
+{
+    public required string ConnectionId { get; init; }
+    public List<TopologyRoutePoint> Points { get; init; } = new();
+    public double? ManualWaypointX { get; set; }
+    public double? ManualWaypointY { get; set; }
+}
+
+public sealed class TopologyRoutePoint
+{
+    public double X { get; set; }
+    public double Y { get; set; }
 }

@@ -41,7 +41,8 @@ public static class ElectricalProjectMigrator
             CableDucts = source.CableDucts,
             CableRoutes = source.CableRoutes,
             EndpointReviews = source.EndpointReviews,
-            TopologyPlacements = source.TopologyPlacements
+            TopologyPlacements = source.TopologyPlacements,
+            TopologyRoutes = source.TopologyRoutes
         };
     }
 
@@ -67,7 +68,8 @@ public static class ElectricalProjectMigrator
             CableDucts = source.CableDucts,
             CableRoutes = source.CableRoutes,
             EndpointReviews = source.EndpointReviews,
-            TopologyPlacements = source.TopologyPlacements
+            TopologyPlacements = source.TopologyPlacements,
+            TopologyRoutes = source.TopologyRoutes
         };
     }
 }

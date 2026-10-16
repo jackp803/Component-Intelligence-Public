@@ -36,10 +36,9 @@ public sealed class PinoutExtractor
                                 spec.Evidence.Any(evidence => evidence.VerificationStatus == VerificationStatus.UserConfirmed);
             if (ocrOnly && !userConfirmed) continue;
 
-            var section = Clean(spec.Section).ToLowerInvariant();
-            var lowerValue = value.ToLowerInvariant();
+            var section = Clean(spec.Section);
             var sectionLooksElectrical = SectionHints.Any(hint => section.Contains(hint, StringComparison.OrdinalIgnoreCase));
-            var valueLooksElectrical = FunctionHints.Any(hint => lowerValue.Contains(hint, StringComparison.OrdinalIgnoreCase));
+            var valueLooksElectrical = FunctionHints.Any(hint => ContainsToken(value, hint));
             if (!sectionLooksElectrical && !valueLooksElectrical) continue;
 
             candidates.Add(new ComponentPin
@@ -73,21 +72,19 @@ public sealed class PinoutExtractor
 
     private static string? InferSignalType(string value)
     {
-        var text = value.ToUpperInvariant();
-        if (ContainsAny(text, "IO-LINK", "IOLINK", "C/Q", "RS485", "RS-485", "ETHERNET", "RX", "TX")) return "Communication";
-        if (ContainsAny(text, "4-20", "4...20", "0-10", "0...10", " AI", "AO ", "ANALOG")) return "Analog";
-        if (ContainsAny(text, "DI", "DO", "DIGITAL")) return "Digital";
-        if (ContainsAny(text, "L+", "L-", "+24", "24V", "24 V", "0V", "0 V", "POWER", "SUPPLY")) return "Power";
-        if (ContainsAny(text, "PE", "FE", "GND", "SG", "SHIELD")) return "Reference";
+        if (ContainsAnyToken(value, "IO-LINK", "IOLINK", "C/Q", "RS485", "RS-485", "ETHERNET", "RX", "TX")) return "Communication";
+        if (ContainsAnyToken(value, "4-20", "4...20", "0-10", "0...10", "AI", "AO", "ANALOG")) return "Analog";
+        if (ContainsAnyToken(value, "DI", "DO", "DIGITAL")) return "Digital";
+        if (ContainsAnyToken(value, "L+", "L-", "+24", "24V", "24 V", "0V", "0 V", "POWER", "SUPPLY")) return "Power";
+        if (ContainsAnyToken(value, "PE", "FE", "GND", "SG", "SHIELD")) return "Reference";
         return null;
     }
 
     private static string? InferDirection(string value)
     {
-        var text = value.ToUpperInvariant();
-        if (Regex.IsMatch(text, @"\b(?:DI|AI|INPUT)\b")) return "Input";
-        if (Regex.IsMatch(text, @"\b(?:DO|AO|OUTPUT)\b")) return "Output";
-        if (ContainsAny(text, "C/Q", "IO-LINK", "IOLINK")) return "Bidirectional";
+        if (ContainsAnyToken(value, "DI", "AI", "INPUT")) return "Input";
+        if (ContainsAnyToken(value, "DO", "AO", "OUTPUT")) return "Output";
+        if (ContainsAnyToken(value, "C/Q", "IO-LINK", "IOLINK")) return "Bidirectional";
         return null;
     }
 
@@ -99,6 +96,13 @@ public sealed class PinoutExtractor
         return $"{match.Groups["v"].Value}V{type}";
     }
 
-    private static bool ContainsAny(string value, params string[] candidates) => candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
+    private static bool ContainsAnyToken(string value, params string[] candidates) => candidates.Any(candidate => ContainsToken(value, candidate));
+
+    private static bool ContainsToken(string value, string token)
+    {
+        var pattern = $@"(?<![A-Za-z0-9]){Regex.Escape(token)}(?![A-Za-z0-9])";
+        return Regex.IsMatch(value, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
     private static string Clean(string? value) => Regex.Replace(value ?? string.Empty, @"\s+", " ").Trim();
 }

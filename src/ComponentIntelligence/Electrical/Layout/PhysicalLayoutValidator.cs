@@ -65,7 +65,8 @@ public sealed class PhysicalLayoutValidator
         var placement = item.Placement;
         if (placement.Surface is MountingSurface.Unknown or MountingSurface.External) return;
 
-        if (item.Footprint.DepthMm is not double depth || depth <= 0)
+        var projection = PhysicalFootprintProjection.Project(item.Footprint, placement);
+        if (projection.ProtrusionMm is not double depth || depth <= 0)
         {
             issues.Add(Warning("RULE-LAYOUT-006", item.ObjectId,
                 "Component Depth（深度）未知；無法完整確認箱內深度與關門空間。"));
@@ -208,9 +209,7 @@ public sealed class PhysicalLayoutValidator
             var used = placed
                 .Where(item => item.Placement.MountTargetId is not null &&
                                string.Equals(item.Placement.MountTargetId, rail.DinRailId, StringComparison.OrdinalIgnoreCase))
-                .Sum(item => Math.Abs(item.Placement.RotationDegrees) % 180 == 0
-                    ? item.Footprint.WidthMm
-                    : item.Footprint.HeightMm);
+                .Sum(item => PhysicalFootprintProjection.Project(item.Footprint, item.Placement).WidthMm);
 
             if (used > rail.LengthMm + 1e-9)
                 issues.Add(Block("RULE-LAYOUT-007", rail.DinRailId, $"DIN rail usage {used:g} mm exceeds rail length {rail.LengthMm:g} mm."));
@@ -240,10 +239,8 @@ public sealed class PhysicalLayoutValidator
 
     private static RectMm GetBodyBounds(PhysicalPlacement placement, PhysicalFootprint footprint)
     {
-        var rotated = Math.Abs(placement.RotationDegrees) % 180 == 90;
-        var width = rotated ? footprint.HeightMm : footprint.WidthMm;
-        var height = rotated ? footprint.WidthMm : footprint.HeightMm;
-        return new RectMm(placement.XMm, placement.YMm, width, height);
+        var projection = PhysicalFootprintProjection.Project(footprint, placement);
+        return new RectMm(placement.XMm, placement.YMm, projection.WidthMm, projection.HeightMm);
     }
 
     private static RectMm GetClearanceBounds(PhysicalPlacement placement, PhysicalFootprint footprint)
@@ -275,13 +272,14 @@ public sealed class PhysicalLayoutValidator
 
     private static (double Start, double End)? GetLocalDepthInterval(PlacedObject item)
     {
-        if (item.Footprint.DepthMm is not double depth || depth <= 0) return null;
+        if (PhysicalFootprintProjection.Project(item.Footprint, item.Placement).ProtrusionMm is not double depth || depth <= 0) return null;
         return (item.Placement.DepthOffsetMm, item.Placement.DepthOffsetMm + depth);
     }
 
     private static (double Start, double End)? GetCabinetDepthInterval(PlacedObject item, LayoutContainer container)
     {
-        if (container.DepthMm is not double cabinetDepth || item.Footprint.DepthMm is not double depth || depth <= 0) return null;
+        if (container.DepthMm is not double cabinetDepth ||
+            PhysicalFootprintProjection.Project(item.Footprint, item.Placement).ProtrusionMm is not double depth || depth <= 0) return null;
         var offset = item.Placement.DepthOffsetMm;
         return item.Placement.Surface switch
         {

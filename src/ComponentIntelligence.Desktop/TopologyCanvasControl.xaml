@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              MinHeight="420" MinWidth="700"
              Focusable="True"
+             Loaded="TopologyCanvas_Loaded"
              PreviewMouseLeftButtonDown="TopologyCanvas_PreviewMouseLeftButtonDown"
              PreviewMouseRightButtonDown="TopologyCanvas_PreviewMouseRightButtonDown"
              PreviewKeyDown="TopologyCanvas_PreviewKeyDown">
@@ -18,6 +19,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <Button x:Name="SelectModeButton" Content="選取 / Select" Padding="12,5" Margin="0,0,6,0" Click="SelectMode_Click" />
                     <Button x:Name="WireModeButton" Content="拉線 / Wire" Padding="12,5" Margin="0,0,6,0" Click="WireMode_Click" ToolTip="左鍵點第一個 Port 或端子圓點，再移動到第二個端點左鍵完成；Esc / 右鍵取消" />
+                    <Button Content="自動排版 / Auto Layout" Padding="12,5" Margin="0,0,6,0" Click="AutoRouteConnections_Click" ToolTip="依接線關係重新排列畫布上的元件，再計算全部 90° 配線通道；可使用 Undo 復原" />
                     <Button Content="匯出 PDF" Padding="12,5" Margin="0,0,6,0" Click="ExportPdf_Click" ToolTip="把目前可見的拓樸畫布匯出為 PDF" />
                     <Button Content="? 操作說明" Padding="12,5" Click="ShowHelp_Click" />
                 </StackPanel>
@@ -28,16 +30,60 @@
         <Border x:Name="HintBanner" Grid.Row="1" BorderBrush="#B9D7F2" BorderThickness="1" CornerRadius="5" Background="#EEF7FF" Padding="8" Margin="0,0,0,8">
             <DockPanel>
                 <Button Content="×" DockPanel.Dock="Right" Width="26" Height="24" Padding="0" Click="DismissHint_Click" ToolTip="關閉提示" />
-                <TextBlock x:Name="HintText" Text="操作提示：拖曳元件可移動；按「拉線」後左鍵點 A Port／端子圓點，預覽線會跟著滑鼠，再左鍵點 B 端點完成；Esc / 右鍵取消。雙擊線路可插入 Terminal（顯示為小圓圈）、Connector 或設定 Cable Segment；端子圓點可再拉出並聯支線。" TextWrapping="Wrap" Foreground="#245A85" VerticalAlignment="Center" />
+                <TextBlock x:Name="HintText" Text="操作提示：框選後按 Del 可刪線，並將一般元件移回左側清單；端子台會保留。Ctrl + 滑鼠滾輪可縮放。" TextWrapping="Wrap" Foreground="#245A85" VerticalAlignment="Center" />
             </DockPanel>
         </Border>
 
-        <Border Grid.Row="2" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="6" Background="#F7F7F7">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <Canvas x:Name="Surface" Width="1800" Height="1200" Background="White"
-                        MouseMove="Surface_WirePreviewMouseMove"
-                        LayoutUpdated="Surface_LayoutUpdated" />
-            </ScrollViewer>
-        </Border>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="6" Background="#FAFAFA" Padding="8" Margin="0,0,6,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock Text="元件 / Components" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock Text="下方顯示尚未放上畫布的專案元件。公用 Phoenix 端子台／短路片請從中央歸檔選擇後按＋；每按一次新增一個，並同步到 Layout。" Foreground="#666" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBlock Text="Phoenix 端子台" FontWeight="SemiBold" Margin="0,8,0,3" />
+                        <DockPanel>
+                            <Button Content="＋" DockPanel.Dock="Right" Width="34" Margin="6,0,0,0" Click="AddArchivedTerminal_Click" ToolTip="新增一個選定的公用端子台到 Topology 與 Layout" />
+                            <ComboBox x:Name="TerminalArchiveCombo" DisplayMemberPath="Display" DropDownOpened="ArchiveMaterialCombo_DropDownOpened" />
+                        </DockPanel>
+                        <TextBlock x:Name="TerminalProjectCountText" Text="專案數量：0" Foreground="#666" Margin="0,2,0,0" />
+                        <TextBlock Text="Phoenix 短路片" FontWeight="SemiBold" Margin="0,7,0,3" />
+                        <DockPanel>
+                            <Button Content="＋" DockPanel.Dock="Right" Width="34" Margin="6,0,0,0" Click="AddArchivedJumper_Click" ToolTip="新增一個選定的公用短路片到 Topology 與 Layout" />
+                            <ComboBox x:Name="JumperArchiveCombo" DisplayMemberPath="Display" DropDownOpened="ArchiveMaterialCombo_DropDownOpened" />
+                        </DockPanel>
+                        <TextBlock x:Name="JumperProjectCountText" Text="專案數量：0" Foreground="#666" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <ListBox x:Name="TopologyPalette"
+                             DisplayMemberPath="Display"
+                             PreviewMouseLeftButtonDown="TopologyPalette_PreviewMouseLeftButtonDown"
+                             PreviewMouseMove="TopologyPalette_PreviewMouseMove"
+                             HorizontalContentAlignment="Stretch" />
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#E5E5E5" ShowsPreview="True" />
+
+            <Border Grid.Column="2" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="6" Background="#F7F7F7">
+                <ScrollViewer x:Name="TopologyScrollViewer"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              PreviewMouseWheel="TopologyScrollViewer_PreviewMouseWheel">
+                    <Canvas x:Name="Surface" Width="3200" Height="2000" Background="White" AllowDrop="True"
+                            DragOver="Surface_TopologyPaletteDragOver"
+                            Drop="Surface_TopologyPaletteDrop"
+                            MouseMove="Surface_WirePreviewMouseMove">
+                        <Canvas.LayoutTransform>
+                            <ScaleTransform x:Name="TopologyZoomTransform" ScaleX="1" ScaleY="1" />
+                        </Canvas.LayoutTransform>
+                    </Canvas>
+                </ScrollViewer>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

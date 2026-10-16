@@ -28,6 +28,14 @@ public sealed class ComponentSearchService
             SpareQuantity = 0,
             Notes = forceRefresh ? "Manual component deep search" : "Manual component search"
         };
-        return new ComponentSearchResult(row, await _pipeline.ProcessAsync(row, forceRefresh, cancellationToken));
+
+        // Normal Search is a read-through lookup: if central/local knowledge already exists, return it
+        // without silently starting network/PDF enrichment. Deep Search is the explicit refresh action.
+        var result = await _pipeline.ProcessAsync(
+            row,
+            forceRefresh,
+            enrichIncompleteExistingKnowledge: forceRefresh,
+            cancellationToken);
+        return new ComponentSearchResult(row, result);
     }
 }

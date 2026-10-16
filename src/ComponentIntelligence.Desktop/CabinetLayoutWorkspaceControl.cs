@@ -38,6 +38,8 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
 
     private readonly TextBlock _selectedLabel = new() { Text = "尚未選取 / Nothing selected", TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold };
     private readonly ComboBox _selectedSurface = new();
+    private readonly ComboBox _mountOrientation = new() { DisplayMemberPath = nameof(OrientationChoice.Label) };
+    private readonly TextBlock _rotationSummary = new() { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
     private readonly TextBox _x = Box("0");
     private readonly TextBox _y = Box("0");
     private readonly TextBox _width = Box(string.Empty);
@@ -66,6 +68,8 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         _surfaceCombo.SelectedItem = MountingSurface.Backplate;
         _selectedSurface.ItemsSource = Enum.GetValues<MountingSurface>();
         _selectedSurface.SelectedItem = MountingSurface.Backplate;
+        _mountOrientation.ItemsSource = OrientationChoices;
+        _mountOrientation.SelectedIndex = 0;
 
         Content = BuildUi();
 
@@ -225,11 +229,16 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         properties.Children.Add(new TextBlock { Text = "選取物件 / Selected", FontSize = 16, FontWeight = FontWeights.SemiBold });
         properties.Children.Add(_selectedLabel);
         properties.Children.Add(Field("Mounting Surface｜安裝面", _selectedSurface));
+        properties.Children.Add(Field("安裝方向 / Mounted face", _mountOrientation));
         properties.Children.Add(TwoFields("X mm", _x, "Y mm", _y));
         properties.Children.Add(TwoFields("Width mm", _width, "Height mm", _height));
         properties.Children.Add(TwoFields("Depth mm", _depth, "Depth Offset mm", _depthOffset));
         var propertyButtons = new WrapPanel { Margin = new Thickness(0, 6, 0, 8) };
         propertyButtons.Children.Add(Button("套用 / Apply", (_, _) => ApplySelection()));
+        var rotate = Button("旋轉 90°", (_, _) => RotateSelection());
+        rotate.Margin = new Thickness(6, 0, 0, 0);
+        propertyButtons.Children.Add(rotate);
+        propertyButtons.Children.Add(_rotationSummary);
         var external = Button("標記箱外 External", (_, _) => MarkExternal());
         external.Margin = new Thickness(6, 0, 0, 0);
         propertyButtons.Children.Add(external);
@@ -440,6 +449,14 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             return;
         }
         var surface = _selectedSurface.SelectedItem is MountingSurface selectedSurface ? selectedSurface : MountingSurface.Unknown;
+        var mountOrientation = _mountOrientation.SelectedItem is OrientationChoice orientation
+            ? orientation.Value
+            : ComponentMountOrientation.Front;
+        if (mountOrientation is not ComponentMountOrientation.Front && depth is null)
+        {
+            MessageBox.Show("側面或平放投影需要 Depth 尺寸。", "Layout", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
 
         _recordMutation($"Edit cabinet layout properties for {target.Label}");
         target.Footprint ??= new PhysicalFootprint();
@@ -447,12 +464,19 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         target.Footprint.HeightMm = height;
         target.Footprint.DepthMm = depth;
         target.Footprint.MountingType = MapMountingType(surface, target.Footprint.MountingType);
+        if (target.Kind == LayoutObjectKind.Component)
+        {
+            var component = project.Components.First(item =>
+                string.Equals(item.ComponentInstanceId, target.ObjectId, StringComparison.OrdinalIgnoreCase));
+            component.FootprintOverride = true;
+        }
         target.Placement = new PhysicalPlacement
         {
             ParentContainerId = container.ContainerId,
             XMm = x,
             YMm = y,
             RotationDegrees = target.Placement?.RotationDegrees ?? 0,
+            MountOrientation = mountOrientation,
             MountTargetId = target.Placement?.MountTargetId,
             Surface = surface,
             DepthOffsetMm = depthOffset
@@ -460,6 +484,20 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         _status($"已更新 {target.Label} 的 Physical Layout。未知 Depth 仍保持未知，不會假裝 FIT。");
         _projectChanged();
         RefreshWorkspace();
+    }
+
+    private void RotateSelection()
+    {
+        if (_selection is null) return;
+        var target = ResolveObject(_projectAccessor(), _selection.ObjectId, _selection.Kind);
+        if (target?.Placement is null) return;
+
+        _recordMutation($"Rotate {target.Label} in cabinet layout");
+        target.Placement.RotationDegrees = PhysicalFootprintProjection.NormalizeRotation(target.Placement.RotationDegrees + 90);
+        _status($"已將 {target.Label} 旋轉至 {target.Placement.RotationDegrees}°。");
+        _projectChanged();
+        RefreshCanvasAndFit();
+        LoadSelection();
     }
 
     private void MarkExternal()
@@ -506,18 +544,21 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         var items = new List<PaletteItem>();
         items.AddRange(project.Components
             .Where(component => component.ResponsibilityScope is not (ResponsibilityScope.OutOfScope or ResponsibilityScope.NotRequired))
+            .Where(component => component.Placement is null)
             .Select(component => new PaletteItem(
                 LayoutObjectKind.Component,
                 component.ComponentInstanceId,
-                component.ReferenceDesignator ?? component.DisplayName ?? component.ComponentInstanceId,
+                component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId,
                 DescribeSize(component.Footprint),
                 component.Placement?.Surface ?? MountingSurface.Unknown)));
-        items.AddRange(project.TerminalBlocks.Select(block => new PaletteItem(
-            LayoutObjectKind.TerminalBlock,
-            block.TerminalBlockId,
-            block.ReferenceDesignator,
-            DescribeSize(block.Footprint),
-            block.Placement?.Surface ?? MountingSurface.Unknown)));
+        items.AddRange(project.TerminalBlocks
+            .Where(block => block.Placement is null)
+            .Select(block => new PaletteItem(
+                LayoutObjectKind.TerminalBlock,
+                block.TerminalBlockId,
+                block.ReferenceDesignator,
+                DescribeSize(block.Footprint),
+                block.Placement?.Surface ?? MountingSurface.Unknown)));
         _palette.ItemsSource = items.OrderBy(item => item.Label, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
@@ -633,9 +674,9 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
     {
         var placement = target.Placement!;
         var footprint = target.Footprint!;
-        var rotated = Math.Abs(placement.RotationDegrees) % 180 == 90;
-        var width = (rotated ? footprint.HeightMm : footprint.WidthMm) * _scale;
-        var height = (rotated ? footprint.WidthMm : footprint.HeightMm) * _scale;
+        var projection = PhysicalFootprintProjection.Project(footprint, placement);
+        var width = projection.WidthMm * _scale;
+        var height = projection.HeightMm * _scale;
         var isSelected = _selection is not null && _selection.Kind == target.Kind && string.Equals(_selection.ObjectId, target.ObjectId, StringComparison.OrdinalIgnoreCase);
 
         var border = new Border
@@ -648,7 +689,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             Opacity = overlay ? 0.35 : 0.92,
             CornerRadius = new CornerRadius(3),
             Tag = new NodeTag(target.Kind, target.ObjectId),
-            ToolTip = $"{target.Label}\nSurface: {placement.Surface}\nW/H/D: {footprint.WidthMm:0.###}/{footprint.HeightMm:0.###}/{(footprint.DepthMm?.ToString("0.###", CultureInfo.InvariantCulture) ?? "?")} mm\nDepth offset: {placement.DepthOffsetMm:0.###} mm"
+            ToolTip = $"{target.Label}\nSurface: {placement.Surface}\nMounted face: {placement.MountOrientation}, {PhysicalFootprintProjection.NormalizeRotation(placement.RotationDegrees)}°\nSource W/H/D: {footprint.WidthMm:0.###}/{footprint.HeightMm:0.###}/{(footprint.DepthMm?.ToString("0.###", CultureInfo.InvariantCulture) ?? "?")} mm\nShown W/H: {projection.WidthMm:0.###}/{projection.HeightMm:0.###} mm\nProtrusion: {(projection.ProtrusionMm?.ToString("0.###", CultureInfo.InvariantCulture) ?? "?")} mm\nDepth offset: {placement.DepthOffsetMm:0.###} mm"
         };
         border.Child = new TextBlock
         {
@@ -711,6 +752,9 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         if (target is null) return;
         _selectedLabel.Text = $"{target.Label}\n{target.Kind} | {target.ObjectId}";
         _selectedSurface.SelectedItem = target.Placement?.Surface ?? MountingSurface.Unknown;
+        var mountOrientation = target.Placement?.MountOrientation ?? ComponentMountOrientation.Front;
+        _mountOrientation.SelectedItem = OrientationChoices.First(choice => choice.Value == mountOrientation);
+        _rotationSummary.Text = $"目前 {PhysicalFootprintProjection.NormalizeRotation(target.Placement?.RotationDegrees ?? 0)}°";
         _x.Text = Format(target.Placement?.XMm ?? 0);
         _y.Text = Format(target.Placement?.YMm ?? 0);
         _width.Text = target.Footprint is null || target.Footprint.WidthMm <= 0 ? string.Empty : Format(target.Footprint.WidthMm);
@@ -734,6 +778,13 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
 
     private static IEnumerable<MountingSurface> EditableSurfaces() =>
         Enum.GetValues<MountingSurface>().Where(surface => surface is not (MountingSurface.Unknown or MountingSurface.External));
+
+    private static readonly OrientationChoice[] OrientationChoices =
+    [
+        new(ComponentMountOrientation.Front, "正面 W×H"),
+        new(ComponentMountOrientation.Side, "側面 D×H"),
+        new(ComponentMountOrientation.Top, "平放 W×D")
+    ];
 
     private static (double Width, double Height)? FaceSize(LayoutContainer container, MountingSurface surface) => surface switch
     {
@@ -761,7 +812,7 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
     {
         foreach (var component in project.Components)
             yield return new LayoutTarget(LayoutObjectKind.Component, component.ComponentInstanceId,
-                component.ReferenceDesignator ?? component.DisplayName ?? component.ComponentInstanceId,
+                component.ReferenceDesignator ?? component.EquipmentTag ?? component.DisplayName ?? component.ComponentInstanceId,
                 component.Footprint, component.Placement,
                 footprint => component.Footprint = footprint,
                 placement => component.Placement = placement);
@@ -833,10 +884,14 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         public string Display => $"{Label}\n{Size}\n{(Surface == MountingSurface.Unknown ? "未分類" : Surface.ToString())}";
     }
 
+    private sealed record OrientationChoice(ComponentMountOrientation Value, string Label);
+
     private sealed class LayoutTarget
     {
         private readonly Action<PhysicalFootprint?> _setFootprint;
         private readonly Action<PhysicalPlacement?> _setPlacement;
+        private PhysicalFootprint? _footprint;
+        private PhysicalPlacement? _placement;
 
         public LayoutTarget(
             LayoutObjectKind kind,
@@ -850,10 +905,10 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
             Kind = kind;
             ObjectId = objectId;
             Label = label;
-            Footprint = footprint;
-            Placement = placement;
             _setFootprint = setFootprint;
             _setPlacement = setPlacement;
+            Footprint = footprint;
+            Placement = placement;
         }
 
         public LayoutObjectKind Kind { get; }
@@ -861,13 +916,13 @@ public sealed class CabinetLayoutWorkspaceControl : UserControl
         public string Label { get; }
         public PhysicalFootprint? Footprint
         {
-            get => field;
-            set { field = value; _setFootprint(value); }
+            get => _footprint;
+            set { _footprint = value; _setFootprint(value); }
         }
         public PhysicalPlacement? Placement
         {
-            get => field;
-            set { field = value; _setPlacement(value); }
+            get => _placement;
+            set { _placement = value; _setPlacement(value); }
         }
     }
 }

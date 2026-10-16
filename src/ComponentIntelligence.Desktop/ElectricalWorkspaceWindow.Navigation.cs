@@ -4,8 +4,8 @@ namespace ComponentIntelligence.Desktop;
 
 public partial class ElectricalWorkspaceWindow
 {
-    public ElectricalWorkspaceWindow(string databasePath, bool openTopology)
-        : this(databasePath)
+    public ElectricalWorkspaceWindow(string databasePath, bool openTopology, string? centralWorkbookPath = null)
+        : this(databasePath, centralWorkbookPath)
     {
         if (!openTopology) return;
         SelectTopologyTab();

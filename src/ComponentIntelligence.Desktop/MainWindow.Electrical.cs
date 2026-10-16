@@ -8,7 +8,7 @@ public partial class MainWindow
     {
         if (!EnsureBomProcessedBeforeElectricalView()) return;
 
-        var workspace = new ElectricalWorkspaceWindow(_databasePath)
+        var workspace = new ElectricalWorkspaceWindow(_databasePath, LoadCentralWorkbookPath())
         {
             Owner = this
         };
@@ -20,7 +20,7 @@ public partial class MainWindow
     {
         if (!EnsureBomProcessedBeforeElectricalView()) return;
 
-        var workspace = new ElectricalWorkspaceWindow(_databasePath, openTopology: true)
+        var workspace = new ElectricalWorkspaceWindow(_databasePath, openTopology: true, LoadCentralWorkbookPath())
         {
             Owner = this
         };

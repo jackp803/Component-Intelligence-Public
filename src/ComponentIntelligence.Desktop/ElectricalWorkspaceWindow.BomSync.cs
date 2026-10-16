@@ -6,25 +6,30 @@ namespace ComponentIntelligence.Desktop;
 public partial class ElectricalWorkspaceWindow
 {
     private bool _workingBomSyncScheduled;
+    private IReadOnlyList<BomRow> _workingBomSnapshot = Array.Empty<BomRow>();
+    private readonly SemaphoreSlim _workingBomSyncGate = new(1, 1);
 
     public void SynchronizeWorkingBomOnLoad(IReadOnlyList<BomRow> workingBom)
     {
         ArgumentNullException.ThrowIfNull(workingBom);
+        _workingBomSnapshot = workingBom.ToArray();
         if (_workingBomSyncScheduled) return;
 
         _workingBomSyncScheduled = true;
-        var snapshot = workingBom.ToArray();
-        Loaded += async (_, _) => await SynchronizeWorkingBomAsync(snapshot);
+        Loaded += async (_, _) => await SynchronizeWorkingBomAsync(_workingBomSnapshot);
     }
 
     private async Task SynchronizeWorkingBomAsync(IReadOnlyList<BomRow> workingBom)
     {
         if (workingBom.Count == 0)
         {
+            TopologyCanvas.SetAvailableCableMaterials(Array.Empty<BomConnectionMaterialOption>());
             WorkspaceStatusText.Text = "BOM → Topology：目前 working BOM 無資料。";
             return;
         }
 
+        await _workingBomSyncGate.WaitAsync();
+        var targetProject = _project;
         try
         {
             var catalog = new ComponentIrCatalogReader(_databasePath);
@@ -47,20 +52,37 @@ public partial class ElectricalWorkspaceWindow
             }
 
             var result = await new BomTopologySynchronizer().SynchronizeAsync(
-                _project,
+                targetProject,
                 workingBom,
                 ResolveProcessedKnowledgeAsync);
 
+            // Loading a saved project can replace _project while an earlier initial sync is still
+            // resolving Component IR.  Never repaint that newer project with stale sync results;
+            // LoadProject_Click immediately performs a fresh sync against the loaded snapshot.
+            if (!ReferenceEquals(targetProject, _project)) return;
+
+            TopologyCanvas.SetAvailableCableMaterials(result.ConnectionMaterials);
             RefreshAll();
             WorkspaceStatusText.Text =
                 $"Processed BOM → Topology：新增 {result.AddedInstances}；" +
                 $"完整 IR {result.RichInstances}；Placeholder {result.PlaceholderInstances}；" +
-                $"連線材料 {result.DeferredConnectionMaterialRows}；" +
-                $"Qty ? {result.UnknownQuantityRows}；Spare-only 略過 {result.SkippedSpareOnlyRows}。";
+                $"連線材料 {result.DeferredConnectionMaterialRows}（可選型號 {result.ConnectionMaterials.Count}）；" +
+                $"Qty ? {result.UnknownQuantityRows}；Spare-only 略過 {result.SkippedSpareOnlyRows}。" +
+                "舊專案的位置與接線已保留；請按「儲存」寫回更新後的專案。";
+
+            // Project instances are snapshots. Refresh their authoritative component knowledge
+            // after BOM merge so central PortRole/Direction/PhysicalSide changes appear immediately
+            // when the workspace is reopened, while project placement and wiring remain untouched.
+            await SynchronizeCentralArchiveOnLoadAsync();
         }
         catch (Exception exception)
         {
-            WorkspaceStatusText.Text = $"Processed BOM → Topology 同步失敗：{exception.Message}";
+            if (ReferenceEquals(targetProject, _project))
+                WorkspaceStatusText.Text = $"Processed BOM → Topology 同步失敗：{exception.Message}";
+        }
+        finally
+        {
+            _workingBomSyncGate.Release();
         }
     }
 }

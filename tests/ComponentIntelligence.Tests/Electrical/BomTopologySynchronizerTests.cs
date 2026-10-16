@@ -124,7 +124,30 @@ public sealed class BomTopologySynchronizerTests
         Assert.Equal(0, result.RichInstances);
         Assert.Equal(0, result.PlaceholderInstances);
         Assert.Equal(1, result.DeferredConnectionMaterialRows);
+        var material = Assert.Single(result.ConnectionMaterials);
+        Assert.Equal("CMP-CABLE-001", material.CableDefinitionId);
+        Assert.Equal("Vendor", material.Manufacturer);
+        Assert.Equal("CABLE-001", material.Model);
+        Assert.Equal(category, material.Category);
+        Assert.Equal(3, material.AvailableQuantity);
+        Assert.Contains("BOM Qty 3", material.DisplayLabel, StringComparison.Ordinal);
         Assert.Empty(project.Components);
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_RepeatedCableRowsBecomeOneDropdownChoiceWithCombinedQuantity()
+    {
+        var project = NewProject();
+        var component = NewComponentIr("CMP-WIRE-001", "Vendor", "WIRE-001", category: "Wire");
+
+        var result = await new BomTopologySynchronizer().SynchronizeAsync(
+            project,
+            [NewRow("C3", "Vendor", "WIRE-001", used: 2, spare: 0),
+             NewRow("C4", "Vendor", "WIRE-001", used: 3, spare: 0)],
+            (_, _, _) => Task.FromResult<ComponentIR?>(component));
+
+        var material = Assert.Single(result.ConnectionMaterials);
+        Assert.Equal(5, material.AvailableQuantity);
     }
 
     [Fact]
@@ -180,6 +203,46 @@ public sealed class BomTopologySynchronizerTests
         Assert.Equal(0, second.AddedInstances);
         Assert.Equal(3, project.Components.Count);
         Assert.Equal(3, project.Components.Select(component => component.ComponentInstanceId).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
+    public async Task SynchronizeAsync_NewBomRowsMergeIntoSavedProjectWithoutChangingExistingLayoutOrConnections()
+    {
+        var project = NewProject();
+        var originalRow = NewRow("10", "IFM", "AL1342", used: 1, spare: 0);
+        var addedRow = NewRow("11", "IFM", "PL1514", used: 1, spare: 0);
+        var synchronizer = new BomTopologySynchronizer();
+
+        await synchronizer.SynchronizeAsync(project, [originalRow], (_, _, _) => Task.FromResult<ComponentIR?>(null));
+        var original = Assert.Single(project.Components);
+        project.TopologyPlacements.Add(new TopologyPlacement
+        {
+            ObjectId = original.ComponentInstanceId,
+            ObjectKind = "Component",
+            X = 321,
+            Y = 123
+        });
+        project.Connections.Add(new ElectricalConnection
+        {
+            ConnectionId = "saved-connection",
+            FromEndpointId = "saved-from",
+            ToEndpointId = "saved-to"
+        });
+
+        var result = await synchronizer.SynchronizeAsync(
+            project,
+            [originalRow, addedRow],
+            (_, _, _) => Task.FromResult<ComponentIR?>(null));
+
+        Assert.Equal(1, result.AddedInstances);
+        Assert.Equal(2, project.Components.Count);
+        Assert.Contains(project.Components, component =>
+            component.DisplayName?.Contains("IFM PL1514", StringComparison.OrdinalIgnoreCase) == true);
+        var placement = Assert.Single(project.TopologyPlacements);
+        Assert.Equal(original.ComponentInstanceId, placement.ObjectId);
+        Assert.Equal(321, placement.X);
+        Assert.Equal(123, placement.Y);
+        Assert.Equal("saved-connection", Assert.Single(project.Connections).ConnectionId);
     }
 
     private static ElectricalProject NewProject() => new()

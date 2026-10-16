@@ -36,8 +36,10 @@ jobs:
       - name: Run deterministic MVP demo
         run: dotnet run --project src/ComponentIntelligence.Cli/ComponentIntelligence.Cli.csproj --configuration Release --no-build -- demo --db artifacts/ci-mvp.db
       - name: Publish Windows desktop x64
+        if: github.event_name != 'pull_request'
         run: dotnet publish src/ComponentIntelligence.Desktop/ComponentIntelligence.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/desktop-win-x64
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           name: ComponentIntelligence-Desktop-win-x64
           path: artifacts/desktop-win-x64

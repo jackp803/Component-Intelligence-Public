@@ -10,7 +10,22 @@ public sealed record BomTopologySyncResult(
     int PlaceholderInstances,
     int UnknownQuantityRows,
     int SkippedSpareOnlyRows,
-    int DeferredConnectionMaterialRows);
+    int DeferredConnectionMaterialRows)
+{
+    public IReadOnlyList<BomConnectionMaterialOption> ConnectionMaterials { get; init; } =
+        Array.Empty<BomConnectionMaterialOption>();
+}
+
+public sealed record BomConnectionMaterialOption(
+    string CableDefinitionId,
+    string Manufacturer,
+    string Model,
+    string Category,
+    int? AvailableQuantity)
+{
+    public string DisplayLabel =>
+        $"{Manufacturer} {Model} · {Category} · BOM Qty {(AvailableQuantity is int quantity ? quantity : "?")}";
+}
 
 /// <summary>
 /// Projects the working BOM into installed electrical objects for the topology workspace.
@@ -38,6 +53,7 @@ public sealed class BomTopologySynchronizer
         var unknownQuantity = 0;
         var spareOnly = 0;
         var deferredConnectionMaterial = 0;
+        var connectionMaterials = new Dictionary<string, BomConnectionMaterialOption>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in rows)
         {
@@ -77,6 +93,7 @@ public sealed class BomTopologySynchronizer
                 ComponentMaterialRolePolicy.Classify(component) == BomTopologyDisposition.DeferredConnectionMaterial)
             {
                 deferredConnectionMaterial++;
+                AddConnectionMaterial(connectionMaterials, component, row);
                 if (quantityUnknown) unknownQuantity++;
                 continue;
             }
@@ -112,6 +129,7 @@ public sealed class BomTopologySynchronizer
                 if (component is not null)
                 {
                     instance = _bridge.CreateInstance(component, instanceId);
+                    instance.Footprint ??= ComponentPhysicalKnowledgeMapper.TryCreateFootprint(component);
                     instance.DisplayName = InstanceDisplayName(manufacturer, model, index, installedQuantity, quantityUnknown: false);
                     instance.ResponsibilityScope = ResponsibilityScope.InScope;
                     rich++;
@@ -142,7 +160,41 @@ public sealed class BomTopologySynchronizer
             placeholders,
             unknownQuantity,
             spareOnly,
-            deferredConnectionMaterial);
+            deferredConnectionMaterial)
+        {
+            ConnectionMaterials = connectionMaterials.Values
+                .OrderBy(item => item.Manufacturer, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => item.Model, StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+        };
+    }
+
+    private static void AddConnectionMaterial(
+        IDictionary<string, BomConnectionMaterialOption> materials,
+        ComponentIR component,
+        BomRow row)
+    {
+        var definitionId = component.Identity.ComponentId.Trim();
+        var manufacturer = component.Identity.Manufacturer.Trim();
+        var model = component.Identity.Model.Trim();
+        var category = string.IsNullOrWhiteSpace(component.Classification.Category)
+            ? "Connection Material"
+            : component.Classification.Category.Trim();
+        var quantity = row.UsedQuantity;
+
+        if (materials.TryGetValue(definitionId, out var existing))
+        {
+            quantity = existing.AvailableQuantity is int previous && quantity is int current
+                ? previous + current
+                : null;
+        }
+
+        materials[definitionId] = new BomConnectionMaterialOption(
+            definitionId,
+            manufacturer,
+            model,
+            category,
+            quantity);
     }
 
     private static string InstanceDisplayName(string manufacturer, string model, int index, int count, bool quantityUnknown)

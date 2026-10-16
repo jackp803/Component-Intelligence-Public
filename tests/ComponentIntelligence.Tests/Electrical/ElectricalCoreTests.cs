@@ -199,14 +199,35 @@ public sealed class ElectricalCoreTests
             var project = NewProject();
             project.Name = "Electrical test";
             project.Nets.Add(new NetDefinition { NetId = "net-1", Label = "54V+", Layer = ElectricalLayer.Power });
+            project.TopologyRoutes.Add(new TopologyRouteGeometry
+            {
+                ConnectionId = "connection-1",
+                ManualWaypointX = 240,
+                ManualWaypointY = 180,
+                Points =
+                {
+                    new TopologyRoutePoint { X = 10, Y = 20 },
+                    new TopologyRoutePoint { X = 240, Y = 20 },
+                    new TopologyRoutePoint { X = 240, Y = 180 }
+                }
+            });
 
             await repository.SaveAsync(project);
             var loaded = await repository.GetAsync(project.ProjectId);
+            var savedProjects = await repository.ListAsync();
 
             Assert.NotNull(loaded);
             Assert.Equal("Electrical test", loaded!.Name);
             Assert.Single(loaded.Nets);
             Assert.Equal("54V+", loaded.Nets[0].Label);
+            var route = Assert.Single(loaded.TopologyRoutes);
+            Assert.Equal("connection-1", route.ConnectionId);
+            Assert.Equal(3, route.Points.Count);
+            Assert.Equal(240, route.ManualWaypointX);
+            Assert.Equal(180, route.ManualWaypointY);
+            var summary = Assert.Single(savedProjects);
+            Assert.Equal(project.ProjectId, summary.ProjectId);
+            Assert.Equal("Electrical test", summary.Name);
         }
         finally
         {

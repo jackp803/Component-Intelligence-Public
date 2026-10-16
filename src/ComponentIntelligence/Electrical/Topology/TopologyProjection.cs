@@ -27,34 +27,202 @@ public sealed record TopologyGraph
     public required IReadOnlyList<TopologyEdge> Edges { get; init; }
 }
 
+public sealed record TopologyArrangementResult(
+    int NodeCount,
+    int ConnectionCount,
+    int GraphGroupCount,
+    int LayerCount,
+    double RequiredWidth,
+    double RequiredHeight);
+
 public sealed class TopologyProjection
 {
+    /// <summary>
+    /// Repositions only objects already present on the topology canvas. Connected objects are split
+    /// into weak graph groups, layered from connection source to destination, and ordered near their
+    /// upstream neighbours. Existing component sizes are respected so columns and rows never overlap.
+    /// </summary>
+    public TopologyArrangementResult ArrangeConnectedPlacements(
+        ElectricalProject project,
+        double startX = 80d,
+        double startY = 70d,
+        double horizontalGap = 220d,
+        double verticalGap = 70d)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        var placements = project.TopologyPlacements
+            .GroupBy(placement => placement.ObjectId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToDictionary(placement => placement.ObjectId, StringComparer.OrdinalIgnoreCase);
+        if (placements.Count == 0)
+            return new TopologyArrangementResult(0, 0, 0, 0, startX, startY);
+
+        var endpointOwners = BuildEndpointOwners(project);
+        var edgeList = new List<LayoutEdge>();
+        foreach (var connection in project.Connections)
+        {
+            if (!endpointOwners.TryGetValue(connection.FromEndpointId, out var from) ||
+                !endpointOwners.TryGetValue(connection.ToEndpointId, out var to) ||
+                string.Equals(from, to, StringComparison.OrdinalIgnoreCase) ||
+                !placements.ContainsKey(from) ||
+                !placements.ContainsKey(to))
+            {
+                continue;
+            }
+
+            edgeList.Add(new LayoutEdge(from, to));
+        }
+        var edges = edgeList.Distinct().ToArray();
+
+        var outgoing = placements.Keys.ToDictionary(
+            id => id,
+            id => edges.Where(edge => string.Equals(edge.From, id, StringComparison.OrdinalIgnoreCase))
+                .Select(edge => edge.To).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+        var incoming = placements.Keys.ToDictionary(
+            id => id,
+            id => edges.Where(edge => string.Equals(edge.To, id, StringComparison.OrdinalIgnoreCase))
+                .Select(edge => edge.From).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+        var neighbours = placements.Keys.ToDictionary(
+            id => id,
+            id => outgoing[id].Concat(incoming[id]).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+
+        var graphGroups = BuildWeakGraphGroups(placements.Keys, neighbours)
+            .OrderByDescending(group => group.Count)
+            .ThenBy(group => group.Min(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var nextGroupY = startY;
+        var requiredWidth = startX;
+        var maximumLayerCount = 0;
+        foreach (var group in graphGroups)
+        {
+            var layers = AssignGraphLayers(group, outgoing, incoming, neighbours);
+            maximumLayerCount = Math.Max(maximumLayerCount, layers.Values.DefaultIfEmpty(0).Max() + 1);
+            var orderedLayers = OrderLayerNodes(group, layers, neighbours, outgoing);
+            var layerNumbers = orderedLayers.Keys.Order().ToArray();
+            var columnWidths = layerNumbers.ToDictionary(
+                layer => layer,
+                layer => orderedLayers[layer].Max(id => placements[id].Width));
+            var columnHeights = layerNumbers.ToDictionary(
+                layer => layer,
+                layer => orderedLayers[layer].Sum(id => placements[id].Height) +
+                         Math.Max(0, orderedLayers[layer].Count - 1) * verticalGap);
+            var groupHeight = Math.Max(1d, columnHeights.Values.DefaultIfEmpty(1d).Max());
+
+            var x = startX;
+            foreach (var layer in layerNumbers)
+            {
+                var y = nextGroupY + (groupHeight - columnHeights[layer]) / 2d;
+                foreach (var id in orderedLayers[layer])
+                {
+                    var placement = placements[id];
+                    placement.X = SnapLayoutCoordinate(x);
+                    placement.Y = SnapLayoutCoordinate(y);
+                    y += placement.Height + verticalGap;
+                    requiredWidth = Math.Max(requiredWidth, placement.X + placement.Width);
+                }
+                x += columnWidths[layer] + horizontalGap;
+            }
+
+            nextGroupY += groupHeight + 130d;
+        }
+
+        var requiredHeight = placements.Values.Max(placement => placement.Y + placement.Height);
+        return new TopologyArrangementResult(
+            placements.Count,
+            edges.Length,
+            graphGroups.Length,
+            maximumLayerCount,
+            requiredWidth,
+            requiredHeight);
+    }
+
+    /// <summary>
+    /// Explicit auto-arrange operation. This method creates placements for every unplaced project
+    /// object and is intentionally not required by normal rendering. Palette-first editing uses
+    /// EnsurePlacement to place only the object the user dragged onto the canvas.
+    /// </summary>
     public void EnsurePlacements(ElectricalProject project, double startX = 40, double startY = 40, double gapX = 190, double gapY = 130, int columns = 5)
     {
         ArgumentNullException.ThrowIfNull(project);
         if (columns <= 0) throw new ArgumentOutOfRangeException(nameof(columns));
+
+        var sensorByObjectId = project.Components.ToDictionary(
+            component => component.ComponentInstanceId,
+            IsFieldSensor,
+            StringComparer.OrdinalIgnoreCase);
         var known = project.TopologyPlacements.Select(item => item.ObjectId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var objects = project.Components.Select(component => (Id: component.ComponentInstanceId, Kind: "COMPONENT"))
-            .Concat(project.TerminalBlocks.Select(block => (Id: block.TerminalBlockId, Kind: "TERMINAL_BLOCK")))
+        var objects = project.Components
+            .Select(component => new PlacementCandidate(component.ComponentInstanceId, "COMPONENT", IsFieldSensor(component)))
+            .Concat(project.TerminalBlocks.Select(block => new PlacementCandidate(block.TerminalBlockId, "TERMINAL_BLOCK", false)))
             .Where(item => !known.Contains(item.Id))
             .ToArray();
 
-        var index = project.TopologyPlacements.Count;
-        foreach (var item in objects)
+        // Reserve the visible far-right lane for field sensors. This keeps the normal control / hub /
+        // terminal topology in the body of the drawing while sensors form a predictable right-side row.
+        // The rule is presentation-only and does not alter electrical Direction, PortRole, or connectivity.
+        var hasDedicatedSensorLane = columns >= 2;
+        var bodyColumns = hasDedicatedSensorLane ? columns - 1 : 1;
+        var sensorX = hasDedicatedSensorLane
+            ? startX + (columns - 1) * gapX
+            : startX + gapX;
+
+        var bodyIndex = project.TopologyPlacements.Count(placement =>
+            !sensorByObjectId.TryGetValue(placement.ObjectId, out var isSensor) || !isSensor);
+        var sensorIndex = project.TopologyPlacements.Count(placement =>
+            sensorByObjectId.TryGetValue(placement.ObjectId, out var isSensor) && isSensor);
+
+        foreach (var item in objects.Where(item => !item.IsFieldSensor))
         {
-            var column = index % columns;
-            var row = index / columns;
-            project.TopologyPlacements.Add(new TopologyPlacement
-            {
-                ObjectId = item.Id,
-                ObjectKind = item.Kind,
-                X = startX + column * gapX,
-                Y = startY + row * gapY,
-                Width = item.Kind == "TERMINAL_BLOCK" ? 165 : 140,
-                Height = item.Kind == "TERMINAL_BLOCK" ? 88 : 76
-            });
-            index++;
+            var column = bodyIndex % bodyColumns;
+            var row = bodyIndex / bodyColumns;
+            AddPlacement(project, item, startX + column * gapX, startY + row * gapY);
+            bodyIndex++;
         }
+
+        foreach (var item in objects.Where(item => item.IsFieldSensor))
+        {
+            AddPlacement(project, item, sensorX, startY + sensorIndex * gapY);
+            sensorIndex++;
+        }
+    }
+
+    /// <summary>
+    /// Ensures only one selected component/terminal block has a topology placement. Existing saved
+    /// placements are returned unchanged; an unplaced object receives a new placement without causing
+    /// the rest of the BOM/project inventory to appear on the canvas.
+    /// </summary>
+    public TopologyPlacement EnsurePlacement(ElectricalProject project, string objectId, double x = 0, double y = 0)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentException.ThrowIfNullOrWhiteSpace(objectId);
+
+        var existing = project.TopologyPlacements.FirstOrDefault(item =>
+            string.Equals(item.ObjectId, objectId, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null) return existing;
+
+        var component = project.Components.FirstOrDefault(item =>
+            string.Equals(item.ComponentInstanceId, objectId, StringComparison.OrdinalIgnoreCase));
+        if (component is not null)
+            return AddPlacement(
+                project,
+                new PlacementCandidate(component.ComponentInstanceId, "COMPONENT", IsFieldSensor(component)),
+                Math.Max(0, x),
+                Math.Max(0, y));
+
+        var block = project.TerminalBlocks.FirstOrDefault(item =>
+            string.Equals(item.TerminalBlockId, objectId, StringComparison.OrdinalIgnoreCase));
+        if (block is not null)
+            return AddPlacement(
+                project,
+                new PlacementCandidate(block.TerminalBlockId, "TERMINAL_BLOCK", false),
+                Math.Max(0, x),
+                Math.Max(0, y));
+
+        throw new InvalidOperationException($"Unknown topology object '{objectId}'.");
     }
 
     public TopologyGraph Build(ElectricalProject project, ElectricalLayer? layerFilter = null)
@@ -156,6 +324,179 @@ public sealed class TopologyProjection
         placement.RotationDegrees = normalized;
     }
 
+    private static TopologyPlacement AddPlacement(ElectricalProject project, PlacementCandidate item, double x, double y)
+    {
+        var placement = new TopologyPlacement
+        {
+            ObjectId = item.Id,
+            ObjectKind = item.Kind,
+            X = x,
+            Y = y,
+            Width = item.Kind == "TERMINAL_BLOCK" ? 165 : 140,
+            Height = item.Kind == "TERMINAL_BLOCK" ? 88 : 76
+        };
+        project.TopologyPlacements.Add(placement);
+        return placement;
+    }
+
+    private static bool IsFieldSensor(ComponentInstance component)
+    {
+        var type = component.TypeKey.Trim();
+        if (!type.Contains("sensor", StringComparison.OrdinalIgnoreCase)) return false;
+
+        // Keep devices whose category merely contains the word Sensor but whose engineering role is
+        // actually an amplifier/controller/interface in the normal control body rather than in the
+        // right-side field-sensor lane.
+        return !ContainsAny(type,
+            "amplifier",
+            "controller",
+            "master",
+            "gateway",
+            "hub",
+            "cable",
+            "connector",
+            "adapter");
+    }
+
+    private static bool ContainsAny(string value, params string[] tokens) =>
+        tokens.Any(token => value.Contains(token, StringComparison.OrdinalIgnoreCase));
+
+    private static IReadOnlyList<HashSet<string>> BuildWeakGraphGroups(
+        IEnumerable<string> objectIds,
+        IReadOnlyDictionary<string, string[]> neighbours)
+    {
+        var remaining = objectIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var groups = new List<HashSet<string>>();
+        while (remaining.Count > 0)
+        {
+            var seed = remaining.Order(StringComparer.OrdinalIgnoreCase).First();
+            var group = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var queue = new Queue<string>();
+            queue.Enqueue(seed);
+            remaining.Remove(seed);
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                group.Add(current);
+                foreach (var neighbour in neighbours[current].Order(StringComparer.OrdinalIgnoreCase))
+                {
+                    if (!remaining.Remove(neighbour)) continue;
+                    queue.Enqueue(neighbour);
+                }
+            }
+            groups.Add(group);
+        }
+        return groups;
+    }
+
+    private static Dictionary<string, int> AssignGraphLayers(
+        IReadOnlySet<string> group,
+        IReadOnlyDictionary<string, string[]> outgoing,
+        IReadOnlyDictionary<string, string[]> incoming,
+        IReadOnlyDictionary<string, string[]> neighbours)
+    {
+        var layers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var roots = group
+            .Where(id => incoming[id].All(source => !group.Contains(source)))
+            .OrderByDescending(id => outgoing[id].Count(group.Contains))
+            .ThenBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (roots.Length == 0)
+        {
+            roots =
+            [
+                group.OrderByDescending(id => outgoing[id].Count(group.Contains) - incoming[id].Count(group.Contains))
+                    .ThenByDescending(id => neighbours[id].Count(group.Contains))
+                    .ThenBy(id => id, StringComparer.OrdinalIgnoreCase)
+                    .First()
+            ];
+        }
+
+        var queue = new Queue<string>();
+        foreach (var root in roots)
+        {
+            layers[root] = 0;
+            queue.Enqueue(root);
+        }
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            foreach (var target in outgoing[current]
+                         .Where(group.Contains)
+                         .Order(StringComparer.OrdinalIgnoreCase))
+            {
+                if (layers.ContainsKey(target)) continue;
+                layers[target] = layers[current] + 1;
+                queue.Enqueue(target);
+            }
+        }
+
+        // A directed cycle or a connection drawn in reverse may not be reachable from a directed
+        // root. Attach each remainder to the closest already layered neighbour and expand undirected.
+        while (layers.Count < group.Count)
+        {
+            var seed = group.Where(id => !layers.ContainsKey(id))
+                .OrderBy(id => neighbours[id].Where(layers.ContainsKey).Select(id => layers[id]).DefaultIfEmpty(int.MaxValue).Min())
+                .ThenByDescending(id => neighbours[id].Count(group.Contains))
+                .ThenBy(id => id, StringComparer.OrdinalIgnoreCase)
+                .First();
+            var attachedLayers = neighbours[seed].Where(layers.ContainsKey).Select(id => layers[id]).ToArray();
+            layers[seed] = attachedLayers.Length == 0 ? 0 : attachedLayers.Min() + 1;
+            queue.Enqueue(seed);
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                foreach (var neighbour in neighbours[current]
+                             .Where(group.Contains)
+                             .Where(id => !layers.ContainsKey(id))
+                             .Order(StringComparer.OrdinalIgnoreCase))
+                {
+                    layers[neighbour] = layers[current] + 1;
+                    queue.Enqueue(neighbour);
+                }
+            }
+        }
+        return layers;
+    }
+
+    private static SortedDictionary<int, List<string>> OrderLayerNodes(
+        IReadOnlySet<string> group,
+        IReadOnlyDictionary<string, int> layers,
+        IReadOnlyDictionary<string, string[]> neighbours,
+        IReadOnlyDictionary<string, string[]> outgoing)
+    {
+        var result = new SortedDictionary<int, List<string>>();
+        var verticalRanks = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        foreach (var layer in layers.Values.Distinct().Order())
+        {
+            var nodes = group.Where(id => layers[id] == layer)
+                .Select(id => new
+                {
+                    Id = id,
+                    Barycenter = neighbours[id]
+                        .Where(verticalRanks.ContainsKey)
+                        .Select(neighbour => verticalRanks[neighbour])
+                        .DefaultIfEmpty(double.NaN)
+                        .Average(),
+                    Degree = neighbours[id].Count(group.Contains),
+                    OutDegree = outgoing[id].Count(group.Contains)
+                })
+                .OrderBy(item => double.IsNaN(item.Barycenter) ? 1 : 0)
+                .ThenBy(item => item.Barycenter)
+                .ThenByDescending(item => item.OutDegree)
+                .ThenByDescending(item => item.Degree)
+                .ThenBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(item => item.Id)
+                .ToList();
+            result[layer] = nodes;
+            for (var index = 0; index < nodes.Count; index++)
+                verticalRanks[nodes[index]] = index;
+        }
+        return result;
+    }
+
+    private static double SnapLayoutCoordinate(double value) => Math.Round(value / 20d) * 20d;
+
     private static IReadOnlyDictionary<string, string> BuildEndpointOwners(ElectricalProject project)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -175,26 +516,15 @@ public sealed class TopologyProjection
 
     private static ElectricalLayer? ResolveLayerFromEndpoints(ElectricalProject project, ElectricalConnection connection)
     {
+        var continuityLayer = TopologyElectricalContinuity.ResolveLayer(project, connection);
+        if (continuityLayer != ElectricalLayer.Unknown) return continuityLayer;
+
         foreach (var component in project.Components)
         foreach (var port in component.Ports)
-        {
-            if (string.Equals(port.PortId, connection.FromEndpointId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(port.PortId, connection.ToEndpointId, StringComparison.OrdinalIgnoreCase))
-            {
-                if (!string.IsNullOrWhiteSpace(port.Protocol)) return ElectricalLayer.Communication;
-                var portLayer = port.Pins.Select(pin => pin.Layer).FirstOrDefault(layer => layer != ElectricalLayer.Unknown);
-                if (portLayer != ElectricalLayer.Unknown) return portLayer;
-            }
-
-            foreach (var pin in port.Pins)
-            {
-                if (string.Equals(pin.PinId, connection.FromEndpointId, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(pin.PinId, connection.ToEndpointId, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (pin.Layer != ElectricalLayer.Unknown) return pin.Layer;
-                }
-            }
-        }
+            if ((string.Equals(port.PortId, connection.FromEndpointId, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(port.PortId, connection.ToEndpointId, StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrWhiteSpace(port.Protocol))
+                return ElectricalLayer.Communication;
         return null;
     }
 
@@ -218,4 +548,7 @@ public sealed class TopologyProjection
         if (layers.Contains(filter.Value)) return true;
         return edges.Any(edge => string.Equals(edge.FromObjectId, objectId, StringComparison.OrdinalIgnoreCase) || string.Equals(edge.ToObjectId, objectId, StringComparison.OrdinalIgnoreCase));
     }
+
+    private sealed record PlacementCandidate(string Id, string Kind, bool IsFieldSensor);
+    private sealed record LayoutEdge(string From, string To);
 }

@@ -115,17 +115,18 @@ public sealed class SchematicCadImporter
             }
             return picture;
         }
-        void PrepareDimensions(Block block, int depth)
+        void PrepareDisplayEntities(Block block, int depth)
         {
             if (depth > 32) throw new InvalidDataException("Block nesting exceeds 32 levels.");
             if (!preparedBlocks.Add(block)) return;
             foreach (var entity in block.Entities.ToArray())
             {
                 if (!entity.IsVisible || !entity.Layer.IsVisible || entity.Normal != Vector3.UnitZ) continue;
-                if (entity is Insert nested) PrepareDimensions(nested.Block, depth + 1);
+                if (entity is MText text) SchematicMTextHeight.Normalize(text);
+                if (entity is Insert nested) PrepareDisplayEntities(nested.Block, depth + 1);
                 if (entity is not Dimension dimension) continue;
                 var picture = DimensionPicture(dimension);
-                PrepareDimensions(picture, depth + 1);
+                PrepareDisplayEntities(picture, depth + 1);
                 // Expand before any parent INSERT is cloned/exploded: Dimension.Clone
                 // loses cached custom pictures, and TransformBy leaves text unscaled.
                 var name = "CAD_DIMENSION_" + Guid.NewGuid().ToString("N");
@@ -147,7 +148,7 @@ public sealed class SchematicCadImporter
             {
                 case Dimension dimension:
                     var picture = DimensionPicture(dimension);
-                    PrepareDimensions(picture, depth + 1);
+                    PrepareDisplayEntities(picture, depth + 1);
                     foreach (var child in picture.Entities) Read((EntityObject)child.Clone(), depth + 1, sourceBlocks, displayOnly: true);
                     break;
                 case Solid solid:
@@ -175,7 +176,7 @@ public sealed class SchematicCadImporter
                     else raw.Add(new() { Kind = "SOLID_HATCH", Start = loops[0][0], Contours = loops });
                     break;
                 case Insert insert:
-                    PrepareDimensions(insert.Block, depth + 1);
+                    PrepareDisplayEntities(insert.Block, depth + 1);
                     var isDimensionPicture = dimensionPictures.Contains(insert.Block.Name);
                     displayOnly |= isDimensionPicture;
                     IReadOnlyList<string> blocks = isDimensionPicture ? sourceBlocks : [..sourceBlocks, insert.Block.Name];
@@ -222,6 +223,7 @@ public sealed class SchematicCadImporter
                         diagnostics.Add("Text formatting requires visual review.");
                     break;
                 case MText text:
+                    SchematicMTextHeight.Normalize(text);
                     raw.Add(new() { Kind = "MTEXT", Start = Point(text.Position), Text = text.PlainText(),
                         TextHeight = text.Height, TextWidth = text.RectangleWidth,
                         TextAttachment = text.AttachmentPoint.ToString(), Rotation = text.Rotation });

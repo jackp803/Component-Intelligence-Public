@@ -29,7 +29,7 @@ internal static partial class Program
 
     private static int Run(string[] args)
     {
-        if (args.FirstOrDefault() == "net-dimensions") return NetDimensionsProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
+        if (args.FirstOrDefault() == "net-dimensions") return NetDimensionsProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault(), args.Skip(3).FirstOrDefault());
         if (args.FirstOrDefault() == "appendix-sketch") return AppendixSketchProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "appendix-layout") return AppendixLayoutProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "library-review") return CableLibraryReviewProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());

@@ -16,7 +16,7 @@ using PdfSharp.Pdf.IO;
 
 internal static partial class Program
 {
-    private static int NetDimensionsProof(string root, string? only)
+    private static int NetDimensionsProof(string root, string? only, string? cadSource = null)
     {
         Directory.CreateDirectory(root);
         var template = AppendixThreePortTemplate();
@@ -71,7 +71,7 @@ internal static partial class Program
         }
         if (only is null or "dimensions")
         {
-            var source = Path.Combine(root, "synthetic-dimensioned-cable.dxf");
+            var source = cadSource ?? Path.Combine(root, "synthetic-dimensioned-cable.dxf");
             var body = new Block("CABLE_APPEARANCE");
             foreach (var p in AppendixSketchCad().Primitives.Where(p => p.AttributeTag is null))
             {
@@ -81,20 +81,29 @@ internal static partial class Program
                 if (p.Kind == "ARC") body.Entities.Add(new netDxf.Entities.Arc(start, p.Radius, p.StartAngle, p.EndAngle));
                 if (p.Kind == "TEXT") body.Entities.Add(new netDxf.Entities.Text(p.Text, start, p.TextHeight));
             }
-            var style = new DimensionStyle("CABLE_MARKS") { TextHeight = 3.5, ArrowSize = 2 };
-            body.Entities.Add(new netDxf.Entities.LinearDimension(new Vector2(1060, -514), new(1100, -514), 16, 0, style) { UserText = "L1" });
-            body.Entities.Add(new netDxf.Entities.LinearDimension(new Vector2(1120, -524), new(1190, -524), 26, 0, style) { UserText = "L2" });
+            var style = new DimensionStyle("CABLE_MARKS") { TextHeight = .18, ArrowSize = 2 };
+            body.Entities.Add(new netDxf.Entities.LinearDimension(new Vector2(1060, -514), new(1100, -514), 16, 0, style) { UserText = @"{\H42.02x;L1}" });
+            body.Entities.Add(new netDxf.Entities.LinearDimension(new Vector2(1120, -524), new(1190, -524), 26, 0, style) { UserText = @"{\H42.02x;L2}" });
             var doc = new DxfDocument { BuildDimensionBlocks = true };
-            doc.Entities.Add(new netDxf.Entities.Insert(body) { Scale = new(1.25, 1.25, 1.25) }); doc.Save(source);
+            doc.Entities.Add(new netDxf.Entities.Insert(body) { Scale = new(1.25, 1.25, 1.25) });
+            if (cadSource is null) doc.Save(source);
             var sourceBytes = File.ReadAllBytes(source);
             var asset = new SchematicCadFileLoader(stagingRoot: Path.Combine(root, "staging")).ReadAsync(source, 1).GetAwaiter().GetResult();
             Require(asset.Primitives.Count(p => p.Text is "L1" or "L2") == 2 && asset.Primitives.Count(p => p.Kind == "SOLID_HATCH") >= 4,
                 "CAD import lost dimension labels or filled arrowheads.");
-            Require(asset.ConnectionPoints.Count == 0 && cable.ProvidedLengthMm is null, "Visual dimension labels became engineering data.");
+            Require(asset.Primitives.Where(p => p.Text is "L1" or "L2").All(p => Math.Abs(p.TextHeight - (cadSource is null ? 9.4545 : 7.5636)) < .001),
+                "L1/L2 retained only the tiny base height instead of the inline height override.");
+            Require((cadSource is not null || asset.ConnectionPoints.Count == 0) && cable.ProvidedLengthMm is null, "Visual dimension labels became engineering data.");
+            var cadCanvas = (Canvas)typeof(SchematicWorkspaceControl).GetMethod("CadCanvas", BindingFlags.Static | BindingFlags.NonPublic)!
+                .Invoke(null, [asset, null, 1d, null, false])!;
+            var renderedLabels = cadCanvas.Children.OfType<TextBlock>().Where(t => t.Text is "L1" or "L2").ToArray();
+            Require(renderedLabels.Length == 2 && renderedLabels.All(t => t.FontSize > 20),
+                "The actual WPF CAD visuals still render unreadably small dimension labels.");
             var previewType = typeof(SchematicCadFileLoader).Assembly.GetType("ComponentIntelligence.Desktop.CableCadRoleEditor")!;
             var preview = (FrameworkElement)Activator.CreateInstance(previewType)!;
             previewType.GetMethod("Restore")!.Invoke(preview, [source, asset, null, 1d]);
             Render(preview, 1200, 650, Path.Combine(root, "import-preview-dimensions.png"));
+            if (cadSource is not null) cable.DisplayName = "CAD appearance check / synthetic wiring";
             cable.ArchivedCable = cable.ArchivedCable! with { ManufacturingGeometry = asset,
                 Template = cable.ArchivedCable.Template with { AssetSha256 = asset.SourceSha256 } };
             var page = new SchematicPage { PageId = "main", Title = "Dimensioned cable", CoordinateGrid = new(10, 10, 390, 275) };

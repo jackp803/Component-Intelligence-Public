@@ -142,6 +142,7 @@
     <Button x:Name="AnotherRepresentationButton" Content="放置另一個表示" Padding="8,5" Margin="0,6,0,0" Click="AnotherRepresentation_Click" ToolTip="放置此元件的另一個表示 (Shift+P)"/>
     <Button x:Name="CablePropertiesButton" Content="線長／備註" Padding="8,5" Margin="0,6,0,0" Click="CableProperties_Click" Visibility="Collapsed"/>
     <Button x:Name="DuplicateCableButton" Content="複製為另一條線材" Padding="8,5" Margin="0,6,0,0" Click="DuplicateCable_Click" Visibility="Collapsed"/>
+    <Button x:Name="WagoGroupButton" Content="合併同型號 WAGO" Padding="8,5" Margin="0,6,0,0" Click="WagoGroup_Click" Visibility="Collapsed"/>
     <Button Content="拆分模塊表示" Padding="8,5" Margin="0,6,0,0" Click="SplitRepresentation_Click" ToolTip="將通用模塊接點分段放到各頁；仍是一顆實體 (Ctrl+Shift+P)"/>
     <Button Content="保存模塊版型" Padding="8,5" Margin="0,6,0,0" Click="SaveModuleLayout_Click" ToolTip="讓同型元件在其他專案沿用目前的尺寸與接點位置；不核准 CAD 圖塊"/>
     <StackPanel x:Name="CadScalePanel" Visibility="Collapsed" Margin="0,12,0,0">

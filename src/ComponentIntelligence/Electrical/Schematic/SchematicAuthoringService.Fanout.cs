@@ -15,6 +15,7 @@ public sealed partial class SchematicAuthoringService
         var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (index < 0) throw new InvalidOperationException("Unknown representation.");
         var symbol = doc.Symbols[index];
+        RequireWagoUngrouped(symbol);
         var owner = SchematicSymbolOwner.Resolve(draft, symbol);
         var port = owner.Ports.SingleOrDefault(p => p.PortId == portId)
             ?? throw new InvalidOperationException("Unknown Port.");

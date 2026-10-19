@@ -11,6 +11,16 @@ an empty central workbook, an isolated SQLite project, candidate archive assets,
 WPF preview PNGs and a two-page draft PDF in the specified fresh directory.
 Never pass a production data directory.
 
+WAGO 221-2411 visual grouping regression:
+
+```powershell
+dotnet run --project validation/CableManufacturingSmoke -c Release -- wago-groups "<fresh-output-directory>"
+```
+
+Uses synthetic independent components to check the same-page chooser/cancel,
+one shared frame, per-row References, whole-group drag preview, dissolve, and
+the shared PDF renderer and DXF output. No application window is shown.
+
 Assertions cover exact CAD contacts, exclusion of the old static CAD table by
 named-block selection, independent physical cable instances, SQLite reload,
 minimum table column widths, the actual shared WPF output renderer, PDF reopen,

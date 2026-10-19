@@ -15,6 +15,7 @@ public sealed partial class SchematicAuthoringService
         IReadOnlyCollection<string> symbolIds, bool deleteConnections) => Edit(project, (draft, doc) =>
     {
         var ids = RequireLifecycleSelection(symbolIds, doc.Symbols.Select(s => s.SymbolId));
+        foreach (var selected in doc.Symbols.Where(s => ids.Contains(s.SymbolId))) RequireWagoUngrouped(selected);
         if (doc.Symbols.Any(s => ids.Contains(s.SymbolId) && s.Locked))
             throw new InvalidOperationException("A selected representation is locked.");
         var attached = doc.Wires.Where(w => ids.Contains(w.Start.SymbolId ?? "") || ids.Contains(w.End.SymbolId ?? ""))

@@ -9,6 +9,7 @@ public sealed partial class SchematicAuthoringService
         var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (index < 0) throw new InvalidOperationException("Select a component representation.");
         var symbol = doc.Symbols[index];
+        RequireWagoUngrouped(symbol);
         var owner = SchematicSymbolOwner.Resolve(draft, symbol);
         var port = owner.Ports.SingleOrDefault(p => p.PortId == portId)
             ?? throw new InvalidOperationException("Unknown port.");
@@ -51,6 +52,7 @@ public sealed partial class SchematicAuthoringService
         var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (index < 0) throw new InvalidOperationException("Select a component representation.");
         var symbol = doc.Symbols[index];
+        RequireWagoUngrouped(symbol);
         if (symbol.Locked) throw new InvalidOperationException("Unlock the representation before moving its port.");
         if (!double.IsFinite(coordinate) || side is not ("Left" or "Right" or "Top" or "Bottom"))
             throw new InvalidOperationException("Choose a finite position on one of the four module edges.");

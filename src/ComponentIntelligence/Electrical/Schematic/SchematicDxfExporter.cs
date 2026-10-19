@@ -171,6 +171,8 @@ public sealed class SchematicDxfExporter
             Add(new Hatch(HatchPattern.Solid, [new HatchBoundaryPath(new EntityObject[] { new Circle(Point(p), 5d / 6) })], false), "SCHEMATIC_JUNCTION");
         diagnostics.AddRange(crossings.Conflicts.Select(c => c.Code));
 
+        foreach (var group in SchematicWagoGroups.Build(source, page.PageId))
+            foreach (var primitive in SchematicWagoGroups.Primitives(project, group)) Primitive(primitive, "SCHEMATIC_WAGO_GROUP", .25);
         foreach (var symbol in source.Symbols.Where(s => s.PageId == page.PageId))
         {
             var owner = SchematicSymbolOwner.Resolve(project, symbol);
@@ -194,7 +196,7 @@ public sealed class SchematicDxfExporter
                     Primitive(p, "SCHEMATIC_LABEL", .25);
                 diagnostics.AddRange(geometry.Diagnostics.Select(d => symbol.SymbolId + ": " + d));
             }
-            else
+            else if (symbol.WagoVisualGroupId is null)
             {
                 var compacted = symbol.ManualSize || owner.Ports.Any(port => SchematicPortPresentation.IsRepresented(symbol, port) &&
                     SchematicPortPresentation.IsPortCollapsed(symbol, port));
@@ -244,7 +246,7 @@ public sealed class SchematicDxfExporter
                     TextWidth = body.Width - 4,
                     TextAttachment = "TopLeft" }, "SCHEMATIC_LABEL", .25);
             }
-            if (SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
+            if (symbol.WagoVisualGroupId is null && SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
                 Label(owner.Reference ?? "Reference 未設定", new(symbol.Position.X, symbol.Position.Y - 6), "SCHEMATIC_LABEL", 11d / 3);
             var caption = SchematicSymbolPresentation.CableCaption(symbol, owner);
             if (caption.Length > 0)
@@ -260,7 +262,7 @@ public sealed class SchematicDxfExporter
                 if (SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
                 {
                     var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
-                    var text = anchor.Label ?? anchor.EndpointId;
+                    var text = symbol.WagoVisualGroupId is null ? anchor.Label ?? anchor.EndpointId : SchematicWagoGroups.PinLabel(project, symbol, anchor);
                     var box = pose.Bounds(text.Length * (8.5 / 3) * .55, 8.5 / 3);
                     Label(text, pose.TextRotation == 0 ? new(box.Left, box.Top) :
                         pose.Side == SchematicLabelSide.Top ? new(box.Right, box.Bottom) : new(box.Left, box.Top),

@@ -12,6 +12,7 @@ public sealed partial class SchematicAuthoringService
     {
         var symbol = doc.Symbols.SingleOrDefault(s => s.SymbolId == symbolId)
             ?? throw new InvalidOperationException("Unknown representation.");
+        RequireWagoUngrouped(symbol);
         if (symbol.Locked) throw new InvalidOperationException("The representation is locked.");
         if (doc.Wires.Any(w => w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId))
             throw new InvalidOperationException("The representation still has attached wires. Resolve those connections explicitly before removing it.");
@@ -178,6 +179,8 @@ public sealed partial class SchematicAuthoringService
         var i = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (i < 0) throw new InvalidOperationException("Unknown representation.");
         var symbol = doc.Symbols[i];
+        if (symbol.WagoVisualGroupId is not null && !symbol.Anchors.Select(a => (a.EndpointId, a.Position, a.Direction))
+            .SequenceEqual(anchors.Select(a => (a.EndpointId, a.Position, a.Direction)))) RequireWagoUngrouped(symbol);
         if (symbol.Locked) throw new InvalidOperationException("The representation is locked.");
         if (symbol.CableInstanceId is { } cableId) RequireIndependentCable(doc, cableId);
         SchematicSymbolOwner.Resolve(draft, symbol).SetReference(reference);
@@ -492,6 +495,7 @@ public sealed partial class SchematicAuthoringService
         var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (index < 0) throw new InvalidOperationException("The representation no longer exists.");
         var old = doc.Symbols[index];
+        if (old.WagoVisualGroupId is not null) { TranslateWagoGroup(draft, doc, old, position, rotation); return; }
         if (old.Locked) throw new InvalidOperationException("The representation is locked.");
         if (doc.Wires.Any(w => w.Locked && (w.Start.SymbolId == symbolId || w.End.SymbolId == symbolId)))
             throw new InvalidOperationException("Unlock the incident wire before moving its anchor.");
@@ -620,7 +624,9 @@ public sealed partial class SchematicAuthoringService
         var b = Lead(end.Point, end.Side, end.Clearance);
         bool Contains(SchematicGridBounds r, SchematicPoint p) => p.X > r.X && p.X < r.X + r.Width && p.Y > r.Y && p.Y < r.Y + r.Height;
         var obstacles = doc.Symbols.Where(s => s.PageId == wire.PageId).Select(s => (s.SymbolId,
-            Bounds: SchematicPortPresentation.GenericBodyBounds(doc, s, SchematicSymbolOwner.Resolve(project, s)))).ToArray();
+            Bounds: SchematicPortPresentation.GenericBodyBounds(doc, s, SchematicSymbolOwner.Resolve(project, s))))
+            .Concat(SchematicWagoGroups.Build(doc, wire.PageId).Select(g => (SymbolId: g.Id,
+                Bounds: new SchematicGridBounds(g.Bounds.X, g.Bounds.Y, g.Bounds.Width, SchematicWagoGroups.HeaderHeight)))).ToArray();
         var draft = wire.Start.Kind == SchematicAttachmentKind.Free || wire.End.Kind == SchematicAttachmentKind.Free;
         if (draft)
             obstacles = obstacles.Where(o => !Contains(o.Bounds, wire.Start.Kind == SchematicAttachmentKind.Free ? start.Point : end.Point)).ToArray();
@@ -797,6 +803,7 @@ public sealed partial class SchematicAuthoringService
     {
         RequirePage(doc, destinationPage);
         var ids = symbolIds.ToHashSet(StringComparer.Ordinal);
+        foreach (var grouped in doc.Symbols.Where(s => ids.Contains(s.SymbolId) && s.WagoVisualGroupId is not null)) RequireWagoUngrouped(grouped);
         if (ids.Count == 0 || ids.Count != symbolIds.Count || ids.Any(id => !doc.Symbols.Any(s => s.SymbolId == id)))
             throw new InvalidOperationException("Select existing representations exactly once.");
         bool Touches(SchematicWire w) => ids.Contains(w.Start.SymbolId ?? "") || ids.Contains(w.End.SymbolId ?? "");
@@ -916,6 +923,7 @@ public sealed partial class SchematicAuthoringService
         var doc = project.Schematic;
         if (doc is null) return;
         if (doc.SchemaVersion != "electrical-schematic.v1") throw new InvalidOperationException("Unsupported schematic document version.");
+        SchematicWagoGroups.Validate(project);
         if (doc.Pages.Select(p => p.PageId).Distinct(StringComparer.Ordinal).Count() != doc.Pages.Count ||
             doc.Symbols.Select(s => s.SymbolId).Distinct(StringComparer.Ordinal).Count() != doc.Symbols.Count ||
             doc.Wires.Select(w => w.WireId).Distinct(StringComparer.Ordinal).Count() != doc.Wires.Count)

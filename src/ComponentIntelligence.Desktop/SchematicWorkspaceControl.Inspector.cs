@@ -136,6 +136,9 @@ public partial class SchematicWorkspaceControl
             CablePropertiesButton.Visibility = DuplicateCableButton.Visibility = symbol?.CableInstanceId is { } cableId &&
                 project.Cables.Any(c => c.CableInstanceId == cableId && c.ArchivedCable is not null) ? Visibility.Visible : Visibility.Collapsed;
             AnotherRepresentationButton.Visibility = symbol?.CableInstanceId is not null ? Visibility.Collapsed : Visibility.Visible;
+            WagoGroupButton.Visibility = symbol is not null && (symbol.WagoVisualGroupId is not null || SchematicWagoGroups.IsEligible(project, symbol))
+                ? Visibility.Visible : Visibility.Collapsed;
+            WagoGroupButton.Content = symbol?.WagoVisualGroupId is null ? "合併同型號 WAGO" : "拆開合併顯示";
             WireInspectorFields.Visibility = wire is null ? Visibility.Collapsed : Visibility.Visible;
             DetailInspectorFields.Visibility = detail is null ? Visibility.Collapsed : Visibility.Visible;
             InspectorActions.Visibility = InspectorDelete.Visibility = symbol is not null || wire is not null || detail is not null ? Visibility.Visible : Visibility.Collapsed;
@@ -149,7 +152,8 @@ public partial class SchematicWorkspaceControl
                 var bounds = SchematicPortPresentation.GenericBodyBounds(project.Schematic!, symbol, owner);
                 SetField("x", symbol.Position.X); SetField("y", symbol.Position.Y); SetField("width", bounds.Width); SetField("height", bounds.Height);
                 SetField("rotation", symbol.Rotation); SetField("locked", symbol.Locked);
-                _inspectorFields["width"].IsEnabled = _inspectorFields["height"].IsEnabled = symbol.Geometry is null;
+                _inspectorFields["width"].IsEnabled = _inspectorFields["height"].IsEnabled = symbol.Geometry is null && symbol.WagoVisualGroupId is null;
+                _inspectorFields["rotation"].IsEnabled = symbol.WagoVisualGroupId is null;
                 _pinInventory.Text = string.Join("\n", owner.Ports.Where(p => SchematicPortPresentation.IsRepresented(symbol, p)).Select(p => p.Name + " / " + p.Pins.Count + " Pin"));
             }
             if (wire is not null) {

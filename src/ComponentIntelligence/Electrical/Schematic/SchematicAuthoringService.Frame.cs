@@ -13,6 +13,7 @@ public sealed partial class SchematicAuthoringService
         var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (index < 0) throw new InvalidOperationException("Select a component representation.");
         var symbol = doc.Symbols[index];
+        RequireWagoUngrouped(symbol);
         if (symbol.Geometry is not null) throw new InvalidOperationException("Archived CAD geometry must be revised in its source asset.");
         if (symbol.Locked) throw new InvalidOperationException("Unlock the representation before resizing it.");
         if (!double.IsFinite(displayedWidth) || !double.IsFinite(displayedHeight))
@@ -92,6 +93,7 @@ public sealed partial class SchematicAuthoringService
         var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (index < 0) throw new InvalidOperationException("Select a component representation.");
         var symbol = doc.Symbols[index];
+        RequireWagoUngrouped(symbol);
         if (symbol.Geometry is not null) throw new InvalidOperationException("Archived CAD contacts must be revised in the source asset.");
         if (!symbol.ManualSize) throw new InvalidOperationException("Resize the module first, then position individual Pins.");
         if (symbol.Locked) throw new InvalidOperationException("Unlock the representation before moving a Pin.");

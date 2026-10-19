@@ -36,9 +36,14 @@ public partial class SchematicWorkspaceControl
     {
         if (_gestureStart is null || _dragStart is null || _pointer is null || _dragSymbol is null) return;
         var dx = _pointer.X - _dragStart.X; var dy = _pointer.Y - _dragStart.Y;
+        var groupId = _gestureStart.Schematic!.Symbols.Single(s => s.SymbolId == _dragSymbol).WagoVisualGroupId;
+        var moving = _gestureStart.Schematic.Symbols.Where(s => s.SymbolId == _dragSymbol || groupId is not null && s.WagoVisualGroupId == groupId)
+            .Select(s => s.SymbolId).ToHashSet(StringComparer.Ordinal);
         if (!_translationPrepared)
         {
-            foreach (var element in _symbolVisuals.GetValueOrDefault(_dragSymbol) ?? [])
+            var visuals = moving.SelectMany(id => _symbolVisuals.GetValueOrDefault(id) ?? []).Concat(
+                Sheet.Children.OfType<FrameworkElement>().Where(e => groupId is not null && Equals(e.Tag, "wago-group:" + groupId)));
+            foreach (var element in visuals.Distinct())
             {
                 _dragVisualTransforms.Add(element, element.RenderTransform);
                 var translation = new TranslateTransform(); _dragTranslations.Add(element, translation);
@@ -47,7 +52,7 @@ public partial class SchematicWorkspaceControl
             var doc = _gestureStart.Schematic!;
             foreach (var marker in Sheet.Children.OfType<FrameworkElement>().Where(e => e.Tag is string tag &&
                 (tag == "route-junction" || tag.StartsWith("route-conflict:")))) Hide(marker);
-            foreach (var wire in doc.Wires.Where(w => w.PageId == _pageId && (w.Start.SymbolId == _dragSymbol || w.End.SymbolId == _dragSymbol)))
+            foreach (var wire in doc.Wires.Where(w => w.PageId == _pageId && (moving.Contains(w.Start.SymbolId ?? "") || moving.Contains(w.End.SymbolId ?? ""))))
             {
             foreach (var target in _wireStrokeTargets.GetValueOrDefault(wire.PageId) ?? [])
                 if (target.WireId == wire.WireId)
@@ -67,8 +72,8 @@ public partial class SchematicWorkspaceControl
         foreach (var (wire, paths) in _dragIncidentRoutes)
         {
             var points = wire.Points.ToList();
-            if (wire.Start.SymbolId == _dragSymbol) points = TranslateEndpoint(points, dx, dy, true);
-            if (wire.End.SymbolId == _dragSymbol) points = TranslateEndpoint(points, dx, dy, false);
+            if (moving.Contains(wire.Start.SymbolId ?? "")) points = TranslateEndpoint(points, dx, dy, true);
+            if (moving.Contains(wire.End.SymbolId ?? "")) points = TranslateEndpoint(points, dx, dy, false);
             foreach (var path in paths) path.Points = new PointCollection(points.Select(p => new Point(p.X * 3, p.Y * 3)));
         }
 

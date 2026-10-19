@@ -313,6 +313,7 @@ public partial class SchematicWorkspaceControl : UserControl
             warning.Tag = "route-conflict:" + conflict.FirstWireId + ":" + conflict.SecondWireId;
             warning.ToolTip = conflict.Code == "COLLINEAR_OVERLAP" ? "不同導線共線重疊；請分開走線通道" : "未連接的接觸／交叉間距不足";
         }
+        RenderWagoGroups(project, page);
         foreach (var symbol in doc.Symbols.Where(s => s.PageId == page.PageId)) RenderTrackedSymbol(project, symbol);
         foreach (var pair in doc.Continuations)
         foreach (var marker in new[] { pair.Source, pair.Destination }.Where(m => m.PageId == page.PageId))
@@ -396,6 +397,7 @@ public partial class SchematicWorkspaceControl : UserControl
     private void RenderSymbol(ElectricalProject project, SchematicSymbol symbol)
     {
         var owner = SchematicSymbolOwner.Resolve(project, symbol);
+        var wagoGrouped = symbol.WagoVisualGroupId is not null;
         var portEditing = _editModuleMode && !_renderingOutput;
         var compact = SchematicPortPresentation.GenericBodyBounds(project.Schematic!, symbol, owner);
         var compacted = symbol.Geometry is null && (symbol.ManualSize || owner.Ports.Any(port =>
@@ -403,7 +405,7 @@ public partial class SchematicWorkspaceControl : UserControl
         var body = new Border { Width = (compacted ? compact.Width : symbol.Width) * 3,
             Height = (compacted ? compact.Height : symbol.Height) * 3, BorderThickness = new(0),
             BorderBrush = symbol.SymbolId == _selectionId ? Brushes.DarkCyan : Brushes.DimGray,
-            Background = symbol.Geometry is null ? Brushes.White : null,
+            Background = wagoGrouped ? Brushes.Transparent : symbol.Geometry is null ? Brushes.White : null,
             Cursor = _wireMode ? Cursors.Cross : portEditing ? Cursors.Arrow : Cursors.SizeAll };
         var content = new Canvas();
         var image = new Image { Stretch = Stretch.Uniform, IsHitTestVisible = false };
@@ -416,7 +418,7 @@ public partial class SchematicWorkspaceControl : UserControl
         var drawing = body.Child; body.Child = null;
         var layers = new Grid(); layers.Children.Add(drawing);
         layers.Children.Add(new Border { BorderBrush = body.BorderBrush,
-            BorderThickness = new(symbol.Geometry is null ? symbol.SymbolId == _selectionId ? 2 : 1 : 0), IsHitTestVisible = false });
+            BorderThickness = new(symbol.Geometry is null ? symbol.SymbolId == _selectionId ? 2 : wagoGrouped ? 0 : 1 : 0), IsHitTestVisible = false });
         body.Child = layers;
         if (!compacted)
         {
@@ -433,10 +435,10 @@ public partial class SchematicWorkspaceControl : UserControl
         else { image.RenderTransform = new RotateTransform(symbol.Rotation); image.RenderTransformOrigin = new(.5, .5); }
         Canvas.SetLeft(body, compact.X * 3); Canvas.SetTop(body, compact.Y * 3); Sheet.Children.Add(body);
         var visibleBounds = new Rect(compact.X, compact.Y, compact.Width, compact.Height);
-        if (symbol.Geometry is null) _ = LoadImage(owner.DefinitionId, image,
+        if (symbol.Geometry is null && !wagoGrouped) _ = LoadImage(owner.DefinitionId, image,
             compacted ? compact.Width : symbol.Width, compacted ? compact.Height : symbol.Height,
             compacted ? symbol.Rotation : 0);
-        else
+        else if (symbol.Geometry is not null)
         {
             var upright = SchematicSymbolPresentation.UprightCadText(symbol, cad!);
             var labels = CadCanvas(upright with { Width = Sheet.Width / 3, Height = Sheet.Height / 3 }, interactive: !_renderingOutput);
@@ -451,7 +453,7 @@ public partial class SchematicWorkspaceControl : UserControl
                 Sheet.Children.Add(selection);
             }
         }
-        if (symbol.Geometry is null)
+        if (symbol.Geometry is null && !wagoGrouped)
         {
             var label = new TextBlock { Text = SchematicSymbolPresentation.DisplayTitle(symbol, owner), FontSize = 9, Width = (compact.Width - 4) * 3,
                 Height = 9 * 3, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis,
@@ -486,12 +488,12 @@ public partial class SchematicWorkspaceControl : UserControl
             var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);
             var pin = Marker(point, anchor.Confirmed ? Brushes.White : Brushes.LightGoldenrodYellow, Brushes.Black, 7);
             pin.ToolTip = $"{anchor.Label}\n{(anchor.Confirmed ? "接點位置已確認" : "接點位置待設定")}";
-            pin.Cursor = portEditing && symbol.Geometry is null ? Cursors.SizeAll : Cursors.Cross;
-            if (!_renderingOutput) pin.ContextMenu = PinOrderMenu(symbol, owner, anchor);
+            pin.Cursor = portEditing && symbol.Geometry is null && !wagoGrouped ? Cursors.SizeAll : Cursors.Cross;
+            if (!_renderingOutput && !wagoGrouped) pin.ContextMenu = PinOrderMenu(symbol, owner, anchor);
             pin.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) WireAt(SchematicAttachment.Pin(symbol.SymbolId, anchor.EndpointId), point, false);
-                else if (portEditing && symbol.Geometry is null && !symbol.Locked)
+                else if (portEditing && symbol.Geometry is null && !symbol.Locked && !wagoGrouped)
                 {
                     _selectionId = symbol.SymbolId; BeginGesture(e);
                     _dragPinSymbol = symbol.SymbolId; _dragPinId = anchor.EndpointId;
@@ -502,7 +504,8 @@ public partial class SchematicWorkspaceControl : UserControl
             if (fanout.Count > 0 || SchematicSymbolPresentation.ShowAnchorLabel(symbol, anchor))
             {
                 var pose = SchematicSymbolPresentation.AnchorLabel(symbol, anchor);
-                var label = new TextBlock { Text = _renderPinLabels.GetValueOrDefault((symbol.SymbolId, anchor.EndpointId)) ?? SchematicWireContacts.AnchorText(project, symbol, anchor), FontSize = 9.5,
+                var label = new TextBlock { Text = wagoGrouped ? SchematicWagoGroups.PinLabel(project, symbol, anchor) :
+                    _renderPinLabels.GetValueOrDefault((symbol.SymbolId, anchor.EndpointId)) ?? SchematicWireContacts.AnchorText(project, symbol, anchor), FontSize = 9.5,
                     Foreground = Brushes.DimGray, IsHitTestVisible = false };
                 label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 var box = pose.Bounds(label.DesiredSize.Width / 3, label.DesiredSize.Height / 3);
@@ -524,6 +527,7 @@ public partial class SchematicWorkspaceControl : UserControl
         }
         foreach (var port in owner.Ports.Where(port => SchematicPortPresentation.IsRepresented(symbol, port)))
         {
+            if (wagoGrouped && !SchematicPortPresentation.HasPortRoute(project.Schematic!, symbol, port.PortId)) continue;
             var collapsed = SchematicPortPresentation.IsPortCollapsed(symbol, port);
             var portRoute = SchematicPortPresentation.HasPortRoute(project.Schematic!, symbol, port.PortId);
             if ((_renderingOutput || _wireMode) && !portEditing && !collapsed && !portRoute) continue;
@@ -537,7 +541,7 @@ public partial class SchematicWorkspaceControl : UserControl
                     (Position: center, Side: SchematicPortPresentation.PortSide(symbol, port));
                 center = contact.Position;
                 var point = Marker(center, Brushes.White, Brushes.Black, 9);
-                if (!_renderingOutput) point.ContextMenu = PortFanoutMenu(symbol, port);
+                if (!_renderingOutput && !wagoGrouped) point.ContextMenu = PortFanoutMenu(symbol, port);
                 point.ToolTip = points.Length == 0 ? portEditing
                     ? $"{port.Name}: 拖曳移動 Port；尚無 Pin 明細，不能展開"
                     : $"{port.Name}: 可接線到 Port；尚無 Pin 明細，不能展開"
@@ -556,9 +560,9 @@ public partial class SchematicWorkspaceControl : UserControl
                     }
                     else if (points.Length == 0 && !portEditing)
                         Status.Text = "此 Port 尚無 Pin 明細；可維持 Port 接線，不能展開成 Pin。";
-                    else if (!portEditing && e.ClickCount >= 2)
+                    else if (!wagoGrouped && !portEditing && e.ClickCount >= 2)
                         Apply(p => _service.TogglePortCollapsed(p, symbol.SymbolId, port.PortId), "已展開 Port Pin");
-                    else if (portEditing && !symbol.Locked)
+                    else if (!wagoGrouped && portEditing && !symbol.Locked)
                     {
                         BeginGesture(e); _dragPortSymbol = symbol.SymbolId; _dragPortId = port.PortId;
                         _dragPortHasPins = points.Length > 0;
@@ -614,7 +618,7 @@ public partial class SchematicWorkspaceControl : UserControl
             };
             Sheet.Children.Add(handle);
         }
-        if (SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
+        if (!wagoGrouped && SchematicSymbolPresentation.ShowReferenceForOwner(symbol, owner))
             Text(owner.Reference ?? "Reference 未設定", symbol.Geometry is null ? symbol.Position.X : visibleBounds.X, referenceY, 11, Brushes.Black);
         var caption = SchematicSymbolPresentation.CableCaption(symbol, owner);
         if (caption.Length > 0)
@@ -625,7 +629,7 @@ public partial class SchematicWorkspaceControl : UserControl
             Canvas.SetTop(label, (symbol.Geometry is null ? symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2 : visibleBounds.Bottom + 2) * 3);
             Sheet.Children.Add(label);
         }
-        if (portEditing && !symbol.Locked && (symbol.Geometry is null || symbol.SymbolId == _selectionId))
+        if (!wagoGrouped && portEditing && !symbol.Locked && (symbol.Geometry is null || symbol.SymbolId == _selectionId))
         {
             var resize = new Border { Width = 14, Height = 14, Background = Brushes.White,
                 BorderBrush = Brushes.DarkCyan, BorderThickness = new(1), Cursor = Cursors.SizeNWSE,

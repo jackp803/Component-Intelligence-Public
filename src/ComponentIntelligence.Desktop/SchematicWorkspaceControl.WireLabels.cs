@@ -66,6 +66,8 @@ public partial class SchematicWorkspaceControl
             var body = SchematicPortPresentation.GenericBodyBounds(doc, s, SchematicSymbolOwner.Resolve(project, s));
             var box = new Rect(body.X * 3, body.Y * 3, body.Width * 3, body.Height * 3); box.Inflate(6, 6); return box;
         }).ToList();
+        occupied.AddRange(SchematicWagoGroups.Build(doc, page.PageId).Select(g =>
+            new Rect(g.Bounds.X * 3 - 6, g.Bounds.Y * 3 - 6, g.Bounds.Width * 3 + 12, g.Bounds.Height * 3 + 12)));
         // Keep notes outside the company title block and inline manufacturing details.
         if (page.TemplateGeometry is not null)
             occupied.Add(new Rect(Math.Max(page.Margin, page.Width - 185) * 3, (page.Height - 65) * 3, 185 * 3, 65 * 3));

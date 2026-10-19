@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -10,10 +11,57 @@ using Microsoft.Win32;
 
 namespace ComponentIntelligence.Desktop;
 
+public sealed record SchematicOutputLabelWarning(int PageNumber, string PageId, string PageTitle,
+    IReadOnlyList<string> WireIds, IReadOnlyList<string> WireNames);
+
 public partial class SchematicWorkspaceControl
 {
     public Func<Task<ElectricalProject?>>? SaveOutputSnapshotAsync { get; set; }
+    public IReadOnlyList<SchematicOutputLabelWarning> OutputLabelWarnings => _outputLabelWarnings.Values.ToArray();
+    private readonly Dictionary<string, SchematicOutputLabelWarning> _outputLabelWarnings = new(StringComparer.Ordinal);
     private bool _renderingOutput, _outputBusy;
+
+    private string WithOutputLabelWarnings(string summary) => _outputLabelWarnings.Count == 0 ? summary : summary +
+        $"\n標示空間不足：{_outputLabelWarnings.Count} 頁、{_outputLabelWarnings.Values.Sum(w => w.WireIds.Count)} 條導線的部分標籤未顯示。";
+
+    private string OutputLabelWarningDetails() =>
+        string.Join("\n", _outputLabelWarnings.Values.Select(w => $"第 {w.PageNumber} 頁 {w.PageTitle} [{w.PageId}]：" +
+            string.Join("、", w.WireNames.Zip(w.WireIds, (name, id) => $"{name} [{id}]"))));
+
+    private void SetOutputSummary(string summary)
+    {
+        Status.Text = WithOutputLabelWarnings(summary);
+        Status.ToolTip = Status.Text;
+        OutputWarningsButton.Visibility = _outputLabelWarnings.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OutputWarnings_Click(object sender, RoutedEventArgs e)
+    {
+        if (_outputLabelWarnings.Count == 0) return;
+        var dialog = new Window { Title = "匯出標示警告", Width = 820, Height = 480, MinWidth = 420, MinHeight = 260,
+            Owner = Window.GetWindow(this), WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        NameScope.SetNameScope(dialog, new NameScope());
+        var panel = new DockPanel { Margin = new(12) }; dialog.Content = panel;
+        var close = new Button { Content = "關閉", IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right,
+            MinWidth = 80, Padding = new(10, 5, 10, 5), Margin = new(0, 10, 0, 0) };
+        DockPanel.SetDock(close, Dock.Bottom); panel.Children.Add(close);
+        var details = new TextBox { Name = "OutputWarningDetails", Text = OutputLabelWarningDetails(), IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Padding = new(8) };
+        panel.Children.Add(details); dialog.RegisterName(details.Name, details);
+        dialog.ShowDialog();
+    }
+
+    private async Task<int?> ExportPdfAsync(string destination, bool? includeWireDetails)
+    {
+        _outputLabelWarnings.Clear();
+        OutputWarningsButton.Visibility = Visibility.Collapsed;
+        if (File.Exists(destination)) throw new IOException("輸出檔已存在，請選擇新的檔名。");
+        var project = await PrepareOutputAsync(); if (project is null) return null;
+        var count = SchematicPdfWriter.Write(project, destination, RenderOutputPage, includeWireDetails == true);
+        SetOutputSummary($"已輸出 {count} 頁 PDF 草稿（未工程核准）：{destination}");
+        return count;
+    }
 
     private async Task<ElectricalProject?> PrepareOutputAsync()
     {
@@ -68,10 +116,7 @@ public partial class SchematicWorkspaceControl
         _outputBusy = true; IsEnabled = false;
         try
         {
-            if (File.Exists(dialog.FileName)) throw new IOException("輸出檔已存在，請選擇新的檔名。");
-            var project = await PrepareOutputAsync(); if (project is null) return;
-            var count = SchematicPdfWriter.Write(project, dialog.FileName, RenderOutputPage, PdfWireDetails.IsChecked);
-            Status.Text = $"已輸出 {count} 頁 PDF 草稿（未工程核准）：{dialog.FileName}";
+            if (await ExportPdfAsync(dialog.FileName, PdfWireDetails.IsChecked) is null) return;
             RememberDialogDirectory(dialog.FileName, false);
         }
         catch (Exception error) { Status.Text = "PDF 未完成：" + error.Message; }
@@ -89,6 +134,8 @@ public partial class SchematicWorkspaceControl
         _outputBusy = true; IsEnabled = false;
         try
         {
+            _outputLabelWarnings.Clear();
+            OutputWarningsButton.Visibility = Visibility.Collapsed;
             var project = await PrepareOutputAsync(); if (project is null) return;
             var document = new FixedDocument();
             var capabilities = dialog.PrintQueue.GetPrintCapabilities(dialog.PrintTicket);
@@ -120,7 +167,7 @@ public partial class SchematicWorkspaceControl
                 var content = new PageContent { Child = page }; document.Pages.Add(content);
             }
             dialog.PrintDocument(document.DocumentPaginator, project.Name ?? "Electrical schematic draft");
-            Status.Text = "已送出草稿列印；請核對實際紙張。";
+            SetOutputSummary("已送出草稿列印；請核對實際紙張。");
         }
         catch (Exception error) { Status.Text = "列印未完成：" + error.Message; }
         finally { _outputBusy = false; IsEnabled = true; }

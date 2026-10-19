@@ -172,7 +172,20 @@ public sealed class SchematicDxfExporter
         diagnostics.AddRange(crossings.Conflicts.Select(c => c.Code));
 
         foreach (var group in SchematicWagoGroups.Build(source, page.PageId))
+        {
             foreach (var primitive in SchematicWagoGroups.Primitives(project, group)) Primitive(primitive, "SCHEMATIC_WAGO_GROUP", .25);
+            var definitionId = SchematicSymbolOwner.Resolve(project, group.Members[0]).DefinitionId;
+            if (images is not null && images.TryGetValue(definitionId, out var raster))
+            {
+                if (raster.Png.Length == 0) throw new InvalidOperationException("Preview image is empty.");
+                var fit = SchematicWagoGroups.ImageBounds(group, raster.PixelWidth, raster.PixelHeight);
+                var definition = new netDxf.Objects.ImageDefinition("IMG_" + raster.Sha256, raster.File,
+                    raster.PixelWidth, 96, raster.PixelHeight, 96, ImageResolutionUnits.Inches);
+                Add(new Image(definition, Point(new(fit.X, fit.Y + fit.Height)), fit.Width, fit.Height), "SCHEMATIC_IMAGE");
+                usedImages.TryAdd(raster.Sha256, raster);
+            }
+            else diagnostics.Add("CATALOG_RASTER_IMAGE_NOT_EMBEDDED: " + group.Id);
+        }
         foreach (var symbol in source.Symbols.Where(s => s.PageId == page.PageId))
         {
             var owner = SchematicSymbolOwner.Resolve(project, symbol);
@@ -255,6 +268,11 @@ public sealed class SchematicDxfExporter
                     Start = new(symbol.Position.X, symbol.Position.Y + (symbol.Rotation % 180 == 0 ? symbol.Height : symbol.Width) + 2) }, "SCHEMATIC_LABEL", .25);
             foreach (var anchor in symbol.Anchors)
             {
+                if (symbol.WagoVisualGroupId is not null)
+                {
+                    var lead = SchematicAuthoringService.PortFanoutLeadPoints(symbol, anchor.EndpointId);
+                    foreach (var segment in lead.Zip(lead.Skip(1))) Line(segment.First, segment.Second, "SCHEMATIC_FANOUT", .15);
+                }
                 if (!anchor.Confirmed) diagnostics.Add("UNCONFIRMED_ANCHOR: " + anchor.EndpointId);
                 if (SchematicPortPresentation.IsCollapsedPin(source, symbol, owner, anchor)) continue;
                 var point = SchematicAuthoringService.AnchorPoint(symbol, anchor.EndpointId);

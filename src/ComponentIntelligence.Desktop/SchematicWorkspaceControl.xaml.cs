@@ -376,6 +376,7 @@ public partial class SchematicWorkspaceControl : UserControl
             }
         }
         RenderWireLabels(project, page, crossings);
+        RenderSearchHighlights(project, page);
     }
 
     private void DrawFrame(SchematicPage page, int number, string? name)
@@ -464,6 +465,7 @@ public partial class SchematicWorkspaceControl : UserControl
         }
         var referenceY = (symbol.Geometry is null ? symbol.Position.Y : visibleBounds.Y) - 6;
         body.MouseLeftButtonDown += SelectBody;
+        if (wagoGrouped && !_renderingOutput) body.ContextMenu = PortFanoutMenu(symbol, owner.Ports.Single());
         void SelectBody(object sender, MouseButtonEventArgs e)
         {
             if (_wireMode) return;
@@ -489,7 +491,7 @@ public partial class SchematicWorkspaceControl : UserControl
             var pin = Marker(point, anchor.Confirmed ? Brushes.White : Brushes.LightGoldenrodYellow, Brushes.Black, 7);
             pin.ToolTip = $"{anchor.Label}\n{(anchor.Confirmed ? "接點位置已確認" : "接點位置待設定")}";
             pin.Cursor = portEditing && symbol.Geometry is null && !wagoGrouped ? Cursors.SizeAll : Cursors.Cross;
-            if (!_renderingOutput && !wagoGrouped) pin.ContextMenu = PinOrderMenu(symbol, owner, anchor);
+            if (!_renderingOutput) pin.ContextMenu = wagoGrouped ? PortFanoutMenu(symbol, owner.Ports.Single()) : PinOrderMenu(symbol, owner, anchor);
             pin.MouseLeftButtonDown += (_, e) =>
             {
                 if (_wireMode) WireAt(SchematicAttachment.Pin(symbol.SymbolId, anchor.EndpointId), point, false);

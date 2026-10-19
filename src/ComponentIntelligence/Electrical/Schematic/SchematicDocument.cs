@@ -85,6 +85,8 @@ public sealed record SchematicSymbol
 {
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? WagoVisualGroupId { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public double? WagoHeaderHeight { get; init; }
     public required string SymbolId { get; init; }
     public string ComponentInstanceId { get; init; } = "";
     public string? CableInstanceId { get; init; }

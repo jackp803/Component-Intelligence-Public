@@ -170,12 +170,9 @@ internal static partial class Program
         Call("Apply", new Func<ElectricalProject, ElectricalProject>(project => project), "synthetic identity edit");
         var status = (TextBlock)type.GetField("Status", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(workspace)!;
         Require(status.Text.Contains("標示空間不足"), "Successful edit overwrote the unplaced-caption warning.");
-        try
-        {
-            Call("RenderOutputPage", p, p.Schematic!.Pages[0]);
-            throw new InvalidOperationException("Output silently omitted unplaceable captions.");
-        }
-        catch (TargetInvocationException error) when (error.InnerException is InvalidOperationException inner && inner.Message.Contains("導線標籤")) { }
+        Call("RenderOutputPage", p, p.Schematic!.Pages[0]);
+        Require(workspace.OutputLabelWarnings.Any(w => w.PageId == p.Schematic!.Pages[0].PageId && w.WireIds.Count > 0),
+            "Nonfatal output warnings lost the affected page and wires.");
         var circleAsset = new SchematicCadAsset { Width = 30, Height = 30, SourceSha256 = "synthetic",
             Primitives = Enumerable.Range(0, 48).Select(_ => new SchematicCadPrimitive { Kind = "CIRCLE", Start = new(15, 15), Radius = 4 }).ToArray() };
         var cad = type.GetMethod("CadCanvas", BindingFlags.Static | BindingFlags.NonPublic)!;
@@ -185,7 +182,7 @@ internal static partial class Program
         Require(VisualTreeHelper.GetDescendantBounds(batched) == VisualTreeHelper.GetDescendantBounds(original), "Batched circle changed its original ink bounds.");
         File.WriteAllText(Path.Combine(output, "wire-readability.json"), JsonSerializer.Serialize(new { Passed = true, CombinedLabels = labels.Length,
             FunctionsPreserved = true, LabelsDoNotOverlap = true, ZoomOutOutlineClearance = true, ManualUiRoute = true, PinOrderUi = true,
-            IncidentWireDragCancel = true, JunctionsNotDuplicated = true, UnplacedCaptionsVisible = true, UnplacedCaptionsBlockOutput = true,
+            IncidentWireDragCancel = true, JunctionsNotDuplicated = true, UnplacedCaptionsVisible = true, UnplacedCaptionsAllowOutputWithWarning = true,
             ScreenshotInteriorInk = interiorInk, CadCircleBoundsUnchanged = true,
             DisconnectRestoresLabels = true, PdfPages = count }));
         Console.WriteLine("PASS combined functions/colors, separate unconnected labels, non-overlap, delete restoration, PDF.");

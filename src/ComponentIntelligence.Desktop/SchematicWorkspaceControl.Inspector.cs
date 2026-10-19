@@ -12,6 +12,7 @@ namespace ComponentIntelligence.Desktop;
 public partial class SchematicWorkspaceControl
 {
     private readonly Dictionary<string, Control> _inspectorFields = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TextBlock> _inspectorLabels = new(StringComparer.Ordinal);
     private string? _inspectorTarget, _inspectorPage, _inspectorProjectId;
     private string _inspectorBaseline = "", _inspectorSource = "";
     private bool _populatingInspector, _applyingInspector;
@@ -55,7 +56,8 @@ public partial class SchematicWorkspaceControl
 
     private void Field(StackPanel panel, string id, string label)
     {
-        panel.Children.Add(new TextBlock { Text = label, Margin = new(0, 7, 0, 2) });
+        var caption = new TextBlock { Text = label, Margin = new(0, 7, 0, 2) };
+        panel.Children.Add(caption); _inspectorLabels.Add(id, caption);
         var field = new TextBox { Name = "Inspector_" + id, MinWidth = 0, MaxLength = 120 };
         field.TextChanged += InspectorFieldChanged; panel.Children.Add(field); _inspectorFields.Add(id, field);
     }
@@ -139,6 +141,9 @@ public partial class SchematicWorkspaceControl
             WagoGroupButton.Visibility = symbol is not null && (symbol.WagoVisualGroupId is not null || SchematicWagoGroups.IsEligible(project, symbol))
                 ? Visibility.Visible : Visibility.Collapsed;
             WagoGroupButton.Content = symbol?.WagoVisualGroupId is null ? "合併同型號 WAGO" : "拆開合併顯示";
+            WagoFanoutButton.Visibility = symbol?.WagoVisualGroupId is not null ? Visibility.Visible : Visibility.Collapsed;
+            _inspectorLabels["width"].Text = symbol?.WagoVisualGroupId is null ? "寬 (mm)" : "合併框寬 (mm)";
+            _inspectorLabels["height"].Text = symbol?.WagoVisualGroupId is null ? "高 (mm)" : "每列高度 (mm)";
             WireInspectorFields.Visibility = wire is null ? Visibility.Collapsed : Visibility.Visible;
             DetailInspectorFields.Visibility = detail is null ? Visibility.Collapsed : Visibility.Visible;
             InspectorActions.Visibility = InspectorDelete.Visibility = symbol is not null || wire is not null || detail is not null ? Visibility.Visible : Visibility.Collapsed;
@@ -152,7 +157,7 @@ public partial class SchematicWorkspaceControl
                 var bounds = SchematicPortPresentation.GenericBodyBounds(project.Schematic!, symbol, owner);
                 SetField("x", symbol.Position.X); SetField("y", symbol.Position.Y); SetField("width", bounds.Width); SetField("height", bounds.Height);
                 SetField("rotation", symbol.Rotation); SetField("locked", symbol.Locked);
-                _inspectorFields["width"].IsEnabled = _inspectorFields["height"].IsEnabled = symbol.Geometry is null && symbol.WagoVisualGroupId is null;
+                _inspectorFields["width"].IsEnabled = _inspectorFields["height"].IsEnabled = symbol.Geometry is null;
                 _inspectorFields["rotation"].IsEnabled = symbol.WagoVisualGroupId is null;
                 _pinInventory.Text = string.Join("\n", owner.Ports.Where(p => SchematicPortPresentation.IsRepresented(symbol, p)).Select(p => p.Name + " / " + p.Pins.Count + " Pin"));
             }

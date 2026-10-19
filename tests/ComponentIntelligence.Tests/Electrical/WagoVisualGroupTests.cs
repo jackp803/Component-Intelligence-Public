@@ -75,7 +75,7 @@ public sealed class WagoVisualGroupTests
             Assert.Equal(new(old.Position.X + 30, old.Position.Y + 10), moved.Schematic!.Symbols.Single(s => s.SymbolId == old.SymbolId).Position);
         Assert.Throws<InvalidOperationException>(() => service.TransformSymbol(grouped, "w1", first.Position, 90));
         Assert.Throws<InvalidOperationException>(() => service.MoveSymbolsToPage(grouped, ["w1"], "other"));
-        Assert.Throws<InvalidOperationException>(() => service.ResizeGenericSymbol(grouped, "w1", 60, 40));
+        Assert.All(service.ResizeGenericSymbol(grouped, "w1", 60, 40).Schematic!.Symbols, s => { Assert.Equal(60, s.Width); Assert.Equal(40, s.Height); });
         Assert.Throws<InvalidOperationException>(() => service.DeleteRepresentations(grouped, ["w1"], true));
         var path = Path.Combine(Path.GetTempPath(), "wago-group-" + Guid.NewGuid().ToString("N") + ".db");
         try { var repository = new ElectricalProjectRepository(new SqliteConnectionFactory(), path); await repository.SaveAsync(moved);
@@ -114,7 +114,7 @@ public sealed class WagoVisualGroupTests
         Assert.Throws<InvalidOperationException>(() => author.MovePinToEdge(grouped, "w1", "p11", "Top", 8));
         Assert.Throws<InvalidOperationException>(() => author.MovePortToEdge(grouped, "w1", "port1", "Top", 8));
         Assert.Throws<InvalidOperationException>(() => author.TogglePortCollapsed(grouped, "w1", "port1"));
-        Assert.Throws<InvalidOperationException>(() => author.SetPortFanout(grouped, "w1", "port1", true, 10, 10));
+        Assert.NotEmpty(author.SetPortFanout(grouped, "w1", "port1", true, 10, 10).Schematic!.Symbols[0].EndpointDisplayPlacements);
         Assert.Equal(before, JsonSerializer.Serialize(grouped));
         var symbol = grouped.Schematic.Symbols.Single(s => s.SymbolId == "w1");
         var renamed = SchematicInspectorEdit.ApplyModule(grouped, "w1", new("X-Independent", symbol.Position.X, symbol.Position.Y, 24, 18, 0, false, null));

@@ -65,7 +65,7 @@ internal static partial class Program
         Require(!canvas.Children.OfType<TextBlock>().Any(t => t.Text == "WAGO 221-2411"), "Individual body titles still render.");
         Require(!canvas.Children.OfType<Border>().Any(b => b.Child is TextBlock { Text: "▾" }), "Port collapse toggles overlap group rows.");
         var fields = (Dictionary<string, Control>)Get("_inspectorFields")!;
-        Require(!fields["width"].IsEnabled && !fields["height"].IsEnabled && !fields["rotation"].IsEnabled, "Grouped geometry is still individually editable.");
+        Require(fields["width"].IsEnabled && fields["height"].IsEnabled && !fields["rotation"].IsEnabled, "Grouped size editing or rotation guard is wrong.");
         var zoom = new DrawingVisual();
         using (var drawing = zoom.RenderOpen()) drawing.DrawRectangle(new VisualBrush(canvas) { ViewboxUnits = BrushMappingMode.Absolute,
             Viewbox = new Rect(240, 240, 300, 240), Stretch = Stretch.Fill }, null, new Rect(0, 0, 750, 600));

@@ -36,20 +36,7 @@ public static partial class CableWiringAppendixRenderer
         var grid = page.EffectiveGrid();
         var width = grid.Width - 8;
         var diagram = preparedDiagram ?? CableWiringAppendixLayout.Build(cable, width);
-        var memberLines = new List<string>();
-        if (members is { Count: > 1 } || !string.IsNullOrWhiteSpace(cable.Notes))
-        foreach (var member in members ?? new[] { cable })
-        {
-            var value = (member.ReferenceDesignator ?? "Reference 未設定") + " / " +
-                (member.ProvidedLengthMm?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) ?? "長度待填") +
-                (member.ProvidedLengthMm.HasValue ? " mm" : "") +
-                (string.IsNullOrWhiteSpace(member.Notes) ? "" : " / " + member.Notes);
-            foreach (var paragraph in value.Replace("\r", "").Split('\n'))
-            {
-                var length = Math.Max(1, (int)(width / 3.2));
-                for (var i = 0; i < paragraph.Length; i += length) memberLines.Add(paragraph.Substring(i, Math.Min(length, paragraph.Length - i)));
-            }
-        }
+        var memberLines = BuildMemberLines(members ?? new[] { cable }, width);
         var headerLimit = Math.Max(1, (int)((grid.Height - (page.TemplateGeometry is null ? 36 : 83)) * .22 / 5));
         var remaining = memberLines.Skip(headerLimit).ToArray();
         if (remaining.Length > 0)
@@ -68,7 +55,7 @@ public static partial class CableWiringAppendixRenderer
             return text.DesiredSize.Height / 4;
         }
         var specificationY = grid.Y + 2 + Math.Max(8, HeaderHeight(Title(cable, members is { Count: > 1 }), 15) + 2);
-        var memberY = specificationY + Math.Max(9, HeaderHeight($"接線圖 1000/1000 / {cable.Specification ?? "規格待確認"}", 12) + 2);
+        var memberY = specificationY + Math.Max(9, HeaderHeight(MemberHeading(1000, 1000), 12) + 2);
         var top = Math.Max(grid.Y + 27 + memberLines.Count * 5, memberY + Math.Max(1, memberLines.Count) * 5 + 5);
         var content = new SchematicGridBounds(grid.X + 4, top, width - reservedRight, footerY - top - 3);
         if (content.Width < 45 || content.Height < 30) throw new InvalidOperationException("紙張太小，無法清楚容納線材接線图與返回連結；請增加紙張尺寸。");
@@ -169,7 +156,7 @@ public static partial class CableWiringAppendixRenderer
             Canvas.SetLeft(text, x * pixelsPerMm); Canvas.SetTop(text, y * pixelsPerMm); canvas.Children.Add(text);
         }
         Text(Title(cable, tile.SharedWiring), left, grid.Y + 2, 15);
-        Text($"接線圖 {tile.TileIndex}/{tile.TileCount} / {cable.Specification ?? "規格待確認"}", left, tile.SpecificationY);
+        Text(MemberHeading(tile.TileIndex, tile.TileCount), left, tile.SpecificationY);
         if (tile.MemberLines.Count == 0) Text(cable.ProvidedLengthMm is double length ? length.ToString("0.###") + " mm" : "長度待填", left, tile.MemberY, 11);
         for (var i = 0; i < tile.MemberLines.Count; i++) Text(tile.MemberLines[i], left, tile.MemberY + i * 5, 12);
         var clip = new Canvas { Width = tile.ContentBounds.Width * pixelsPerMm, Height = tile.ContentBounds.Height * pixelsPerMm,

@@ -52,7 +52,7 @@ public static class SchematicWireLegendPresentation
         return Create(project, wire, Indices(project).GetValueOrDefault(wire.WireId));
     }
 
-    private static Dictionary<string, int> Indices(ElectricalProject project)
+    internal static Dictionary<string, int> Indices(ElectricalProject project)
     {
         var connections = project.Connections.ToDictionary(c => c.ConnectionId, StringComparer.Ordinal);
         var indices = new Dictionary<string, int>(StringComparer.Ordinal);

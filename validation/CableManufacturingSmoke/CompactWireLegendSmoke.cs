@@ -57,12 +57,9 @@ internal static partial class Program
         var before = JsonSerializer.Serialize(p);
         var dense = Draw();
         Require(before == JsonSerializer.Serialize(p), "Narrow label reflow mutated electrical data or full manual names.");
-        try
-        {
-            type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [p, p.Schematic!.Pages[0]]);
-            throw new InvalidOperationException("In-sheet unconnected Pin text left no clearance, but output silently omitted a conductor caption.");
-        }
-        catch (TargetInvocationException error) when (error.InnerException is InvalidOperationException inner && inner.Message.Contains("導線標籤")) { }
+        type.GetMethod("RenderOutputPage", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(workspace, [p, p.Schematic!.Pages[0]]);
+        Require(workspace.OutputLabelWarnings.Any(w => w.PageId == p.Schematic!.Pages[0].PageId && w.WireIds.Count > 0),
+            "Unplaced captions must allow output but retain the affected page and wire identities.");
         // Preserve full manual names in data/tooltips while checking expanded-port layout as well.
         var author = new SchematicAuthoringService();
         p = author.TransformSymbol(p, p.Schematic!.Symbols[1].SymbolId, new(230, 40), 0);

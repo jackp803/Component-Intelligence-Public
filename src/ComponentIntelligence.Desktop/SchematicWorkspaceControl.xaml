@@ -22,6 +22,7 @@
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE71B;" Padding="10,5" Click="Mating_Click" ToolTip="接頭對接 / Port 逐 Pin 核對"/>
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE8FD;" Padding="10,5" Click="FunctionReview_Click" ToolTip="Pin 功能 / 自動映射與衝突核對"/>
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE9D5;" Padding="10,5" Click="WireDetails_Click" ToolTip="導線明細"/>
+   <Button x:Name="ProjectSearchButton" FontFamily="Segoe MDL2 Assets" Content="&#xE721;" Padding="10,5" Click="ProjectSearch_Click" ToolTip="搜尋工程圖 (Ctrl+F)"/>
    <ToggleButton x:Name="AllPagesTool" Content="所有頁面" Padding="12,5" Click="AllPages_Click" ToolTip="單頁／所有頁面 (F6)"/>
    <Button Content="PDF 草稿" Padding="12,5" Click="ExportPdf_Click" ToolTip="儲存並匯出多頁 PDF 草稿 (Ctrl+Shift+E)"/>
    <Button FontFamily="Segoe MDL2 Assets" Content="&#xE749;" Padding="10,5" Click="Print_Click" ToolTip="儲存並列印草稿 (Ctrl+P)"/>
@@ -29,6 +30,7 @@
    <Button x:Name="LeftPanelToggle" FontFamily="Segoe MDL2 Assets" Content="&#xE700;" Click="ToggleLeftPanel_Click" ToolTip="收合／展開頁面與 BOM"/>
    <Menu Background="Transparent" VerticalAlignment="Center" Margin="4,0">
     <MenuItem Header="圖面">
+     <MenuItem Header="搜尋工程圖" InputGestureText="Ctrl+F" Click="ProjectSearch_Click"/>
      <MenuItem Header="跨頁符號" InputGestureText="X" Click="Continuation_Click"/>
      <MenuItem Header="接頭對接" Click="Mating_Click"/>
      <MenuItem Header="Pin 功能／自動映射" Click="FunctionReview_Click"/>
@@ -75,7 +77,7 @@
       <TextBlock Text="專案 BOM" FontWeight="SemiBold" VerticalAlignment="Center"/>
      </DockPanel>
      <ComboBox x:Name="BomCategory" Margin="0,5,0,0" SelectionChanged="BomCategory_Changed" ToolTip="元件分類"/>
-     <TextBox x:Name="Search" Margin="0,5,0,0" TextChanged="Search_Changed" ToolTip="搜尋廠牌、型號、分類 (Ctrl+F)"/>
+     <TextBox x:Name="Search" Margin="0,5,0,0" TextChanged="Search_Changed" ToolTip="篩選 BOM 廠牌、型號、分類"/>
      <TextBlock x:Name="BomContext" TextWrapping="Wrap" FontSize="11" Foreground="#61696B" Margin="0,4,0,0"/>
     </StackPanel>
     <Grid Grid.Row="3">
@@ -143,6 +145,7 @@
     <Button x:Name="CablePropertiesButton" Content="線長／備註" Padding="8,5" Margin="0,6,0,0" Click="CableProperties_Click" Visibility="Collapsed"/>
     <Button x:Name="DuplicateCableButton" Content="複製為另一條線材" Padding="8,5" Margin="0,6,0,0" Click="DuplicateCable_Click" Visibility="Collapsed"/>
     <Button x:Name="WagoGroupButton" Content="合併同型號 WAGO" Padding="8,5" Margin="0,6,0,0" Click="WagoGroup_Click" Visibility="Collapsed"/>
+    <Button x:Name="WagoFanoutButton" Content="WAGO 引線設定" Padding="8,5" Margin="0,6,0,0" Click="WagoFanout_Click" Visibility="Collapsed"/>
     <Button Content="拆分模塊表示" Padding="8,5" Margin="0,6,0,0" Click="SplitRepresentation_Click" ToolTip="將通用模塊接點分段放到各頁；仍是一顆實體 (Ctrl+Shift+P)"/>
     <Button Content="保存模塊版型" Padding="8,5" Margin="0,6,0,0" Click="SaveModuleLayout_Click" ToolTip="讓同型元件在其他專案沿用目前的尺寸與接點位置；不核准 CAD 圖塊"/>
     <StackPanel x:Name="CadScalePanel" Visibility="Collapsed" Margin="0,12,0,0">
@@ -163,6 +166,11 @@
     </ScrollViewer>
    </DockPanel>
   </Grid>
-  <TextBlock x:Name="Status" Grid.Row="2" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#41494B"/>
+  <DockPanel Grid.Row="2" Margin="0,8,0,0">
+   <Button x:Name="OutputWarningsButton" DockPanel.Dock="Right" FontFamily="Segoe MDL2 Assets" Content="&#xE7BA;"
+    Width="30" Height="28" Margin="8,0,0,0" VerticalAlignment="Top" Visibility="Collapsed"
+    ToolTip="查看匯出標示警告" Click="OutputWarnings_Click"/>
+   <TextBlock x:Name="Status" MaxHeight="80" TextWrapping="Wrap" Foreground="#41494B"/>
+  </DockPanel>
  </Grid>
 </UserControl>

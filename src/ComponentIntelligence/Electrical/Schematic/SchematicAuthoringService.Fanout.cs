@@ -15,7 +15,6 @@ public sealed partial class SchematicAuthoringService
         var index = doc.Symbols.FindIndex(s => s.SymbolId == symbolId);
         if (index < 0) throw new InvalidOperationException("Unknown representation.");
         var symbol = doc.Symbols[index];
-        RequireWagoUngrouped(symbol);
         var owner = SchematicSymbolOwner.Resolve(draft, symbol);
         var port = owner.Ports.SingleOrDefault(p => p.PortId == portId)
             ?? throw new InvalidOperationException("Unknown Port.");
@@ -26,6 +25,7 @@ public sealed partial class SchematicAuthoringService
         var next = FanoutSymbol(symbol, port, enabled, pitch, lead);
         doc.Symbols[index] = next;
         ValidatePortFanout(draft, doc, next, owner);
+        if (symbol.WagoVisualGroupId is not null) { ReanchorWagoRoutes(draft, doc, [symbol]); return; }
         var affected = doc.Wires.Where(w => new[] { w.Start, w.End }.Any(a => a.SymbolId == symbolId &&
             SymbolAttachmentPoint(draft, symbol, a) != SymbolAttachmentPoint(draft, next, a)))
             .Select(w => w.WireId).ToHashSet(StringComparer.Ordinal);

@@ -30,6 +30,9 @@ internal static partial class Program
     private static int Run(string[] args)
     {
         if (args.FirstOrDefault() == "wago-groups") return WagoGroupProof(Path.GetFullPath(args[1]));
+        if (args.FirstOrDefault() == "wago-editing") return WagoGroupEditingProof(Path.GetFullPath(args[1]));
+        if (args.FirstOrDefault() == "project-search") return ProjectSearchProof(Path.GetFullPath(args[1]));
+        if (args.FirstOrDefault() == "export-warnings-notes") return ExportWarningsNotesProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "compact-symbol") return CompactSymbolProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "bom-addition") return BomAdditionProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "placement-preview") return PlacementPreviewProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());

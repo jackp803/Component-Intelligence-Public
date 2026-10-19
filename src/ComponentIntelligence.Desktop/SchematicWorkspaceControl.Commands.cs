@@ -25,7 +25,7 @@ public partial class SchematicWorkspaceControl
         var command = SchematicShortcutCatalog.All.SingleOrDefault(s => s.Gesture == gesture)?.Command;
         if (command is null) return;
         if (Keyboard.FocusedElement is TextBoxBase or PasswordBox or ComboBox &&
-            command is not ("Save" or "Cancel" or "ApplyReference" or "Help")) return;
+            command is not ("Save" or "Cancel" or "ApplyReference" or "Help" or "Search")) return;
         var args = new RoutedEventArgs();
         switch (command)
         {
@@ -61,7 +61,7 @@ public partial class SchematicWorkspaceControl
             case "OrderNext": MovePage(1); break;
             case "Rename": RenamePage_Click(this, args); break;
             case "ApplyReference": Reference_Click(this, args); break;
-            case "Search": Search.Focus(); Search.SelectAll(); break;
+            case "Search": ProjectSearch_Click(this, args); break;
             case "Save": if (FinishDraftForSave()) SaveRequested?.Invoke(this, EventArgs.Empty); break;
             case "Undo": CancelCommand(); _undo(); RefreshWorkspace(); break;
             case "Redo": CancelCommand(); _redo(); RefreshWorkspace(); break;

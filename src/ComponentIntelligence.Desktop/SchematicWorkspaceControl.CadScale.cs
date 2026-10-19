@@ -29,6 +29,14 @@ public partial class SchematicWorkspaceControl
     {
         var symbol = _gestureStart!.Schematic!.Symbols.Single(s => s.SymbolId == _dragResizeSymbol);
         var owner = SchematicSymbolOwner.Resolve(_gestureStart, symbol);
+        if (symbol.WagoVisualGroupId is not null)
+        {
+            var group = SchematicWagoGroups.Build(_gestureStart.Schematic!).Single(g => g.Id == symbol.WagoVisualGroupId);
+            var header = Math.Max(group.HeaderHeight, SchematicWagoGroups.ImageHeaderHeight);
+            _gesturePreview = _service.ResizeGenericSymbol(_gestureStart, symbol.SymbolId, _pointer!.X - group.Bounds.X,
+                (_pointer.Y - group.Bounds.Y - header) / group.Members.Count);
+            return;
+        }
         if (symbol.Geometry is not null)
         {
             var visible = _gestureCadBounds ??= CadContentBounds(_gestureStart.Schematic, symbol, owner);

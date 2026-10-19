@@ -13,7 +13,7 @@ public sealed partial class SchematicAuthoringService
             throw new InvalidOperationException("請選擇同頁至少兩顆尚未合併、接點完整且各自獨立的 WAGO 221-2411 一般圖塊。");
         RequireWagoUnlocked(doc, rows);
         var page = doc.Pages.Single(p => p.PageId == rows[0].PageId);
-        var x = rows.Min(s => s.Position.X); var y = Math.Max(page.Margin + SchematicWagoGroups.HeaderHeight, rows.Min(s => s.Position.Y));
+        var x = rows.Min(s => s.Position.X); var y = Math.Max(page.Margin + SchematicWagoGroups.ImageHeaderHeight, rows.Min(s => s.Position.Y));
         var groupId = "wago-group-" + Guid.NewGuid().ToString("N");
         for (var n = 0; n < rows.Length; n++) {
             var source = rows[n] with { Rotation = 0, EndpointDisplayPlacements = [], CollapsedPortIds = [] };
@@ -26,7 +26,8 @@ public sealed partial class SchematicAuthoringService
                 Schematic = new() { Pages = [page], Symbols = [source] } };
             var fitted = ResizeGenericSymbol(isolated, source.SymbolId, SchematicWagoGroups.Width, SchematicWagoGroups.RowHeight).Schematic!.Symbols.Single();
             doc.Symbols[doc.Symbols.FindIndex(s => s.SymbolId == source.SymbolId)] = fitted with {
-                Position = new(x, y + n * SchematicWagoGroups.RowHeight), Rotation = 0, WagoVisualGroupId = groupId };
+                Position = new(x, y + n * SchematicWagoGroups.RowHeight), Rotation = 0, WagoVisualGroupId = groupId,
+                WagoHeaderHeight = SchematicWagoGroups.ImageHeaderHeight };
         }
         ReanchorWagoRoutes(draft, doc, rows);
     });
@@ -38,8 +39,40 @@ public sealed partial class SchematicAuthoringService
         var rows = doc.Symbols.Where(s => s.WagoVisualGroupId == id).ToArray();
         if (rows.Any(s => s.Locked)) throw new InvalidOperationException("請先解鎖合併顯示的 WAGO。");
         for (var i = 0; i < doc.Symbols.Count; i++)
-            if (doc.Symbols[i].WagoVisualGroupId == id) doc.Symbols[i] = doc.Symbols[i] with { WagoVisualGroupId = null };
+            if (doc.Symbols[i].WagoVisualGroupId == id) doc.Symbols[i] = doc.Symbols[i] with { WagoVisualGroupId = null, WagoHeaderHeight = null };
     });
+
+    private void ResizeWagoGroup(ElectricalProject draft, SchematicDocument doc, SchematicSymbol selected, double width, double rowHeight)
+    {
+        if (!double.IsFinite(width) || !double.IsFinite(rowHeight)) throw new InvalidOperationException("WAGO 尺寸必須是有效數值。");
+        width = Math.Max(20, width); rowHeight = Math.Max(SchematicWagoGroups.RowHeight, rowHeight);
+        var group = SchematicWagoGroups.Build(doc).Single(g => g.Id == selected.WagoVisualGroupId);
+        var rows = group.Members.ToArray(); RequireWagoUnlocked(doc, rows);
+        var header = Math.Max(SchematicWagoGroups.ImageHeaderHeight, group.HeaderHeight);
+        for (var i = 0; i < rows.Length; i++)
+        {
+            var old = rows[i]; var source = old with { WagoVisualGroupId = null, WagoHeaderHeight = null, EndpointDisplayPlacements = [] };
+            var isolated = new ElectricalProject { ProjectId = "wago-layout", SchemaVersion = draft.SchemaVersion,
+                Components = [draft.Components.Single(c => c.ComponentInstanceId == source.ComponentInstanceId)],
+                Schematic = new() { Pages = [doc.Pages.Single(p => p.PageId == source.PageId)], Symbols = [source] } };
+            var fitted = ResizeGenericSymbol(isolated, source.SymbolId, width, rowHeight).Schematic!.Symbols.Single();
+            var next = fitted with { Position = new(group.Bounds.X, group.Bounds.Y + header + i * rowHeight),
+                WagoVisualGroupId = group.Id, WagoHeaderHeight = header,
+                EndpointDisplayPlacements = old.EndpointDisplayPlacements.Select(p => {
+                    var oldPin = old.Anchors.Single(a => a.EndpointId == p.EndpointId).Position;
+                    var newPin = fitted.Anchors.Single(a => a.EndpointId == p.EndpointId).Position;
+                    var direction = old.Anchors.Single(a => a.EndpointId == p.EndpointId).Direction;
+                    var sidePins = old.EndpointDisplayPlacements.Where(q => q.PortId == p.PortId &&
+                        old.Anchors.Single(a => a.EndpointId == q.EndpointId).Direction == direction).ToArray();
+                    // Move the whole side together so resizing does not change its chosen pitch.
+                    var dy = sidePins.Average(q => fitted.Anchors.Single(a => a.EndpointId == q.EndpointId).Position.Y) -
+                        sidePins.Average(q => old.Anchors.Single(a => a.EndpointId == q.EndpointId).Position.Y);
+                    return p with { Position = new(p.Position.X + newPin.X - oldPin.X, p.Position.Y + dy) };
+                }).ToList() };
+            doc.Symbols[doc.Symbols.FindIndex(s => s.SymbolId == next.SymbolId)] = next;
+        }
+        ReanchorWagoRoutes(draft, doc, rows);
+    }
 
     private static void RequireWagoUnlocked(SchematicDocument doc, IReadOnlyList<SchematicSymbol> rows)
     {

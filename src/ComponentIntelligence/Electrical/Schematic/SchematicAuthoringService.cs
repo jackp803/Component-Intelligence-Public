@@ -626,7 +626,7 @@ public sealed partial class SchematicAuthoringService
         var obstacles = doc.Symbols.Where(s => s.PageId == wire.PageId).Select(s => (s.SymbolId,
             Bounds: SchematicPortPresentation.GenericBodyBounds(doc, s, SchematicSymbolOwner.Resolve(project, s))))
             .Concat(SchematicWagoGroups.Build(doc, wire.PageId).Select(g => (SymbolId: g.Id,
-                Bounds: new SchematicGridBounds(g.Bounds.X, g.Bounds.Y, g.Bounds.Width, SchematicWagoGroups.HeaderHeight)))).ToArray();
+                Bounds: new SchematicGridBounds(g.Bounds.X, g.Bounds.Y, g.Bounds.Width, g.HeaderHeight)))).ToArray();
         var draft = wire.Start.Kind == SchematicAttachmentKind.Free || wire.End.Kind == SchematicAttachmentKind.Free;
         if (draft)
             obstacles = obstacles.Where(o => !Contains(o.Bounds, wire.Start.Kind == SchematicAttachmentKind.Free ? start.Point : end.Point)).ToArray();

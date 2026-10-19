@@ -46,7 +46,16 @@ internal static partial class Program
             Require(metadata is not null, "Large shared groups have no metadata pagination.");
             var pages = (IReadOnlyList<IReadOnlyList<string>>)metadata!.Invoke(null, [tiles[0], page])!;
             var lines = tiles[0].MemberLines.Concat(pages.SelectMany(p => p)).ToArray();
-            foreach (var member in members) Require(lines.Any(l => l.Contains(member.ReferenceDesignator + " / " + member.ProvidedLengthMm + " mm / " + member.Notes)), "A shared member's independent metadata was omitted.");
+            foreach (var member in members)
+            {
+                Require(lines.Contains(member.ReferenceDesignator + " / " + member.ProvidedLengthMm + " mm"),
+                    "A shared member's independent length was omitted.");
+                Require(lines.Contains(member.ReferenceDesignator + " / 備註：" + member.Notes),
+                    "A shared member's independent notes were omitted.");
+                Require(lines.Contains(member.ReferenceDesignator + " / 規格：" +
+                    (string.IsNullOrWhiteSpace(member.Specification) ? "待確認" : member.Specification)),
+                    "A shared member's independent specification was omitted.");
+            }
             File.WriteAllText(Path.Combine(root, "member-page-count.txt"), pages.Count.ToString());
             var project = new ElectricalProject { ProjectId = "many-members", Cables = members.ToList(), Schematic = new() {
                 Pages = Enumerable.Range(1, 4).Select(i => page with { PageId = "sheet-" + i, Title = "Members " + i }).ToList(),

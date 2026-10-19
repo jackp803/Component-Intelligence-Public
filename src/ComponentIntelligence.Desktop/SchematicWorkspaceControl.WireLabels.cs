@@ -174,8 +174,10 @@ public partial class SchematicWorkspaceControl
             };
         }
 
-        _wireLabelWarnings.Remove(page.PageId);
+        if (_renderingOutput) _outputLabelWarnings.Remove(page.PageId);
+        else _wireLabelWarnings.Remove(page.PageId);
         var warnings = new List<string>();
+        var warningIds = new List<string>();
         foreach (var wire in wires)
         {
             if (!_renderWireLabels.TryGetValue(wire.WireId, out var caption)) continue;
@@ -197,11 +199,17 @@ public partial class SchematicWorkspaceControl
             occupied.RemoveRange(start, occupied.Count - start);
             if (pieces.Count == fragments.Count) { foreach (var piece in pieces) Add(wire, piece); continue; }
             warnings.Add(_renderWireDetails.GetValueOrDefault(wire.WireId)?.DisplayName ?? caption.Text);
+            warningIds.Add(wire.WireId);
         }
-        if (warnings.Count > 0)
+        if (_renderingOutput)
+        {
+            if (warnings.Count > 0)
+                _outputLabelWarnings[page.PageId] = new(project.Schematic!.Pages.FindIndex(p => p.PageId == page.PageId) + 1,
+                    page.PageId, page.Title, warningIds.AsReadOnly(), warnings.AsReadOnly());
+        }
+        else if (warnings.Count > 0)
         {
             const string message = "標示空間不足：已嘗試各線段與分行，請使用「依接線對齊接點」或調整引線間距。";
-            if (_renderingOutput) throw new InvalidOperationException("導線標籤未完整放入圖面；" + message + "\n" + string.Join("、", warnings));
             _wireLabelWarnings[page.PageId] = message;
             Status.Text = message + "\n" + string.Join("、", warnings); Status.ToolTip = string.Join("\n", warnings);
         }

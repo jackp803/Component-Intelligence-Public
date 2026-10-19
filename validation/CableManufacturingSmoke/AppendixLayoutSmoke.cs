@@ -41,11 +41,11 @@ internal static partial class Program
                     port.X + port.Width <= tile.ViewBounds.X + tile.ViewBounds.Width && port.Y + port.Height <= tile.ViewBounds.Y + tile.ViewBounds.Height,
                     "A connector body is clipped by the fitted viewport.");
             var canvas = new Canvas();
-            CableWiringVisualRenderer.DrawDiagram(canvas, tile.Diagram, 4 * tile.GeometryScale, 4, tile.MinimumTextHeight);
+            CableWiringVisualRenderer.DrawDiagram(canvas, tile.Diagram, 4 * tile.GeometryScale, 4 * tile.GeometryScale, tile.MinimumTextHeight);
             foreach (var text in canvas.Children.OfType<TextBlock>())
             {
                 text.Measure(new(double.PositiveInfinity, double.PositiveInfinity));
-                Require(text.FontSize >= 3.2 * 4, "Fitting made Pin labels too small.");
+                Require(text.FontSize >= 3.2 * 4 * tile.GeometryScale, "Proportional fitting lost its native Pin label size.");
                 var box = new Rect(Canvas.GetLeft(text), Canvas.GetTop(text), text.DesiredSize.Width, text.DesiredSize.Height);
                 var owner = tile.Diagram.PortBounds.Values.Single(p => box.Left >= p.X * 4 * tile.GeometryScale &&
                     box.Left < (p.X + p.Width) * 4 * tile.GeometryScale && box.Top >= p.Y * 4 * tile.GeometryScale && box.Top < (p.Y + p.Height) * 4 * tile.GeometryScale);
@@ -70,7 +70,7 @@ internal static partial class Program
             var longer = ArchivedCableInstanceFactory.Create(longLabel, CableConstructionType.Custom);
             var fitted = CableWiringAppendixRenderer.Plan(longer, page, 2, [longer, cables[1]])[0];
             var canvas = new Canvas();
-            CableWiringVisualRenderer.DrawDiagram(canvas, fitted.Diagram, 4 * fitted.GeometryScale, 4, fitted.MinimumTextHeight);
+            CableWiringVisualRenderer.DrawDiagram(canvas, fitted.Diagram, 4 * fitted.GeometryScale, 4 * fitted.GeometryScale, fitted.MinimumTextHeight);
             foreach (var text in canvas.Children.OfType<TextBlock>())
             {
                 text.Measure(new(double.PositiveInfinity, double.PositiveInfinity));
@@ -87,12 +87,12 @@ internal static partial class Program
                 DisplayName = string.Join(" ", Enumerable.Repeat("CONTROL", 60)) }, CableConstructionType.Custom);
             var narrow = page with { CoordinateGrid = new(5, 5, 180, 275) };
             var tile = CableWiringAppendixRenderer.Plan(longTitle, narrow, 1)[0];
-            var heading = new TextBlock { Text = "Reference 未設定 / " + longTitle.DisplayName, Width = tile.ContentBounds.Width * 4,
-                FontSize = 15, FontFamily = new("Microsoft JhengHei"), TextWrapping = TextWrapping.Wrap };
+            var heading = new TextBlock { Text = "Reference 未設定 / " + longTitle.DisplayName, Width = tile.HeaderWidth * 4,
+                FontSize = tile.TitleFontHeight * 4, FontFamily = new("Microsoft JhengHei"), TextWrapping = TextWrapping.Wrap };
             heading.Measure(new(double.PositiveInfinity, double.PositiveInfinity));
             Require(tile.SpecificationY >= narrow.EffectiveGrid().Y + 2 + heading.DesiredSize.Height / 4 + 2 && tile.MemberY >= tile.SpecificationY + 9,
                 "Header fields do not use the measured title/specification positions.");
-            Require(tile.ContentBounds.Y >= narrow.EffectiveGrid().Y + 2 + heading.DesiredSize.Height / 4 + 2 + 4 + 2 + 4 + 5,
+            Require(tile.ContentBounds.Y >= tile.SpecificationY + 9,
                 "Wrapped appendix title/specification overlap subsequent header or diagram content.");
         }
         if (only is null or "frame")

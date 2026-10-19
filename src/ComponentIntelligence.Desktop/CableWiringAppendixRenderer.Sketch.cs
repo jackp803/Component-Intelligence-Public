@@ -13,28 +13,7 @@ public static partial class CableWiringAppendixRenderer
     public static IReadOnlyList<CableWiringAppendixTile> Plan(CableInstance cable, SchematicPage page, int sourcePageCount,
         IReadOnlyList<CableInstance>? members = null)
     {
-        var tiles = PlanWiring(cable, page, sourcePageCount, members);
-        var variants = SketchVariants(members ?? new[] { cable });
-        if (variants.Count == 0) return tiles;
-        var shared = members is { Count: > 1 };
-        var placed = new List<CableWiringAppendixTile>();
-        foreach (var tile in tiles)
-        {
-            var b = tile.ContentBounds;
-            var region = new Rect(b.X + b.Width / 2, b.Y + b.Height * .45, b.Width / 2, b.Height * .55);
-            if (PlaceSketch(variants, tile, region, shared, page) is not { } result) break;
-            placed.Add(result);
-        }
-        if (placed.Count == tiles.Count) return placed;
-
-        // Keep the saved electrical layout and full-width header; reserve a separate
-        // right column only when the diagram has no safe lower-right opening.
-        var full = tiles[0].ContentBounds;
-        var reserved = Math.Min(180, full.Width * .45);
-        var partitioned = PlanWiring(cable, page, sourcePageCount, members, reserved, tiles[0].Diagram);
-        return partitioned.Select(tile => PlaceSketch(variants, tile,
-            new Rect(full.X + full.Width - reserved + 6, full.Y, reserved - 6, full.Height), shared, page)
-            ?? throw new InvalidOperationException("接線圖與製作示意 CAD 無法安全放在同一頁；請使用較大紙張，未輸出重疊或裁切的圖面。")).ToArray();
+        return PlanSinglePage(cable, page, sourcePageCount, members);
     }
 
     private sealed record SketchVariant(CableInstance Source, IReadOnlyList<string> References);
@@ -53,54 +32,62 @@ public static partial class CableWiringAppendixRenderer
             g.Select(s => s.Cable.ReferenceDesignator ?? "Reference 未設定").Distinct(StringComparer.Ordinal).ToArray())).ToArray();
     }
 
-    private static CableWiringAppendixTile? PlaceSketch(IReadOnlyList<SketchVariant> variants, CableWiringAppendixTile tile, Rect region, bool shared, SchematicPage page)
+    private static CableWiringAppendixTile? PlaceSketch(IReadOnlyList<SketchVariant> variants, CableWiringAppendixTile tile, Rect region, bool shared, SchematicPage page, double captionScale = 1)
     {
         if (region.Width <= 2 || region.Height <= 2) return null;
         var obstacles = SketchObstacles(tile, page);
-        for (var step = 0; step <= 4; step++)
+        var candidates = new List<(double Score, double Width, double Height, IReadOnlyList<SchematicCadPrimitive> Ink)>();
+        for (var columns = 1; columns <= Math.Ceiling(Math.Sqrt(variants.Count)); columns++)
         {
-            var factor = 1 - step * .05;
-            var width = Math.Min(170, region.Width) * factor;
-            var captions = variants.Select((v, i) => variants.Count > 1 ? "示意 " + (i + 1) + " / " + string.Join(" / ", v.References) : "").ToArray();
-            var captionHeights = captions.Select(value => {
-                if (value.Length == 0) return 0d;
-                var text = new TextBlock { Text = value, FontSize = 12, Width = width * 4, TextWrapping = TextWrapping.Wrap };
-                text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                return text.DesiredSize.Height / 4 + 2;
-            }).ToArray();
-            var availableHeight = region.Height - captionHeights.Sum() - (variants.Count - 1) * 4;
-            if (availableHeight <= variants.Count * 2) continue;
-            var primitives = new List<SchematicCadPrimitive>(); var w = 0d; var h = 0d;
-            for (var i = 0; i < variants.Count; i++)
+            var cellWidth = Math.Min(170, (region.Width - (columns - 1) * 4) / columns);
+            if (cellWidth <= 1) continue;
+            var primitives = new List<SchematicCadPrimitive>(); var top = 0d;
+            for (var row = 0; row < variants.Count; row += columns)
             {
-                var source = variants[i].Source;
-                if (captions[i].Length > 0) primitives.Add(new() { Kind = "MTEXT", Start = new(0, h), Text = captions[i],
-                    TextHeight = 3, TextWidth = width, TextAttachment = "TopLeft" });
-                h += captionHeights[i];
-                var sketch = SchematicCableDetailService.BuildSketch(source, new(source.CableInstanceId, null) {
-                    TableVisible = false, SketchPosition = new(0, 0), SketchWidth = width,
-                    SketchHeight = Math.Min(70, availableHeight / variants.Count) * factor }, includeInstanceText: !shared);
-                primitives.AddRange(TranslateSketch(sketch.Primitives, 0, h));
-                w = Math.Max(w, captions[i].Length > 0 ? width : sketch.Bounds.Width);
-                h += sketch.Bounds.Height + (i + 1 < variants.Count ? 4 : 0);
+                var rowHeight = 0d;
+                for (var column = 0; column < Math.Min(columns, variants.Count - row); column++)
+                {
+                    var variant = variants[row + column]; var x = column * (cellWidth + 4);
+                    var caption = variants.Count > 1 ? "示意 " + (row + column + 1) + " / " + string.Join(" / ", variant.References) : "";
+                    var captionHeight = caption.Length == 0 ? 0 : MeasureLabel(caption, cellWidth, 3 * captionScale) + 2;
+                    if (caption.Length > 0) primitives.Add(new() { Kind = "MTEXT", Start = new(x, top), Text = caption,
+                        TextHeight = 3 * captionScale, TextWidth = cellWidth, TextAttachment = "TopLeft" });
+                    var sketch = SchematicCableDetailService.BuildSketch(variant.Source, new(variant.Source.CableInstanceId, null) {
+                        TableVisible = false, SketchPosition = new(0, 0), SketchWidth = cellWidth, SketchHeight = 70 }, includeInstanceText: !shared);
+                    primitives.AddRange(TranslateSketch(sketch.Primitives, x, top + captionHeight));
+                    rowHeight = Math.Max(rowHeight, captionHeight + sketch.Bounds.Height);
+                }
+                top += rowHeight + (row + columns < variants.Count ? 4 : 0);
             }
-            var xs = obstacles.Select(o => o.Left - w - 2).Append(region.Right - w).Where(x => x >= region.Left && x + w <= region.Right).Distinct().OrderDescending();
-            var ys = obstacles.Select(o => o.Top - h - 2).Append(region.Bottom - h).Where(y => y >= region.Top && y + h <= region.Bottom).Distinct().OrderDescending();
+            var width = variants.Count == 1 ? SchematicCableDetailService.BuildSketch(variants[0].Source,
+                new(variants[0].Source.CableInstanceId, null) { TableVisible = false, SketchWidth = cellWidth, SketchHeight = 70 },
+                includeInstanceText: !shared).Bounds.Width : columns * cellWidth + (columns - 1) * 4;
+            var scale = Math.Min(1, Math.Min(region.Width / width, region.Height / top));
+            candidates.Add((cellWidth * scale, width * scale, top * scale, TranslateSketch(primitives, 0, 0, scale)));
+        }
+        foreach (var candidate in candidates.OrderByDescending(c => c.Score))
+        {
+            var xs = obstacles.Select(o => o.Left - candidate.Width - 2).Append(region.Right - candidate.Width)
+                .Where(x => x >= region.Left && x + candidate.Width <= region.Right + .000001).Distinct().OrderDescending();
+            var ys = obstacles.Select(o => o.Top - candidate.Height - 2).Append(region.Bottom - candidate.Height)
+                .Where(y => y >= region.Top - .000001 && y + candidate.Height <= region.Bottom + .000001).Distinct().OrderDescending();
             foreach (var y in ys)
             foreach (var x in xs)
             {
-                var box = new Rect(x, y, w, h);
+                var box = new Rect(x, y, candidate.Width, candidate.Height);
                 if (obstacles.Any(o => o.IntersectsWith(box))) continue;
-                return tile with { SketchBounds = new(x, y, w, h), SketchPrimitives = TranslateSketch(primitives, x, y) };
+                return tile with { SketchBounds = new(x, y, candidate.Width, candidate.Height),
+                    SketchPrimitives = TranslateSketch(candidate.Ink, x, y) };
             }
         }
         return null;
     }
 
-    private static IReadOnlyList<SchematicCadPrimitive> TranslateSketch(IReadOnlyList<SchematicCadPrimitive> primitives, double x, double y)
+    private static IReadOnlyList<SchematicCadPrimitive> TranslateSketch(IReadOnlyList<SchematicCadPrimitive> primitives, double x, double y, double scale = 1)
     {
-        SchematicPoint Move(SchematicPoint p) => new(p.X + x, p.Y + y);
+        SchematicPoint Move(SchematicPoint p) => new(p.X * scale + x, p.Y * scale + y);
         return primitives.Select(p => p with { Start = Move(p.Start), End = p.End is null ? null : Move(p.End),
+            Radius = p.Radius * scale, TextHeight = p.TextHeight * scale, TextWidth = p.TextWidth * scale,
             Contours = p.Contours.Select(c => (IReadOnlyList<SchematicPoint>)c.Select(Move).ToArray()).ToArray() }).ToArray();
     }
 
@@ -126,7 +113,8 @@ public static partial class CableWiringAppendixRenderer
         {
             if (p.Kind is "TEXT" or "MTEXT")
             {
-                var text = CableWiringVisualRenderer.CreateText(p, 4, tile.MinimumTextHeight, scale);
+                var text = CableWiringVisualRenderer.CreateText(p, tile.ScaleTextWithGeometry ? 4 * scale : 4,
+                    tile.MinimumTextHeight, tile.ScaleTextWithGeometry ? 1 : scale);
                 text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 Add(new(X(p.Start.X), Y(p.Start.Y), text.DesiredSize.Width / 4, text.DesiredSize.Height / 4));
             }

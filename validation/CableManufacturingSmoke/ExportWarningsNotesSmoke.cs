@@ -168,7 +168,7 @@ internal static partial class Program
             }
             finally { host.Content = null; host.Close(); }
         });
-        Proof("physical cable specification notes wrapping pagination and PDF", () =>
+        Proof("physical cable specification notes wrapping same-page fitting and PDF", () =>
         {
             var template = new ArchivedCableTemplate { TemplateId = "metadata", TemplateRevision = "r1", AssetSha256 = new('a', 64),
                 Ports = new[] { "A", "B" }.Select(id => new ComponentIntelligence.Electrical.Domain.ComponentPort { PortId = id, Name = id,
@@ -202,7 +202,7 @@ internal static partial class Program
             Check(tiles.Count == 1, "Metadata forced duplicate internal wiring diagrams.");
             var tile = tiles[0];
             var memberPages = CableWiringAppendixRenderer.MemberPages(tile, page);
-            Check(memberPages.Count >= 2, "Long independent notes did not exercise metadata pagination.");
+            Check(memberPages.Count == 0 && tile.MemberLabels.Count == 27, "Independent cable labels left the same-page assembly.");
             var allLines = tile.MemberLines.Concat(memberPages.SelectMany(lines => lines)).ToArray();
             var metadata = string.Join("\n", allLines);
             Check(metadata.Split("L1=5000mm").Length - 1 == 9, "Specification was omitted or deduplicated across physical cables.");
@@ -225,7 +225,9 @@ internal static partial class Program
                 text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 Check(text.DesiredSize.Height / 4 <= 5, "A wrapped metadata row overlaps the next row.");
             }
-            Check(tile.MemberY + tile.MemberLines.Count * 5 <= tile.ContentBounds.Y, "Metadata overlaps internal wiring.");
+            Check(tile.MemberLabels.All(label => label.Bounds.X > tile.ContentBounds.X + tile.ContentBounds.Width &&
+                label.Bounds.Y + label.Bounds.Height <= tile.MetadataBounds!.Y + tile.MetadataBounds.Height),
+                "Independent cable metadata overlaps wiring or escapes its area.");
             CheckAppendixSketchClearance(tile, tile.SketchBounds!, page);
             foreach (var lines in memberPages)
                 Check(page.EffectiveGrid().Y + 18 + lines.Count * 5 <= CableWiringAppendixRenderer.MemberReturnBounds(page).Y,
@@ -257,7 +259,6 @@ internal static partial class Program
             var workspace = Workspace(project);
             var background = Page(workspace, project, page with { PageId = "blank" });
             Png(CableWiringAppendixRenderer.Render(members[0], page, tile, [], background), "cable-wiring.png");
-            Png(CableWiringAppendixRenderer.RenderMembers(page, memberPages[0], background), "cable-members.png");
             File.WriteAllText(Path.Combine(root, "member-lines.json"), JsonSerializer.Serialize(new { tile.MemberLines, Pages = memberPages }));
             var pdfPath = Path.Combine(root, "cable-metadata.pdf");
             var count = SchematicPdfWriter.Write(project, pdfPath, (p, sheet) => Page(workspace, p, sheet));

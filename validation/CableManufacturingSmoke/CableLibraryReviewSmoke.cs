@@ -43,8 +43,9 @@ internal static partial class Program
             var tiles = CableWiringAppendixRenderer.Plan(members[0], page, 1, members);
             Require(tiles.Count == 1, "Member metadata duplicated the wiring diagram.");
             var metadata = typeof(CableWiringAppendixRenderer).GetMethod("MemberPages");
-            Require(metadata is not null, "Large shared groups have no metadata pagination.");
+            Require(metadata is not null, "Missing metadata compatibility query.");
             var pages = (IReadOnlyList<IReadOnlyList<string>>)metadata!.Invoke(null, [tiles[0], page])!;
+            Require(pages.Count == 0 && tiles[0].MemberLabels.Count == 150, "Shared cable labels left the one-page assembly.");
             var lines = tiles[0].MemberLines.Concat(pages.SelectMany(p => p)).ToArray();
             foreach (var member in members)
             {

@@ -52,23 +52,28 @@ public static class SchematicPdfWriter
             var indices = output.Select((page, index) => (page.Sheet.PageId, index)).ToDictionary(p => p.PageId, p => p.index, StringComparer.Ordinal);
             using var document = new PdfDocument();
             document.Info.Title = (project.Name ?? "Electrical schematic") + " - DRAFT";
-            document.Info.Subject = "Saved schematic draft; engineering acceptance pending; 300 DPI page rendering";
+            document.Info.Subject = "Saved schematic draft; engineering acceptance pending; vector cable assemblies; 300 DPI main pages";
             foreach (var item in output)
             {
                 var sheet = item.Sheet;
                 var bitmap = render(snapshot, sheet);
+                System.Windows.Controls.Canvas? vectorCanvas = null;
                 if (item.Tile is { } tile && item.Section is { } section)
-                    bitmap = CableWiringAppendixRenderer.Render(snapshot.Cables.Single(c => c.CableInstanceId == section.CableInstanceId), sheet, tile,
+                    vectorCanvas = CableWiringAppendixRenderer.CreateCanvas(snapshot.Cables.Single(c => c.CableInstanceId == section.CableInstanceId), sheet, tile,
                         CableWiringAppendixRenderer.ReturnLinks(tile, section.SourceLinks, indices, sheet.Margin), bitmap);
                 if (item.WireDetails is { } details) bitmap = SchematicWireDetailsRenderer.Render(sheet, details, bitmap);
                 if (item.CableMembers is { } memberLines) bitmap = CableWiringAppendixRenderer.RenderMembers(sheet, memberLines, bitmap);
-                var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
-                using var stream = new MemoryStream(); encoder.Save(stream); stream.Position = 0;
-                using var image = XImage.FromStream(stream);
                 var page = document.AddPage();
                 page.Width = XUnit.FromMillimeter(sheet.Width); page.Height = XUnit.FromMillimeter(sheet.Height);
                 using var graphics = XGraphics.FromPdfPage(page);
-                graphics.DrawImage(image, 0, 0, page.Width.Point, page.Height.Point);
+                if (vectorCanvas is not null) WpfPdfVectorRenderer.Draw(graphics, vectorCanvas, 72d / 25.4 / 4);
+                else
+                {
+                    var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
+                    using var stream = new MemoryStream(); encoder.Save(stream); stream.Position = 0;
+                    using var image = XImage.FromStream(stream);
+                    graphics.DrawImage(image, 0, 0, page.Width.Point, page.Height.Point);
+                }
             }
             foreach (var sheet in snapshot.Schematic.Pages.Select((value, index) => (value, index)))
             foreach (var link in SchematicContinuationNavigation.Links(snapshot, sheet.value.PageId))

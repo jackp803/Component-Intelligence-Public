@@ -64,6 +64,7 @@ public sealed partial class SchematicAuthoringService
 
     private static void ReanchorWagoRoutes(ElectricalProject draft, SchematicDocument doc, IReadOnlyList<SchematicSymbol> old)
     {
+        var previousRoutes = doc.Wires.ToDictionary(w => w.WireId, w => w.Points.ToArray(), StringComparer.Ordinal);
         var ids = old.Select(s => s.SymbolId).ToHashSet(StringComparer.Ordinal);
         var affected = doc.Wires.Where(w => ids.Contains(w.Start.SymbolId ?? "") || ids.Contains(w.End.SymbolId ?? "")).Select(w => w.WireId).ToHashSet(StringComparer.Ordinal);
         var reserved = doc.Wires.Where(w => !affected.Contains(w.WireId)).ToList();
@@ -94,6 +95,16 @@ public sealed partial class SchematicAuthoringService
             if (points.Count < 2) throw new InvalidOperationException("WAGO 移動後導線長度為零，請調整位置。");
             if (CanRerouteSimpleWire(doc, wire)) points = RerouteSimpleWire(draft, doc, wire, reserved);
             doc.Wires[i] = wire with { Points = points }; reserved.Add(doc.Wires[i]); ReanchorDependentJunctions(doc, wire.WireId);
+        }
+        foreach (var wire in doc.Wires.Where(w => !w.Points.SequenceEqual(previousRoutes[w.WireId])))
+        foreach (var symbol in doc.Symbols.Where(s => s.PageId == wire.PageId && !ids.Contains(s.SymbolId) &&
+            s.SymbolId != wire.Start.SymbolId && s.SymbolId != wire.End.SymbolId))
+        {
+            var owner = SchematicSymbolOwner.Resolve(draft, symbol);
+            var body = SchematicPortPresentation.GenericBodyBounds(doc, symbol, owner);
+            var interior = new SchematicGridBounds(body.X + .001, body.Y + .001, body.Width - .002, body.Height - .002);
+            if (wire.Points.Zip(wire.Points.Skip(1)).Any(e => FanoutSegmentTouchesBody(e.First, e.Second, interior)))
+                throw new InvalidOperationException($"WAGO 連接導線會穿過「{owner.Reference ?? owner.DisplayName}」圖塊；請先調整走線或移動位置。");
         }
     }
 

@@ -91,4 +91,16 @@ public sealed class WagoVisualGroupRegressionTests
         var next = Group(p); var bounds = SchematicWagoGroups.Build(next.Schematic!).Single().Bounds;
         Assert.DoesNotContain(next.Schematic!.Wires.Single().Points.Zip(next.Schematic.Wires.Single().Points.Skip(1)), e => Interior(e.First, e.Second, bounds));
     }
+
+    [Fact]
+    public void TranslatedInternalManualRouteCannotCrossLockedNonmember()
+    {
+        var p = Group(Fixture()); p = _service.TransformSymbol(p, "w3", new(300, 60), 0); p = _service.SetLocked(p, "w3", true);
+        var a = Pin(p, "w1", "p12"); var b = Pin(p, "w2", "p22");
+        p = _service.DrawWire(p, "page", SchematicAttachment.Pin("w1", "p12"), SchematicAttachment.Pin("w2", "p22"),
+            [a, new(250, a.Y), new(250, b.Y), b], true);
+        var before = JsonSerializer.Serialize(p);
+        Assert.Throws<InvalidOperationException>(() => _service.TransformSymbol(p, "w1", new(200, 60), 0));
+        Assert.Equal(before, JsonSerializer.Serialize(p));
+    }
 }

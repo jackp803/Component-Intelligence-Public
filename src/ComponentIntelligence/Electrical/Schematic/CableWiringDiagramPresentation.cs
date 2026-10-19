@@ -8,4 +8,5 @@ public sealed record CableWiringDiagramPresentation(
     IReadOnlyDictionary<string, IReadOnlyList<SchematicPoint>> EdgePaths)
 {
     public IReadOnlyDictionary<string, IReadOnlyList<SchematicCadPrimitive>> EdgePrimitives { get; init; } = new Dictionary<string, IReadOnlyList<SchematicCadPrimitive>>();
+    public IReadOnlyDictionary<string, string> EdgeNetworks { get; init; } = new Dictionary<string, string>();
 }

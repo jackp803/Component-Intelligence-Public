@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using netDxf;
+using netDxf.Blocks;
 using netDxf.Entities;
 
 namespace ComponentIntelligence.Electrical.Schematic;
@@ -102,7 +103,40 @@ public sealed class SchematicCadImporter
                 throw new InvalidDataException("Only finite planar XY geometry is supported.");
             var point = new SchematicPoint(p.X, p.Y); bounds.Add(point); return point;
         }
-        void Read(EntityObject e, int depth, IReadOnlyList<string>? sourceBlocks = null)
+        var preparedBlocks = new HashSet<Block>(ReferenceEqualityComparer.Instance);
+        var dimensionPictures = new HashSet<string>(StringComparer.Ordinal);
+        Block DimensionPicture(Dimension dimension)
+        {
+            var picture = dimension.Block;
+            if (picture is null || picture.Entities.Count == 0)
+            {
+                picture = DimensionBlock.Build((Dimension)dimension.Clone());
+                diagnostics.Add("Dimension picture generated from stored style and text; visual review required.");
+            }
+            return picture;
+        }
+        void PrepareDimensions(Block block, int depth)
+        {
+            if (depth > 32) throw new InvalidDataException("Block nesting exceeds 32 levels.");
+            if (!preparedBlocks.Add(block)) return;
+            foreach (var entity in block.Entities.ToArray())
+            {
+                if (!entity.IsVisible || !entity.Layer.IsVisible || entity.Normal != Vector3.UnitZ) continue;
+                if (entity is Insert nested) PrepareDimensions(nested.Block, depth + 1);
+                if (entity is not Dimension dimension) continue;
+                var picture = DimensionPicture(dimension);
+                PrepareDimensions(picture, depth + 1);
+                // Expand before any parent INSERT is cloned/exploded: Dimension.Clone
+                // loses cached custom pictures, and TransformBy leaves text unscaled.
+                var name = "CAD_DIMENSION_" + Guid.NewGuid().ToString("N");
+                var display = (Block)picture.Clone(name);
+                display.Record.Units = block.Record.Units;
+                dimensionPictures.Add(name);
+                block.Entities.Remove(dimension);
+                block.Entities.Add(new Insert(display, display.Origin) { Layer = dimension.Layer });
+            }
+        }
+        void Read(EntityObject e, int depth, IReadOnlyList<string>? sourceBlocks = null, bool displayOnly = false)
         {
             sourceBlocks ??= [];
             var firstPrimitive = raw.Count;
@@ -111,6 +145,16 @@ public sealed class SchematicCadImporter
             if (e.Normal != Vector3.UnitZ) { diagnostics.Add($"Unsupported normal: {e.Type}"); return; }
             switch (e)
             {
+                case Dimension dimension:
+                    var picture = DimensionPicture(dimension);
+                    PrepareDimensions(picture, depth + 1);
+                    foreach (var child in picture.Entities) Read((EntityObject)child.Clone(), depth + 1, sourceBlocks, displayOnly: true);
+                    break;
+                case Solid solid:
+                    var contour = new[] { solid.FirstVertex, solid.SecondVertex, solid.FourthVertex, solid.ThirdVertex }
+                        .Distinct().Select(v => Point(new Vector3(v.X, v.Y, solid.Elevation))).ToArray();
+                    if (contour.Length >= 3) raw.Add(new() { Kind = "SOLID_HATCH", Start = contour[0], Contours = [contour] });
+                    break;
                 case Hatch hatch when hatch.Pattern.Name == "SOLID" && hatch.Pattern.Style.ToString() == "Normal":
                     var loops = new List<IReadOnlyList<SchematicPoint>>();
                     foreach (var path in hatch.BoundaryPaths)
@@ -131,27 +175,31 @@ public sealed class SchematicCadImporter
                     else raw.Add(new() { Kind = "SOLID_HATCH", Start = loops[0][0], Contours = loops });
                     break;
                 case Insert insert:
+                    PrepareDimensions(insert.Block, depth + 1);
+                    var isDimensionPicture = dimensionPictures.Contains(insert.Block.Name);
+                    displayOnly |= isDimensionPicture;
+                    IReadOnlyList<string> blocks = isDimensionPicture ? sourceBlocks : [..sourceBlocks, insert.Block.Name];
                     foreach (var attribute in insert.Attributes)
                     {
-                        if (attribute.Tag.StartsWith("X", StringComparison.Ordinal) && attribute.Tag.Contains("TERM", StringComparison.Ordinal))
+                        if (!displayOnly && attribute.Tag.StartsWith("X", StringComparison.Ordinal) && attribute.Tag.Contains("TERM", StringComparison.Ordinal))
                             contacts.Add(new(attribute.Tag, attribute.Value ?? "", Point(attribute.Position),
-                                Direction: InsertContactDirection(attribute.Tag, insert), SourceBlocks: [..sourceBlocks, insert.Block.Name]));
+                                Direction: InsertContactDirection(attribute.Tag, insert), SourceBlocks: blocks));
                         // Explode discards attribute identity. Preserve tagged text before flattening.
                         if (attribute.IsVisible && attribute.Layer.IsVisible && !attribute.Flags.HasFlag(AttributeFlags.Hidden) && !string.IsNullOrEmpty(attribute.Value))
                         {
                             raw.Add(new() { Kind = "TEXT", Start = Point(attribute.Position), Text = attribute.Value,
-                                AttributeTag = attribute.Tag, TextHeight = attribute.Height, Rotation = attribute.Rotation,
+                                AttributeTag = displayOnly ? null : attribute.Tag, TextHeight = attribute.Height, Rotation = attribute.Rotation,
                                 TextAttachment = attribute.Alignment.ToString(), TextWidthFactor = attribute.WidthFactor,
-                                SourceBlocks = [..sourceBlocks, insert.Block.Name] });
+                                SourceBlocks = blocks });
                             if (attribute.Alignment != TextAlignment.BaselineLeft || attribute.WidthFactor != 1 || attribute.ObliqueAngle != 0)
                                 diagnostics.Add("Attribute text formatting requires visual review.");
                         }
                         attribute.IsVisible = false;
                     }
-                    foreach (var child in insert.Explode()) Read(child, depth + 1, [..sourceBlocks, insert.Block.Name]);
+                    foreach (var child in insert.Explode()) Read(child, depth + 1, blocks, displayOnly);
                     break;
                 case Polyline2D polyline:
-                    foreach (var child in polyline.Explode()) Read(child, depth + 1, sourceBlocks);
+                    foreach (var child in polyline.Explode()) Read(child, depth + 1, sourceBlocks, displayOnly);
                     break;
                 case Line line:
                     raw.Add(new() { Kind = "LINE", Start = Point(line.StartPoint), End = Point(line.EndPoint) });

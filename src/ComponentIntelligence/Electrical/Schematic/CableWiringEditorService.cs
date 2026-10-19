@@ -249,7 +249,9 @@ public sealed class CableWiringEditorService
         // A geometric crossing is never an electrical connection. Mark only shared
         // vertices of explicitly connected pairs, not arbitrary segment intersections.
         var junctions = new HashSet<SchematicPoint>();
-        var pinNetworks = CableFunctionAssociationService.Components(draft).SelectMany((group, net) => group.Select(id => (id, net)))
+        var networks = CableFunctionAssociationService.Components(draft);
+        var networkKeys = networks.Select(g => g.Order(StringComparer.Ordinal).First()).ToArray();
+        var pinNetworks = networks.SelectMany((group, net) => group.Select(id => (id, net)))
             .ToDictionary(p => p.id, p => p.net, StringComparer.Ordinal);
         var junctionNetworks = new Dictionary<SchematicPoint, HashSet<int>>();
         foreach (var pair in Mapping(draft))
@@ -277,7 +279,9 @@ public sealed class CableWiringEditorService
         var minX = points.Min(p => p.X) - 5; var minY = points.Min(p => p.Y) - 5;
         var maxX = primitives.Max(p => p.Kind == "TEXT" ? p.Start.X + (p.Text?.Length ?? 0) * p.TextHeight : Math.Max(p.Start.X, p.End?.X ?? p.Start.X));
         var maxY = primitives.Max(p => p.Kind == "TEXT" ? p.Start.Y + p.TextHeight * 1.5 : Math.Max(p.Start.Y, p.End?.Y ?? p.Start.Y));
-        return new(primitives, new(minX, minY, maxX - minX + 5, maxY - minY + 5), layout.PortBounds, layout.PinPositions, paths) { EdgePrimitives = edgePrimitives };
+        return new(primitives, new(minX, minY, maxX - minX + 5, maxY - minY + 5), layout.PortBounds, layout.PinPositions, paths) {
+            EdgePrimitives = edgePrimitives,
+            EdgeNetworks = wires.ToDictionary(w => w.WireId, w => networkKeys[pinNetworks[w.Start.EndpointId!]], StringComparer.Ordinal) };
     }
 
     private static IReadOnlyList<SchematicCadPrimitive> BridgeJunctions(IReadOnlyList<SchematicCadPrimitive> source, IReadOnlyList<SchematicPoint> points)

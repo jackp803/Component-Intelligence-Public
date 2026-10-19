@@ -22,7 +22,9 @@ public static class CableWiringVisualRenderer
         var strokes = new Dictionary<SchematicCadPrimitive, Brush>(ReferenceEqualityComparer.Instance);
         var used = new HashSet<Color>();
         var index = 0;
-        foreach (var (_, parts) in diagram.EdgePrimitives.OrderBy(p => p.Key, StringComparer.Ordinal))
+        var networks = diagram.EdgePrimitives.GroupBy(edge => diagram.EdgeNetworks.TryGetValue(edge.Key, out var network)
+            ? "network:" + network : "edge:" + edge.Key, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal);
+        foreach (var network in networks)
         {
             var color = IdentificationColor(index++);
             while (!used.Add(color))
@@ -31,7 +33,8 @@ public static class CableWiringVisualRenderer
                 color = Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
             }
             var brush = new SolidColorBrush(color); brush.Freeze();
-            foreach (var part in parts) strokes.Add(part, brush);
+            foreach (var edge in network)
+            foreach (var part in edge.Value) strokes.Add(part, brush);
         }
         // Preserve primitive order so shared junction dots stay above conductor segments.
         foreach (var primitive in diagram.Primitives)

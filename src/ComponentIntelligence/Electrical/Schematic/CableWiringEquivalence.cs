@@ -48,6 +48,6 @@ public static class CableWiringEquivalence
             .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
         return JsonSerializer.Serialize(new { Source = source, Ports = ports, Edges = edges,
             Usage = usage.Where(u => pins.ContainsKey(u.SourcePinId)).Select(u => new { Pin = pins[u.SourcePinId], u.Usage }).OrderBy(u => u.Pin, StringComparer.Ordinal),
-            cable.Specification, binding.MappingConfirmed });
+            binding.MappingConfirmed });
     }
 }

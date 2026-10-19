@@ -65,8 +65,11 @@ internal static partial class Program
                 Require(!box.IntersectsWith(diagramBox) && !box.IntersectsWith(sketchBox) &&
                     box.Bottom <= metadata.Y + metadata.Height, "A cable metadata label overlaps wiring/sketch or escapes its region.");
             }
-            Require(tile.MemberLabels.Count == count * 3 &&
-                tile.MemberLabels.Count(l => l.Text.Contains("END-NOTE-")) == count,
+            var noteGroups = Math.Min(count, 2);
+            Require(tile.MemberLabels.Count == count * 2 + noteGroups &&
+                tile.MemberLabels.Count(l => l.Text.Contains("END-NOTE-")) == noteGroups &&
+                members.All(member => tile.MemberLabels.Any(l => l.Text.Contains(member.ReferenceDesignator!) &&
+                    l.Text.Contains(member.Notes!))),
                 "A member's complete notes/specification/length label was lost.");
             Require(JsonSerializer.Serialize(members[0].ArchivedCable!.Manufacturing!.WiringDiagram) ==
                 JsonSerializer.Serialize(cables[0].ArchivedCable!.Manufacturing!.WiringDiagram), "Fitting changed saved electrical geometry.");

@@ -41,8 +41,7 @@ public sealed class CableWiringAppendixGroupingTests
     [InlineData("pin-number")]
     [InlineData("coding")]
     [InlineData("function")]
-    [InlineData("specification")]
-    public void SamePortsDoNotMergeDifferentElectricalOrPrintedSpecifications(string change)
+    public void SamePortsDoNotMergeDifferentElectricalSpecifications(string change)
     {
         var project = Project(); var cable = project.Cables[1]; var binding = cable.ArchivedCable!;
         if (change is "mapping" or "short")
@@ -50,8 +49,24 @@ public sealed class CableWiringAppendixGroupingTests
         if (change == "pin-number") binding.Ports[0].Pins[0].PinNumber = "5";
         if (change == "coding") binding.Ports[0].Connector!.Coding = "B";
         if (change == "function") binding.Ports[0].Pins[0].Function = "PE";
-        if (change == "specification") cable.Specification = "AWG18 / shielded";
         Assert.Equal(2, CableWiringAppendixPlan.Build(project).Sections.Count);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void IndependentSpecificationsDoNotDuplicateTheSameRecordedWiring(bool partial)
+    {
+        var project = Project(partial);
+        project.Cables[0].ReferenceDesignator = "Valva1_Cable";
+        project.Cables[1].ReferenceDesignator = "Valva2_cable";
+        project.Cables[0].Specification = "L1=200mm; L2=4800mm";
+        project.Cables[1].Specification = "L1=500mm; L2=1500mm";
+        var before = JsonSerializer.Serialize(project);
+        var plan = CableWiringAppendixPlan.Build(project);
+        Assert.Equal(2, Assert.Single(plan.Sections).CableInstanceIds.Count);
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+        Assert.Equal(JsonSerializer.Serialize(project.Cables), JsonSerializer.Serialize(plan.MainProject.Cables));
     }
 
     [Fact]

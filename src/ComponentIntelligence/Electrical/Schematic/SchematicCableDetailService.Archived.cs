@@ -225,7 +225,7 @@ public sealed partial class SchematicCableDetailService
             return ([], new(binding.SketchPosition.X, binding.SketchPosition.Y, binding.SketchWidth, binding.SketchHeight));
         var fields = cable.ArchivedCable.Template.TextBindings.ToDictionary(b => b.AttributeTag, b => b.Field, StringComparer.Ordinal);
         var resolved = sketch.Primitives.Select(p => p with { Text = p.AttributeTag is { } tag && fields.TryGetValue(tag, out var field)
-            ? !includeInstanceText && field is CableTextField.Reference or CableTextField.LengthMm ? "" :
+            ? !includeInstanceText ? "" :
                 SchematicSymbolPresentation.CableFieldValue(cable, field) : p.Text, AttributeTag = null }).ToArray();
         var primitives = FitSketch(resolved, binding, out var bounds);
         return (primitives, bounds);

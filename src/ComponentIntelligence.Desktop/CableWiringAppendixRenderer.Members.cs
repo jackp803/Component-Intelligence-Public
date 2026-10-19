@@ -11,6 +11,31 @@ public static partial class CableWiringAppendixRenderer
 {
     private static string MemberHeading(int index, int count) => $"接線圖 {index}/{count} / Reference、實際線長、規格、備註";
 
+    private static IReadOnlyList<(string Prefix, string Value)> MemberFields(IReadOnlyList<CableInstance> members)
+    {
+        string Reference(CableInstance member) => member.ReferenceDesignator ?? "Reference 未設定";
+        string Notes(CableInstance member) => string.IsNullOrWhiteSpace(member.Notes) ? "未填" :
+            member.Notes.Replace("\r\n", "\n").Replace('\r', '\n');
+        var fields = new List<(string Prefix, string Value)>();
+        foreach (var member in members)
+        {
+            var reference = Reference(member);
+            var length = member.ProvidedLengthMm?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) +
+                (member.ProvidedLengthMm.HasValue ? " mm" : "長度待填");
+            fields.Add((reference + " / ", length));
+            fields.Add((reference + " / 規格：", string.IsNullOrWhiteSpace(member.Specification) ? "待確認" : member.Specification));
+        }
+        // Group only the displayed notes; never change the independent cable instance values.
+        foreach (var group in members.GroupBy(Notes, StringComparer.Ordinal))
+        {
+            var prefix = group.Count() > 1
+                ? "共用備註（" + string.Join("、", group.Select(Reference)) + "）："
+                : Reference(group.First()) + " / 備註：";
+            fields.Add((prefix, group.Key));
+        }
+        return fields;
+    }
+
     private static List<string> BuildMemberLines(IReadOnlyList<CableInstance> members, double width)
     {
         var lines = new List<string>();
@@ -35,15 +60,7 @@ public static partial class CableWiringAppendixRenderer
                 }
             }
         }
-        foreach (var member in members)
-        {
-            var reference = member.ReferenceDesignator ?? "Reference 未設定";
-            var length = member.ProvidedLengthMm?.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) +
-                (member.ProvidedLengthMm.HasValue ? " mm" : "長度待填");
-            Field(reference + " / ", length);
-            Field(reference + " / 規格：", string.IsNullOrWhiteSpace(member.Specification) ? "待確認" : member.Specification);
-            Field(reference + " / 備註：", string.IsNullOrWhiteSpace(member.Notes) ? "未填" : member.Notes);
-        }
+        foreach (var field in MemberFields(members)) Field(field.Prefix, field.Value);
         return lines;
     }
 

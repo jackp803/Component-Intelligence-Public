@@ -48,7 +48,8 @@ public static partial class CableWiringAppendixRenderer
                 for (var column = 0; column < Math.Min(columns, variants.Count - row); column++)
                 {
                     var variant = variants[row + column]; var x = column * (cellWidth + 4);
-                    var caption = variants.Count > 1 ? "示意 " + (row + column + 1) + " / " + string.Join(" / ", variant.References) : "";
+                    var caption = variants.Count > 1 ? "示意 " + (row + column + 1) + " / " + string.Join(" / ", variant.References)
+                        : shared ? "共用示意圖 / " + string.Join(" / ", variant.References) : "";
                     var captionHeight = caption.Length == 0 ? 0 : MeasureLabel(caption, cellWidth, 3 * captionScale) + 2;
                     if (caption.Length > 0) primitives.Add(new() { Kind = "MTEXT", Start = new(x, top), Text = caption,
                         TextHeight = 3 * captionScale, TextWidth = cellWidth, TextAttachment = "TopLeft" });
@@ -59,7 +60,7 @@ public static partial class CableWiringAppendixRenderer
                 }
                 top += rowHeight + (row + columns < variants.Count ? 4 : 0);
             }
-            var width = variants.Count == 1 ? SchematicCableDetailService.BuildSketch(variants[0].Source,
+            var width = variants.Count == 1 && !shared ? SchematicCableDetailService.BuildSketch(variants[0].Source,
                 new(variants[0].Source.CableInstanceId, null) { TableVisible = false, SketchWidth = cellWidth, SketchHeight = 70 },
                 includeInstanceText: !shared).Bounds.Width : columns * cellWidth + (columns - 1) * 4;
             var scale = Math.Min(1, Math.Min(region.Width / width, region.Height / top));

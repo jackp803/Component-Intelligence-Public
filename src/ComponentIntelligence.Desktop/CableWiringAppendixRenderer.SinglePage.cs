@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -43,12 +42,7 @@ public static partial class CableWiringAppendixRenderer
         var variants = SketchVariants(members);
         var sketchHeight = variants.Count == 0 ? 0 : Math.Min(75, right.Height * .36);
         var metadata = right with { Height = right.Height - sketchHeight - (variants.Count == 0 ? 0 : 7) };
-        var values = members.SelectMany(member => new[] {
-            (member.ReferenceDesignator ?? "Reference 未設定") + " / " +
-                (member.ProvidedLengthMm?.ToString("0.###", CultureInfo.InvariantCulture) is { } length ? length + " mm" : "長度待填"),
-            (member.ReferenceDesignator ?? "Reference 未設定") + " / 規格：" + (string.IsNullOrWhiteSpace(member.Specification) ? "待確認" : member.Specification),
-            (member.ReferenceDesignator ?? "Reference 未設定") + " / 備註：" + (string.IsNullOrWhiteSpace(member.Notes) ? "未填" : member.Notes)
-        }).ToArray();
+        var values = MemberFields(members).Select(field => field.Prefix + field.Value).ToArray();
         var font = 3d;
         double TotalHeight() => values.Sum(value => Height(value, metadata.Width, font) + font * .3);
         while (TotalHeight() > metadata.Height)

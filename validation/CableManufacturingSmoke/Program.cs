@@ -34,6 +34,7 @@ internal static partial class Program
         if (args.FirstOrDefault() == "project-search") return ProjectSearchProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "export-warnings-notes") return ExportWarningsNotesProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "single-page-cable") return SinglePageCableProof(Path.GetFullPath(args[1]));
+        if (args.FirstOrDefault() == "shared-cable-metadata") return SharedCableMetadataProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "vector-pdf") return VectorPdfProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "compact-symbol") return CompactSymbolProof(Path.GetFullPath(args[1]));
         if (args.FirstOrDefault() == "bom-addition") return BomAdditionProof(Path.GetFullPath(args[1]));

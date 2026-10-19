@@ -23,10 +23,10 @@ public sealed class ManufacturingSketchFitTests
         var before = JsonSerializer.Serialize(project);
         var view = SchematicCableDetailService.BuildSketch(cable, Layout(project), includeInstanceText);
         var labels = view.Primitives.Where(p => p.Kind == "TEXT").ToArray();
-        Assert.Contains(labels, p => p.Text == "SHIELDED");
-        Assert.Equal(includeInstanceText ? 3 : 1, labels.Length);
+        Assert.Equal(includeInstanceText ? 3 : 0, labels.Length);
         if (includeInstanceText)
         {
+            Assert.Contains(labels, p => p.Text == "SHIELDED");
             Assert.Contains(labels, p => p.Text == "CB-7");
             Assert.Contains(labels, p => p.Text == SchematicSymbolPresentation.CableFieldValue(cable, CableTextField.LengthMm));
         }

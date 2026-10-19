@@ -119,8 +119,8 @@ internal static partial class Program
             var memberTiles = CableWiringAppendixRenderer.Plan(project.Cables[0], page, 1, project.Cables.Take(2).ToArray());
             var returns = CableWiringAppendixRenderer.ReturnLinks(memberTiles[0], plan.Sections[0].SourceLinks, new Dictionary<string, int> { [page.PageId] = 0 }, page.Margin);
             Require(returns.Count == 2 && returns[0].Destination != returns[1].Destination, "Shared diagram loses the separate return locations for cables on the same sheet.");
-            Require(memberTiles[0].MemberLines.Any(t => t.Contains("C1 / 500 mm / Upper sensor")) &&
-                memberTiles[0].MemberLines.Any(t => t.Contains("C2 / 1200 mm / Lower sensor")), "Shared diagram does not identify its independent lengths and notes.");
+            foreach (var line in new[] { "C1 / 500 mm", "C1 / 備註：Upper sensor", "C2 / 1200 mm", "C2 / 備註：Lower sensor" })
+                Require(memberTiles[0].MemberLines.Contains(line), "Shared diagram lost an independent cable field: " + line);
             var workspace = new SchematicWorkspaceControl(() => project, (_, _) => { }, () => Task.FromResult<IReadOnlyList<ComponentIntelligence.Contracts.ComponentIR>>([]),
                 _ => Task.FromResult<Uri?>(null), () => { }, () => { });
             var render = typeof(SchematicWorkspaceControl).GetMethod("RenderOutputPage", flags)!;

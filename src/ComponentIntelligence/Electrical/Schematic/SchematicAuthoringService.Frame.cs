@@ -33,8 +33,10 @@ public sealed partial class SchematicAuthoringService
             var contact = SchematicPortPresentation.GroupContact(doc, symbol, owner, port, oldBody);
             contacts.Add(("port:" + port.PortId, contact.Side, EdgeFraction(contact.Position, contact.Side, oldBody)));
         }
-        var width = Math.Max(30, displayedWidth);
-        var height = Math.Max(30, displayedHeight);
+        // A single interface can fit a compact body; multi-Port controls keep their existing room.
+        var compactInterface = owner.Ports.Count(p => SchematicPortPresentation.IsRepresented(symbol, p)) <= 1;
+        var width = Math.Max(compactInterface ? 20 : 30, displayedWidth);
+        var height = Math.Max(compactInterface ? 18 : 30, displayedHeight);
         foreach (var group in contacts.GroupBy(c => c.Side, StringComparer.Ordinal))
         {
             var required = 2 * ContactMargin + (group.Count() - 1) * ContactSpacing;

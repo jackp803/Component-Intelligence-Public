@@ -588,6 +588,13 @@ public partial class SchematicWorkspaceControl : UserControl
                 "Left" => new SchematicPoint(compact.X + 5, center.Y),
                 _ => new SchematicPoint(compact.X + compact.Width - 5, center.Y)
             };
+            if (symbol.Geometry is null && owner.Ports.Count(p => SchematicPortPresentation.IsRepresented(symbol, p)) == 1)
+            {
+                var captionBounds = new Rect(compact.X + 2, compact.Y + compact.Height - 10, compact.Width - 4, 9);
+                var handleBounds = new Rect(handlePosition.X - 8d / 3, handlePosition.Y - 8d / 3, handle.Width / 3, handle.Height / 3);
+                if (captionBounds.IntersectsWith(handleBounds))
+                    handlePosition = handlePosition with { Y = captionBounds.Top - 1 - (handle.Height - 8) / 3 };
+            }
             Canvas.SetLeft(handle, handlePosition.X * 3 - 8); Canvas.SetTop(handle, handlePosition.Y * 3 - 8);
             handle.MouseLeftButtonDown += (_, e) =>
             {

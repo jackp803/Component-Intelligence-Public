@@ -20,8 +20,9 @@ public partial class SchematicWorkspaceControl
     private void BeginAnotherCableRepresentation(SchematicSymbol source)
     {
         if (_pageId is null || !FinishPendingDraft()) return;
+        var preview = _service.PreviewCableDuplicate(_getProject(), source.SymbolId, _pageId, new(20, 20));
         CancelCommand();
-        _placementPreview = _service.DuplicateArchivedCable(_getProject(), source.SymbolId, _pageId, new(20, 20));
+        _placementPreview = preview;
         _pendingCableRepresentation = source.SymbolId; _placeMode = true;
         Status.Text = "另一條實體線材待放置；接法相同，線長、備註與 Reference 分別設定。";
         Focus(); Render(_getProject());
@@ -152,12 +153,7 @@ public partial class SchematicWorkspaceControl
             finally { IsEnabled = true; }
             if (!geometry.Complete && MessageBox.Show(Window.GetWindow(this), string.Join("\n", geometry.Diagnostics),
                 "部分 CAD 內容不支援；僅繼續為草稿？", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-            CancelCommand();
-            var preview = _service.AddArchivedCable(_getProject(), source.Entry.Template, construction, geometry,
-                CableContacts(source.Entry), _pageId!, new(20, 20), source.AbsolutePath, source.Entry.Status == SymbolRevisionStatus.Approved, manufacturing);
-            _placementPreview = preview; _pendingCable = new(source, geometry, construction, resolver, manufacturing);
-            _placeMode = true; Status.Text = "線材待放置；點畫布新增一條實體線材，Escape 取消。";
-            Focus(); Render(_getProject());
+            BeginCablePlacement(new(source, geometry, construction, resolver, manufacturing));
         }
         catch (Exception error) { Status.Text = "線材庫：" + error.Message; }
     }
@@ -175,6 +171,17 @@ public partial class SchematicWorkspaceControl
 
     private static Dictionary<string, string> CableContacts(CableArchiveEntry entry) =>
         entry.ContactBindings.ToDictionary(b => b.EngineeringEndpointId, b => b.ConnectionPointId, StringComparer.Ordinal);
+
+    private void BeginCablePlacement(PendingCable pending)
+    {
+        var source = pending.Source;
+        var preview = _service.PreviewArchivedCable(_getProject(), source.Entry.Template, pending.Construction, pending.Geometry,
+            CableContacts(source.Entry), _pageId!, new(20, 20), source.AbsolutePath, source.Entry.Status == SymbolRevisionStatus.Approved, pending.ManufacturingGeometry);
+        CancelCommand();
+        _placementPreview = preview; _pendingCable = pending;
+        _placeMode = true; Status.Text = "線材待放置；點畫布新增一條實體線材，Escape 取消。";
+        Focus(); Render(_getProject());
+    }
 
     private async Task PlacePendingCableAsync(SchematicPoint point)
     {

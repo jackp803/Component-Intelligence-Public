@@ -1,4 +1,5 @@
 using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Editing;
 
 namespace ComponentIntelligence.Electrical.Schematic;
 
@@ -117,18 +118,23 @@ public sealed partial class SchematicAuthoringService
         });
 
     public ElectricalProject DuplicateArchivedCable(ElectricalProject project, string symbolId, string pageId, SchematicPoint position) =>
-        Edit(project, (draft, doc) =>
-        {
-            var source = doc.Symbols.Single(s => s.SymbolId == symbolId);
-            var original = draft.Cables.SingleOrDefault(c => c.CableInstanceId == source.CableInstanceId && c.ArchivedCable is not null)
-                ?? throw new InvalidOperationException("請選取有接線模板的實體線材。");
-            var copy = ArchivedCableInstanceFactory.Duplicate(original);
-            var ids = SchematicCableInstanceIdentity.EndpointMap(original, copy);
-            draft.Cables.Add(copy);
-            doc.Symbols.Add(SchematicCableInstanceIdentity.Rebind(source, copy.CableInstanceId, ids) with {
-                SymbolId = "symbol-" + Guid.NewGuid().ToString("N"), CableInstanceId = copy.CableInstanceId,
-                PageId = pageId, Position = position, Locked = false });
-        });
+        Edit(project, (draft, doc) => AppendCableDuplicate(draft, doc, symbolId, pageId, position));
+
+    public ElectricalProject PreviewCableDuplicate(ElectricalProject project, string symbolId, string pageId, SchematicPoint position) =>
+        CablePlacementPreview(project, pageId, (draft, doc) => AppendCableDuplicate(draft, doc, symbolId, pageId, position));
+
+    private static void AppendCableDuplicate(ElectricalProject draft, SchematicDocument doc, string symbolId, string pageId, SchematicPoint position)
+    {
+        var source = doc.Symbols.Single(s => s.SymbolId == symbolId);
+        var original = draft.Cables.SingleOrDefault(c => c.CableInstanceId == source.CableInstanceId && c.ArchivedCable is not null)
+            ?? throw new InvalidOperationException("請選取有接線模板的實體線材。");
+        var copy = ArchivedCableInstanceFactory.Duplicate(original);
+        var ids = SchematicCableInstanceIdentity.EndpointMap(original, copy);
+        draft.Cables.Add(copy);
+        doc.Symbols.Add(SchematicCableInstanceIdentity.Rebind(source, copy.CableInstanceId, ids) with {
+            SymbolId = "symbol-" + Guid.NewGuid().ToString("N"), CableInstanceId = copy.CableInstanceId,
+            PageId = pageId, Position = position, Locked = false });
+    }
 
     private static void RequireIndependentCable(SchematicDocument doc, string cableId)
     {
@@ -140,6 +146,29 @@ public sealed partial class SchematicAuthoringService
         CableConstructionType construction, SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts,
         string pageId, SchematicPoint position, string? assetPath = null, bool assetApproved = false,
         SchematicCadAsset? manufacturingGeometry = null) => Edit(project, (draft, doc) =>
+            AppendArchivedCable(draft, doc, template, construction, geometry, contacts, pageId, position, assetPath, assetApproved, manufacturingGeometry));
+
+    public ElectricalProject PreviewArchivedCable(ElectricalProject project, ArchivedCableTemplate template,
+        CableConstructionType construction, SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts,
+        string pageId, SchematicPoint position, string? assetPath = null, bool assetApproved = false,
+        SchematicCadAsset? manufacturingGeometry = null) => CablePlacementPreview(project, pageId, (draft, doc) =>
+            AppendArchivedCable(draft, doc, template, construction, geometry, contacts, pageId, position, assetPath, assetApproved, manufacturingGeometry));
+
+    // Render-only snapshot. A drop must use AddArchivedCable/DuplicateArchivedCable
+    // and their full validation, never commit this transient scene.
+    private static ElectricalProject CablePlacementPreview(ElectricalProject project, string pageId,
+        Action<ElectricalProject, SchematicDocument> append)
+    {
+        var preview = EngineeringReviewService.Clone(project);
+        var doc = preview.Schematic ?? throw new InvalidOperationException("The schematic is missing.");
+        RequirePage(doc, pageId);
+        append(preview, doc);
+        return preview;
+    }
+
+    private static void AppendArchivedCable(ElectricalProject draft, SchematicDocument doc, ArchivedCableTemplate template,
+        CableConstructionType construction, SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts,
+        string pageId, SchematicPoint position, string? assetPath, bool assetApproved, SchematicCadAsset? manufacturingGeometry)
     {
         var cable = ArchivedCableInstanceFactory.Create(template, construction);
         if (manufacturingGeometry is not null)
@@ -148,7 +177,7 @@ public sealed partial class SchematicAuthoringService
         draft.Cables.Add(cable);
         doc.Symbols.Add(CreateCableSymbol(cable, geometry, contacts, pageId, position) with {
             AssetPath = assetPath, AssetRevision = assetApproved ? template.TemplateRevision : null });
-    });
+    }
 
     public ElectricalProject PlaceCableRepresentation(ElectricalProject project, string cableId,
         SchematicCadAsset geometry, IReadOnlyDictionary<string, string> contacts, string pageId, SchematicPoint position) =>

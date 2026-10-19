@@ -135,8 +135,11 @@ public sealed partial class SchematicAuthoringService
         bool OnSheet(SchematicPoint p) => double.IsFinite(p.X) && double.IsFinite(p.Y) && p.X >= page.Margin &&
             p.Y >= page.Margin && p.X <= page.Width - page.Margin && p.Y <= page.Height - page.Margin;
         var bodies = doc.Symbols.Where(s => s.PageId == symbol.PageId && s.SymbolId != symbol.SymbolId)
-            .Select(s => SchematicPortPresentation.GenericBodyBounds(doc, s with { EndpointDisplayPlacements = [] },
-                SchematicSymbolOwner.Resolve(project, s))).ToArray();
+            .Select(s => {
+                var bodyOwner = SchematicSymbolOwner.Resolve(project, s);
+                return new { Bounds = SchematicPortPresentation.GenericBodyBounds(doc, s with { EndpointDisplayPlacements = [] }, bodyOwner),
+                    Label = bodyOwner.Reference ?? bodyOwner.DisplayName };
+            }).ToArray();
         foreach (var placement in placements)
         {
             RequirePoint(placement.Position);
@@ -150,8 +153,9 @@ public sealed partial class SchematicAuthoringService
             if (!outside) throw new InvalidOperationException("Fan-out display contacts must lie outside the native body on their native side.");
             var leads = PortFanoutLeadPoints(symbol, placement.EndpointId);
             if (leads.Any(p => !OnSheet(p))) throw new InvalidOperationException("Fan-out leads must remain inside the sheet.");
-            if (bodies.Any(body => leads.Zip(leads.Skip(1)).Any(s => FanoutSegmentTouchesBody(s.First, s.Second, body))))
-                throw new InvalidOperationException("A fan-out contact or lead overlaps another representation body.");
+            var blocking = bodies.FirstOrDefault(body => leads.Zip(leads.Skip(1)).Any(s => FanoutSegmentTouchesBody(s.First, s.Second, body.Bounds)));
+            if (blocking is not null)
+                throw new InvalidOperationException($"「{owner.Reference ?? owner.DisplayName}」的展開接點或引線與「{blocking.Label}」圖塊重疊；請換個位置或調整引線。");
         }
     }
 

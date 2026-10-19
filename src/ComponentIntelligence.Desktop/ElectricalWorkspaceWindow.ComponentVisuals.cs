@@ -17,6 +17,11 @@ public partial class ElectricalWorkspaceWindow
     {
         try
         {
+            if (componentDefinitionId.StartsWith("project-local:", StringComparison.Ordinal))
+            {
+                var local = _project.BomItems.Select(b => b.DefinitionSnapshot).FirstOrDefault(c => c?.Identity.ComponentId == componentDefinitionId);
+                return local is null ? null : selector(local);
+            }
             var catalog = new ComponentIrCatalogReader(_databasePath);
             var component = await catalog.GetByIdAsync(componentDefinitionId);
             var uri = component is null ? null : selector(component);

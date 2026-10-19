@@ -88,8 +88,9 @@ public static class SchematicBomPalette
         IReadOnlyDictionary<string, ComponentIR> definitions)
     {
         if (item.ComponentDefinitionId is not null && definitions.TryGetValue(item.ComponentDefinitionId, out var exact)) return exact;
+        if (item.DefinitionSnapshot is not null) return item.DefinitionSnapshot;
         var matches = catalog.Where(c => string.Equals(c.Identity.Manufacturer, item.Row.Manufacturer?.Trim(), StringComparison.OrdinalIgnoreCase) &&
             string.Equals(c.Identity.Model, item.Row.ModelOrPartNumber?.Trim(), StringComparison.OrdinalIgnoreCase)).Take(2).ToArray();
-        return matches.Length == 1 ? matches[0] : null;
+        return matches.Length == 1 ? matches[0] : item.DefinitionSnapshot;
     }
 }

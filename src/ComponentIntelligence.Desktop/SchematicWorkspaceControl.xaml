@@ -69,7 +69,11 @@
      <ListBox.ContextMenu><ContextMenu><MenuItem Header="重新命名目前頁面" InputGestureText="F2" Click="RenamePage_Click"/><MenuItem Header="刪除目前頁面" Click="DeletePage_Click"/></ContextMenu></ListBox.ContextMenu>
     </ListBox>
     <StackPanel Grid.Row="2" Margin="0,12,0,5">
-     <TextBlock Text="專案 BOM" FontWeight="SemiBold"/>
+     <DockPanel LastChildFill="True">
+      <Button x:Name="AddBomComponentButton" DockPanel.Dock="Right" FontFamily="Segoe MDL2 Assets" Content="&#xE710;" Width="30" Height="28"
+       ToolTip="新增元件至目前專案 BOM" Click="AddBomComponent_Click"/>
+      <TextBlock Text="專案 BOM" FontWeight="SemiBold" VerticalAlignment="Center"/>
+     </DockPanel>
      <ComboBox x:Name="BomCategory" Margin="0,5,0,0" SelectionChanged="BomCategory_Changed" ToolTip="元件分類"/>
      <TextBox x:Name="Search" Margin="0,5,0,0" TextChanged="Search_Changed" ToolTip="搜尋廠牌、型號、分類 (Ctrl+F)"/>
      <TextBlock x:Name="BomContext" TextWrapping="Wrap" FontSize="11" Foreground="#61696B" Margin="0,4,0,0"/>

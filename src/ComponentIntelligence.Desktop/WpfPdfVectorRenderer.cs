@@ -13,7 +13,7 @@ public static class WpfPdfVectorRenderer
 
     /// <summary>
     /// Draws in the caller's current graphics coordinates. Layout is read without measuring or arranging it.
-    /// Non-solid brushes, group opacity/masks, effects, video and non-bitmap image sources are unsupported.
+    /// Non-solid brushes, group opacity/masks, effects, video and unknown image sources are unsupported.
     /// </summary>
     public static void Draw(XGraphics graphics, Visual visual, double pointsPerUnit)
     {
@@ -90,8 +90,24 @@ public static class WpfPdfVectorRenderer
                 break;
             case ImageDrawing image:
                 if (image.ImageSource is null || image.Rect.IsEmpty || image.Rect.Width == 0 || image.Rect.Height == 0) return;
+                if (image.ImageSource is DrawingImage drawingImage)
+                {
+                    if (drawingImage.Drawing is not { } sourceDrawing) return;
+                    var bounds = sourceDrawing.Bounds;
+                    if (bounds.IsEmpty || bounds.Width == 0 || bounds.Height == 0) return;
+                    var imageState = graphics.Save();
+                    try
+                    {
+                        var sx = image.Rect.Width / bounds.Width; var sy = image.Rect.Height / bounds.Height;
+                        if (ApplyTransform(graphics, new Matrix(sx, 0, 0, sy,
+                            image.Rect.X - bounds.X * sx, image.Rect.Y - bounds.Y * sy), nameof(DrawingImage)))
+                            DrawDrawing(graphics, sourceDrawing);
+                    }
+                    finally { graphics.Restore(imageState); }
+                    break;
+                }
                 if (image.ImageSource is not BitmapSource bitmap)
-                    throw Unsupported(nameof(ImageDrawing), $"image source {image.ImageSource.GetType().Name}; only existing BitmapSource rasters are supported");
+                    throw Unsupported(nameof(ImageDrawing), $"image source {image.ImageSource.GetType().Name}; only BitmapSource and DrawingImage are supported");
                 // PDFsharp expects straight alpha; WPF render targets use premultiplied BGRA.
                 if (bitmap.Format == PixelFormats.Pbgra32)
                     bitmap = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);

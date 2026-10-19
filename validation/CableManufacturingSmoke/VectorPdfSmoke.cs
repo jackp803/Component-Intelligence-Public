@@ -69,6 +69,14 @@ internal static partial class Program
             new byte[] { 0, 0, 128, 128, 0, 128, 0, 128, 128, 0, 0, 128, 0, 0, 0, 255 }, 8);
         var raster = new VectorProofDrawing(new ImageDrawing(bitmap, new Rect(0, 0, 24, 24))) { Width = 24, Height = 24 };
         Canvas.SetLeft(raster, 1450); Canvas.SetTop(raster, 1000); canvas.Children.Add(raster);
+        var vectorImageSource = new DrawingGroup { Transform = new TranslateTransform(5, 7) };
+        vectorImageSource.Children.Add(new GeometryDrawing(Brushes.Orange, new Pen(Brushes.Black, 2),
+            new RectangleGeometry(new Rect(-10, -20, 40, 30))));
+        var vectorImage = new VectorProofDrawing(new ImageDrawing(new DrawingImage(vectorImageSource), new Rect(0, 0, 120, 90)))
+            { Width = 120, Height = 90 };
+        Canvas.SetLeft(vectorImage, 1100); Canvas.SetTop(vectorImage, 1000); canvas.Children.Add(vectorImage);
+        canvas.Children.Add(new VectorProofDrawing(new ImageDrawing(new DrawingImage(), new Rect(0, 0, 20, 20)))
+            { Width = 20, Height = 20 });
         var emptyClip = new VectorProofDrawing(new GeometryDrawing(Brushes.Cyan, null, new RectangleGeometry(new Rect(1200, 400, 50, 50))))
             { Width = width, Height = height, Clip = Geometry.Empty };
         canvas.Children.Add(emptyClip);
@@ -139,7 +147,8 @@ internal static partial class Program
             ("Latin/CJK outlines", (r,g,b) => r < 100 && g < 100 && b < 100, new Rect(60, 50, 550, 80)),
             ("dashed arcs and lines", (r,g,b) => r > 200 && g < 70 && b < 70, new Rect(50, 250, 1100, 700)),
             ("even-odd filled shape", (r,g,b) => r < 70 && g < 70 && b > 200, new Rect(500, 450, 650, 350)),
-            ("alpha solid brush", (r,g,b) => g > r + 40 && g > b + 40, new Rect(800, 450, 400, 350)) })
+            ("alpha solid brush", (r,g,b) => g > r + 40 && g > b + 40, new Rect(800, 450, 400, 350)),
+            ("nested DrawingImage", (r,g,b) => r > 230 && g > 130 && g < 190 && b < 30, new Rect(1050, 950, 250, 200)) })
         {
             var a = VectorProofInk(before, predicate, region, 1);
             var b = VectorProofInk(preview, predicate, region, pdfScale);
@@ -158,7 +167,8 @@ internal static partial class Program
             foreach (var unsupported in new Drawing[] {
                 new GeometryDrawing(new LinearGradientBrush(Colors.Red, Colors.Blue, 0), null, new RectangleGeometry(new Rect(0, 0, 10, 10))),
                 new DrawingGroup { Opacity = .5, Children = { new GeometryDrawing(Brushes.Red, null, new RectangleGeometry(new Rect(0, 0, 10, 10))) } },
-                new ImageDrawing(new DrawingImage(geometry), new Rect(0, 0, 20, 20)) })
+                new ImageDrawing(new DrawingImage(new GeometryDrawing(new LinearGradientBrush(Colors.Red, Colors.Blue, 0),
+                    null, new RectangleGeometry(new Rect(0, 0, 20, 20)))), new Rect(0, 0, 20, 20)) })
             {
                 var visual = new DrawingVisual(); using (var context = visual.RenderOpen()) context.DrawDrawing(unsupported);
                 var initial = graphics.Transform;

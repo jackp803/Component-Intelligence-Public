@@ -8,6 +8,40 @@ namespace ComponentIntelligence.Tests.Electrical;
 
 public sealed class ManufacturingSketchFitTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SharedSketchCanOmitInstanceFieldsWithoutChangingTheirSavedValues(bool includeInstanceText)
+    {
+        var project = WithSketch(new() { Kind = "LINE", Start = new(1000, 500), End = new(1200, 540) },
+            new() { Kind = "TEXT", Start = new(1000, 550), Text = "SOURCE REF", AttributeTag = "REF", TextHeight = 3 },
+            new() { Kind = "TEXT", Start = new(1080, 550), Text = "SOURCE LENGTH", AttributeTag = "LEN", TextHeight = 3 },
+            new() { Kind = "TEXT", Start = new(1000, 560), Text = "SOURCE SPEC", AttributeTag = "SPEC", TextHeight = 3 });
+        var cable = project.Cables[0]; cable.ReferenceDesignator = "CB-7"; cable.ProvidedLengthMm = 987; cable.Specification = "SHIELDED";
+        cable.ArchivedCable = cable.ArchivedCable! with { Template = cable.ArchivedCable.Template with {
+            TextBindings = [new("REF", CableTextField.Reference), new("LEN", CableTextField.LengthMm), new("SPEC", CableTextField.Specification)] } };
+        var before = JsonSerializer.Serialize(project);
+        var view = SchematicCableDetailService.BuildSketch(cable, Layout(project), includeInstanceText);
+        var labels = view.Primitives.Where(p => p.Kind == "TEXT").ToArray();
+        Assert.Contains(labels, p => p.Text == "SHIELDED");
+        Assert.Equal(includeInstanceText ? 3 : 1, labels.Length);
+        if (includeInstanceText)
+        {
+            Assert.Contains(labels, p => p.Text == "CB-7");
+            Assert.Contains(labels, p => p.Text == SchematicSymbolPresentation.CableFieldValue(cable, CableTextField.LengthMm));
+        }
+        Assert.All(view.Primitives, p => Assert.Null(p.AttributeTag));
+        Assert.Equal(before, JsonSerializer.Serialize(project));
+    }
+
+    [Fact]
+    public void MissingManufacturingCadDoesNotInventAnAppearanceFromWiring()
+    {
+        var project = WithSketch(new SchematicCadPrimitive { Kind = "LINE", Start = new(0, 0), End = new(100, 20) });
+        var cable = project.Cables[0]; cable.ArchivedCable = cable.ArchivedCable! with { ManufacturingGeometry = null };
+        Assert.Empty(SchematicCableDetailService.BuildSketch(cable, Layout(project)).Primitives);
+    }
+
     [Fact]
     public void UnusedMaximumHeightDoesNotPreventEnlargingContentThatFitsThePage()
     {

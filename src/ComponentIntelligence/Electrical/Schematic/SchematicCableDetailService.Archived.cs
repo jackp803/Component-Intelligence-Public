@@ -218,14 +218,15 @@ public sealed partial class SchematicCableDetailService
             throw new InvalidOperationException("線材明細位置與尺寸超出有效圖面。");
     }
 
-    private static (IReadOnlyList<SchematicCadPrimitive> Primitives, SchematicGridBounds Bounds) BuildSketch(CableInstance cable,
-        SchematicCableDetailBinding binding)
+    public static (IReadOnlyList<SchematicCadPrimitive> Primitives, SchematicGridBounds Bounds) BuildSketch(CableInstance cable,
+        SchematicCableDetailBinding binding, bool includeInstanceText = true)
     {
         if (cable.ArchivedCable!.ManufacturingGeometry is not { } sketch)
             return ([], new(binding.SketchPosition.X, binding.SketchPosition.Y, binding.SketchWidth, binding.SketchHeight));
         var fields = cable.ArchivedCable.Template.TextBindings.ToDictionary(b => b.AttributeTag, b => b.Field, StringComparer.Ordinal);
         var resolved = sketch.Primitives.Select(p => p with { Text = p.AttributeTag is { } tag && fields.TryGetValue(tag, out var field)
-            ? SchematicSymbolPresentation.CableFieldValue(cable, field) : p.Text, AttributeTag = null }).ToArray();
+            ? !includeInstanceText && field is CableTextField.Reference or CableTextField.LengthMm ? "" :
+                SchematicSymbolPresentation.CableFieldValue(cable, field) : p.Text, AttributeTag = null }).ToArray();
         var primitives = FitSketch(resolved, binding, out var bounds);
         return (primitives, bounds);
     }

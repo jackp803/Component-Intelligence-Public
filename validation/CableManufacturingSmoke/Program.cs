@@ -29,6 +29,7 @@ internal static partial class Program
 
     private static int Run(string[] args)
     {
+        if (args.FirstOrDefault() == "appendix-sketch") return AppendixSketchProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "appendix-layout") return AppendixLayoutProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "library-review") return CableLibraryReviewProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());
         if (args.FirstOrDefault() == "library-workflow") return CableLibraryWorkflowProof(Path.GetFullPath(args[1]), args.Skip(2).FirstOrDefault());

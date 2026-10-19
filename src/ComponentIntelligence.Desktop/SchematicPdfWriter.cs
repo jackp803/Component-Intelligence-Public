@@ -99,7 +99,7 @@ public static class SchematicPdfWriter
                 var memberPage = output.First(p => p.CableMembers is not null && p.Section!.CableInstanceId == item.Section!.CableInstanceId);
                 var grid = item.Sheet.EffectiveGrid();
                 AddLink(indices[item.Sheet.PageId], new(item.Tile!.ContentBounds.X, item.Tile.MemberY + (item.Tile.MemberLines.Count - 1) * 5,
-                    item.Tile.ContentBounds.Width, 5), indices[memberPage.Sheet.PageId], new(grid.X + 4, grid.Y + 4));
+                    item.Tile.HeaderWidth, 5), indices[memberPage.Sheet.PageId], new(grid.X + 4, grid.Y + 4));
             }
             foreach (var item in output.Where(p => p.WireDetails is not null))
             {

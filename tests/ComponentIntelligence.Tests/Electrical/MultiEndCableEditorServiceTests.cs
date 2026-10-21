@@ -4,6 +4,7 @@ using ComponentIntelligence.Electrical.Editing;
 using ComponentIntelligence.Electrical.Validation;
 using ComponentIntelligence.Electrical.Topology;
 using ComponentIntelligence.Electrical.Drawing;
+using ComponentIntelligence.Electrical.Schematic;
 using Xunit;
 
 namespace ComponentIntelligence.Tests.Electrical;
@@ -11,6 +12,35 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class MultiEndCableEditorServiceTests
 {
     private readonly MultiEndCableEditorService _service = new();
+
+    [Fact]
+    public void ConsolidationRebindsExistingDetailPagesWithoutDeletingPagesOrElectricalTruth()
+    {
+        var p = Fixture(2);
+        foreach (var connection in p.Connections)
+        {
+            connection.CableInstanceId = "old-" + connection.ConnectionId;
+            p.Cables.Add(new() { CableInstanceId = connection.CableInstanceId, CableDefinitionId = "custom",
+                CableConstructionType = CableConstructionType.Custom });
+        }
+        var details = new SchematicCableDetailService();
+        p = details.AddPage(p, p.Connections[0].ConnectionId);
+        p = details.AddPage(p, p.Connections[1].ConnectionId);
+        var pages = p.Schematic!.Pages.Select(x => (x.PageId, x.Title)).ToArray();
+        var before = Truth(p);
+        var draft = Confirmed(p);
+        _service.ConfirmConsolidation(p, draft);
+        var assembly = _service.Apply(p, draft);
+        Assert.Equal(before, Truth(p));
+        Assert.Equal(pages, p.Schematic.Pages.Select(x => (x.PageId, x.Title)).ToArray());
+        foreach (var page in p.Schematic.Pages)
+        {
+            Assert.Equal(assembly.PhysicalTopology!.CableInstanceId, page.CableDetail!.CableInstanceId);
+            Assert.Equal(assembly.CableAssemblyId, page.CableDetail.CableAssemblyId);
+            Assert.Equal(p.Connections.Count, details.Build(p, page).ConnectionIds.Count);
+        }
+        Assert.Equal(2, details.AddPage(p, p.Connections[0].ConnectionId).Schematic!.Pages.Count);
+    }
 
     [Theory]
     [InlineData(2)]

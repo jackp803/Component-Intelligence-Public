@@ -135,7 +135,6 @@ public partial class MainWindow
         ProcessButton.IsEnabled = hasBom;
 
         ElectricalButton.IsEnabled = true;
-        TopologyButton.IsEnabled = true;
 
         var topologyTip = T(
             !hasBom
@@ -148,7 +147,6 @@ public partial class MainWindow
                 : _bomProcessingCompleted
                 ? "Central-library load is complete; open Topology to review components and missing-data placeholders."
                 : "Import a BOM and run Load Central Library before opening Topology.");
-        TopologyButton.ToolTip = topologyTip;
         ElectricalButton.ToolTip = topologyTip;
     }
 

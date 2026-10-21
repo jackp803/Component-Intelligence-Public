@@ -1,6 +1,6 @@
 namespace ComponentIntelligence.Electrical.Drawing;
 
-public sealed class DrawingPlanEditService
+public sealed partial class DrawingPlanEditService
 {
     public DrawingPlanDocument MovePlacement(DrawingPlanDocument plan, string representationId, long x, long y) => UpdatePlacement(plan, representationId, p => EnsureEditable(p) with { X = x, Y = y, State = DrawingPlanControlState.Manual });
     public DrawingPlanDocument SetPlacementState(DrawingPlanDocument plan, string representationId, DrawingPlanControlState state) => UpdatePlacement(plan, representationId, p => p with { State = state });
@@ -32,17 +32,41 @@ public sealed class DrawingPlanEditService
     {
         EnsureEditable(route);
         if (segmentIndex < 0 || segmentIndex >= route.Points.Count - 1) throw new InvalidOperationException("Route segment index is invalid.");
+        if (delta == 0) return route;
         var points = route.Points.ToArray(); var a = points[segmentIndex]; var b = points[segmentIndex + 1];
         if (a.X == b.X) { points[segmentIndex] = a with { X = a.X + delta }; points[segmentIndex + 1] = b with { X = b.X + delta }; }
         else if (a.Y == b.Y) { points[segmentIndex] = a with { Y = a.Y + delta }; points[segmentIndex + 1] = b with { Y = b.Y + delta }; }
         else throw new InvalidOperationException("Only orthogonal route segments can move.");
-        ValidateOrthogonal(points); return route with { Points = points, State = DrawingPlanControlState.Manual };
+        // Endpoint segments acquire a lead instead of detaching from their anchors.
+        var connected = points.ToList();
+        if (segmentIndex == 0) connected.Insert(0, route.Points[0]);
+        if (segmentIndex == route.Points.Count - 2) connected.Add(route.Points[^1]);
+        ValidateOrthogonal(connected); return route with { Points = connected, State = DrawingPlanControlState.Manual };
     });
 
     public DrawingPlanDocument MoveBendPoint(DrawingPlanDocument plan, string routeId, int pointIndex, long x, long y) => UpdateRoute(plan, routeId, route =>
     {
         EnsureEditable(route); if (pointIndex <= 0 || pointIndex >= route.Points.Count - 1) throw new InvalidOperationException("Only interior bend points can move.");
-        var points = route.Points.ToArray(); points[pointIndex] = new DrawingPoint(x, y); ValidateOrthogonal(points); return route with { Points = points, State = DrawingPlanControlState.Manual };
+        var original = route.Points[pointIndex];
+        var target = new DrawingPoint(x, y);
+        if (target == original) return route;
+        var previous = route.Points[pointIndex - 1];
+        var next = route.Points[pointIndex + 1];
+        var points = route.Points.Take(pointIndex).ToList();
+        // Only rebuild the two incident legs; external anchors and all other vertices stay fixed.
+        var collinear = previous.X == original.X && original.X == next.X ||
+                        previous.Y == original.Y && original.Y == next.Y;
+        var incomingHorizontal = previous.Y == original.Y;
+        var outgoingHorizontal = next.Y == original.Y;
+        var lead = collinear
+            ? (incomingHorizontal ? new DrawingPoint(previous.X, y) : new DrawingPoint(x, previous.Y))
+            : (incomingHorizontal ? new DrawingPoint(x, previous.Y) : new DrawingPoint(previous.X, y));
+        var tail = outgoingHorizontal ? new DrawingPoint(next.X, y) : new DrawingPoint(x, next.Y);
+        if (!collinear) tail = outgoingHorizontal ? new DrawingPoint(x, next.Y) : new DrawingPoint(next.X, y);
+        foreach (var point in new[] { lead, target, tail }.Concat(route.Points.Skip(pointIndex + 1)))
+            if (points[^1] != point) points.Add(point);
+        ValidateOrthogonal(points);
+        return route with { Points = points, State = DrawingPlanControlState.Manual };
     });
 
     public DrawingPlanDocument AddBendPoint(DrawingPlanDocument plan, string routeId, int segmentIndex, long x, long y) => UpdateRoute(plan, routeId, route =>
@@ -69,7 +93,7 @@ public sealed class DrawingPlanEditService
             DrawingAlignment.HorizontalCenter => selected.Sum(x => x.X + x.Width / 2) / selected.Count, DrawingAlignment.VerticalCenter => selected.Sum(x => x.Y + x.Height / 2) / selected.Count, _ => 0
         };
         var ids = representationIds.ToHashSet(StringComparer.Ordinal); var placements = plan.Placements.Select(p => !ids.Contains(p.RepresentationId) ? p : Align(EnsureEditable(p), alignment, target)).ToArray();
-        return DrawingPlanJson.Rehash(plan with { Placements = placements });
+        return ReconnectPlacements(plan, placements);
     }
 
     public DrawingPlanDocument DistributePlacements(DrawingPlanDocument plan, IReadOnlyList<string> representationIds, DrawingDistribution distribution)
@@ -79,7 +103,7 @@ public sealed class DrawingPlanEditService
         var start = distribution == DrawingDistribution.Horizontal ? ordered.First().X : ordered.First().Y; var end = distribution == DrawingDistribution.Horizontal ? ordered.Last().X : ordered.Last().Y; var step = (end - start) / (ordered.Count - 1);
         var positions = ordered.Select((p, i) => (p.RepresentationId, Value: start + step * i)).ToDictionary(x => x.RepresentationId, x => x.Value, StringComparer.Ordinal);
         var placements = plan.Placements.Select(p => positions.TryGetValue(p.RepresentationId, out var value) ? (distribution == DrawingDistribution.Horizontal ? EnsureEditable(p) with { X = value, State = DrawingPlanControlState.Manual } : EnsureEditable(p) with { Y = value, State = DrawingPlanControlState.Manual }) : p).ToArray();
-        return DrawingPlanJson.Rehash(plan with { Placements = placements });
+        return ReconnectPlacements(plan, placements);
     }
 
     public DrawingPlanDocument RotatePlacement(DrawingPlanDocument plan, string representationId, int rotationDegrees) => UpdatePlacement(plan, representationId, p =>
@@ -114,9 +138,9 @@ public sealed class DrawingPlanEditService
     private static DrawingRoute EnsureEditable(DrawingRoute r) { if (r.State == DrawingPlanControlState.Locked) throw new InvalidOperationException("Locked route cannot be edited."); return r; }
     private static void ValidateOrthogonal(IReadOnlyList<DrawingPoint> points) { for (var i = 1; i < points.Count; i++) if (points[i - 1].X != points[i].X && points[i - 1].Y != points[i].Y) throw new InvalidOperationException("Route geometry must remain orthogonal."); }
 
-    private static DrawingPlanDocument UpdatePlacement(DrawingPlanDocument plan, string id, Func<DrawingPlacement, DrawingPlacement> update)
+    private DrawingPlanDocument UpdatePlacement(DrawingPlanDocument plan, string id, Func<DrawingPlacement, DrawingPlacement> update)
     {
-        var items = plan.Placements.ToArray(); var index = Array.FindIndex(items, p => p.RepresentationId == id); if (index < 0) throw new InvalidOperationException("Placement not found."); items[index] = update(items[index]); return DrawingPlanJson.Rehash(plan with { Placements = items });
+        var items = plan.Placements.ToArray(); var index = Array.FindIndex(items, p => p.RepresentationId == id); if (index < 0) throw new InvalidOperationException("Placement not found."); items[index] = update(items[index]); return ReconnectPlacements(plan, items);
     }
     private static DrawingPlanDocument UpdateRoute(DrawingPlanDocument plan, string id, Func<DrawingRoute, DrawingRoute> update)
     {

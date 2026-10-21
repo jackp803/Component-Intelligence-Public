@@ -35,6 +35,8 @@ public sealed class CentralArchiveProjectSynchronizer
         var updated = 0;
         foreach (var instance in project.Components)
         {
+            // Locally authored definitions are not aliases of same-named library products.
+            if (instance.ComponentDefinitionId.StartsWith("project-local:", StringComparison.Ordinal)) continue;
             if (!byId.TryGetValue(Normalize(instance.ComponentDefinitionId), out var source) &&
                 (string.IsNullOrWhiteSpace(instance.DisplayName) ||
                  !byDisplayName.TryGetValue(Normalize(instance.DisplayName), out source)) &&

@@ -16,7 +16,6 @@ public partial class TopologyCanvasControl
     private readonly HashSet<string> _expandedVisualPortIds = new(StringComparer.OrdinalIgnoreCase);
     private bool _componentVisualHooked;
     private bool _decoratingVisuals;
-    private bool _notionSettingsButtonAdded;
 
     public Func<string, Task<Uri?>>? ComponentImageResolver
     {
@@ -40,29 +39,9 @@ public partial class TopologyCanvasControl
 
     private void ConfigureComponentVisualHooks()
     {
-        ConfigureNotionSettingsButton();
         if (_componentVisualHooked || Surface is null) return;
         _componentVisualHooked = true;
         Surface.PreviewMouseLeftButtonDown += Surface_PreviewPinExpansion;
-    }
-
-    private void ConfigureNotionSettingsButton()
-    {
-        if (_notionSettingsButtonAdded || WireModeButton.Parent is not Panel toolbar) return;
-        _notionSettingsButtonAdded = true;
-        var button = new Button
-        {
-            Content = "Notion 中央庫",
-            Padding = new Thickness(10, 5, 10, 5),
-            Margin = new Thickness(6, 0, 0, 0),
-            ToolTip = "設定／測試 Component Intelligence 的 Notion 中央電料知識庫連線"
-        };
-        button.Click += (_, _) =>
-        {
-            var dialog = new NotionConnectionDialog { Owner = Window.GetWindow(this) };
-            dialog.ShowDialog();
-        };
-        toolbar.Children.Add(button);
     }
 
     private void Surface_PreviewPinExpansion(object sender, MouseButtonEventArgs e)

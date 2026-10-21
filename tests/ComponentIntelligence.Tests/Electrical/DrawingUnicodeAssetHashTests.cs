@@ -21,4 +21,39 @@ public sealed class DrawingUnicodeAssetHashTests
         var canonical = node.ToJsonString(new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
         Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))), hash);
     }
+
+    [Fact]
+    public void DrawingPlanHash_UsesUtf8CanonicalIssueText_NotEscapedUnicode()
+    {
+        var plan = new DrawingPlanDocument
+        {
+            ProjectId = "P",
+            SourcePlanningInputHash = new string('1', 64),
+            SourcePagePlanHash = new string('2', 64),
+            Issues =
+            [
+                new DrawingPlanIssue
+                {
+                    IssueId = "ISSUE:PAGE:P1:SPACE",
+                    Severity = DrawingPlanningIssueSeverity.Warning,
+                    Code = "DRAWING_SOFT_SPACING_CONSTRAINT",
+                    Message = "頁面需要更密集的間距或續頁檢查。",
+                    TargetKind = "DrawingPage",
+                    TargetId = "P1"
+                }
+            ]
+        };
+
+        var json = DrawingPlanJson.Serialize(plan);
+        Assert.Contains("頁面需要更密集的間距或續頁檢查。", json);
+        var node = JsonNode.Parse(json)!.AsObject();
+        var hash = node["drawingPlanHash"]!.GetValue<string>();
+        node["drawingPlanHash"] = null;
+        var canonical = node.ToJsonString(new System.Text.Json.JsonSerializerOptions
+        {
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
+
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))), hash);
+    }
 }

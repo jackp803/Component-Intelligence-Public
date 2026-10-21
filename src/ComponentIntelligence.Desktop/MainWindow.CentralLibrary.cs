@@ -19,7 +19,6 @@ public partial class MainWindow
             var root = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "ComponentIntelligence");
-            Directory.CreateDirectory(root);
             return Path.Combine(root, "central-workbook.txt");
         }
     }
@@ -305,15 +304,15 @@ public partial class MainWindow
         return null;
     }
 
-    private static string? LoadCentralWorkbookPath()
+    private CentralWorkbookPathSettings CentralWorkbookSettings => new(
+        _databasePath, CentralWorkbookSettingsPath,
+        Environment.GetEnvironmentVariable("COMPONENT_INTELLIGENCE_WORKBOOK"));
+
+    private string? LoadCentralWorkbookPath()
     {
-        var environment = Environment.GetEnvironmentVariable("COMPONENT_INTELLIGENCE_WORKBOOK")?.Trim();
-        if (!string.IsNullOrWhiteSpace(environment)) return environment;
         try
         {
-            return File.Exists(CentralWorkbookSettingsPath)
-                ? File.ReadAllText(CentralWorkbookSettingsPath).Trim()
-                : null;
+            return CentralWorkbookSettings.Load();
         }
         catch
         {
@@ -321,9 +320,9 @@ public partial class MainWindow
         }
     }
 
-    private static void SaveCentralWorkbookPath(string path)
+    private void SaveCentralWorkbookPath(string path)
     {
-        File.WriteAllText(CentralWorkbookSettingsPath, Path.GetFullPath(path.Trim()));
+        CentralWorkbookSettings.Save(path);
     }
 
     private void UpdateCentralLibraryPathUi()

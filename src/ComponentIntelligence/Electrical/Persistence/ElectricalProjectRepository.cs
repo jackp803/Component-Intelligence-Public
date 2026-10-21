@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Editing;
 using ComponentIntelligence.Repository;
 
 namespace ComponentIntelligence.Electrical.Persistence;
@@ -41,13 +42,18 @@ public sealed class ElectricalProjectRepository
         await command.ExecuteNonQueryAsync(ct);
     }
 
-    public async Task SaveAsync(ElectricalProject project, CancellationToken ct = default)
+    public async Task SaveAsync(ElectricalProject project, CancellationToken ct = default) => _ = await SaveSnapshotAsync(project, ct);
+
+    public async Task<ElectricalProject> SaveSnapshotAsync(ElectricalProject project, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(project);
         ct.ThrowIfCancellationRequested();
-        await InitializeAsync(ct);
-        var current = ElectricalProjectMigrator.Migrate(project);
+        var current = ElectricalProjectMigrator.Migrate(ProjectSaveSession.Clone(project));
+        Schematic.SchematicAuthoringService.Validate(current);
+        Connectivity.ProjectPinFunctionService.Synchronize(current);
+        current = ElectricalProjectMigrator.Migrate(current);
         var json = JsonSerializer.Serialize(current, _jsonOptions);
+        await InitializeAsync(ct);
 
         using var connection = _connectionFactory.Open(_databasePath);
         await using var command = connection.CreateCommand();
@@ -66,6 +72,7 @@ public sealed class ElectricalProjectRepository
         command.Parameters.AddWithValue("$snapshotJson", json);
         command.Parameters.AddWithValue("$updatedUtc", DateTimeOffset.UtcNow.ToString("O"));
         await command.ExecuteNonQueryAsync(ct);
+        return current;
     }
 
     public async Task<ElectricalProject?> GetAsync(string projectId, CancellationToken ct = default)
@@ -81,7 +88,11 @@ public sealed class ElectricalProjectRepository
         var result = await command.ExecuteScalarAsync(ct);
         if (result is not string json || string.IsNullOrWhiteSpace(json)) return null;
         var project = JsonSerializer.Deserialize<ElectricalProject>(json, _jsonOptions);
-        return project is null ? null : ElectricalProjectMigrator.Migrate(project);
+        if (project is null) return null;
+        var current = ElectricalProjectMigrator.Migrate(project);
+        Schematic.SchematicAuthoringService.Validate(current);
+        Connectivity.ProjectPinFunctionService.Synchronize(current);
+        return current;
     }
 
     public async Task<IReadOnlyList<ElectricalProjectSummary>> ListAsync(CancellationToken ct = default)

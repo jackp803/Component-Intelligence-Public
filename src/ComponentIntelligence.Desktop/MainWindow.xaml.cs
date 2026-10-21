@@ -61,8 +61,6 @@ public partial class MainWindow : Window
         TemplateButton.Content = zh ? "產生 BOM 範本" : "Generate BOM Template";
         ProcessButton.Content = zh ? "開始處理" : "Process BOM";
         ElectricalButton.Content = zh ? "電氣設計" : "Electrical Design";
-        TopologyButton.Content = zh ? "電路拓樸" : "Electrical Topology";
-        TopologyButton.ToolTip = zh ? "直接開啟電路拓樸頁面" : "Open the Electrical Topology page directly";
 
         SearchHeaderText.Text = zh ? "元件搜尋" : "Component Search";
         ModelLabelText.Text = zh ? "型號 / 料號" : "Model / Part Number";

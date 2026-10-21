@@ -10,6 +10,7 @@ public interface IDrawingAssetResolver
 
 public sealed record DrawingAssetResolution
 {
+    public string ArchiveRepresentationId { get; init; } = "default";
     public required string SourceType { get; init; }
     public required string Revision { get; init; }
     public required string AssetPath { get; init; }
@@ -22,12 +23,17 @@ public sealed class Cp3aDrawingAssetResolver(SymbolResolver resolver, SymbolArch
     private readonly SymbolResolver _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
 
     public DrawingAssetResolution? Resolve(string ownerId, DrawingRepresentationRole role)
+        => ResolveRepresentation(ownerId, role, "default");
+
+    public DrawingAssetResolution? ResolveRepresentation(string ownerId, DrawingRepresentationRole role, string representationId)
     {
+        SymbolArchiveRepository.NormalizeRepresentationId(representationId);
         if (!TryMapRole(role, out var assetRole)) return null;
         var document = repository.Load();
         if (!document.Bindings.Any(b => string.Equals(b.ComponentId, ownerId, StringComparison.Ordinal) && b.Role == assetRole
+            && b.RepresentationId == representationId
             && b.Revisions.Any(r => r.Status == SymbolRevisionStatus.Approved))) return null;
-        var resolved = Task.Run(() => _resolver.ResolveAsync(ownerId, assetRole, allowGeneratedGeneric: false))
+        var resolved = Task.Run(() => _resolver.ResolveAsync(ownerId, assetRole, allowGeneratedGeneric: false, representationId: representationId))
             .GetAwaiter().GetResult();
         var path = repository.ResolveArchivePath(resolved.AssetPath);
         // Reject linked descendants so lexical containment cannot redirect execution outside the root.
@@ -37,6 +43,7 @@ public sealed class Cp3aDrawingAssetResolver(SymbolResolver resolver, SymbolArch
                 throw new InvalidDataException("Approved symbol path contains a linked descendant.");
         return new DrawingAssetResolution
         {
+            ArchiveRepresentationId = resolved.RepresentationId,
             SourceType = resolved.SourceType.ToString(),
             Revision = resolved.Revision,
             AssetPath = path,

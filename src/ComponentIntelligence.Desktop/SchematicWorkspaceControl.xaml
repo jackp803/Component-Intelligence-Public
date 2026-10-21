@@ -1,0 +1,176 @@
+<UserControl x:Class="ComponentIntelligence.Desktop.SchematicWorkspaceControl"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Focusable="True" PreviewKeyDown="OnKeyDown">
+ <UserControl.Resources>
+  <Style TargetType="Button"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="8,3"/></Style>
+  <Style TargetType="ToggleButton"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="8,3"/></Style>
+  <Style TargetType="TextBox"><Setter Property="MinHeight" Value="26"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+ </UserControl.Resources>
+ <Grid Margin="8">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <WrapPanel Margin="0,0,0,8">
+   <ToggleButton x:Name="SelectTool" Content="選取" IsChecked="True" Padding="12,5" Click="Select_Click" ToolTip="選取 (V)"/>
+   <ToggleButton x:Name="EditModuleTool" Content="編輯模塊" Padding="12,5" Margin="4,0" Click="EditModule_Click" ToolTip="編輯模塊接點位置；點一下 Port 展開／收合，拖曳到四邊 (E)"/>
+   <ToggleButton x:Name="WireTool" Content="導線" Padding="12,5" Margin="4,0" Click="Wire_Click" ToolTip="導線 (W)"/>
+   <Button Content="完成線段" Padding="12,5" Click="FinishWire_Click" ToolTip="完成線段 (Enter／雙擊)"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE7AD;" ToolTip="旋轉 90 度 (R)" Padding="10,5" Margin="4,0" Click="Rotate_Click"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE72E;" ToolTip="鎖定／解鎖 (L)" Padding="10,5" Click="Lock_Click"/>
+   <Button Content="線材庫" Padding="12,5" Margin="4,0" Click="CableLibrary_Click" ToolTip="新增一條實體線材 (Ctrl+Shift+C)"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE8A5;" Padding="10,5" Click="CableDetail_Click" ToolTip="線材明細 (Ctrl+D)"/>
+   <Button Content="AWG" Padding="12,5" Click="Gauge_Click" ToolTip="導線規格 (G)"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE71B;" Padding="10,5" Click="Mating_Click" ToolTip="接頭對接 / Port 逐 Pin 核對"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE8FD;" Padding="10,5" Click="FunctionReview_Click" ToolTip="Pin 功能 / 自動映射與衝突核對"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE9D5;" Padding="10,5" Click="WireDetails_Click" ToolTip="導線明細"/>
+   <Button x:Name="ProjectSearchButton" FontFamily="Segoe MDL2 Assets" Content="&#xE721;" Padding="10,5" Click="ProjectSearch_Click" ToolTip="搜尋工程圖 (Ctrl+F)"/>
+   <ToggleButton x:Name="AllPagesTool" Content="所有頁面" Padding="12,5" Click="AllPages_Click" ToolTip="單頁／所有頁面 (F6)"/>
+   <Button Content="PDF 草稿" Padding="12,5" Click="ExportPdf_Click" ToolTip="儲存並匯出多頁 PDF 草稿 (Ctrl+Shift+E)"/>
+   <Button FontFamily="Segoe MDL2 Assets" Content="&#xE749;" Padding="10,5" Click="Print_Click" ToolTip="儲存並列印草稿 (Ctrl+P)"/>
+   <Slider x:Name="Zoom" Minimum="0.25" Maximum="2" Value="0.65" Width="110" Margin="12,0" ToolTip="縮放" ValueChanged="Zoom_Changed"/>
+   <Button x:Name="LeftPanelToggle" FontFamily="Segoe MDL2 Assets" Content="&#xE700;" Click="ToggleLeftPanel_Click" ToolTip="收合／展開頁面與 BOM"/>
+   <Menu Background="Transparent" VerticalAlignment="Center" Margin="4,0">
+    <MenuItem Header="圖面">
+     <MenuItem Header="搜尋工程圖" InputGestureText="Ctrl+F" Click="ProjectSearch_Click"/>
+     <MenuItem Header="跨頁符號" InputGestureText="X" Click="Continuation_Click"/>
+     <MenuItem Header="接頭對接" Click="Mating_Click"/>
+     <MenuItem Header="Pin 功能／自動映射" Click="FunctionReview_Click"/>
+     <MenuItem Header="接點設定" InputGestureText="B" Click="Bindings_Click"/>
+     <MenuItem Header="圖塊外觀" InputGestureText="I" Click="ImportSymbol_Click"/>
+     <MenuItem Header="更新已放置 CAD 圖塊" Click="RefreshCad_Click"/>
+     <MenuItem Header="圖框／頁面" InputGestureText="T" Click="ImportTemplate_Click"/>
+     <MenuItem Header="標題欄" Click="TitleBlock_Click"/>
+     <MenuItem Header="前往對端" InputGestureText="J" Click="Navigate_Click"/>
+     <MenuItem Header="搬到其他頁" InputGestureText="Ctrl+M" Click="MoveSymbolPage_Click"/>
+    </MenuItem>
+    <MenuItem Header="更多">
+     <MenuItem Header="線材設定" InputGestureText="C" Click="CableSettings_Click"/>
+     <MenuItem Header="更新自動線號" Click="RefreshWireNames_Click"/>
+     <MenuItem x:Name="PdfWireDetails" Header="PDF 附完整導線明細" IsCheckable="True" IsChecked="False"/>
+     <MenuItem Header="DXF 草稿" InputGestureText="Ctrl+E" Click="ExportDraft_Click"/>
+     <MenuItem Header="草稿缺口" InputGestureText="F8" Click="ReviewDraft_Click"/>
+     <MenuItem Header="快捷鍵" InputGestureText="F1" Click="Shortcuts_Click"/>
+     <Separator/>
+     <MenuItem Header="還原面板配置" Click="ResetPanels_Click"/>
+    </MenuItem>
+   </Menu>
+  </WrapPanel>
+  <Grid Grid.Row="1">
+   <Grid.ColumnDefinitions><ColumnDefinition x:Name="LeftColumn" Width="240" MinWidth="0" MaxWidth="400"/><ColumnDefinition Width="5"/><ColumnDefinition Width="*" MinWidth="100"/><ColumnDefinition Width="5"/><ColumnDefinition x:Name="InspectorColumn" Width="260" MinWidth="220" MaxWidth="400"/></Grid.ColumnDefinitions>
+   <Grid x:Name="LeftPanel" Margin="0,0,5,0">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="150"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <DockPanel Margin="0,0,0,5">
+     <TextBlock Text="頁面" FontWeight="SemiBold" VerticalAlignment="Center"/>
+     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button Content="＋" ToolTip="新增頁面 (Ctrl+Shift+N)" Width="30" Click="AddPage_Click"/>
+      <Button Content="↑" ToolTip="頁面往前 (Alt+PageUp)" Width="30" Click="PageUp_Click"/>
+      <Button Content="↓" ToolTip="頁面往後 (Alt+PageDown)" Width="30" Click="PageDown_Click"/>
+      <Button FontFamily="Segoe MDL2 Assets" Content="&#xE74D;" ToolTip="刪除目前頁面" Width="30" Click="DeletePage_Click"/>
+     </StackPanel>
+    </DockPanel>
+    <ListBox x:Name="PageList" Grid.Row="1" DisplayMemberPath="Label" SelectionChanged="Page_Selected">
+     <ListBox.ContextMenu><ContextMenu><MenuItem Header="重新命名目前頁面" InputGestureText="F2" Click="RenamePage_Click"/><MenuItem Header="刪除目前頁面" Click="DeletePage_Click"/></ContextMenu></ListBox.ContextMenu>
+    </ListBox>
+    <StackPanel Grid.Row="2" Margin="0,12,0,5">
+     <DockPanel LastChildFill="True">
+      <Button x:Name="AddBomComponentButton" DockPanel.Dock="Right" FontFamily="Segoe MDL2 Assets" Content="&#xE710;" Width="30" Height="28"
+       ToolTip="新增元件至目前專案 BOM" Click="AddBomComponent_Click"/>
+      <TextBlock Text="專案 BOM" FontWeight="SemiBold" VerticalAlignment="Center"/>
+     </DockPanel>
+     <ComboBox x:Name="BomCategory" Margin="0,5,0,0" SelectionChanged="BomCategory_Changed" ToolTip="元件分類"/>
+     <TextBox x:Name="Search" Margin="0,5,0,0" TextChanged="Search_Changed" ToolTip="篩選 BOM 廠牌、型號、分類"/>
+     <TextBlock x:Name="BomContext" TextWrapping="Wrap" FontSize="11" Foreground="#61696B" Margin="0,4,0,0"/>
+    </StackPanel>
+    <Grid Grid.Row="3">
+     <ListBox x:Name="CatalogList" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+       VirtualizingPanel.IsVirtualizingWhenGrouping="True">
+      <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem">
+       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+       <Setter Property="Padding" Value="4,6"/>
+      </Style></ListBox.ItemContainerStyle>
+      <ListBox.GroupStyle><GroupStyle><GroupStyle.HeaderTemplate><DataTemplate>
+       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#384E50" Margin="6,8,0,4"/>
+      </DataTemplate></GroupStyle.HeaderTemplate></GroupStyle></ListBox.GroupStyle>
+      <ListBox.ItemTemplate><DataTemplate>
+       <Grid ToolTip="{Binding Label}">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Grid Width="48" Height="52" VerticalAlignment="Top">
+         <TextBlock Text="{Binding PhotoStatus}" FontSize="10" Foreground="#61696B" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+         <Image Source="{Binding PreviewImage}" Stretch="Uniform"/>
+        </Grid>
+        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+         <TextBlock Text="{Binding Label}" TextWrapping="Wrap" FontSize="12"/>
+         <TextBlock Text="{Binding Entry.Subcategory}" TextWrapping="Wrap" FontSize="10" Foreground="#61696B"/>
+         <TextBlock Text="{Binding Entry.QuantityLabel}" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0"/>
+         <TextBlock Text="{Binding Entry.StockLabel}" TextWrapping="Wrap" FontSize="10" Foreground="#61696B"/>
+        </StackPanel>
+       </Grid>
+      </DataTemplate></ListBox.ItemTemplate>
+     </ListBox>
+     <TextBlock x:Name="BomEmpty" Text="尚無專案 BOM" TextWrapping="Wrap" Foreground="#61696B"
+       HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
+    </Grid>
+    <Button Grid.Row="4" Content="放置元件" Padding="10,6" Margin="0,5,0,0" Click="Place_Click" ToolTip="放置元件 (P)；取消 (Esc)"/>
+   </Grid>
+   <GridSplitter x:Name="LeftSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" DragCompleted="PanelResize_Completed"/>
+   <Border Grid.Column="2" BorderBrush="#CBD0D2" BorderThickness="1" Background="#E9ECEC">
+    <ScrollViewer x:Name="PageScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+      PreviewMouseWheel="PageScroll_Wheel" PreviewMouseDown="PageScroll_Down"
+      PreviewMouseMove="PageScroll_Move" PreviewMouseUp="PageScroll_Up" LostMouseCapture="PageScroll_LostCapture">
+     <StackPanel x:Name="PageHost" HorizontalAlignment="Left">
+      <StackPanel.LayoutTransform><ScaleTransform x:Name="SheetZoom" ScaleX="0.65" ScaleY="0.65"/></StackPanel.LayoutTransform>
+     </StackPanel>
+    </ScrollViewer>
+   </Border>
+   <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" DragCompleted="PanelResize_Completed"/>
+   <DockPanel Grid.Column="4" Margin="8,0,0,0">
+    <StackPanel DockPanel.Dock="Bottom">
+     <TextBlock x:Name="InspectorError" Foreground="#AE2727" TextWrapping="Wrap" Margin="0,5"/>
+     <Grid x:Name="InspectorActions" Visibility="Collapsed" Margin="0,4,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <Button Content="套用" Click="InspectorApply_Click" ToolTip="套用目前設定 (Enter)"/>
+      <Button Grid.Column="1" Content="取消" Click="InspectorCancel_Click" Margin="5,0,0,0" ToolTip="取消尚未套用的設定 (Esc)"/>
+     </Grid>
+    </StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel x:Name="InspectorContent">
+    <TextBlock Text="選取項目" FontWeight="SemiBold"/>
+    <TextBlock x:Name="SelectionLabel" TextWrapping="Wrap" Margin="0,8,0,12"/>
+    <StackPanel x:Name="ModuleInspectorPanel" Visibility="Collapsed">
+    <TextBlock Text="Reference"/>
+    <TextBox x:Name="ReferenceText" Margin="0,4,0,6"/>
+    <StackPanel x:Name="ModuleInspectorFields"/>
+    <Button Content="Port／Pin 接點設定" Click="InspectorBindings_Click" Margin="0,6,0,0"/>
+    <Button Content="移動 Port／Pin" Click="InspectorEditModule_Click" Margin="0,6,0,0"/>
+    <Button x:Name="AnotherRepresentationButton" Content="放置另一個表示" Padding="8,5" Margin="0,6,0,0" Click="AnotherRepresentation_Click" ToolTip="放置此元件的另一個表示 (Shift+P)"/>
+    <Button x:Name="CablePropertiesButton" Content="線長／備註" Padding="8,5" Margin="0,6,0,0" Click="CableProperties_Click" Visibility="Collapsed"/>
+    <Button x:Name="DuplicateCableButton" Content="複製為另一條線材" Padding="8,5" Margin="0,6,0,0" Click="DuplicateCable_Click" Visibility="Collapsed"/>
+    <Button x:Name="WagoGroupButton" Content="合併同型號 WAGO" Padding="8,5" Margin="0,6,0,0" Click="WagoGroup_Click" Visibility="Collapsed"/>
+    <Button x:Name="WagoFanoutButton" Content="WAGO 引線設定" Padding="8,5" Margin="0,6,0,0" Click="WagoFanout_Click" Visibility="Collapsed"/>
+    <Button Content="拆分模塊表示" Padding="8,5" Margin="0,6,0,0" Click="SplitRepresentation_Click" ToolTip="將通用模塊接點分段放到各頁；仍是一顆實體 (Ctrl+Shift+P)"/>
+    <Button Content="保存模塊版型" Padding="8,5" Margin="0,6,0,0" Click="SaveModuleLayout_Click" ToolTip="讓同型元件在其他專案沿用目前的尺寸與接點位置；不核准 CAD 圖塊"/>
+    <StackPanel x:Name="CadScalePanel" Visibility="Collapsed" Margin="0,12,0,0">
+     <TextBlock Text="CAD 縮放 (%)"/>
+     <DockPanel Margin="0,4,0,0">
+      <Button x:Name="CadScaleReset" DockPanel.Dock="Right" Width="30" Height="28" Margin="4,0,0,0" FontFamily="Segoe MDL2 Assets" Content="&#xE72C;" Click="CadScaleReset_Click" ToolTip="還原 CAD 顯示為 100%"/>
+      <Button x:Name="CadScaleApply" DockPanel.Dock="Right" Width="30" Height="28" Margin="4,0,0,0" FontFamily="Segoe MDL2 Assets" Content="&#xE74E;" Click="CadScaleApply_Click" ToolTip="套用 CAD 顯示縮放"/>
+      <TextBox x:Name="CadScaleText" VerticalContentAlignment="Center"/>
+     </DockPanel>
+     <TextBlock x:Name="CadSizeText" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#61696B"/>
+    </StackPanel>
+    </StackPanel>
+    <StackPanel x:Name="WireInspectorFields" Visibility="Collapsed"/>
+    <StackPanel x:Name="DetailInspectorFields" Visibility="Collapsed"/>
+    <Button x:Name="InspectorDelete" FontFamily="Segoe MDL2 Assets" Content="&#xE74D;" ToolTip="刪除選取的表示／導線" Click="InspectorDelete_Click" Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+    <TextBlock x:Name="SelectionState" TextWrapping="Wrap" Margin="0,12,0,0" Foreground="#61696B"/>
+   </StackPanel>
+    </ScrollViewer>
+   </DockPanel>
+  </Grid>
+  <DockPanel Grid.Row="2" Margin="0,8,0,0">
+   <Button x:Name="OutputWarningsButton" DockPanel.Dock="Right" FontFamily="Segoe MDL2 Assets" Content="&#xE7BA;"
+    Width="30" Height="28" Margin="8,0,0,0" VerticalAlignment="Top" Visibility="Collapsed"
+    ToolTip="查看匯出標示警告" Click="OutputWarnings_Click"/>
+   <TextBlock x:Name="Status" MaxHeight="80" TextWrapping="Wrap" Foreground="#41494B"/>
+  </DockPanel>
+ </Grid>
+</UserControl>

@@ -14,6 +14,14 @@ public sealed record ComponentIR
     public IReadOnlyList<ComponentDocument> Documents { get; init; } = Array.Empty<ComponentDocument>();
     public ComponentAssets Assets { get; init; } = new();
     public ComponentReadiness Readiness { get; init; } = new();
+    public CableProductAuthority? CableProduct { get; init; }
+}
+
+public enum CableProductKind { Unknown, BulkMaterial, PurchasedPreassembled }
+public sealed record CableProductAuthority
+{
+    public CableProductKind Kind { get; init; }
+    public string? Evidence { get; init; }
 }
 
 public sealed record ComponentIrIdentity

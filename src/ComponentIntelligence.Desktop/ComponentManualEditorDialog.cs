@@ -25,14 +25,14 @@ public sealed class ComponentManualEditorDialog : Window
     private readonly ObservableCollection<PinEditRow> _pins;
     private readonly ObservableCollection<SpecificationEditRow> _specifications;
 
-    public ComponentManualEditorDialog(ComponentIR component)
+    public ComponentManualEditorDialog(ComponentIR component, bool projectLocal = false)
     {
         _original = component ?? throw new ArgumentNullException(nameof(component));
         _ports = new ObservableCollection<PortEditRow>(component.Ports.Select(PortEditRow.From));
         _pins = new ObservableCollection<PinEditRow>(component.Pins.Select(PinEditRow.From));
         _specifications = new ObservableCollection<SpecificationEditRow>(component.Specifications.Select(SpecificationEditRow.From));
 
-        Title = $"人工修正元件資料 / Edit Component - {component.Identity.Manufacturer} {component.Identity.Model}";
+        Title = projectLocal ? $"自製元件接點與規格 - {component.Identity.Model}" : $"人工修正元件資料 / Edit Component - {component.Identity.Manufacturer} {component.Identity.Model}";
         Width = 980;
         Height = 760;
         MinWidth = 820;
@@ -52,7 +52,7 @@ public sealed class ComponentManualEditorDialog : Window
         var root = new DockPanel { Margin = new Thickness(16) };
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
         var cancel = new Button { Content = "取消 / Cancel", Padding = new Thickness(16, 7, 16, 7), Margin = new Thickness(0, 0, 8, 0), IsCancel = true };
-        var save = new Button { Content = "儲存本機修正 / Save", Padding = new Thickness(16, 7, 16, 7), IsDefault = true };
+        var save = new Button { Content = projectLocal ? "套用接點與規格" : "儲存本機修正 / Save", Padding = new Thickness(16, 7, 16, 7), IsDefault = true };
         save.Click += Save_Click;
         footer.Children.Add(cancel);
         footer.Children.Add(save);
@@ -66,7 +66,7 @@ public sealed class ComponentManualEditorDialog : Window
             FontSize = 20,
             FontWeight = FontWeights.SemiBold
         });
-        header.Children.Add(new TextBlock
+        if (!projectLocal) header.Children.Add(new TextBlock
         {
             Text = "只編輯跨專案可重用的元件知識。Reference、Topology 位置、目前專案接線不會在此修改。人工修改的 Pin / Specification 會留下 UserConfirmed（使用者確認）證據；同步 Notion 時若撞到 Verified（已驗證）資料會進 Conflict，不會直接覆蓋。",
             TextWrapping = TextWrapping.Wrap,

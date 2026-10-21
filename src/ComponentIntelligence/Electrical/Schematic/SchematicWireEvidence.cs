@@ -1,0 +1,72 @@
+using System.Globalization;
+using ComponentIntelligence.Electrical.Domain;
+
+namespace ComponentIntelligence.Electrical.Schematic;
+
+public sealed record SchematicWireEvidence(string Category, string ColorHex, string Description)
+{
+    public string? PhysicalColor { get; init; }
+    public bool ColorConflict { get; init; }
+    public bool NeedsOutline => ColorHex is "#FFFFFF" or "#E3BB22";
+    // Product display only; standards applicability and clauses are not yet verified.
+    public const string Profile = "PRODUCT-SCHEMATIC-PREVIEW-V1";
+
+    public static SchematicWireEvidence Resolve(ElectricalProject project, SchematicWire wire)
+    {
+        var connection = project.Connections.SingleOrDefault(c => c.ConnectionId == wire.ConnectionId);
+        var chain = new List<SchematicWire> { wire };
+        var seen = new HashSet<string>(StringComparer.Ordinal) { wire.WireId };
+        if (connection is null && project.Schematic is { } doc)
+        {
+            for (var i = 0; i < chain.Count; i++)
+            foreach (var attachment in new[] { chain[i].Start, chain[i].End })
+            {
+                if (attachment.Kind == SchematicAttachmentKind.WireJunction)
+                {
+                    var parent = doc.Wires.SingleOrDefault(w => w.WireId == attachment.WireId);
+                    if (parent is not null && seen.Add(parent.WireId)) chain.Add(parent);
+                    continue;
+                }
+                if (attachment.Kind != SchematicAttachmentKind.Continuation) continue;
+                var pair = doc.Continuations.SingleOrDefault(c => c.Source.MarkerId == attachment.MarkerId || c.Destination.MarkerId == attachment.MarkerId);
+                if (pair is null) continue;
+                var peer = pair.Source.MarkerId == attachment.MarkerId ? pair.Destination.MarkerId : pair.Source.MarkerId;
+                foreach (var next in doc.Wires.Where(w => w.Start.MarkerId == peer || w.End.MarkerId == peer))
+                    if (seen.Add(next.WireId)) chain.Add(next);
+            }
+        }
+        var endpointIds = connection is null
+            ? chain.SelectMany(w => new[] { w.Start.EndpointId, w.End.EndpointId })
+                .Concat(chain.Where(w => w.ConnectionId is not null)
+                    .SelectMany(w => project.Connections.Where(c => c.ConnectionId == w.ConnectionId)
+                        .SelectMany(c => new[] { c.FromEndpointId, c.ToEndpointId }))).ToArray()
+            : new[] { connection.FromEndpointId, connection.ToEndpointId };
+        var pins = project.Components.SelectMany(c => c.Ports).SelectMany(p => p.Pins)
+            .Where(p => endpointIds.Contains(p.PinId, StringComparer.Ordinal)).ToArray();
+        var powers = pins.Select(p => p.Power).Where(p => p is not null).Cast<PowerCapability>().ToArray();
+        var polarities = powers.Select(p => p.Polarity).Where(p => p is Polarity.Positive or Polarity.Negative or Polarity.Return).Distinct().ToArray();
+        var types = powers.Select(p => p.Voltage?.Type ?? VoltageType.Unknown).Where(t => t != VoltageType.Unknown).Distinct().ToArray();
+        var conflict = polarities.Length > 1 || types.Length > 1;
+        var category = conflict ? "CONFLICT" : types.SequenceEqual([VoltageType.Dc]) && polarities.Length == 1
+            ? polarities[0] switch { Polarity.Positive => "DC_POSITIVE", Polarity.Negative => "DC_NEGATIVE", _ => "UNCLASSIFIED" }
+            : "UNCLASSIFIED";
+        var descriptions = pins.Select(pin =>
+        {
+            var v = pin.Power?.Voltage;
+            var value = v?.NominalVoltage is double n ? n.ToString("0.###", CultureInfo.InvariantCulture)
+                : v?.MinVoltage is double min && v.MaxVoltage is double max
+                    ? $"{min.ToString("0.###", CultureInfo.InvariantCulture)}..{max.ToString("0.###", CultureInfo.InvariantCulture)}" : "?";
+            return $"{pin.PinNumber} {pin.PinName}: {value} V {(v?.Type ?? VoltageType.Unknown).ToString().ToUpperInvariant()}";
+        });
+        var contactPins = SchematicWireContacts.Ends(project, wire).Select(c => c.Pin).OfType<ComponentPin>();
+        var colors = pins.Concat(contactPins).Select(SchematicWireContacts.Color).Where(c => c.HasValue)
+            .Select(c => c!.Value).DistinctBy(c => c.Name).ToArray();
+        var colorConflict = colors.Length > 1;
+        var colorHex = conflict || colorConflict ? "#8B008B" : colors.Length == 1 ? colors[0].Hex :
+            category switch { "DC_POSITIVE" => "#B42318", "DC_NEGATIVE" => "#FFFFFF", _ => "#333333" };
+        return new(category, colorHex, string.Join("\n", descriptions) +
+            (colorConflict ? "\n兩端腳位線色不同，請確認：" + string.Join(" / ", colors.Select(c => c.Name)) :
+                colors.Length == 1 ? "\n腳位線色：" + colors[0].Name : ""))
+        { PhysicalColor = colors.Length == 1 ? colors[0].Name : null, ColorConflict = colorConflict };
+    }
+}

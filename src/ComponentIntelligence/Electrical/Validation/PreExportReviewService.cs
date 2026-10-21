@@ -21,9 +21,7 @@ public sealed class PreExportReviewService
     public IReadOnlyList<PreExportReviewItem> BuildReview(ElectricalProject project)
     {
         ArgumentNullException.ThrowIfNull(project);
-        var connected = project.Connections
-            .SelectMany(connection => new[] { connection.FromEndpointId, connection.ToEndpointId })
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var connected = Connectivity.ProjectConductiveEdges.ConnectedEndpointIds(project);
         var reviews = project.EndpointReviews
             .GroupBy(review => review.EndpointId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);

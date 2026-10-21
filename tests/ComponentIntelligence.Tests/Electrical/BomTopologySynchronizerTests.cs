@@ -97,10 +97,14 @@ public sealed class BomTopologySynchronizerTests
                 return Task.FromResult<ComponentIR?>(NewComponentIr("CMP-EVC001", "IFM", "EVC001", category: "Cable Assembly"));
             });
 
-        Assert.Equal(0, lookupCalls);
+        Assert.Equal(1, lookupCalls);
         Assert.Equal(0, result.AddedInstances);
         Assert.Equal(1, result.SkippedSpareOnlyRows);
         Assert.Empty(project.Components);
+        var inventory = Assert.Single(project.BomItems);
+        Assert.Equal("CMP-EVC001", inventory.ComponentDefinitionId);
+        Assert.Equal("Cable Assembly", inventory.Category);
+        Assert.Empty(inventory.ComponentInstanceIds);
     }
 
     [Theory]

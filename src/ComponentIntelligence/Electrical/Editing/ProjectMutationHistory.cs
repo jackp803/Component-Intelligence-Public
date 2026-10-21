@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ComponentIntelligence.Electrical.Domain;
@@ -6,12 +7,16 @@ namespace ComponentIntelligence.Electrical.Editing;
 
 public sealed class ProjectMutationHistory
 {
-    private readonly Stack<ProjectSnapshot> _undo = new();
-    private readonly Stack<ProjectSnapshot> _redo = new();
+    private readonly LinkedList<ProjectSnapshot> _undo = new();
+    private readonly LinkedList<ProjectSnapshot> _redo = new();
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly int _capacity;
+    private readonly long _maxBytes;
 
-    public ProjectMutationHistory()
+    public ProjectMutationHistory(int capacity = 100, long maxBytes = 64 * 1024 * 1024)
     {
+        if (capacity < 1 || maxBytes < 1) throw new ArgumentOutOfRangeException(nameof(capacity));
+        _capacity = capacity; _maxBytes = maxBytes;
         _jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             PropertyNameCaseInsensitive = true
@@ -21,8 +26,9 @@ public sealed class ProjectMutationHistory
 
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
-    public string? UndoDescription => _undo.TryPeek(out var snapshot) ? snapshot.Description : null;
-    public string? RedoDescription => _redo.TryPeek(out var snapshot) ? snapshot.Description : null;
+    public string? UndoDescription => _undo.Last?.Value.Description;
+    public string? RedoDescription => _redo.Last?.Value.Description;
+    public long RetainedBytes => _undo.Concat(_redo).Sum(s => (long)s.Data.Length);
 
     public void Clear()
     {
@@ -34,8 +40,9 @@ public sealed class ProjectMutationHistory
     {
         ArgumentNullException.ThrowIfNull(project);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
-        _undo.Push(Capture(project, description));
+        _undo.AddLast(Capture(project, description));
         _redo.Clear();
+        Trim();
     }
 
     public bool TryUndo(ElectricalProject current, out ElectricalProject restored, out string? description)
@@ -48,10 +55,11 @@ public sealed class ProjectMutationHistory
             return false;
         }
 
-        var target = _undo.Pop();
-        _redo.Push(Capture(current, target.Description));
+        var target = _undo.Last!.Value; _undo.RemoveLast();
+        _redo.AddLast(Capture(current, target.Description));
         restored = Restore(target);
         description = target.Description;
+        Trim();
         return true;
     }
 
@@ -65,19 +73,40 @@ public sealed class ProjectMutationHistory
             return false;
         }
 
-        var target = _redo.Pop();
-        _undo.Push(Capture(current, target.Description));
+        var target = _redo.Last!.Value; _redo.RemoveLast();
+        _undo.AddLast(Capture(current, target.Description));
         restored = Restore(target);
         description = target.Description;
+        Trim();
         return true;
     }
 
-    private ProjectSnapshot Capture(ElectricalProject project, string description) =>
-        new(description, JsonSerializer.Serialize(project, _jsonOptions));
+    private void Trim()
+    {
+        // Retain one usable snapshot even when a single project exceeds the budget.
+        while (_undo.Count + _redo.Count > 1 &&
+            (_undo.Count + _redo.Count > _capacity || RetainedBytes > _maxBytes))
+        {
+            if (_undo.Count > 0) _undo.RemoveFirst();
+            else _redo.RemoveFirst();
+        }
+    }
 
-    private ElectricalProject Restore(ProjectSnapshot snapshot) =>
-        JsonSerializer.Deserialize<ElectricalProject>(snapshot.Json, _jsonOptions)
-        ?? throw new InvalidOperationException("Electrical project snapshot could not be restored.");
+    private ProjectSnapshot Capture(ElectricalProject project, string description)
+    {
+        using var buffer = new MemoryStream();
+        using (var compressed = new GZipStream(buffer, CompressionLevel.Fastest, leaveOpen: true))
+            JsonSerializer.Serialize(compressed, project, _jsonOptions);
+        return new(description, buffer.ToArray());
+    }
 
-    private sealed record ProjectSnapshot(string Description, string Json);
+    private ElectricalProject Restore(ProjectSnapshot snapshot)
+    {
+        using var buffer = new MemoryStream(snapshot.Data, writable: false);
+        using var compressed = new GZipStream(buffer, CompressionMode.Decompress);
+        return JsonSerializer.Deserialize<ElectricalProject>(compressed, _jsonOptions)
+            ?? throw new InvalidOperationException("Electrical project snapshot could not be restored.");
+    }
+
+    private sealed record ProjectSnapshot(string Description, byte[] Data);
 }

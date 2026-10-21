@@ -6,6 +6,55 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class ConnectionPinMappingTests
 {
     [Fact]
+    public void PinEndedCable_PreservesReferencedCoreAndNetAuthority()
+    {
+        var project = BuildProject();
+        project.Connections.Add(new() { ConnectionId = "wire", FromEndpointId = "a:p1:pin:1", ToEndpointId = "b:p1:pin:3", Kind = ConnectionKind.Cable, CableInstanceId = "cable", CableCoreId = "core", NetId = "net" });
+        project.Cables.Add(new() { CableInstanceId = "cable", CableDefinitionId = "UNRESOLVED-CABLE", CoreAssignments = { new() { CoreId = "core", NetId = "net", FromEndpointId = "a:p1:pin:1", ToEndpointId = "b:p1:pin:3" } } });
+        var service = new ConnectionPinMappingService();
+        service.SetMappings(project, "wire", [new("a:p1:pin:1", "b:p1:pin:3", "core", "CONFIRMED")]);
+        Assert.Equal("net", Assert.Single(project.Cables[0].CoreAssignments).NetId);
+        var before = System.Text.Json.JsonSerializer.Serialize(project);
+        Assert.Throws<InvalidOperationException>(() => service.SetMappings(project, "wire", [new("a:p1:pin:1", "b:p1:pin:3", "different")]));
+        Assert.Throws<InvalidOperationException>(() => service.ClearMappings(project, "wire"));
+        Assert.Equal(before, System.Text.Json.JsonSerializer.Serialize(project));
+    }
+
+    [Fact]
+    public void PinEndedCable_MappingEditsOnlySelectedConductorEvidence()
+    {
+        var project = BuildProject();
+        var connection = new ElectricalConnection { ConnectionId = "wire-1", FromEndpointId = "a:p1:pin:1", ToEndpointId = "b:p1:pin:3", Kind = ConnectionKind.Cable, CableInstanceId = "cable" };
+        project.Connections.Add(connection);
+        var other = new CoreAssignment { CoreId = "other", FromEndpointId = "a:p1:pin:4", ToEndpointId = "b:p1:pin:4", Signal = "KEEP", Layer = ElectricalLayer.Communication };
+        var cable = new CableInstance { CableInstanceId = "cable", CableDefinitionId = "UNRESOLVED-CABLE", CoreAssignments = { other } };
+        project.Cables.Add(cable);
+        var service = new ConnectionPinMappingService();
+        Assert.Equal("a:p1", service.GetPortPair(project, connection.ConnectionId).From.PortId);
+        Assert.Empty(service.GetMappings(project, connection.ConnectionId));
+        service.SetMappings(project, connection.ConnectionId, [new("a:p1:pin:1", "b:p1:pin:3", "explicit-core", "SUPPLY", ElectricalLayer.Power)]);
+        Assert.Equal("explicit-core", Assert.Single(service.GetMappings(project, connection.ConnectionId)).CoreId);
+        Assert.Contains(other, cable.CoreAssignments);
+        Assert.Equal("a:p1:pin:1", connection.FromEndpointId);
+        Assert.Equal("b:p1:pin:3", connection.ToEndpointId);
+        service.ClearMappings(project, connection.ConnectionId);
+        Assert.Same(other, Assert.Single(cable.CoreAssignments));
+    }
+
+    [Theory]
+    [InlineData("a:p1:pin:2", "new")]
+    [InlineData("a:p1:pin:1", "occupied")]
+    public void PinEndedCable_ConflictingMappingFailsWithoutMutation(string from, string core)
+    {
+        var project = BuildProject();
+        project.Connections.Add(new() { ConnectionId = "wire", FromEndpointId = "a:p1:pin:1", ToEndpointId = "b:p1:pin:3", Kind = ConnectionKind.Cable, CableInstanceId = "cable" });
+        project.Cables.Add(new() { CableInstanceId = "cable", CableDefinitionId = "UNRESOLVED-CABLE", CoreAssignments = { new() { CoreId = "occupied", FromEndpointId = "a:p1:pin:4", ToEndpointId = "b:p1:pin:4" } } });
+        var before = System.Text.Json.JsonSerializer.Serialize(project);
+        Assert.Throws<InvalidOperationException>(() => new ConnectionPinMappingService().SetMappings(project, "wire", [new(from, "b:p1:pin:3", core)]));
+        Assert.Equal(before, System.Text.Json.JsonSerializer.Serialize(project));
+    }
+
+    [Fact]
     public void NewPortConnection_HasNoImplicitPinMapping()
     {
         var project = BuildProject();

@@ -1,4 +1,6 @@
 using System.Windows;
+using ComponentIntelligence.Electrical.Domain;
+using ComponentIntelligence.Electrical.Editing;
 using ComponentIntelligence.Electrical.Topology;
 
 namespace ComponentIntelligence.Desktop;
@@ -9,6 +11,20 @@ public partial class ElectricalWorkspaceWindow
     {
         try
         {
+            var connection = _project.Connections.Single(c => c.ConnectionId == connectionId);
+            if (connection.Kind == ConnectionKind.Wire && connection.CableInstanceId is null)
+            {
+                var wireService = new WirePinMappingService();
+                var wirePorts = wireService.GetPorts(_project, connectionId);
+                var wireDialog = new WirePinMappingDialog(wirePorts.From, wirePorts.To, connection) { Owner = this };
+                if (wireDialog.ShowDialog() != true) return false;
+                RecordMutation($"Edit wire pin mapping {connectionId}");
+                wireService.Apply(_project, connectionId, wireDialog.FromPinId, wireDialog.ToPinId);
+                TopologyCanvas.RefreshCanvas();
+                UpdateHistoryButtons();
+                WorkspaceStatusText.Text = "普通配線腳位對應已確認；線材歸屬維持不變。";
+                return true;
+            }
             var service = new ConnectionPinMappingService();
             var ports = service.GetPortPair(_project, connectionId);
             var existing = service.GetMappings(_project, connectionId);

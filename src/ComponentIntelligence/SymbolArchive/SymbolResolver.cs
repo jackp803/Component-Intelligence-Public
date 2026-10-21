@@ -5,6 +5,7 @@ namespace ComponentIntelligence.SymbolArchive;
 
 public sealed record SymbolResolution
 {
+    public string RepresentationId { get; init; } = "default";
     public required string ComponentId { get; init; }
     public SymbolRole Role { get; init; }
     public SymbolSourceType SourceType { get; init; }
@@ -37,15 +38,17 @@ public sealed class SymbolResolver
         SymbolRole role,
         bool allowGeneratedGeneric = true,
         CancellationToken cancellationToken = default,
-        IReadOnlyCollection<string>? requiredEndpointIds = null)
+        IReadOnlyCollection<string>? requiredEndpointIds = null,
+        string representationId = "default")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
+        SymbolArchiveRepository.NormalizeRepresentationId(representationId);
         if (!_components.TryGetValue(componentId.Trim(), out var component))
             throw new InvalidOperationException($"Unknown ComponentId '{componentId}'.");
 
         var document = _repository.Load();
         var binding = document.Bindings.SingleOrDefault(item =>
-            string.Equals(item.ComponentId, componentId.Trim(), StringComparison.Ordinal) && item.Role == role);
+            string.Equals(item.ComponentId, componentId.Trim(), StringComparison.Ordinal) && item.Role == role && item.RepresentationId == representationId);
         var approved = binding?.Revisions.Where(item => item.Status == SymbolRevisionStatus.Approved).ToArray()
             ?? Array.Empty<SymbolRevisionRecord>();
         if (approved.Length > 1)
@@ -63,6 +66,7 @@ public sealed class SymbolResolver
             return new SymbolResolution
             {
                 ComponentId = componentId.Trim(),
+                RepresentationId = representationId,
                 Role = role,
                 SourceType = revision.SourceType,
                 Revision = revision.Revision,
@@ -72,7 +76,7 @@ public sealed class SymbolResolver
             };
         }
 
-        if (!allowGeneratedGeneric)
+        if (!allowGeneratedGeneric || representationId != "default")
             throw new InvalidOperationException($"No Approved symbol exists for {componentId} / {role} and GeneratedGeneric is disabled.");
         var generic = _genericFactory.Create(component, role, requiredEndpointIds);
         return new SymbolResolution

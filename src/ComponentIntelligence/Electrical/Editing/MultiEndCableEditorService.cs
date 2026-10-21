@@ -172,7 +172,18 @@ public sealed class MultiEndCableEditorService
         }
         if (existing is null) project.CableAssemblies.Add(replacement);
         else project.CableAssemblies[project.CableAssemblies.IndexOf(existing)] = replacement;
-        project.Cables.RemoveAll(c => oldCableIds.Contains(c.CableInstanceId) && !project.Connections.Any(w => w.CableInstanceId == c.CableInstanceId));
+        var retiredCableIds = project.Cables
+            .Where(c => oldCableIds.Contains(c.CableInstanceId) && !project.Connections.Any(w => w.CableInstanceId == c.CableInstanceId))
+            .Select(c => c.CableInstanceId).ToHashSet(StringComparer.Ordinal);
+        if (project.Schematic is { } schematic)
+            for (var i = 0; i < schematic.Pages.Count; i++)
+            {
+                var page = schematic.Pages[i];
+                if (page.CableDetail is { } detail && retiredCableIds.Contains(detail.CableInstanceId))
+                    schematic.Pages[i] = page with { CableDetail = detail with
+                    { CableInstanceId = draft.CableId, CableAssemblyId = replacement.CableAssemblyId } };
+            }
+        project.Cables.RemoveAll(c => retiredCableIds.Contains(c.CableInstanceId));
         return replacement;
     }
 

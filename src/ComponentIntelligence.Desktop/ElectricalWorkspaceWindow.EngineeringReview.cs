@@ -14,6 +14,8 @@ public partial class ElectricalWorkspaceWindow
 {
     private async void EngineeringReview_Click(object sender, RoutedEventArgs e)
     {
+        if (_saveBusy || _switchBusy || _schematicWorkspace?.FinishPendingDraft() == false) return;
+        var reviewEpoch = _saveSession.Epoch;
         try
         {
             if (string.IsNullOrWhiteSpace(_centralWorkbookPath))
@@ -21,6 +23,7 @@ public partial class ElectricalWorkspaceWindow
             string CatalogHash() { using var stream = File.OpenRead(_centralWorkbookPath); return Convert.ToHexString(SHA256.HashData(stream)); }
             var catalogHash = CatalogHash();
             var catalog = await new WorkbookComponentKnowledgeStore(_centralWorkbookPath).ListAsync();
+            if (_saveSession.Epoch != reviewEpoch) return;
             TopologyCanvas.PersistCurrentRouteGeometry();
             var persisted = new List<ComponentIntelligence.Contracts.ComponentIR>();
             // Context lookup must not initialize schema or change journal mode on Cancel/Skip.
@@ -49,16 +52,22 @@ public partial class ElectricalWorkspaceWindow
                 "已設定的中央工作簿 / exact ComponentID / SHA256=" + catalogHash, persisted);
             var dialog = new EngineeringReviewDialog(service, () => _project, async (draft, evidence) =>
             {
+                if (_saveBusy || _saveSession.Epoch != reviewEpoch) throw new InvalidOperationException("專案正在儲存或已切換，未套用工程確認。");
                 if (catalogHash != CatalogHash()) throw new InvalidOperationException("型錄已變更，未儲存；請關閉並重新開啟工程確認。");
+                draft = CableConstructionAuthority.ApplyDefinitions(draft, catalog);
                 var revisions = EnsureDrawingRevisionService();
-                await revisions.CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, "Before " + evidence);
-                // The modal dialog edits a clone. The active project changes only after normal Save succeeds.
-                await _repository.SaveAsync(draft);
-                RecordMutation(evidence);
-                _project = draft;
-                RefreshAll();
-                try { await revisions.CreateCheckpointAsync(_project, ProjectRevisionTrigger.TopologyChange, evidence); }
-                catch (Exception ex) { throw new InvalidOperationException("專案已儲存，但後置版本紀錄失敗；請重新檢查專案及 History：" + ex.Message, ex); }
+                var capture = _saveSession.Capture(_project); var saved = ProjectSaveSession.Clone(draft);
+                _saveBusy = true; UpdateSaveState();
+                try {
+                    await _queuedCheckpoints;
+                    await Task.Run(() => revisions.CreateCheckpointAsync(capture.Snapshot, ProjectRevisionTrigger.TopologyChange, "Before " + evidence));
+                    saved = await _persistProjectSnapshot(saved);
+                    _lastSavedSnapshot = ProjectSaveSession.Clone(saved); _savedOnce = true;
+                    if (_saveSession.Complete(capture, saved, _project)) { RecordMutation(evidence); _project = saved; RefreshAll(); }
+                    try { await Task.Run(() => revisions.CreateCheckpointAsync(saved, ProjectRevisionTrigger.TopologyChange, evidence)); }
+                    catch (Exception ex) { throw new InvalidOperationException("專案已儲存，但後置版本紀錄失敗；請檢查 History：" + ex.Message, ex); }
+                }
+                finally { _saveBusy = false; ScheduleStateCheck(); UpdateSaveState(); }
             }) { Owner = this };
             dialog.ShowDialog();
         }

@@ -43,7 +43,7 @@ public sealed record MultiCoreCableBundle(
     CableAssembly Assembly,
     IReadOnlyList<ElectricalConnection> CableCoreConnections);
 
-public sealed class TopologyConnectionEditor
+public sealed partial class TopologyConnectionEditor
 {
     /// <summary>
     /// Groups one ordinary route, or exactly three routes for a Y harness, into one project-local
@@ -598,7 +598,10 @@ public sealed class TopologyConnectionEditor
         Kind = source.Kind,
         CableInstanceId = source.CableInstanceId,
         CableCoreId = source.CableCoreId,
-        ConductorAreaMm2 = source.ConductorAreaMm2
+        ConductorAreaMm2 = source.ConductorAreaMm2,
+        MaxVoltageDropPercent = source.MaxVoltageDropPercent,
+        ConductorMaterial = source.ConductorMaterial,
+        InstallationMethod = source.InstallationMethod
     };
 
     private static ElectricalConnection CloneLooseWireSegment(ElectricalConnection source, string from, string to) => new()

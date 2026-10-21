@@ -44,13 +44,26 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
 
         foreach (var component in project.Components.OrderBy(x => x.ComponentInstanceId, StringComparer.Ordinal))
         {
+            var terminalContactPins = component.ComponentDefinitionId == "PHOENIX_CONTACT_3209578"
+                ? component.Ports.SelectMany(port => port.Pins)
+                    .Where(pin => pin.SourcePinId is "PHOENIX_CONTACT_3209578_TERMINALS_1"
+                        or "PHOENIX_CONTACT_3209578_TERMINALS_2"
+                        or "PHOENIX_CONTACT_3209578_TERMINALS_3"
+                        or "PHOENIX_CONTACT_3209578_TERMINALS_4")
+                    .ToArray()
+                : [];
+            var transparentTerminal = terminalContactPins.Length == 4
+                && terminalContactPins.Select(pin => pin.SourcePinId).Distinct(StringComparer.Ordinal).Count() == 4;
+            var contactIds = transparentTerminal
+                ? terminalContactPins.Select(pin => pin.PinId).ToHashSet(StringComparer.Ordinal)
+                : [];
             var explicitBindings = component.Ports
                 .Select(port => new DrawingPortBinding { EngineeringEndpointId = port.PortId, ConnectionPointId = $"PORT:{port.PortId}", DisplayLabel = port.Name,
                     PhysicalSide = CardinalSide(port.PhysicalLocation?.Side) })
                 .Concat(component.Ports.SelectMany(port => port.Pins.Select(pin => new DrawingPortBinding
                 {
                     EngineeringEndpointId = pin.PinId,
-                    ConnectionPointId = $"PIN:{pin.PinId}",
+                    ConnectionPointId = contactIds.Contains(pin.PinId) ? $"TERMINAL_CONTACT:{pin.PinId}" : $"PIN:{pin.PinId}",
                     DisplayLabel = $"{port.Name} / {pin.PinNumber}{(string.IsNullOrWhiteSpace(pin.PinName) ? "" : " " + pin.PinName)}",
                     PhysicalSide = CardinalSide(port.PhysicalLocation?.Side)
                 })))
@@ -101,7 +114,9 @@ public sealed class DrawingPlanningInputBuilder(RepresentationPolicy representat
                 FieldDeviceClass = null
             });
             var bindingsByEndpoint = explicitBindings.ToDictionary(b => b.EngineeringEndpointId, StringComparer.Ordinal);
-            representations.Add(result.Decision with { PortBindings = result.Decision.PortBindings
+            representations.Add(result.Decision with { SourceType = transparentTerminal && result.Decision.AssetPath is null
+                    ? "ProjectTerminalContact" : result.Decision.SourceType,
+                PortBindings = result.Decision.PortBindings
                 .Select(b => b with { DisplayLabel = bindingsByEndpoint.GetValueOrDefault(b.EngineeringEndpointId)?.DisplayLabel,
                     PhysicalSide = bindingsByEndpoint.GetValueOrDefault(b.EngineeringEndpointId)?.PhysicalSide }).ToArray() });
             issues.AddRange(result.Issues);

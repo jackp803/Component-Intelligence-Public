@@ -6,6 +6,37 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class DrawingPlanningInputBuilderTests
 {
     [Fact]
+    public void Build_ExactQuattroMarksOnlyFourConductorHolesForTransparentPresentation()
+    {
+        var project = new ElectricalProject
+        {
+            ProjectId = "P-TERMINAL",
+            Components = [new ComponentInstance
+            {
+                ComponentInstanceId = "T1", ComponentDefinitionId = "PHOENIX_CONTACT_3209578", TypeKey = "TerminalBlock",
+                Ports =
+                [
+                    new ComponentPort { PortId = "T1:CONDUCTORS", Name = "CONDUCTORS", Pins =
+                    [
+                        new ComponentPin { PinId = "T1:P1", SourcePinId = "PHOENIX_CONTACT_3209578_TERMINALS_1", PinNumber = "1" },
+                        new ComponentPin { PinId = "T1:P2", SourcePinId = "PHOENIX_CONTACT_3209578_TERMINALS_2", PinNumber = "2" },
+                        new ComponentPin { PinId = "T1:P3", SourcePinId = "PHOENIX_CONTACT_3209578_TERMINALS_3", PinNumber = "3" },
+                        new ComponentPin { PinId = "T1:P4", SourcePinId = "PHOENIX_CONTACT_3209578_TERMINALS_4", PinNumber = "4" }
+                    ] },
+                    new ComponentPort { PortId = "T1:BRIDGE", Name = "BRIDGE", Pins =
+                    [new ComponentPin { PinId = "T1:BA", SourcePinId = "PHOENIX_CONTACT_3209578_BRIDGE_A", PinNumber = "A" }] }
+                ]
+            }]
+        };
+
+        var rep = Assert.Single(new DrawingPlanningInputBuilder(new RepresentationPolicy(new NoAssets())).Build(project).Representations);
+        Assert.Equal("ProjectTerminalContact", rep.SourceType);
+        Assert.Equal(4, rep.PortBindings.Count(b => b.ConnectionPointId.StartsWith("TERMINAL_CONTACT:", StringComparison.Ordinal)));
+        Assert.Equal("PIN:T1:BA", rep.PortBindings.Single(b => b.EngineeringEndpointId == "T1:BA").ConnectionPointId);
+        Assert.Equal("PORT:T1:BRIDGE", rep.PortBindings.Single(b => b.EngineeringEndpointId == "T1:BRIDGE").ConnectionPointId);
+    }
+
+    [Fact]
     public void Build_CarriesExplicitPortAndPinDisplayNamesWithoutChangingEndpointIdentity()
     {
         var project = new ElectricalProject

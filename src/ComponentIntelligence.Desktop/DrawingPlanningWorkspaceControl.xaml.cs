@@ -192,16 +192,25 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
         var page = plan.Pages.Single(x => x.PageId == pageId);
         DrawingCanvas.Width = page.Bounds.Width;
         DrawingCanvas.Height = page.Bounds.Height;
+        var terminalGroups = _previewInput is null
+            ? new Dictionary<string, DrawingTerminalContactGroup>()
+            : DrawingTerminalContactPresentation.Build(_previewInput, plan)
+                .ToDictionary(group => group.RepresentationId, StringComparer.Ordinal);
         foreach (var route in plan.Routes.Where(r => r.PageId == pageId)) DrawEditableRoute(route);
         foreach (var placement in plan.Placements.Where(x => x.PageId == pageId))
         {
             var label = labels.GetValueOrDefault(placement.RepresentationId, "名稱待確認");
-            var border = new Border { Width = placement.Width, Height = placement.Height, BorderBrush = placement.State == DrawingPlanControlState.Locked ? Brushes.DarkRed : Brushes.DimGray, BorderThickness = new Thickness(1.5), Background = Brushes.WhiteSmoke, Tag = placement.RepresentationId, ToolTip = label,
-                Child = CablePreview(placement, project, label) ?? HeavyDutyPreview(placement, project, label) ?? (placement.Height < 40
+            terminalGroups.TryGetValue(placement.RepresentationId, out var terminal);
+            var border = new Border { Width = placement.Width, Height = placement.Height, BorderBrush = terminal is null ? (placement.State == DrawingPlanControlState.Locked ? Brushes.DarkRed : Brushes.DimGray) : Brushes.Transparent,
+                BorderThickness = terminal is null ? new Thickness(1.5) : new Thickness(0), Background = terminal is null ? Brushes.WhiteSmoke : Brushes.Transparent, Tag = placement.RepresentationId, ToolTip = label,
+                Child = terminal is null ? CablePreview(placement, project, label) ?? HeavyDutyPreview(placement, project, label) ?? (placement.Height < 40
                     ? new TextBlock { Text = label.Replace('\n', ' '), FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(4, 2, 4, 2) }
                     : new Viewbox { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Margin = new Thickness(5),
-                    Child = new TextBlock { Width = Math.Max(30, placement.Width - 12), Text = label, TextWrapping = TextWrapping.Wrap, FontSize = 13 } }) };
-            Canvas.SetLeft(border, placement.X); Canvas.SetTop(border, placement.Y); border.RenderTransform = new RotateTransform(placement.RotationDegrees, placement.Width / 2.0, placement.Height / 2.0); border.MouseLeftButtonDown += Placement_MouseLeftButtonDown; DrawingCanvas.Children.Add(border);
+                    Child = new TextBlock { Width = Math.Max(30, placement.Width - 12), Text = label, TextWrapping = TextWrapping.Wrap, FontSize = 13 } })
+                    : TerminalContactPreview(placement, terminal, label) };
+            Canvas.SetLeft(border, placement.X); Canvas.SetTop(border, placement.Y);
+            if (terminal is null) border.RenderTransform = new RotateTransform(placement.RotationDegrees, placement.Width / 2.0, placement.Height / 2.0);
+            border.MouseLeftButtonDown += Placement_MouseLeftButtonDown; DrawingCanvas.Children.Add(border);
         }
         if (_previewInput is not null)
             foreach (var port in DrawingIoPortLabels.Build(_previewInput, plan).Where(label => label.PageId == pageId))
@@ -211,6 +220,42 @@ public partial class DrawingPlanningWorkspaceControl : UserControl
                 Canvas.SetLeft(text, port.X); Canvas.SetTop(text, port.Y); DrawingCanvas.Children.Add(text);
             }
         DrawContinuationLabels(plan, pageId);
+    }
+
+    private static Canvas TerminalContactPreview(DrawingPlacement placement, DrawingTerminalContactGroup group, string label)
+    {
+        var canvas = new Canvas { Width = placement.Width, Height = placement.Height, Background = Brushes.Transparent };
+        var center = group.Center;
+        foreach (var anchor in group.PotentialAnchors)
+        {
+            AddLine(anchor.Point.X, anchor.Point.Y, center.X, anchor.Point.Y);
+            AddLine(center.X, anchor.Point.Y, center.X, center.Y);
+        }
+        if (group.PotentialAnchors.Count > 1)
+        {
+            var dot = new Ellipse { Width = 4, Height = 4, Fill = Brushes.DimGray };
+            Canvas.SetLeft(dot, center.X - placement.X - 2); Canvas.SetTop(dot, center.Y - placement.Y - 2);
+            canvas.Children.Add(dot);
+        }
+        foreach (var contact in group.Contacts)
+        {
+            var circle = new Ellipse { Width = 10, Height = 10, Stroke = Brushes.Black, StrokeThickness = 1.4, Fill = Brushes.White,
+                ToolTip = contact.EngineeringEndpointId };
+            Canvas.SetLeft(circle, contact.Point.X - placement.X - 5); Canvas.SetTop(circle, contact.Point.Y - placement.Y - 5);
+            canvas.Children.Add(circle);
+        }
+        var caption = new TextBlock { Text = label.Split('\n')[0], FontSize = 10, Foreground = Brushes.DimGray,
+            Background = Brushes.White, MaxWidth = Math.Max(30, placement.Width - 8), TextTrimming = TextTrimming.CharacterEllipsis };
+        Canvas.SetLeft(caption, 4); Canvas.SetTop(caption, Math.Max(0, placement.Height - 15));
+        canvas.Children.Add(caption);
+        return canvas;
+
+        void AddLine(long x1, long y1, long x2, long y2)
+        {
+            if (x1 == x2 && y1 == y2) return;
+            canvas.Children.Add(new Line { X1 = x1 - placement.X, Y1 = y1 - placement.Y,
+                X2 = x2 - placement.X, Y2 = y2 - placement.Y, Stroke = Brushes.DimGray, StrokeThickness = 1.2 });
+        }
     }
 
     private void DrawContinuationLabels(DrawingPlanDocument plan, string pageId)

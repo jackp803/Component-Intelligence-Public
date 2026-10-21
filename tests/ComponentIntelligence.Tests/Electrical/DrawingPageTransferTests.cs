@@ -5,6 +5,30 @@ namespace ComponentIntelligence.Tests.Electrical;
 public sealed class DrawingPageTransferTests
 {
     [Fact]
+    public void ExactTerminalContactPresentationUpgradePreservesPriorPlanButNotEngineeringChanges()
+    {
+        var oldInput = DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(new DrawingPlanningInput
+        {
+            ProjectId = "P", Representations = [new DrawingRepresentationDecision
+            {
+                RepresentationId = "T", OwnerId = "T1", PortBindings =
+                [new DrawingPortBinding { EngineeringEndpointId = "H1", ConnectionPointId = "PIN:H1" }]
+            }]
+        }));
+        var upgraded = DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(oldInput with
+        {
+            Representations = [oldInput.Representations[0] with { SourceType = "ProjectTerminalContact", PortBindings =
+                [oldInput.Representations[0].PortBindings[0] with { ConnectionPointId = "TERMINAL_CONTACT:H1" }] }]
+        }));
+        Assert.True(DrawingPlanningInputHashCompatibility.IsPresentationMetadataOnlyUpgrade(upgraded, oldInput.PlanningInputHash!));
+        var changed = DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(upgraded with
+        {
+            Connections = [new DrawingConnectionPlanningItem { ConnectionId = "NEW", FromEndpointId = "H1", ToEndpointId = "OTHER" }]
+        }));
+        Assert.False(DrawingPlanningInputHashCompatibility.IsPresentationMetadataOnlyUpgrade(changed, oldInput.PlanningInputHash!));
+    }
+
+    [Fact]
     public async Task LabelOnlyInputUpgradeAllowsAtomicPageTransferButOtherInputChangesDoNot()
     {
         var oldInput = DrawingPlanningJson.Deserialize(DrawingPlanningJson.Serialize(new DrawingPlanningInput

@@ -47,12 +47,33 @@ public static class TopologyEndpointPolicy
                 "FIXED CABLE"))
             return TopologyEndpointDisplayMode.Pins;
 
-        // If there is no meaningful connector body but engineering pins exist, exposing the
-        // physical conductors is safer than hiding them behind an artificial aggregate endpoint.
-        if (port.Connector is null && port.Pins.Count > 0)
+        // Older imported project snapshots can retain an "Unknown" connector *object*
+        // without a real mateable connector family. Do not collapse screw-terminal pins
+        // into one synthetic Port endpoint just because that placeholder object exists.
+        if (port.Pins.Count > 0 &&
+            (port.Connector is null ||
+             string.IsNullOrWhiteSpace(family) ||
+             family.Equals("Unknown", StringComparison.OrdinalIgnoreCase) ||
+             family.Equals("NotApplicable", StringComparison.OrdinalIgnoreCase)))
             return TopologyEndpointDisplayMode.Pins;
 
         return TopologyEndpointDisplayMode.Connector;
+    }
+
+    /// <summary>
+    /// Internal module-configuration jumpers are not external wiring endpoints. A legacy
+    /// zero-pin PWM_LEVEL_SEL record must not produce a phantom Port marker. Do not hide
+    /// arbitrary zero-pin connectors: they may be valid whole-mated interfaces whose
+    /// contact-level pin information has not yet been archived.
+    /// </summary>
+    public static bool ShouldRenderWiringEndpoint(ComponentPort port)
+    {
+        ArgumentNullException.ThrowIfNull(port);
+
+        if (port.Pins.Count != 0)
+            return true;
+
+        return !port.Name.Equals("PWM_LEVEL_SEL", StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool ShouldShowPins(ComponentPort port, IReadOnlySet<string> expandedPortIds) =>

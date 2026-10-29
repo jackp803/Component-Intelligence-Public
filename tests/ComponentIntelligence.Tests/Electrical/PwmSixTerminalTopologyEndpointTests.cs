@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using ComponentIntelligence.Electrical.Domain;
 using ComponentIntelligence.Electrical.Topology;
 using Xunit;

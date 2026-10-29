@@ -53,6 +53,9 @@ public partial class TopologyCanvasControl
         var result = new List<VisualEndpoint>();
         foreach (var port in component.Ports)
         {
+            if (!TopologyEndpointPolicy.ShouldRenderWiringEndpoint(port))
+                continue;
+
             var side = TopologyPortGeometry.DetermineScreenSide(component, port);
             var expandedPinSide = TopologyPortGeometry.DetermineExpandedPinSide(component, port, side);
             var mode = TopologyEndpointPolicy.DetermineDisplayMode(port);
@@ -151,14 +154,15 @@ public partial class TopologyCanvasControl
     {
         foreach (var port in component.Ports)
         {
-            var pinMode = TopologyEndpointPolicy.DetermineDisplayMode(port) == TopologyEndpointDisplayMode.Pins;
+            var hideAggregate = !TopologyEndpointPolicy.ShouldRenderWiringEndpoint(port) ||
+                                TopologyEndpointPolicy.DetermineDisplayMode(port) == TopologyEndpointDisplayMode.Pins;
             var marker = FindEndpointMarker(port.PortId);
             if (marker is not null)
-                marker.Visibility = pinMode ? Visibility.Collapsed : Visibility.Visible;
+                marker.Visibility = hideAggregate ? Visibility.Collapsed : Visibility.Visible;
 
             var label = marker is null ? null : FindPortLabelFollowing(marker, port.Name);
             if (label is not null)
-                label.Visibility = pinMode ? Visibility.Collapsed : Visibility.Visible;
+                label.Visibility = hideAggregate ? Visibility.Collapsed : Visibility.Visible;
         }
     }
 

@@ -64,7 +64,7 @@ public partial class TopologyCanvasControl
             {
                 foreach (var pin in port.Pins)
                 {
-                    var label = BuildPinLabel(pin);
+                    var label = TopologyPinLabelFormatter.Format(component, pin);
                     result.Add(new VisualEndpoint(pin.PinId, label, port, pin, expandedPinSide, IsAggregatePort: false));
                 }
             }
@@ -425,14 +425,6 @@ public partial class TopologyCanvasControl
 
     private static double EstimateEndpointLabelWidth(string text) =>
         Math.Max(28d, text.Length * 5.8d + 6d);
-
-    private static string BuildPinLabel(ComponentPin pin)
-    {
-        var name = string.IsNullOrWhiteSpace(pin.PinName) ? pin.Function : pin.PinName;
-        return string.IsNullOrWhiteSpace(name)
-            ? pin.PinNumber
-            : $"{pin.PinNumber} {name}";
-    }
 
     private static string BuildPinTooltip(ComponentPort port, ComponentPin pin) =>
         $"{port.Name} / Pin {pin.PinNumber}\n" +
